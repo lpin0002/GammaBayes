@@ -1,0 +1,39 @@
+import os
+from scipy import stats, interpolate
+import numpy as np
+axis = np.linspace(-2,3,300)
+
+
+
+def make_gaussian(centre = 0.25, spread = 0.2, axis=axis):
+    continuous_gaussian = stats.norm(loc=np.power(10.,centre), scale=spread*np.power(10.,centre))
+
+    norm = sum(continuous_gaussian.pdf(np.power(10.,axis)))
+    outputfunc = lambda x: continuous_gaussian.pdf(np.power(10.,x))/norm
+
+    return outputfunc
+
+
+backgrounddist = make_gaussian(centre = 0.25, axis=axis)
+signaldist = make_gaussian(centre = 1, axis=axis)
+
+
+energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-2*(3-log_energy_true)+1e-2).pdf(log_energy_measured)
+
+
+
+def inv_trans_sample(Nsamples, pdf):
+
+    pdf = pdf/sum(pdf)
+    uniformvals = np.random.uniform(size=Nsamples)
+
+    cdf = np.cumsum(pdf)
+
+    indices= np.array(range(len(axis)))
+
+    interpolationfunc = interpolate.interp1d(y = indices, x=cdf, kind='nearest', fill_value=(0, indices[-1]), bounds_error=False)
+
+    sampledindices = np.int64(interpolationfunc(uniformvals))
+
+    return sampledindices
+
