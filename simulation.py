@@ -7,14 +7,19 @@ from tqdm import tqdm
 import time
 import os
 import sys
-from utils import make_gaussian, backgrounddist, signaldist, energydisp, inv_trans_sample, axis
+from utils import make_gaussian, backgrounddist, energydisp, inv_trans_sample, axis, find_closest
 
 
 lambdaval = float(sys.argv[1])
 Nsamples = float(sys.argv[2])
+signalcentreval = float(sys.argv[3])
+
+signalcentreval = find_closest(axis, signalcentreval)
 Nsamples_signal = int(np.round(lambdaval*Nsamples))
 Nsamples_background = int(np.round((1-lambdaval)*Nsamples))
 
+
+signaldist = make_gaussian(centre = signalcentreval,axis=axis)
 
 plt.figure(dpi=200)
 plt.plot(axis,signaldist(axis), label="Signal")
@@ -95,3 +100,4 @@ np.save(f"runs/{timestring}/true_background.npy", truesamples_background)
 np.save(f"runs/{timestring}/true_signal.npy", truesamples_signal)
 np.save(f"runs/{timestring}/axis.npy", axis)
 
+np.save(f"runs/{timestring}/parameterarray", np.array([['logmass [TeV]', 'true lambda'],[signalcentreval, lambdaval]]))

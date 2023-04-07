@@ -4,6 +4,11 @@ import numpy as np
 axis = np.linspace(-2,3,300)
 
 
+def find_closest(arr, val):
+       idx = np.abs(arr - val).argmin()
+       return arr[idx]
+
+
 
 def make_gaussian(centre = 0.25, spread = 0.2, axis=axis):
     continuous_gaussian = stats.norm(loc=np.power(10.,centre), scale=spread*np.power(10.,centre))
@@ -14,11 +19,11 @@ def make_gaussian(centre = 0.25, spread = 0.2, axis=axis):
     return outputfunc
 
 
-backgrounddist = make_gaussian(centre = 0.25, axis=axis)
-signaldist = make_gaussian(centre = 1, axis=axis)
+backgrounddist = make_gaussian(centre = find_closest(axis,0.25), axis=axis)
 
 
-energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-2*(3-log_energy_true)+1e-2).pdf(log_energy_measured)
+
+energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).pdf(log_energy_measured)
 
 
 
