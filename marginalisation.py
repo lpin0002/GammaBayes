@@ -46,8 +46,7 @@ if 'N' in continueq.upper():
     raise Exception("You did not wish to continue.")
 # We then do the mixture
 # p(\lambda|E_m, S, B) = prod( \lambda*p(E_m|S) + (1-\lambda)*p(E_m|B))*prior(\lambda)
-lambdalist = np.linspace(0,1,100)
-
+lambdalist = np.linspace(0,1,2000)
 
 
 print(marglist_signal.shape)
@@ -67,7 +66,7 @@ print(normalisedposterior.max())
 
 
 plt.figure()
-plt.plot(lambdalist, normalisedposterior)
+plt.plot(lambdalist, normalisedposterior, c="r", marker="s", linestyle="None", markersize=0.1)
 plt.axvline(0.5)
 plt.xlabel(r"$\lambda$")
 plt.savefig(f"{timestring}_posterior_lambda_slice.png")
