@@ -46,9 +46,6 @@ print(marglist_signal)
 
 
 
-continueq = input("Do you wish to continue?: ")
-if 'N' in continueq.upper():
-    raise Exception("You did not wish to continue.")
 # Doing the marginalisation with the background distribution
 # p(E_m|B)
 marglist_background =  []
@@ -60,9 +57,6 @@ marglist_background = np.array(marglist_background)
 print("Background: ", marglist_background.shape)
 print("Signal: ", marglist_signal.shape)
 
-continueq = input("Do you wish to continue?: ")
-if 'N' in continueq.upper():
-    raise Exception("You did not wish to continue.")
 # We then do the mixture
 # p(\lambda|E_m, S, B) = prod( \lambda*p(E_m|S) + (1-\lambda)*p(E_m|B))*prior(\lambda)
 lambdalist = np.linspace(0,1,3*axis.shape[0])
