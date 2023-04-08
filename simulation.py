@@ -13,6 +13,7 @@ from utils import make_gaussian, backgrounddist, energydisp, inv_trans_sample, a
 lambdaval = float(sys.argv[1])
 Nsamples = float(sys.argv[2])
 signalcentreval = float(sys.argv[3])
+timestring = str(sys.argv[4])
 
 signalcentreval = find_closest(axis, signalcentreval)
 Nsamples_signal = int(np.round(lambdaval*Nsamples))
@@ -21,11 +22,11 @@ Nsamples_background = int(np.round((1-lambdaval)*Nsamples))
 
 signaldist = make_gaussian(centre = signalcentreval,axis=axis)
 
-plt.figure(dpi=200)
-plt.plot(axis,signaldist(axis), label="Signal")
-plt.plot(axis, backgrounddist(axis), label="Background")
-plt.legend()
-plt.show()
+# plt.figure(dpi=200)
+# plt.plot(axis,signaldist(axis), label="Signal")
+# plt.plot(axis, backgrounddist(axis), label="Background")
+# plt.legend()
+# plt.show()
 
 
 
@@ -51,12 +52,12 @@ truesamples_signal = axis[inv_trans_sample(Nsamples_signal, np.multiply(signaldi
 truesamples_background = axis[inv_trans_sample(Nsamples_background, np.multiply(backgrounddist(axis), np.power(10.,axis)))]
 
 
-plt.figure(dpi=100)
-histogramdata = plt.hist(truesamples_signal, bins=axis, label="Signal")
-histogramdata2 = plt.hist(truesamples_background, bins=axis, label="Background")
-plt.plot(axis,signaldist(axis)/max(signaldist(axis))*max(histogramdata[0]))
-plt.legend()
-plt.show()
+# plt.figure(dpi=100)
+# histogramdata = plt.hist(truesamples_signal, bins=axis, label="Signal")
+# histogramdata2 = plt.hist(truesamples_background, bins=axis, label="Background")
+# plt.plot(axis,signaldist(axis)/max(signaldist(axis))*max(histogramdata[0]))
+# plt.legend()
+# plt.show()
 
 
 
@@ -71,14 +72,12 @@ for sample in truesamples_background:
 pseudomeasuredenergysamples_background = np.array(pseudomeasuredenergysamples_background)
 
 
-plt.figure(dpi=100)
-histogramdata = plt.hist(pseudomeasuredenergysamples_signal, bins=axis)
-histogramdata2 = plt.hist(pseudomeasuredenergysamples_background, bins=axis)
-plt.plot(axis,signaldist(axis)/max(signaldist(axis))*max(histogramdata[0]))
-plt.show()
+# plt.figure(dpi=100)
+# histogramdata = plt.hist(pseudomeasuredenergysamples_signal, bins=axis)
+# histogramdata2 = plt.hist(pseudomeasuredenergysamples_background, bins=axis)
+# plt.plot(axis,signaldist(axis)/max(signaldist(axis))*max(histogramdata[0]))
+# plt.show()
 
-
-timestring = time.strftime("%m%d%H%M%S")
 print(timestring)
 
 try:
