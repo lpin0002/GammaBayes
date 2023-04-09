@@ -1,6 +1,14 @@
 import os
 from scipy import stats, interpolate
 import numpy as np
+import gammapy
+from gammapy.irf import EffectiveAreaTable2D, load_cta_irfs
+from astropy import units as u
+irfs = load_cta_irfs("Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits")
+
+
+
+
 axis = np.linspace(-2,3,300)
 
 
@@ -21,9 +29,12 @@ def make_gaussian(centre = 0.25, spread = 0.2, axis=axis):
 
 backgrounddist = make_gaussian(centre = find_closest(axis,0.25), axis=axis)
 
+edispkernel =irfs['edisp'].to_edisp_kernel(offset=1*u.deg)
 
 
-energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).pdf(log_energy_measured)
+energydisp = lambda log_energy_measured, log_energy_true: edispkernel.evaluate(energy_true=np.power(10.,log_energy_true)*u.TeV, energy = np.power(10.,log_energy_measured)*u.TeV)
+
+# energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).pdf(log_energy_measured)
 
 
 

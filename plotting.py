@@ -19,6 +19,9 @@ normalisedposterior                     = np.load(f"runs/{timestring}/posteriora
 logmassrange                            = np.load(f"runs/{timestring}/logmassrange.npy")
 lambdarange                             = np.load(f"runs/{timestring}/lambdarange.npy")
 
+print(params)
+print("Nsamples: ", pseudomeasuredenergysamples_background.shape[0]+pseudomeasuredenergysamples_signal.shape[0])
+
 
 
 plt.figure()

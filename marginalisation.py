@@ -19,22 +19,28 @@ axis                                    = np.load(f"runs/{timestring}/axis.npy")
 measuredsamples = np.concatenate((pseudomeasuredenergysamples_signal, pseudomeasuredenergysamples_background))
 
 
-logmassrange = axis
+logmassrange = np.linspace(axis[0],axis[-1],400)
 # Doing the marginalisations with the signal distribution
 # p(E_m|S)
 
 
+edisplist = []
+for sample in measuredsamples:
+    edisplist.append(energydisp(sample, axis))
+
+
+eaxis = np.power(10., axis)
+
 marglist_signal = []
-for logmass in tqdm(logmassrange):
+for logmass in tqdm(logmassrange, desc="signal marginalisation"):
 
     marglist_singlemass = []
+    singlemass_sigfunc = make_gaussian(centre=logmass, axis=axis)
+    singlemass_sigfunc_norm = sum(singlemass_sigfunc(axis))
 
-    for sample in measuredsamples:
-        proposaldist = make_gaussian(centre=logmass, axis=axis)
-        proposalnorm = sum(proposaldist(axis))
+    for i, sample in enumerate(measuredsamples):
 
-        marglist_singlemass.append(integrate.simps(y=make_gaussian(centre=logmass, axis=axis)(sample)*np.multiply(energydisp(sample, axis),
-                                                                                                            np.power(10.,axis))/proposalnorm, 
+        marglist_singlemass.append(integrate.simps(y=singlemass_sigfunc(sample)*np.multiply(edisplist[i],eaxis)/singlemass_sigfunc_norm, 
                                                                                                             x=axis))
     
     marglist_signal.append(marglist_singlemass)
@@ -50,7 +56,7 @@ print(marglist_signal)
 # p(E_m|B)
 marglist_background =  []
 
-for sample in tqdm(measuredsamples):
+for sample in tqdm(measuredsamples, desc="background marginalisation"):
     marglist_background.append(integrate.simps(y=backgrounddist(sample)*np.multiply(energydisp(sample, axis),np.power(10.,axis)), x=axis))
 marglist_background = np.array(marglist_background)
 
@@ -59,7 +65,7 @@ print("Signal: ", marglist_signal.shape)
 
 # We then do the mixture
 # p(\lambda|E_m, S, B) = prod( \lambda*p(E_m|S) + (1-\lambda)*p(E_m|B))*prior(\lambda)
-lambdalist = np.linspace(0,1,3*axis.shape[0])
+lambdalist = np.linspace(0,1,int(axis.shape[0]))
 
 
 print(marglist_signal.shape)
@@ -73,7 +79,7 @@ print("repeated background shape: ", marglist_background_repeated.shape)
 print("original background: ", marglist_background[:5])
 print("new background list: ", marglist_background_repeated[0,:5])
 
-for lval in tqdm(lambdalist):
+for lval in tqdm(lambdalist, desc="iterating through lambdas"):
     fullmarglist_signal.append(lval*marglist_signal)
     fullmarglist_background.append((1-lval)*marglist_background_repeated)
 

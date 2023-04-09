@@ -15,7 +15,6 @@ Nsamples = float(sys.argv[2])
 signalcentreval = float(sys.argv[3])
 timestring = str(sys.argv[4])
 
-signalcentreval = find_closest(axis, signalcentreval)
 Nsamples_signal = int(np.round(lambdaval*Nsamples))
 Nsamples_background = int(np.round((1-lambdaval)*Nsamples))
 
@@ -99,4 +98,4 @@ np.save(f"runs/{timestring}/true_background.npy", truesamples_background)
 np.save(f"runs/{timestring}/true_signal.npy", truesamples_signal)
 np.save(f"runs/{timestring}/axis.npy", axis)
 
-np.save(f"runs/{timestring}/parameterarray", np.array([['logmass [TeV]', 'true lambda'],[signalcentreval, lambdaval]]))
+np.save(f"runs/{timestring}/parameterarray", np.array([['logmass [TeV]', 'true lambda', 'Nsamples'],[signalcentreval, lambdaval, Nsamples]]))
