@@ -18,6 +18,10 @@ energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_ene
 
 # axis = np.linspace(-1.5,2.5,300)
 
+edispnorms = []
+for val in axis:
+     edispnorms.append(np.sum(energydisp(axis, val)))
+edispnorms = np.array(edispnorms)
 
 def find_closest(arr, val):
        idx = np.abs(arr - val).argmin()
@@ -25,11 +29,11 @@ def find_closest(arr, val):
 
 
 
-def make_gaussian(centre = 0.25, spread = 0.2, axis=axis):
-    continuous_gaussian = stats.norm(loc=np.power(10.,centre), scale=spread*np.power(10.,centre))
+def make_gaussian(centre = 0.25, spread = 0.1, axis=axis):
+    continuous_gaussian = stats.norm(loc=centre, scale=spread)
 
-    norm = np.sum(continuous_gaussian.pdf(np.power(10.,axis)))
-    outputfunc = lambda x: continuous_gaussian.pdf(np.power(10.,x))/norm
+    norm = np.sum(continuous_gaussian.pdf(axis))
+    outputfunc = lambda x: continuous_gaussian.pdf(x)/norm
 
     return outputfunc
 

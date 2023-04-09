@@ -30,7 +30,7 @@ plt.show()
 edispsums = []
 
 for val in axis:
-    edispsums.append(sum(energydisp(axis,val)))
+    edispsums.append(np.sum(energydisp(axis,val)))
 
 plt.figure()
 plt.plot(edispsums)

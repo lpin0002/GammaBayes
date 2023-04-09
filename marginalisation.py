@@ -5,7 +5,7 @@ from tqdm import tqdm
 import time
 import os
 import sys
-from utils import make_gaussian, backgrounddist, energydisp, inv_trans_sample, axis
+from utils import make_gaussian, backgrounddist, energydisp, axis, edispnorms
 
 # The identifier for the run you are analyzing
 timestring = sys.argv[1]
@@ -19,15 +19,19 @@ axis                                    = np.load(f"runs/{timestring}/axis.npy")
 measuredsamples = np.concatenate((pseudomeasuredenergysamples_signal, pseudomeasuredenergysamples_background))
 
 
-logmassrange = np.linspace(axis[0],axis[-1], 3000)
+
+logmassrange = np.linspace(axis[0],axis[-1], 4000)
 # Doing the marginalisations with the signal distribution
 # p(E_m|S)
 
 
+
+print(edispnorms)
+
 edisplist = []
 for sample in measuredsamples:
-    edisplist.append(energydisp(sample, axis))
-
+    edisplist.append(energydisp(sample, axis)/edispnorms)
+edisplist = np.array(edisplist)
 
 eaxis = np.power(10., axis)
 
@@ -60,7 +64,7 @@ print(marglist_signal)
 marglist_background =  []
 
 for sample in tqdm(measuredsamples, desc="background marginalisation"):
-    marglist_background.append(np.sum(backgrounddist(sample)*np.multiply(energydisp(sample, axis),np.power(10.,axis))))
+    marglist_background.append(np.sum(backgrounddist(sample)*np.multiply(edisplist,eaxis)))
 marglist_background = np.array(marglist_background)
 
 print("Background: ", marglist_background.shape)
@@ -92,30 +96,38 @@ for lval in tqdm(lambdalist, desc="iterating through lambdas"):
 print("Turning the unnormalised results into numpy arrays...")
 fullmarglist_background = np.asarray(fullmarglist_background)
 fullmarglist_signal = np.asarray(fullmarglist_signal)
-print("Finished turning unnormalised results into numpy arrays.")
+print("Finished turning unnormalised results into numpy arrays.\033[F")
 
 print(fullmarglist_background.shape)
 print(fullmarglist_signal.shape)
 
+unnormalisedposterior = []
 print("Calculating the unnormalised posterior...")
-unnormalisedposterior = np.nansum(np.log(fullmarglist_signal+fullmarglist_background), axis=2)
+for i, lambdaval in tqdm(enumerate(lambdalist), desc="lambda iteration"):
+    unnormposterior_singlelambda = []
+    for j, logmass in enumerate(logmassrange):
+        unnormposterior_singlelambda.append(np.nansum(np.log(fullmarglist_signal[i,j,:]+fullmarglist_background[i,j,:])))
+    unnormalisedposterior.append(unnormposterior_singlelambda)
 print("Finished calculating the unnormalised posterior.")
+
+unnormalisedposterior = np.array(unnormalisedposterior)
+print(unnormalisedposterior)
 
 print("Finding max before normalisation...")
 print(unnormalisedposterior.max())
-print("Finished finding max.")
+print("Finished finding max.\033[F")
 
 print("Calculating normalisation factor...")
 posteriornormalisationfactor = special.logsumexp(unnormalisedposterior)
 print("Finished calculation of normalisation. Now normalising...")
 normalisedposterior = np.exp(unnormalisedposterior-posteriornormalisationfactor)
-print("Finished normalising.")
+print("Finished normalising.\033[F")
 print(normalisedposterior.max())
 
 print("Now saving results. \n1...")
 np.save(f"runs/{timestring}/posteriorarray.npy", normalisedposterior)
-print("2...")
+print("2...\033[F")
 np.save(f"runs/{timestring}/logmassrange.npy", logmassrange)
-print("3...")
+print("3...\033[F")
 np.save(f"runs/{timestring}/lambdarange.npy", lambdalist)
 print("Done! Hope the posteriors look good my g.")

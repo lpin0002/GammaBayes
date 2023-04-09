@@ -7,7 +7,7 @@ from tqdm import tqdm
 import time
 import os
 import sys
-from utils import make_gaussian, backgrounddist, energydisp, inv_trans_sample, axis, find_closest
+from utils import make_gaussian, backgrounddist, energydisp, inv_trans_sample, axis, find_closest,edispnorms
 
 
 lambdaval = float(sys.argv[1])
@@ -31,13 +31,13 @@ print("Finished sampling the true distributions.")
 print("Creating pseudo-measured signal values...")
 pseudomeasuredenergysamples_signal = []
 for sample in truesamples_signal:
-    pseudomeasuredenergysamples_signal.append(float(axis[inv_trans_sample(1,np.multiply(energydisp(sample, axis),np.power(10.,axis)))]))
+    pseudomeasuredenergysamples_signal.append(float(axis[inv_trans_sample(1,np.multiply(energydisp(sample, axis)/edispnorms,np.power(10.,axis)))]))
 pseudomeasuredenergysamples_signal = np.array(pseudomeasuredenergysamples_signal)
 
 print("Creating psuedo-measured background values...")
 pseudomeasuredenergysamples_background = []
 for sample in truesamples_background:
-    pseudomeasuredenergysamples_background.append(float(axis[inv_trans_sample(1,np.multiply(energydisp(sample, axis),np.power(10.,axis)))]))
+    pseudomeasuredenergysamples_background.append(float(axis[inv_trans_sample(1,np.multiply(energydisp(sample, axis)/edispnorms,np.power(10.,axis)))]))
 pseudomeasuredenergysamples_background = np.array(pseudomeasuredenergysamples_background)
 print("Finished.")
 
