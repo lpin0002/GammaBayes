@@ -27,14 +27,14 @@ print("Nsamples: ", pseudomeasuredenergysamples_background.shape[0]+pseudomeasur
 plt.figure()
 plt.hist(pseudomeasuredenergysamples_background, bins=axis)
 plt.hist(pseudomeasuredenergysamples_signal, bins=axis)
-plt.xlabel("Log Mass [TeV]")
+plt.xlabel("Log E [TeV]")
 plt.savefig(f"runs/{timestring}/pseudomeasuredsamples.png")
 plt.show()
 
 plt.figure()
-plt.hist(truesamples_background, bins=axis)
-plt.hist(truesamples_signal, bins=axis)
-plt.xlabel("Log Mass [TeV]")
+plt.hist(np.power(10.,truesamples_background), bins=np.power(10.,axis))
+plt.hist(np.power(10.,truesamples_signal), bins=np.power(10.,axis))
+plt.xlabel("E [TeV]")
 plt.savefig(f"runs/{timestring}/truesamples.png")
 plt.show()
 

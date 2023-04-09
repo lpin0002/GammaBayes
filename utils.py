@@ -9,12 +9,12 @@ irfs = load_cta_irfs("Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits
 
 edispkernel =irfs['edisp'].to_edisp_kernel(offset=1*u.deg)
 
-def energydisp(log_energy_measured, log_energy_true):
-     return edispkernel.evaluate(energy_true=np.power(10.,log_energy_true)*u.TeV, energy = np.power(10.,log_energy_measured)*u.TeV)
+# def energydisp(log_energy_measured, log_energy_true):
+#      return edispkernel.evaluate(energy_true=np.power(10.,log_energy_true)*u.TeV, energy = np.power(10.,log_energy_measured)*u.TeV)
 
 axis = np.log10(edispkernel.axes["energy_true"].center.value)
 axis = axis[18:227]
-# energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).pdf(log_energy_measured)
+energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).pdf(log_energy_measured)
 
 # axis = np.linspace(-1.5,2.5,300)
 
