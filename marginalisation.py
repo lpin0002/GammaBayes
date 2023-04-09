@@ -19,7 +19,7 @@ axis                                    = np.load(f"runs/{timestring}/axis.npy")
 measuredsamples = np.concatenate((pseudomeasuredenergysamples_signal, pseudomeasuredenergysamples_background))
 
 
-logmassrange = np.linspace(axis[0],axis[-1],400)
+logmassrange = np.linspace(axis[0],axis[-1], 3000)
 # Doing the marginalisations with the signal distribution
 # p(E_m|S)
 
@@ -36,12 +36,15 @@ for logmass in tqdm(logmassrange, desc="signal marginalisation"):
 
     marglist_singlemass = []
     singlemass_sigfunc = make_gaussian(centre=logmass, axis=axis)
-    singlemass_sigfunc_norm = sum(singlemass_sigfunc(axis))
+    singlemass_sigfunc_norm = np.sum(singlemass_sigfunc(axis))
 
     for i, sample in enumerate(measuredsamples):
+        singlemassfunceval = singlemass_sigfunc(sample)
+        edispmultiple=np.multiply(edisplist[i],eaxis)
 
-        marglist_singlemass.append(integrate.simps(y=singlemass_sigfunc(sample)*np.multiply(edisplist[i],eaxis)/singlemass_sigfunc_norm, 
-                                                                                                            x=axis))
+        singledatumposterior = singlemassfunceval*edispmultiple/singlemass_sigfunc_norm
+
+        marglist_singlemass.append(np.sum(singledatumposterior))
     
     marglist_signal.append(marglist_singlemass)
 
@@ -57,7 +60,7 @@ print(marglist_signal)
 marglist_background =  []
 
 for sample in tqdm(measuredsamples, desc="background marginalisation"):
-    marglist_background.append(integrate.simps(y=backgrounddist(sample)*np.multiply(energydisp(sample, axis),np.power(10.,axis)), x=axis))
+    marglist_background.append(np.sum(backgrounddist(sample)*np.multiply(energydisp(sample, axis),np.power(10.,axis))))
 marglist_background = np.array(marglist_background)
 
 print("Background: ", marglist_background.shape)
@@ -85,19 +88,34 @@ for lval in tqdm(lambdalist, desc="iterating through lambdas"):
 
 # fullmarglist_signal = np.outer(marglist_signal,lambdalist)
 # fullmarglist_background = np.outer(marglist_background, (1-lambdalist))
-fullmarglist_background = np.array(fullmarglist_background)
-fullmarglist_signal = np.array(fullmarglist_signal)
+
+print("Turning the unnormalised results into numpy arrays...")
+fullmarglist_background = np.asarray(fullmarglist_background)
+fullmarglist_signal = np.asarray(fullmarglist_signal)
+print("Finished turning unnormalised results into numpy arrays.")
 
 print(fullmarglist_background.shape)
 print(fullmarglist_signal.shape)
 
+print("Calculating the unnormalised posterior...")
 unnormalisedposterior = np.nansum(np.log(fullmarglist_signal+fullmarglist_background), axis=2)
+print("Finished calculating the unnormalised posterior.")
+
+print("Finding max before normalisation...")
 print(unnormalisedposterior.max())
+print("Finished finding max.")
 
-
-normalisedposterior = np.exp(unnormalisedposterior-special.logsumexp(unnormalisedposterior))
+print("Calculating normalisation factor...")
+posteriornormalisationfactor = special.logsumexp(unnormalisedposterior)
+print("Finished calculation of normalisation. Now normalising...")
+normalisedposterior = np.exp(unnormalisedposterior-posteriornormalisationfactor)
+print("Finished normalising.")
 print(normalisedposterior.max())
 
+print("Now saving results. \n1...")
 np.save(f"runs/{timestring}/posteriorarray.npy", normalisedposterior)
+print("2...")
 np.save(f"runs/{timestring}/logmassrange.npy", logmassrange)
+print("3...")
 np.save(f"runs/{timestring}/lambdarange.npy", lambdalist)
+print("Done! Hope the posteriors look good my g.")

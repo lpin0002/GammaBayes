@@ -21,61 +21,26 @@ Nsamples_background = int(np.round((1-lambdaval)*Nsamples))
 
 signaldist = make_gaussian(centre = signalcentreval,axis=axis)
 
-# plt.figure(dpi=200)
-# plt.plot(axis,signaldist(axis), label="Signal")
-# plt.plot(axis, backgrounddist(axis), label="Background")
-# plt.legend()
-# plt.show()
+print("Sampling the signal distribution...")
+truesamples_signal = axis[inv_trans_sample(Nsamples_signal, signaldist(axis))]
+print("Sampling the background distribution...")
+truesamples_background = axis[inv_trans_sample(Nsamples_background, backgrounddist(axis))]
+print("Finished sampling the true distributions.")
 
 
-
-
-# edispplot = []
-# for energy_measured in axis:
-#     edisprow = []
-#     for energy_true in axis:
-#         edisprow.append(energydisp(energy_measured, energy_true))
-#     edispplot.append(edisprow)
-
-
-# plt.figure(dpi=100)
-# plt.pcolormesh(axis,axis, edispplot)
-# plt.colorbar()
-# plt.clim([np.min(edispplot),np.max(edispplot)])
-# plt.show()
-
-
-
-
-truesamples_signal = axis[inv_trans_sample(Nsamples_signal, np.multiply(signaldist(axis), np.power(10.,axis)))]
-truesamples_background = axis[inv_trans_sample(Nsamples_background, np.multiply(backgrounddist(axis), np.power(10.,axis)))]
-
-
-# plt.figure(dpi=100)
-# histogramdata = plt.hist(truesamples_signal, bins=axis, label="Signal")
-# histogramdata2 = plt.hist(truesamples_background, bins=axis, label="Background")
-# plt.plot(axis,signaldist(axis)/max(signaldist(axis))*max(histogramdata[0]))
-# plt.legend()
-# plt.show()
-
-
-
+print("Creating pseudo-measured signal values...")
 pseudomeasuredenergysamples_signal = []
 for sample in truesamples_signal:
-    pseudomeasuredenergysamples_signal.append(float(axis[inv_trans_sample(1,np.multiply(energydisp(sample, axis),np.power(10.,axis)))]))
+    pseudomeasuredenergysamples_signal.append(float(axis[inv_trans_sample(1,energydisp(sample, axis))]))
 pseudomeasuredenergysamples_signal = np.array(pseudomeasuredenergysamples_signal)
 
+print("Creating psuedo-measured background values...")
 pseudomeasuredenergysamples_background = []
 for sample in truesamples_background:
-    pseudomeasuredenergysamples_background.append(float(axis[inv_trans_sample(1,np.multiply(energydisp(sample, axis),np.power(10.,axis)))]))
+    pseudomeasuredenergysamples_background.append(float(axis[inv_trans_sample(1,energydisp(sample, axis))]))
 pseudomeasuredenergysamples_background = np.array(pseudomeasuredenergysamples_background)
+print("Finished sampling.")
 
-
-# plt.figure(dpi=100)
-# histogramdata = plt.hist(pseudomeasuredenergysamples_signal, bins=axis)
-# histogramdata2 = plt.hist(pseudomeasuredenergysamples_background, bins=axis)
-# plt.plot(axis,signaldist(axis)/max(signaldist(axis))*max(histogramdata[0]))
-# plt.show()
 
 print(timestring)
 
