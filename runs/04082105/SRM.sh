@@ -1,0 +1,13 @@
+#!/bin/bash                                                                                                                                                                                                                                        
+#                                                                                                                                                                                                                                                  
+#SBATCH --job-name=MDMn1.25_DMPipe_04082105                                                                                                                                                                                                                  
+#SBATCH --output=runs/Outputs/MDMn1.25_04082105.txt                                                                                                                                                                                                   
+#                                                                                                                                                                                                                                                  
+#SBATCH --ntasks=1                                                                                                                                                                                                                                 
+#SBATCH --cpus-per-task=1                                                                                                                                                                                                                          
+#SBATCH --time=1:30:00                                                                                                                                                                                                                             
+#SBATCH --mem-per-cpu=4000                                                                                                                                                                                                                          
+#SBATCH --mail-type=ALL                                                                                                                                                                                                                            
+#SBATCH --mail-user=progressemail1999@gmail.com                                                                                                                                                                                                    
+source activate DMPipe
+srun python3 marginalisation.py 04082105
