@@ -1,5 +1,5 @@
 import os
-from scipy import stats, interpolate
+from scipy import stats, interpolate, special
 import numpy as np
 import gammapy
 from gammapy.irf import EffectiveAreaTable2D, load_cta_irfs
@@ -15,13 +15,13 @@ edispkernel =irfs['edisp'].to_edisp_kernel(offset=1*u.deg)
 axis = np.log10(edispkernel.axes["energy_true"].center.value)
 axis = axis[18:227]
 axis = axis.astype(np.float128)
-energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).pdf(log_energy_measured)
+energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)+1e-3).logpdf(log_energy_measured)
 
 # axis = np.linspace(-1.5,2.5,300)
 
 edispnorms = []
 for val in axis:
-     edispnorms.append(np.sum(energydisp(axis, val)))
+     edispnorms.append(np.sum(np.exp(energydisp(axis, val))))
 edispnorms = np.array(edispnorms)
 
 def find_closest(arr, val):
@@ -33,8 +33,8 @@ def find_closest(arr, val):
 def make_gaussian(centre = 0.25, spread = 0.1, axis=axis):
     continuous_gaussian = stats.norm(loc=centre, scale=spread)
 
-    norm = np.sum(continuous_gaussian.pdf(axis)).astype(np.float128)
-    outputfunc = lambda x: continuous_gaussian.pdf(x)/norm
+    norm = special.logsumexp(continuous_gaussian.logpdf(axis)).astype(np.float128)
+    outputfunc = lambda x: continuous_gaussian.logpdf(x) - norm
 
     return outputfunc
 

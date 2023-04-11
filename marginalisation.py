@@ -8,6 +8,7 @@ import sys
 from utils import make_gaussian, backgrounddist, energydisp, axis, edispnorms
 from scipy.sparse import dok_matrix
 
+
 # The identifier for the run you are analyzing
 timestring = sys.argv[1]
 
@@ -21,17 +22,19 @@ del(pseudomeasuredenergysamples_background)
 del(pseudomeasuredenergysamples_signal)
 
 
-logmassrange = np.linspace(0.5,1.5, 300).astype(np.float128)
-
+logmassrange = axis.astype(np.float128)
 
 
 edisplist = []
 for sample in measuredsamples:
-    edisplist.append(energydisp(sample, axis)/edispnorms)
+    edisplist.append(energydisp(sample, axis)-np.log(edispnorms))
 edisplist = np.array(edisplist).astype(np.float128)
 
-eaxis = np.power(10., axis).astype(np.float128)
 
+eaxis = np.power(10., axis).astype(np.float128)
+eaxis_mod = np.log(eaxis)
+print("edispnorms: ", edispnorms)
+print("edisplist: ", edisplist)
 
 ###############################################################################################################################################
 # Marginalising with signal distribution
@@ -41,32 +44,31 @@ for logmass in tqdm(logmassrange, desc="signal marginalisation"):
 
     marglist_singlemass = []
     singlemass_sigfunc = make_gaussian(centre=logmass, axis=axis)
-    singlemass_sigfunc_norm = np.sum(singlemass_sigfunc(axis)).astype(np.float128)
+    singlemass_sigfunc_norm = special.logsumexp(singlemass_sigfunc(axis))
     
 
     for i, sample in enumerate(measuredsamples):
-        singlemassfunceval = singlemass_sigfunc(sample).astype(np.float128)
-        edispmultiple=np.multiply(edisplist[i],eaxis).astype(np.float128)
-        singledatumposterior = singlemassfunceval*edispmultiple/singlemass_sigfunc_norm
+        singlemassfunceval = singlemass_sigfunc(sample)
+        singledatumposterior = singlemassfunceval+edisplist[i]-singlemass_sigfunc_norm+eaxis_mod
 
-        marglist_singlemass.append(np.sum(singledatumposterior))
+        marglist_singlemass.append(special.logsumexp(singledatumposterior))
     
     marglist_signal.append(marglist_singlemass)
 
-marglist_signal = np.array(marglist_signal).astype(np.float128)
-
+marglist_signal = np.array(marglist_signal)
+print(marglist_signal)
 
 
 ###############################################################################################################################################
 # Marginalising with background distribution
 ###############################################################################################################################################
 marglist_background =  []
-backgroundnorm = np.sum(backgrounddist(axis)).astype(np.float128)
+backgroundnorm = special.logsumexp(backgrounddist(axis).astype(np.float128))
 for i, sample in tqdm(enumerate(measuredsamples), desc="background marginalisation"):
-    edispmultiple=np.multiply(edisplist[i]/backgroundnorm,eaxis).astype(np.float128)
-    marglist_background.append(np.sum(backgrounddist(sample)*edispmultiple).astype(np.float128))
+    marglist_background.append(special.logsumexp(backgrounddist(sample) + edisplist[i] - backgroundnorm + eaxis_mod))
 
-marglist_background = np.array(marglist_background).astype(np.float128)
+marglist_background = np.array(marglist_background)
+# print(marglist_background)
 
 print("Background: ", marglist_background.shape)
 print("Signal: ", marglist_signal.shape)
@@ -99,8 +101,8 @@ print("new background list: ", marglist_background_repeated[0,:5])
 # Doing the product of all the data points
 ###############################################################################################################################################
 for lval in tqdm(lambdalist, desc="iterating through lambdas"):
-    fullmarglist_signal.append(np.log(lval*marglist_signal).astype(np.float128))
-    fullmarglist_background.append(np.log((1-lval)*marglist_background_repeated).astype(np.float128))
+    fullmarglist_signal.append(np.log(lval)+marglist_signal)
+    fullmarglist_background.append(np.log(1-lval)+marglist_background_repeated)
 
 
 
