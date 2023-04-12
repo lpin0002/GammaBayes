@@ -8,6 +8,9 @@ from astropy import units as u
 import matplotlib.pyplot as plt
 from utils import axis,energydisp, edispkernel
 from sys import getsizeof
+import chime
+
+
 
 
 print(axis)

@@ -15,9 +15,6 @@ pseudomeasuredenergysamples_signal      = np.load(f"runs/{timestring}/measured_s
 truesamples_background                  = np.load(f"runs/{timestring}/true_background.npy")
 truesamples_signal                      = np.load(f"runs/{timestring}/true_signal.npy")
 axis                                    = np.load(f"runs/{timestring}/axis.npy")
-normalisedposterior                     = np.load(f"runs/{timestring}/posteriorarray.npy")
-logmassrange                            = np.load(f"runs/{timestring}/logmassrange.npy")
-lambdarange                             = np.load(f"runs/{timestring}/lambdarange.npy")
 
 print(params)
 print("Nsamples: ", pseudomeasuredenergysamples_background.shape[0]+pseudomeasuredenergysamples_signal.shape[0])
@@ -41,13 +38,17 @@ plt.savefig(f"runs/{timestring}/truesamples.pdf")
 plt.show()
 
 
-# normalisedposterior = np.float32(normalisedposterior)
+normalisedposterior                     = np.load(f"runs/{timestring}/posteriorarray.npy")
+logmassrange                            = np.load(f"runs/{timestring}/logmassrange.npy")
+lambdarange                             = np.load(f"runs/{timestring}/lambdarange.npy")
+
+
 plt.figure()
 plt.pcolormesh(logmassrange.astype(float), lambdarange.astype(float), normalisedposterior, cmap='inferno')
 plt.axvline(signalcentreval, lw=0.5, c='g')
 plt.axhline(truelambda, lw=0.5, c='g')
-# plt.savefig(f"runs/{timestring}/posterior.png")
-# plt.savefig(f"runs/{timestring}/posterior.pdf")
+plt.savefig(f"runs/{timestring}/posterior.png")
+plt.savefig(f"runs/{timestring}/posterior.pdf")
 plt.colorbar()
 plt.show()
 
@@ -61,7 +62,12 @@ plt.show()
 
 plt.figure()
 plt.plot(logmassrange, normalisedposterior[np.abs(lambdarange - truelambda).argmin(),:], lw=0.5)
-plt.axvline(signalcentreval, lw=0.5, c='g')
+plt.axvline(signalcentreval, lw=0.5, c='g', label="actual val")
+plt.axvline(axis[(np.abs(axis-signalcentreval)).argmin()], label="Closest val on axis")
+plt.axvline(axis[(np.abs(axis-signalcentreval)).argmin()]+(axis[1]-axis[0]), label="Closest val on axis to the right")
+plt.axvline(axis[(np.abs(axis-signalcentreval)).argmin()]-(axis[1]-axis[0]), label="Closest val on axis to the left")
+
+plt.legend()
 plt.savefig(f"runs/{timestring}/logmassslice.png")
 plt.savefig(f"runs/{timestring}/logmassslice.pdf")
 plt.show()

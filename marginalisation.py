@@ -7,7 +7,7 @@ import os
 import sys
 from utils import make_gaussian, backgrounddist, energydisp, axis, edispnorms
 from scipy.sparse import dok_matrix
-
+import chime
 
 # The identifier for the run you are analyzing
 timestring = sys.argv[1]
@@ -22,7 +22,7 @@ del(pseudomeasuredenergysamples_background)
 del(pseudomeasuredenergysamples_signal)
 
 
-logmassrange = axis.astype(np.float128)
+logmassrange = axis
 
 
 edisplist = []
@@ -77,7 +77,7 @@ print("Signal: ", marglist_signal.shape)
 ###############################################################################################################################################
 # Creating the mixture with lambda
 ###############################################################################################################################################
-lambdalist = np.linspace(0.,1., 300)
+lambdalist = np.linspace(0,1.0,201)
 
 
 print(marglist_signal.shape)
@@ -100,6 +100,7 @@ print("new background list: ", marglist_background_repeated[0,:5])
 ###############################################################################################################################################
 # Doing the product of all the data points
 ###############################################################################################################################################
+print("Multiplying models by lambda and (1-lambda)...")
 for lval in tqdm(lambdalist, desc="iterating through lambdas"):
     fullmarglist_signal.append(np.log(lval)+marglist_signal)
     fullmarglist_background.append(np.log(1-lval)+marglist_background_repeated)
@@ -112,7 +113,7 @@ for lval in tqdm(lambdalist, desc="iterating through lambdas"):
 
 unnormalisedposterior = np.ones((lambdalist.shape[0], logmassrange.shape[0]), dtype=np.float128)
 print("Calculating the unnormalised posterior...")
-for i, lambdaval in tqdm(enumerate(lambdalist), desc="lambda iteration"):
+for i, lambdaval in tqdm(enumerate(lambdalist), desc="lambda progress"):
     for j, logmass in enumerate(logmassrange):
         addition = np.sum(np.logaddexp(fullmarglist_signal[i][j,:],fullmarglist_background[i][j,:]),dtype=np.float128)
         # print(addition)
@@ -143,11 +144,13 @@ print(normalisedposterior.max())
 ###############################################################################################################################################
 # Saving the results
 ###############################################################################################################################################
-print("Now saving results. \n1...\033[F")
+print("Now saving results. \n1...")
 np.save(f"runs/{timestring}/posteriorarray.npy", normalisedposterior)
-print("2...\033[F")
+print("\033[F2...")
 np.save(f"runs/{timestring}/logmassrange.npy", logmassrange)
-print("3...\033[F")
+print("\033[F3...")
 np.save(f"runs/{timestring}/lambdarange.npy", lambdalist)
-print("Done! Hope the posteriors look good my g.")
+chime.success()
+chime.info('sonic')
+print("\033[F Done! Hope the posteriors look good my g.")
 print(timestring)
