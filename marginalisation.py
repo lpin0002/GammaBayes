@@ -22,7 +22,7 @@ del(pseudomeasuredenergysamples_background)
 del(pseudomeasuredenergysamples_signal)
 
 
-logmassrange = axis
+logmassrange = np.linspace(axis[0],axis[-1],axis.shape[0]-1)
 
 
 edisplist = []
@@ -77,7 +77,7 @@ print("Signal: ", marglist_signal.shape)
 ###############################################################################################################################################
 # Creating the mixture with lambda
 ###############################################################################################################################################
-lambdalist = np.linspace(0,1.0,201)
+lambdalist = np.linspace(0.85,0.95,11)
 
 
 print(marglist_signal.shape)
@@ -85,10 +85,6 @@ fullmarglist_signal = []
 fullmarglist_background = []
 marglist_background_repeated = np.repeat(marglist_background,logmassrange.shape[0]).reshape((marglist_background.shape[0], logmassrange.shape[0])).T
 
-del(measuredsamples)
-del(edispnorms)
-del(edisplist)
-del(eaxis)
 
 print("marglist shape: ", marglist_signal.shape)
 print("repeated background shape: ", marglist_background_repeated.shape)
@@ -133,7 +129,7 @@ print("Finished finding max.\033[F")
 print("Calculating normalisation factor...")
 posteriornormalisationfactor = special.logsumexp(unnormalisedposterior)
 print("Finished calculation of normalisation. Now normalising...")
-normalisedposterior = np.exp(unnormalisedposterior-posteriornormalisationfactor)
+normalisedposterior = unnormalisedposterior-posteriornormalisationfactor
 print("Finished normalising.\033[F")
 print(normalisedposterior.max())
 

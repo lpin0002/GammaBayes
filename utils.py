@@ -14,7 +14,7 @@ edispkernel =irfs['edisp'].to_edisp_kernel(offset=1*u.deg)
 
 axis = np.log10(edispkernel.axes["energy_true"].center.value)
 axis = axis[19:226]
-axis = np.linspace(axis[0],axis[-1],int(2*axis.shape[0]))
+# axis = np.linspace(axis[0],axis[-1],int(2*axis.shape[0]))
 axis = axis.astype(np.float128)
 energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)).logpdf(log_energy_measured)
 
