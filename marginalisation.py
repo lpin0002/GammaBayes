@@ -31,7 +31,7 @@ del(pseudomeasuredenergysamples_signal)
     # of each pair of the previous values you'd have 0,0.5,1.0,1.5,2.0,2.5,...,8.5,9.0,9.5,10.0. So the number of
     # samples hasn't actually doubled, it's increased by 2*(previous number -1)+1. That is what I replicate in 
     # general below.
-logenergyaxis_subdivisions= 4
+logenergyaxis_subdivisions= 3
 logmassrange = np.linspace(axis[0],axis[-1],logenergyaxis_subdivisions*(axis.shape[0]-1)+1)
 
 
@@ -109,7 +109,7 @@ print("Signal: ", marglist_signal.shape)
 ###############################################################################################################################################
 # Creating the mixture with lambda
 ###############################################################################################################################################
-lambdalist = np.linspace(0.,1.0,501)
+lambdalist = np.linspace(0.,1.0,51)
 
 
 print(marglist_signal.shape)
