@@ -8,7 +8,7 @@ import time
 import os
 import sys
 from utils import make_gaussian, backgrounddist, energydisp, inv_trans_sample, axis, find_closest,edispnorms
-import chime
+# import chime
 
 lambdaval           = np.float128(sys.argv[1])
 Nsamples            = np.float128(sys.argv[2])
@@ -68,6 +68,6 @@ np.save(f"runs/{timestring}/axis.npy", axis)
 
 np.save(f"runs/{timestring}/parameterarray", np.array([['logmass [TeV]', 'true lambda', 'Nsamples'],[signalcentreval, lambdaval, Nsamples]]))
 
-chime.success()
-chime.info('sonic')
+# chime.success()
+# chime.info('sonic')
 print("Finished script, please input into marginalisation.py for analysis.")

@@ -7,7 +7,7 @@ import os
 import sys
 from utils import make_gaussian, backgrounddist, energydisp, axis, edispnorms
 from scipy.sparse import dok_matrix
-import chime
+# import chime
 
 # The identifier for the run you are analyzing
 timestring = sys.argv[1]
@@ -178,7 +178,7 @@ print("\033[F2...")
 np.save(f"runs/{timestring}/logmassrange.npy", logmassrange)
 print("\033[F3...")
 np.save(f"runs/{timestring}/lambdarange.npy", lambdalist)
-chime.success()
-chime.info('sonic')
+# chime.success()
+# chime.info('sonic')
 print("\033[F Done! Hope the posteriors look good my g.")
 print(timestring)
