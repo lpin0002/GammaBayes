@@ -12,25 +12,43 @@ import chime
 # The identifier for the run you are analyzing
 timestring = sys.argv[1]
 
+# Using the identifier to access the measured samples and the log energy axis we used for the run(s).
 pseudomeasuredenergysamples_background  = np.load(f"runs/{timestring}/measured_background.npy")
 pseudomeasuredenergysamples_signal      = np.load(f"runs/{timestring}/measured_signal.npy")
 axis                                    = np.load(f"runs/{timestring}/axis.npy")
 
+# Concatenating the measured samples as we always work with them together anyway.
 measuredsamples = np.concatenate((pseudomeasuredenergysamples_signal, pseudomeasuredenergysamples_background))
 
+
+# This code has had some problems with memory usage in the past, and we don't won't to keep anything on ram that
+    # we don't need to. As these aren't used again we remove them for these reasons.
 del(pseudomeasuredenergysamples_background)
 del(pseudomeasuredenergysamples_signal)
 
+# The way the subdivisions in the code below works is that say you have a range of values 0,1,2,3,4,5,6,7,8,9,10
+    # If you then wanted to increase the number of divisions, effectively putting in an extra sample in the middle
+    # of each pair of the previous values you'd have 0,0.5,1.0,1.5,2.0,2.5,...,8.5,9.0,9.5,10.0. So the number of
+    # samples hasn't actually doubled, it's increased by 2*(previous number -1)+1. That is what I replicate in 
+    # general below.
+logenergyaxis_subdivisions= 4
+logmassrange = np.linspace(axis[0],axis[-1],logenergyaxis_subdivisions*(axis.shape[0]-1)+1)
 
-logmassrange = np.linspace(axis[0],axis[-1],axis.shape[0]-1)
 
+# Below I make a pseudo-lookup table of the value of the energy dispersion for each measured sample so that during the 
+    # marginalisation steps it isn't evaluated multiple times unnecessarily. The edispnorms are the log of normalisation
+    # factors for each value of _true energy_ where we want the total probability for the whole _measured energy_ axis
+    # to be one as that is how the energy dispersion is normalised.
 
 edisplist = []
 for sample in measuredsamples:
-    edisplist.append(energydisp(sample, axis)-np.log(edispnorms))
+    edisplist.append(energydisp(sample, axis)-edispnorms)
 edisplist = np.array(edisplist).astype(np.float128)
 
-
+# The axis we are effectively sampling is the log energy axis, hence the ''axis'' is in log energy. But our integration
+    # must occur over _energy_ so we need to map the axis values to the energy values with np.power(10.,_value_). We then 
+    # take the _natural_ log of this with np.log as we are primarily working in log probability space to avoid numerical
+    # instability problems.
 eaxis = np.power(10., axis).astype(np.float128)
 eaxis_mod = np.log(eaxis)
 print("edispnorms: ", edispnorms)
@@ -39,18 +57,32 @@ print("edisplist: ", edisplist)
 ###############################################################################################################################################
 # Marginalising with signal distribution
 ###############################################################################################################################################
+# We instantiate a python list for the marginalisation results for the signal
 marglist_signal = []
-for logmass in tqdm(logmassrange, desc="signal marginalisation"):
 
+# For this marginalisation, we must marginalise the events for all the different possible values of mass/logmass, hence this iteration
+for logmass in tqdm(logmassrange, desc="signal marginalisation", ncols=80):
+
+    # We instantiate a dummy list for storing the marginalisation results for a single signal model/logmass/mass
     marglist_singlemass = []
+
+    #Instantiating the signal model for that particular mass.
     singlemass_sigfunc = make_gaussian(centre=logmass, axis=axis)
+
+    # Calculating the normalisation for the signal function
     singlemass_sigfunc_norm = special.logsumexp(singlemass_sigfunc(axis))
     
 
     for i, sample in enumerate(measuredsamples):
+
+        # Evaluating the probability of the sample given the signal model
         singlemassfunceval = singlemass_sigfunc(sample)
+
+        # Evaluating the probability of the measured value given the prior and likelihood for the 
+            # range of true energies
         singledatumposterior = singlemassfunceval+edisplist[i]-singlemass_sigfunc_norm+eaxis_mod
 
+        # Using logsumexp for the actual marginalisation
         marglist_singlemass.append(special.logsumexp(singledatumposterior))
     
     marglist_signal.append(marglist_singlemass)
@@ -64,7 +96,7 @@ print(marglist_signal)
 ###############################################################################################################################################
 marglist_background =  []
 backgroundnorm = special.logsumexp(backgrounddist(axis).astype(np.float128))
-for i, sample in tqdm(enumerate(measuredsamples), desc="background marginalisation"):
+for i, sample in tqdm(enumerate(measuredsamples), desc="background marginalisation", ncols=80):
     marglist_background.append(special.logsumexp(backgrounddist(sample) + edisplist[i] - backgroundnorm + eaxis_mod))
 
 marglist_background = np.array(marglist_background)
@@ -77,7 +109,7 @@ print("Signal: ", marglist_signal.shape)
 ###############################################################################################################################################
 # Creating the mixture with lambda
 ###############################################################################################################################################
-lambdalist = np.linspace(0.85,0.95,11)
+lambdalist = np.linspace(0.,1.0,501)
 
 
 print(marglist_signal.shape)
@@ -97,7 +129,7 @@ print("new background list: ", marglist_background_repeated[0,:5])
 # Doing the product of all the data points
 ###############################################################################################################################################
 print("Multiplying models by lambda and (1-lambda)...")
-for lval in tqdm(lambdalist, desc="iterating through lambdas"):
+for lval in tqdm(lambdalist, desc="iterating through lambdas", ncols=80):
     fullmarglist_signal.append(np.log(lval)+marglist_signal)
     fullmarglist_background.append(np.log(1-lval)+marglist_background_repeated)
 
@@ -111,9 +143,9 @@ unnormalisedposterior = np.ones((lambdalist.shape[0], logmassrange.shape[0]), dt
 print("Calculating the unnormalised posterior...")
 for i, lambdaval in tqdm(enumerate(lambdalist), desc="lambda progress"):
     for j, logmass in enumerate(logmassrange):
-        addition = np.sum(np.logaddexp(fullmarglist_signal[i][j,:],fullmarglist_background[i][j,:]),dtype=np.float128)
+        product = np.sum(np.logaddexp(fullmarglist_signal[i][j,:],fullmarglist_background[i][j,:]),dtype=np.float128)
         # print(addition)
-        unnormalisedposterior[i,j] = addition.astype(np.float128)
+        unnormalisedposterior[i,j] = product
 print("Finished calculating the unnormalised posterior.")
 
 

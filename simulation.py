@@ -21,23 +21,26 @@ Nsamples_background = int(np.round((1-lambdaval)*Nsamples))
 
 signaldist = make_gaussian(centre = signalcentreval,axis=axis)
 
+eaxis = np.power(10.,axis)
+eaxis_mod = np.log(eaxis)
+
 print("Sampling the signal distribution...")
-truesamples_signal = axis[inv_trans_sample(Nsamples_signal, np.exp(signaldist(axis)+np.log(np.power(10.,axis))).astype(np.float128))]
+truesamples_signal = axis[inv_trans_sample(Nsamples_signal, np.exp(signaldist(axis)+eaxis_mod).astype(np.float128))]
 print("\033[F Sampling the background distribution...")
-truesamples_background = axis[inv_trans_sample(Nsamples_background, np.exp(backgrounddist(axis)+np.log(np.power(10.,axis))).astype(np.float128))]
+truesamples_background = axis[inv_trans_sample(Nsamples_background, np.exp(backgrounddist(axis)+eaxis_mod).astype(np.float128))]
 print("\033[F Finished sampling the true distributions.")
 
-
+# TODO: Inverses transform sampling with log probabilities
 print("Creating pseudo-measured signal values...")
 pseudomeasuredenergysamples_signal = []
 for sample in truesamples_signal:
-    pseudomeasuredenergysamples_signal.append(np.float128(axis[inv_trans_sample(1,np.exp(energydisp(sample, axis) - np.log(edispnorms)+np.log(np.power(10.,axis))).astype(np.float128))]))
+    pseudomeasuredenergysamples_signal.append(np.float128(axis[inv_trans_sample(1,np.exp(energydisp(sample, axis) - edispnorms+eaxis_mod).astype(np.float128))]))
 pseudomeasuredenergysamples_signal = np.array(pseudomeasuredenergysamples_signal).astype(np.float128)
 
 print("\033[F Creating psuedo-measured background values...")
 pseudomeasuredenergysamples_background = []
 for sample in truesamples_background:
-    pseudomeasuredenergysamples_background.append(np.float128(axis[inv_trans_sample(1,np.exp(energydisp(sample, axis) - np.log(edispnorms)+np.log(np.power(10.,axis))).astype(np.float128))]))
+    pseudomeasuredenergysamples_background.append(np.float128(axis[inv_trans_sample(1,np.exp(energydisp(sample, axis) - edispnorms+eaxis_mod).astype(np.float128))]))
 pseudomeasuredenergysamples_background = np.array(pseudomeasuredenergysamples_background).astype(np.float128)
 print("\033[F Finished creating pseudo-measured values.")
 

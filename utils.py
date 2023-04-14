@@ -16,13 +16,13 @@ axis = np.log10(edispkernel.axes["energy_true"].center.value)
 axis = axis[19:226]
 # axis = np.linspace(axis[0],axis[-1],int(2*axis.shape[0]))
 axis = axis.astype(np.float128)
-energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-3*(3-log_energy_true)).logpdf(log_energy_measured)
+energydisp = lambda log_energy_measured, log_energy_true: stats.norm(loc=log_energy_true, scale = 1e-2*(np.abs(3-log_energy_true)+0.5)*(axis[1]-axis[0])).logpdf(log_energy_measured)
 
 # axis = np.linspace(-1.5,2.5,300)
 
 edispnorms = []
 for val in axis:
-     edispnorms.append(np.sum(np.exp(energydisp(axis, val))))
+     edispnorms.append(special.logsumexp(energydisp(axis, val)))
 edispnorms = np.array(edispnorms)
 
 def find_closest(arr, val):
