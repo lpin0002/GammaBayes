@@ -12,12 +12,13 @@ edispfull = irfs['edisp']
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 # edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).logpdf(erecon)
-edisp = lambda erecon, etrue: np.log(edispkernel.evaluate(energy_true=np.power(10.,etrue)*u.TeV, energy = np.power(10.,erecon)*u.TeV).value)
-axis = np.linspace(-1,2,61)
+edisp = lambda erecon, etrue: np.log(edispkernel.evaluate(energy_true=np.power(10.,etrue)*u.TeV, 
+                                                   energy = np.power(10.,erecon)*u.TeV).value)
+axis = np.linspace(np.log10(0.3),np.log10(200),61)
 
 
-def makedist(centre, spread=0.1):
-    func = lambda x: stats.norm(loc=centre, scale=spread).logpdf(x)
+def makedist(centre, spread=0.5):
+    func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
 print(axis)
 

@@ -23,7 +23,7 @@ plt.hist(bkgsamples_measured, bins=centrevals, alpha=0.7)
 plt.show()
 
 
-logmassrange = np.linspace(0.8,1.2,81)
+logmassrange = np.linspace(-2,2,81)
 
 edispnorms = np.array([special.logsumexp(edisp(axis,axisval)) for axisval in axis])
 
