@@ -13,7 +13,7 @@ import chime
 
 
 
-print(axis)
+print(list(axis))
 # edispkernel.normalize('energy')
 
 plt.figure()
