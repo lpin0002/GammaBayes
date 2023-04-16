@@ -15,7 +15,8 @@ edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 edisp = lambda erecon, etrue: np.log(edispkernel.evaluate(energy_true=np.power(10.,etrue)*u.TeV, 
                                                    energy = np.power(10.,erecon)*u.TeV).value)
 axis = np.linspace(np.log10(0.3),np.log10(200),61)
-
+eaxis = np.power(10., axis)
+eaxis_mod = np.log(eaxis)
 
 def makedist(centre, spread=0.5):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
@@ -39,8 +40,8 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
     Returns:
         A random integer index between 0 and len(pmf) - 1, inclusive.
     """
+    logpmf = logpmf - special.logsumexp(logpmf)
     pmf = np.exp(logpmf)
-    pmf = pmf/np.sum(pmf)
     cdf = np.cumsum(pmf)  # compute the cumulative distribution function
     # print(cdf)
     randvals = [random.random() for xkcd in range(Nsamples)]

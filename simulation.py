@@ -4,25 +4,25 @@ import os
 import matplotlib.pyplot as plt
 import random
 from tqdm import tqdm
-from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist
+from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist, eaxis_mod
 
 
-sigdist = makedist(1.0)
+sigdist = makedist(0.5)
 
-nevents = 10000
-sigsamples = axis[inverse_transform_sampling(sigdist(axis),nevents)]
+nevents = 500000
+sigsamples = axis[inverse_transform_sampling(sigdist(axis)+eaxis_mod,nevents)]
 
 sigsamples_measured = []
 for sigsample in tqdm(sigsamples, desc="Creating measured signal vals..."):
-    sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample),Nsamples=1)])
+    sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample)+eaxis_mod,Nsamples=1)])
 sigsamples_measured = np.array(sigsamples_measured)
 
 
-bkgsamples = axis[inverse_transform_sampling(bkgdist(axis),nevents)]
+bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+eaxis_mod,nevents)]
 
 bkgsamples_measured = []
-for bkgsample in tqdm(bkgsamples, desc="Creating measured signal vals..."):
-    bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample),Nsamples=1)])
+for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals..."):
+    bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample)+eaxis_mod,Nsamples=1)])
 bkgsamples_measured = np.array(bkgsamples_measured)
 
 
