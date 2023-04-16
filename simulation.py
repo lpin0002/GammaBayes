@@ -7,10 +7,13 @@ from tqdm import tqdm
 from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist, eaxis_mod
 
 
-sigdist = makedist(0.5)
+sigdist = makedist(1.1)
 
-nevents = 500000
-sigsamples = axis[inverse_transform_sampling(sigdist(axis)+eaxis_mod,nevents)]
+nevents = 2000
+lambdaval = 0.9
+nsig = int(np.round(lambdaval*nevents))
+nbkg = int(np.round((1-lambdaval)*nevents))
+sigsamples = axis[inverse_transform_sampling(sigdist(axis)+eaxis_mod,nsig)]
 
 sigsamples_measured = []
 for sigsample in tqdm(sigsamples, desc="Creating measured signal vals..."):
@@ -18,7 +21,7 @@ for sigsample in tqdm(sigsamples, desc="Creating measured signal vals..."):
 sigsamples_measured = np.array(sigsamples_measured)
 
 
-bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+eaxis_mod,nevents)]
+bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+eaxis_mod,nbkg)]
 
 bkgsamples_measured = []
 for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals..."):

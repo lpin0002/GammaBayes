@@ -14,11 +14,12 @@ edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 # edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).logpdf(erecon)
 edisp = lambda erecon, etrue: np.log(edispkernel.evaluate(energy_true=np.power(10.,etrue)*u.TeV, 
                                                    energy = np.power(10.,erecon)*u.TeV).value)
-axis = np.linspace(np.log10(0.3),np.log10(200),61)
+axis = np.log10(edispkernel.axes['energy'].center.value)
+axis = axis[18:227]
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
 
-def makedist(centre, spread=0.5):
+def makedist(centre, spread=0.3):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
 print(axis)
