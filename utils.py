@@ -9,6 +9,9 @@ from astropy import units as u
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
 edispfull = irfs['edisp']
+bkgfull = irfs['bkg'].to_2d()
+
+bkgdist = lambda logenerg: np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 # edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).logpdf(erecon)
@@ -22,13 +25,13 @@ eaxis_mod = np.log(eaxis)
 def makedist(centre, spread=0.3):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
-print(axis)
 
 
 
 
 
-bkgdist = makedist(-0.5)
+
+# bkgdist = makedist(-0.5)
 
 
 
@@ -48,3 +51,18 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]
     return indices
+
+
+
+# Purely for different looking terminal outputs
+class color:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'

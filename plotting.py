@@ -1,94 +1,69 @@
-import matplotlib.pyplot as plt
+from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, color
+from scipy import integrate, special, interpolate, stats
 import numpy as np
-import os, sys
+import os, time, random
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import chime
+from BFCalc.BFInterp import DM_spectrum_setup
 import warnings
-warnings.filterwarnings("ignore", category = RuntimeWarning)
 
-# The identifier for the run you are analyzing
-timestring      = sys.argv[1]
-params          = np.load(f"runs/{timestring}/parameterarray.npy")
-signalcentreval = float(params[1,0])
-truelambda      = float(params[1,1])
-Nevents      = float(params[1,2])
 
-pseudomeasuredenergysamples_background  = np.load(f"runs/{timestring}/measured_background.npy")
-pseudomeasuredenergysamples_signal      = np.load(f"runs/{timestring}/measured_signal.npy")
-truesamples_background                  = np.load(f"runs/{timestring}/true_background.npy")
-truesamples_signal                      = np.load(f"runs/{timestring}/true_signal.npy")
-axis                                    = np.load(f"runs/{timestring}/axis.npy")
-edisplist                               = np.load(f"runs/{timestring}/edisplist.npy")
 
-measuredsamples = np.concatenate((pseudomeasuredenergysamples_signal, pseudomeasuredenergysamples_background))
+sigsamples          = np.load("truesigsamples.npy")
+sigsamples_measured = np.load("meassigsamples.npy")
+bkgsamples          = np.load("truebkgsamples.npy")
+bkgsamples_measured = np.load("measbkgsamples.npy")
+params              = np.load("params.npy")
+params[1,:]         = params[1,:]
+truelogmass     = float(params[1,2])
+nevents         = int(params[1,1])
+truelambdaval   = float(params[1,0])
+truevals            = np.concatenate((sigsamples, bkgsamples))
+measuredvals        = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
-print(params)
+logmasslowerbound = truelogmass-20/np.sqrt(nevents)
+if logmasslowerbound<axis[0]:
+       logmasslowerbound = axis[0]
+logmassrange = np.linspace(logmasslowerbound,truelogmass+20/np.sqrt(nevents),61)
+# lambdarange = np.linspace(truelambdaval-2/np.sqrt(nevents),truelambdaval+2/np.sqrt(nevents),41)
+lambdarange = np.array([0.45, 0.5])
+normedlogposterior = np.load("normedlogposterior.npy")
+
 
 
 plt.figure()
-plt.hist(pseudomeasuredenergysamples_background, bins=axis)
-plt.hist(pseudomeasuredenergysamples_signal, bins=axis)
-plt.title(f"Nevents = {Nevents}")
-plt.xlabel("Log E [TeV]")
-plt.savefig(f"runs/{timestring}/pseudomeasuredsamples.png")
-plt.savefig(f"runs/{timestring}/pseudomeasuredsamples.pdf")
+plt.pcolormesh(lambdarange, logmassrange, np.exp(normedlogposterior))
+plt.ylabel("log mass [TeV]")
+plt.xlabel("lambda = signal events/total events")
+plt.colorbar(label="Probability Density [1/TeV]")
+plt.axvline(truelogmass, c='r')
+plt.axhline(truelambdaval, c='r')
+plt.savefig("posterior.pdf")
 plt.show()
 
 plt.figure()
-plt.hist(np.power(10.,truesamples_background), bins=np.power(10.,axis))
-plt.hist(np.power(10.,truesamples_signal), bins=np.power(10.,axis))
-plt.xlabel("E [TeV]")
-plt.savefig(f"runs/{timestring}/truesamples.png")
-plt.savefig(f"runs/{timestring}/truesamples.pdf")
-plt.show()
-
-
-normalisedposterior                     = np.exp(np.load(f"runs/{timestring}/posteriorarray.npy"))
-logmassrange                            = np.load(f"runs/{timestring}/logmassrange.npy")
-lambdarange                             = np.load(f"runs/{timestring}/lambdarange.npy")
-
-
-plt.figure()
-plt.pcolormesh(logmassrange.astype(float), lambdarange.astype(float), normalisedposterior, cmap='inferno')
-plt.axvline(signalcentreval, lw=0.5, c='g')
-plt.axhline(truelambda, lw=0.5, c='g')
-plt.savefig(f"runs/{timestring}/posterior.png")
-plt.savefig(f"runs/{timestring}/posterior.pdf")
-plt.colorbar()
-plt.show()
-
-plt.figure()
-plt.plot(lambdarange, normalisedposterior[:, np.abs(logmassrange - signalcentreval).argmin()], lw=0.5)
-plt.axvline(truelambda, lw=0.5)
-plt.savefig(f"runs/{timestring}/lambdaslice.png")
-plt.savefig(f"runs/{timestring}/lambdaslice.pdf")
-plt.show()
-
-
-plt.figure()
-plt.plot(logmassrange, normalisedposterior[np.abs(lambdarange - truelambda).argmin(),:], lw=0.5)
-plt.axvline(signalcentreval, lw=0.5, c='g', label="actual val")
-plt.axvline(axis[(np.abs(axis-signalcentreval)).argmin()], lw=0.5, label="Closest val on axis")
-plt.axvline(axis[(np.abs(axis-signalcentreval)).argmin()]+(axis[1]-axis[0]), lw=0.5, c='pink', label="Closest val to the right")
-plt.axvline(axis[(np.abs(axis-signalcentreval)).argmin()]-(axis[1]-axis[0]), lw=0.5, c='purple', label="Closest val to the left")
-
-plt.xlim([axis[(np.abs(axis-signalcentreval)).argmin()]-3*(axis[1]-axis[0]),
-          axis[(np.abs(axis-signalcentreval)).argmin()]+3*(axis[1]-axis[0])])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()+3])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()+2])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()+1])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()-1])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()-2])
+plt.axvline(logmassrange[np.abs(logmassrange-truelogmass).argmin()-3])
+plt.plot(logmassrange, np.exp(normedlogposterior[:, np.abs(truelambdaval-lambdarange).argmin()]))
+plt.axvline(truelogmass, c='r', label=params[1,2])
+plt.xlabel("log mass [TeV]")
+plt.ylabel("Probability density (slice) [1/TeV]")
 plt.legend()
-plt.savefig(f"runs/{timestring}/logmassslice.png")
-plt.savefig(f"runs/{timestring}/logmassslice.pdf")
+plt.savefig("logmassslice.pdf")
 plt.show()
 
 
-plt.figure(figsize=(20,5))
-for i, sample in enumerate(measuredsamples[:5]):
-    plt.plot(axis, np.exp(edisplist[i]))
-    plt.axvline(measuredsamples[i], c='g', label=np.round(measuredsamples[i],3))
-
-for j, sample in enumerate(measuredsamples[-5:]):
-    plt.plot(axis, np.exp(edisplist[-5+j]))
-    plt.axvline(measuredsamples[-5+j],c='r', label=np.round(measuredsamples[-5+j],3))
+plt.figure()
+plt.plot(lambdarange, np.exp(normedlogposterior[:, np.abs(truelogmass-logmassrange).argmin()]))
+plt.xlabel("lambda = signal events/total events")
+plt.ylabel("Probability density (slice) []")
+plt.axvline(truelambdaval,c='r', label=params[1,0])
 plt.legend()
-
-plt.savefig(f"runs/{timestring}/edisplistcheck.png")
-plt.savefig(f"runs/{timestring}/edisplistcheck.pdf")
+plt.savefig("lambdaslice.pdf")
 plt.show()
