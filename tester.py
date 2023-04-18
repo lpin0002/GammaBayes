@@ -5,37 +5,60 @@ import matplotlib.pyplot as plt
 import random
 from tqdm import tqdm
 import dynesty
-
-axis = np.linspace(-2,2,100)
-
-sampledist = lambda x: stats.uniform(loc=-2., scale=4).logpdf(x)
-
-energydisp = lambda x: stats.norm(loc=0.0, scale=0.5).logpdf(x)
+from dynesty import plotting as dyplot
+import math
+from utils import axis
+print('\n')
 
 
 
-# Define the dimensionality of our problem.
+nlive = 1024
+dlogz = 0.2
+likelihoodspread = 0.5
+priorspread = 0.3
+priorcentre = 0.5
 ndim = 1
+measuredval = 0.0
 
 
-def loglike(x):
-    return float(stats.norm(loc=0.0, scale=0.5).logpdf(x))
+
+energydisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=likelihoodspread).logpdf(erecon)
+
+def makedist(centre=priorcentre, spread =priorspread):
+    sampledist = lambda x: stats.norm(loc=centre, scale=spread).logpdf(x)
+    return sampledist 
+
+def makeloglike(measured=measuredval):
+    def loglike(x):
+        return float(energydisp(measured, x))
+    return loglike
 
 # Define our uniform prior via the prior transform.
-def ptform(u):
-    return 4. * u - 2.
 
+def makeptform(centre=priorcentre):
+    sampledist = makedist(priorcentre)
+    def ptform(u):
+        logpmf = sampledist(axis)
+        logpmf = logpmf - special.logsumexp(logpmf)
+        pmf = np.exp(logpmf)
+        cdf = np.cumsum(pmf)
+        index = np.searchsorted(cdf, u[0])
+        u[0] = axis[index]
+        return u
+    return ptform
+
+endsample = 1
 # Sample from our distribution.
-sampler = dynesty.NestedSampler(loglike, ptform, ndim,
-                                bound='single', nlive=1000)
-sampler.run_nested(dlogz=0.1)
+sampler = dynesty.NestedSampler(makeloglike(measuredval), makeptform(priorcentre), ndim,
+                                bound='single', nlive=nlive)
+sampler.run_nested(dlogz=dlogz)
 res = sampler.results
 
-marglist = np.exp(energydisp(axis)+sampledist(axis))
-marglistint = integrate.simps(y=marglist, x=axis)
+marglist = energydisp(measuredval, axis)+makedist(priorcentre)(axis)
+marglistint = np.exp(special.logsumexp(marglist))*(axis[1]-axis[0])
 plt.figure()
-histvals = plt.hist(res["samples"], bins=axis.shape[0])
-plt.plot(axis, marglist/np.max(marglist)*np.max(histvals[0]))
+histvals = plt.hist(res["samples"][:-endsample], bins=int(axis.shape[0]/5))
+plt.plot(axis, np.exp(marglist)/np.max(np.exp(marglist))*np.max(histvals[0]))
 plt.show()
 
 print(np.exp(res['logz'][-1]), marglistint)
@@ -44,25 +67,22 @@ print(np.exp(res['logz'][-1]), marglistint)
 
 
 
-energydisp = lambda x: stats.norm(loc=1.0, scale=0.5).logpdf(x)
-
-
-
-def loglike(x):
-    return float(energydisp(x))
-
 
 # Sample from our distribution.
-sampler = dynesty.NestedSampler(loglike, ptform, ndim,
-                                bound='single', nlive=1000)
-sampler.run_nested(dlogz=0.1)
+sampler = dynesty.NestedSampler(makeloglike(measuredval), makeptform(priorcentre), ndim,
+                                bound='single', nlive=nlive)
+sampler.run_nested(dlogz=dlogz)
 res = sampler.results
 
-marglist = np.exp(energydisp(axis)+sampledist(axis))
-marglistint = integrate.simps(y=marglist, x=axis)
+marglist = energydisp(measuredval, axis)+makedist(priorcentre)(axis)
+marglistint = np.exp(special.logsumexp(marglist))*(axis[1]-axis[0])
 plt.figure()
-histvals = plt.hist(res["samples"], bins=axis.shape[0])
-plt.plot(axis, marglist/np.max(marglist)*np.max(histvals[0]))
+histvals = plt.hist(res["samples"][:-endsample], bins=int(axis.shape[0]/5))
+plt.plot(axis, np.exp(marglist)/np.max(np.exp(marglist))*np.max(histvals[0]))
 plt.show()
 
 print(np.exp(res['logz'][-1]), marglistint)
+lnz_truth = np.log(marglistint)# analytic evidence solution
+fig, axes = dyplot.runplot(res, lnz_truth=lnz_truth)
+plt.show()
+print('\n\n')
