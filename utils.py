@@ -6,32 +6,38 @@ import random
 from tqdm import tqdm
 from gammapy.irf import load_cta_irfs
 from astropy import units as u
+import dynesty
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
 edispfull = irfs['edisp']
 bkgfull = irfs['bkg'].to_2d()
 
-bkgdist = lambda logenerg: np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
-# edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).logpdf(erecon)
-edisp = lambda erecon, etrue: np.log(edispkernel.evaluate(energy_true=np.power(10.,etrue)*u.TeV, 
-                                                   energy = np.power(10.,erecon)*u.TeV).value)
 axis = np.log10(edispkernel.axes['energy'].center.value)
 axis = axis[18:227]
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
+
+
+# def edisp(logerecon,logetrue):
+#     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
+#     norm = special.logsumexp(eaxis_mod+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
+#     return val-norm
+
+
+edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).logpdf(erecon)
+
+
 
 def makedist(centre, spread=0.3):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
 
 
+# bkgdist = lambda logenerg: np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
-
-
-
-# bkgdist = makedist(-0.5)
+bkgdist = makedist(-0.5)
 
 
 
@@ -66,3 +72,6 @@ class color:
    BOLD = '\033[1m'
    UNDERLINE = '\033[4m'
    END = '\033[0m'
+
+
+

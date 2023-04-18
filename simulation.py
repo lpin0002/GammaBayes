@@ -16,7 +16,7 @@ truelogmass = 0.5
 sigdist = sigdistsetup(truelogmass)
 
 
-nevents = 50000
+nevents = 50
 lambdaval = 0.5
 nsig = int(np.round(lambdaval*nevents))
 nbkg = int(np.round((1-lambdaval)*nevents))

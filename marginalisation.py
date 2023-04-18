@@ -58,13 +58,19 @@ if -np.inf in edispnorms:
        print(color.BOLD+"Your energy dispersion normalisation has -np.inf inside, which will almostly definitely mean your energy dispersion or the normalisation is wrong."+color.END)
 
 edisplist = []
-for sample in measuredvals:
+bkgmarglist = []
+bkgdistnormed = bkgdist(axis) - special.logsumexp(bkgdist(axis)+eaxis_mod)
+
+
+print(f"There are {color.BLUE}{nevents}{color.END} events being analyzed.")
+for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100):
         edisplist.append(edisp(sample,axis)-edispnorms)
+        bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+eaxis_mod))
 edisplist = np.array(edisplist)
 
-logmassposterior = []
 
-bkgdistnormed = bkgdist(axis) - special.logsumexp(bkgdist(axis)+eaxis_mod)
+
+logmassposterior = []
 for logmass in tqdm(logmassrange, ncols=100, desc="Computing log posterior in lambda and logmDM"):
        templogmassrow = []
        for lambdaval in lambdarange:
@@ -73,10 +79,8 @@ for logmass in tqdm(logmassrange, ncols=100, desc="Computing log posterior in la
 
               tempmargval = 0
               for i, sample in enumerate(measuredvals):
-                     temppriorvals = np.logaddexp(np.log(lambdaval)+tempsigdistaxis,np.log(1-lambdaval)+bkgdistnormed)
-                     # print(tempval)
-                     tempmargval += special.logsumexp(temppriorvals+edisplist[i]+eaxis_mod)
-              
+                     tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+eaxis_mod)
+                     tempmargval += np.logaddexp(np.log(lambdaval)+tempsigmarg,np.log(1-lambdaval)+bkgmarglist[i])
               # print(f"{tempmargval:.2e}", end='\r')
               
               templogmassrow.append(tempmargval)

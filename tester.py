@@ -1,32 +1,68 @@
-from scipy import integrate, special, interpolate, stats
+from scipy import integrate, special, interpolate, stats, linalg
 import numpy as np
 import os
 import matplotlib.pyplot as plt
 import random
 from tqdm import tqdm
-from gammapy.irf import load_cta_irfs
-from astropy import units as u
+import dynesty
+
+axis = np.linspace(-2,2,100)
+
+sampledist = lambda x: stats.uniform(loc=-2., scale=4).logpdf(x)
+
+energydisp = lambda x: stats.norm(loc=0.0, scale=0.5).logpdf(x)
+
+
+
+# Define the dimensionality of our problem.
+ndim = 1
+
+
+def loglike(x):
+    return float(stats.norm(loc=0.0, scale=0.5).logpdf(x))
+
+# Define our uniform prior via the prior transform.
+def ptform(u):
+    return 4. * u - 2.
+
+# Sample from our distribution.
+sampler = dynesty.NestedSampler(loglike, ptform, ndim,
+                                bound='single', nlive=1000)
+sampler.run_nested(dlogz=0.1)
+res = sampler.results
+
+marglist = np.exp(energydisp(axis)+sampledist(axis))
+marglistint = integrate.simps(y=marglist, x=axis)
+plt.figure()
+histvals = plt.hist(res["samples"], bins=axis.shape[0])
+plt.plot(axis, marglist/np.max(marglist)*np.max(histvals[0]))
+plt.show()
+
+print(np.exp(res['logz'][-1]), marglistint)
 
 
 
 
-irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
-edispfull = irfs['edisp']
-
-edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
-# edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).logpdf(erecon)
-edisp = lambda erecon, etrue: np.log(edispkernel.evaluate(energy_true=np.power(10.,etrue)*u.TeV, 
-                                                   energy = np.power(10.,erecon)*u.TeV).value)
-axis = np.log10(edispkernel.axes['energy'].center.value)
-axis = axis[18:227]
-eaxis = np.power(10., axis)
-eaxis_mod = np.log(eaxis)
+energydisp = lambda x: stats.norm(loc=1.0, scale=0.5).logpdf(x)
 
 
 
-edispnorms = np.array([special.logsumexp(edisp(axis,axisval)+eaxis_mod) for axisval in axis])
+def loglike(x):
+    return float(energydisp(x))
 
 
-for i, edispval in enumerate(edispnorms):
-    print(i, edispval)
+# Sample from our distribution.
+sampler = dynesty.NestedSampler(loglike, ptform, ndim,
+                                bound='single', nlive=1000)
+sampler.run_nested(dlogz=0.1)
+res = sampler.results
+
+marglist = np.exp(energydisp(axis)+sampledist(axis))
+marglistint = integrate.simps(y=marglist, x=axis)
+plt.figure()
+histvals = plt.hist(res["samples"], bins=axis.shape[0])
+plt.plot(axis, marglist/np.max(marglist)*np.max(histvals[0]))
+plt.show()
+
+print(np.exp(res['logz'][-1]), marglistint)
