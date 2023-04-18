@@ -7,7 +7,7 @@ from tqdm import tqdm
 import dynesty
 from dynesty import plotting as dyplot
 import math
-from utils import axis
+from utils import axis, eaxis_mod
 print('\n')
 
 
@@ -30,7 +30,7 @@ def makedist(centre=priorcentre, spread =priorspread):
 
 def makeloglike(measured=measuredval):
     def loglike(x):
-        return float(energydisp(measured, x))
+        return float(energydisp(measured, x)+np.log(np.power(10.,x)))
     return loglike
 
 # Define our uniform prior via the prior transform.
@@ -54,7 +54,7 @@ sampler = dynesty.NestedSampler(makeloglike(measuredval), makeptform(priorcentre
 sampler.run_nested(dlogz=dlogz)
 res = sampler.results
 
-marglist = energydisp(measuredval, axis)+makedist(priorcentre)(axis)
+marglist = energydisp(measuredval, axis)+makedist(priorcentre)(axis)+eaxis_mod
 marglistint = np.exp(special.logsumexp(marglist))*(axis[1]-axis[0])
 plt.figure()
 histvals = plt.hist(res["samples"][:-endsample], bins=int(axis.shape[0]/5))
@@ -74,7 +74,7 @@ sampler = dynesty.NestedSampler(makeloglike(measuredval), makeptform(priorcentre
 sampler.run_nested(dlogz=dlogz)
 res = sampler.results
 
-marglist = energydisp(measuredval, axis)+makedist(priorcentre)(axis)
+marglist = energydisp(measuredval, axis)+makedist(priorcentre)(axis)+eaxis_mod
 marglistint = np.exp(special.logsumexp(marglist))*(axis[1]-axis[0])
 plt.figure()
 histvals = plt.hist(res["samples"][:-endsample], bins=int(axis.shape[0]/5))
