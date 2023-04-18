@@ -13,7 +13,7 @@ print('\n')
 
 
 nlive = 1024
-dlogz = 0.2
+dlogz = 0.1
 likelihoodspread = 0.5
 priorspread = 0.3
 priorcentre = 0.5
@@ -79,10 +79,12 @@ marglistint = np.exp(special.logsumexp(marglist))*(axis[1]-axis[0])
 plt.figure()
 histvals = plt.hist(res["samples"][:-endsample], bins=int(axis.shape[0]/5))
 plt.plot(axis, np.exp(marglist)/np.max(np.exp(marglist))*np.max(histvals[0]))
+plt.savefig("NestedSampling_vs_DirectIntegration.png")
 plt.show()
 
 print(np.exp(res['logz'][-1]), marglistint)
 lnz_truth = np.log(marglistint)# analytic evidence solution
 fig, axes = dyplot.runplot(res, lnz_truth=lnz_truth)
+plt.savefig('ConvergencePlot.png')
 plt.show()
 print('\n\n')
