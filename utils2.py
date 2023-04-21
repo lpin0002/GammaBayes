@@ -1,12 +1,11 @@
 from scipy import integrate, special, interpolate, stats
 import numpy as np
-import os
+import os, sys, dynesty, random, shutil
+from dynesty.utils import get_print_fn_args
 import matplotlib.pyplot as plt
-import random
 from tqdm import tqdm
 from gammapy.irf import load_cta_irfs
 from astropy import units as u
-import dynesty
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
 edispfull = irfs['edisp']
@@ -18,6 +17,7 @@ axis = np.log10(edispkernel.axes['energy'].center.value)
 axis = axis[18:227]
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
+logjacob = eaxis_mod+np.log(np.log(10))
 
 
 # def edisp(logerecon,logetrue):
@@ -30,7 +30,7 @@ edisp = lambda erecon, etrue: stats.norm(loc=etrue, scale=(axis[1]-axis[0])).log
 
 
 
-def makedist(centre, spread=0.3):
+def makedist(centre, spread=1.0):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
 
@@ -72,4 +72,36 @@ class color:
    BOLD = '\033[1m'
    UNDERLINE = '\033[4m'
    END = '\033[0m'
+
+
+def custom_print_function(results,
+                      niter,
+                      ncall,
+                      add_live_it=None,
+                      dlogz=None,
+                      stop_val=None,
+                      nbatch=None,
+                      logl_min=-np.inf,
+                      logl_max=np.inf):
+    """
+    Custom print function for DyNesty's print_progress argument that shows time elapsed and dlogz value,
+    and overwrites the previous message in the terminal for each iteration.
+    """
+    
+    # elapsed_time = results['elapsed_time']
+    dlogz = results.delta_logz if results.delta_logz <1000000 else np.nan
+    # message = f"Elapsed time: {elapsed_time:.2f} s | dlogz: {dlogz:.2f}"
+    message = f"dlogz: {dlogz:.2f}"
+
+
+    if custom_print_function.prev_line is not None:
+        sys.stdout.write("\r" + message)
+    else:
+        sys.stdout.write("\n"+message)
+        custom_print_function.prev_line = [message]
+    sys.stdout.flush()
+    
+    # print("Prevline", custom_print_function.prev_line)
+
+custom_print_function.prev_line = None
 

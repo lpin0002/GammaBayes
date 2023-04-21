@@ -2,12 +2,12 @@
 from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, color
 from scipy import integrate, special, interpolate, stats
 import numpy as np
-import os, time, random
+import os, time, random, warnings, concurrent.futures
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import chime
 from BFCalc.BFInterp import DM_spectrum_setup
-import warnings
+
 # chime.info('sonic')
 
 sigdistsetup = makedist
@@ -27,12 +27,16 @@ truevals            = np.concatenate((sigsamples, bkgsamples))
 measuredvals        = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
 
-logmasslowerbound = truelogmass-1/np.sqrt(nevents)
+logmasslowerbound = truelogmass-1/np.sqrt(nevents*2)
 if logmasslowerbound<axis[0]:
        logmasslowerbound = axis[0]
 
-logmassrange = np.linspace(logmasslowerbound,truelogmass+1/np.sqrt(nevents),21)
-lambdarange = np.linspace(truelambdaval-2/np.sqrt(nevents),truelambdaval+2/np.sqrt(nevents),21)
+nbins = 41
+
+logmassrange = np.linspace(logmasslowerbound,truelogmass+1/np.sqrt(nevents*2),nbins)
+lambdarange = np.linspace(truelambdaval-1/np.sqrt(nevents/2),truelambdaval+1/np.sqrt(nevents/2),nbins)
+np.save('logmassrange.npy',logmassrange)
+np.save('lambdarange.npy',lambdarange)
 # lambdarange = np.array([0.45, 0.5])
 
 print(color.BOLD+f"""\n\n{color.BOLD}{color.GREEN}IMPORTANT PARAMETERS: {color.END}
@@ -69,18 +73,30 @@ for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and b
 edisplist = np.array(edisplist)
 
 
+sigmarglogzvals = []
+tempsigfuncs = []
+
+
+for logmass in tqdm(logmassrange, desc="Marginalising over signal priors", ncols=100):
+       tempsigdist = sigdistsetup(logmass)
+       tempsigfuncs.append(tempsigdist)
+       tempmargval = 0
+       tempmarglogmassrow = []
+       tempsigdist = sigdistsetup(logmass)
+       tempsigdistaxis = tempsigdist(axis) - special.logsumexp(tempsigdist(axis)+eaxis_mod)
+       for i, sample in enumerate(measuredvals):
+              tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+eaxis_mod)
+              tempmarglogmassrow.append(tempsigmarg)
+       sigmarglogzvals.append(tempmarglogmassrow)
+
 
 logmassposterior = []
-for logmass in tqdm(logmassrange, ncols=100, desc="Computing log posterior in lambda and logmDM"):
+for j in tqdm(range(len(logmassrange)), ncols=100, desc="Computing log posterior in lambda and logmDM"):
        templogmassrow = []
        for lambdaval in lambdarange:
-              tempsigdist = sigdistsetup(logmass)
-              tempsigdistaxis = tempsigdist(axis) - special.logsumexp(tempsigdist(axis)+eaxis_mod)
-
               tempmargval = 0
               for i, sample in enumerate(measuredvals):
-                     tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+eaxis_mod)
-                     tempmargval += np.logaddexp(np.log(lambdaval)+tempsigmarg,np.log(1-lambdaval)+bkgmarglist[i])
+                     tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[j][i],np.log(1-lambdaval)+bkgmarglist[i])
               # print(f"{tempmargval:.2e}", end='\r')
               
               templogmassrow.append(tempmargval)
@@ -93,50 +109,14 @@ print("\n")
        # to deal with
 # logmassposterior = np.where(np.isnan(logmassposterior),-np.inf, logmassposterior)
 normedlogposterior = logmassposterior - special.logsumexp(logmassposterior)
-np.save("normedlogposterior.npy", normedlogposterior)
+np.save("normedlogposteriorDirect.npy", normedlogposterior)
 
 
 chime.info('sonic')
 
 
 
-plt.figure()
-plt.pcolormesh(lambdarange, logmassrange, np.exp(normedlogposterior))
-plt.ylabel("log mass [TeV]")
-plt.xlabel("lambda = signal events/total events")
-plt.colorbar(label="Probability Density [1/TeV]")
-plt.axhline(truelogmass, c='r')
-plt.axvline(truelambdaval, c='r')
-if measuredvals.shape[0]>10000:
-       plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"posterior%H%M_{measuredvals.shape[0]}.pdf"))
-plt.savefig("posterior.pdf")
-plt.show()
 
-plt.figure()
-plt.plot(logmassrange, np.exp(normedlogposterior[:,np.abs(truelambdaval-lambdarange).argmin()]))
-plt.axvline(truelogmass, c='r', label=params[1,2])
-plt.xlabel("log mass [TeV]")
-plt.ylabel("Probability density (slice) [1/TeV]")
-plt.legend()
-plt.savefig("logmassslice.pdf")
-if measuredvals.shape[0]>10000:
-       plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"logmassslice%H%M_{measuredvals.shape[0]}.pdf"))
-plt.show()
-
-
-plt.figure()
-plt.plot(lambdarange, np.exp(normedlogposterior[np.abs(truelogmass-logmassrange).argmin(),:]))
-plt.xlabel("lambda = signal events/total events")
-plt.ylabel("Probability density (slice) []")
-plt.axvline(truelambdaval,c='r', label=params[1,0])
-plt.legend()
-if measuredvals.shape[0]>10000:
-       plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"lambdaslice%H%M_{measuredvals.shape[0]}.pdf"))
-plt.savefig("lambdaslice.pdf")
-plt.show()
 
 
 
