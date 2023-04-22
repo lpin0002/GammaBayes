@@ -1,10 +1,7 @@
 from scipy import integrate, special, interpolate, stats
-import numpy as np
-import os, sys, time
-import matplotlib.pyplot as plt
-import random
+import os, sys, time, random, chime, numpy as np, matplotlib.pyplot as plt
 from tqdm import tqdm
-from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist, eaxis_mod, eaxis
+from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist, eaxis_mod, eaxis, logjacob
 from BFCalc.BFInterp import DM_spectrum_setup
 # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
 np.seterr(divide='ignore', invalid='ignore')
@@ -15,28 +12,28 @@ except:
     identifier = time.strftime("%d%m%H%M")
 sigdistsetup = makedist
 
-truelogmass = 1.
+truelogmass = 1.3
 
 sigdist = sigdistsetup(truelogmass)
 
 
-nevents = 20000
-lambdaval = 0.9
+nevents = 100
+lambdaval = 0.5
 nsig = int(np.round(lambdaval*nevents))
 nbkg = int(np.round((1-lambdaval)*nevents))
-sigsamples = axis[inverse_transform_sampling(sigdist(axis)+eaxis_mod,nsig)]
+sigsamples = axis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
 
 sigsamples_measured = []
 for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
-    sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample)+eaxis_mod,Nsamples=1)])
+    sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample)+logjacob,Nsamples=1)])
 sigsamples_measured = np.array(sigsamples_measured)
 
 
-bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+eaxis_mod,nbkg)]
+bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+logjacob,nbkg)]
 
 bkgsamples_measured = []
 for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals", ncols=100):
-    bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample)+eaxis_mod,Nsamples=1)])
+    bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample)+logjacob,Nsamples=1)])
 bkgsamples_measured = np.array(bkgsamples_measured)
 
 
@@ -52,6 +49,8 @@ signalintegrals = np.array(signalintegrals)
 
 centrevals = axis[:-1]+0.5*(axis[1]-axis[0])
 
+chime.info('sonic')
+
 plt.figure()
 plt.title("signal true values")
 sighistvals = plt.hist(sigsamples, bins=centrevals, alpha=0.7, label='Measured signal')
@@ -59,7 +58,7 @@ sigdistvals = np.exp(sigdist(axis))*eaxis
 plt.plot(axis, sigdistvals/np.max(sigdistvals)*np.max(sighistvals[0]), label='point signal with jacobian')
 plt.plot(centrevals, signalintegrals/np.max(signalintegrals)*np.max(sighistvals[0]), label='signal integral vals')
 plt.legend()
-plt.savefig("TrueValsSignal.pdf")
+plt.savefig("Figures/LatestFigures/TrueValsSignal.pdf")
 plt.show()
 
 
@@ -72,7 +71,7 @@ plt.plot(axis, bkgdistvals/np.max(bkgdistvals)*np.max(bkghistvals[0]), label='po
 plt.plot(centrevals, backgroundintegrals/np.max(backgroundintegrals)*np.max(bkghistvals[0]), label='background integral vals')
 
 plt.legend()
-plt.savefig("TrueValsBackground.pdf")
+plt.savefig("Figures/LatestFigures/TrueValsBackground.pdf")
 plt.show()
 
 
@@ -81,13 +80,13 @@ plt.title("measured values")
 plt.hist(sigsamples_measured, bins=centrevals, alpha=0.7, label='pseudo-measured signal')
 plt.hist(bkgsamples_measured, bins=centrevals, alpha=0.7, label='pseudo-measured background')
 plt.legend()
-plt.savefig("MeasuredVals.pdf")
+plt.savefig("Figures/LatestFigures/MeasuredVals.pdf")
 plt.show()
 
 
-np.save("truesigsamples.npy", sigsamples)
-np.save("meassigsamples.npy", sigsamples_measured)
-np.save("truebkgsamples.npy", bkgsamples)
-np.save("measbkgsamples.npy", bkgsamples_measured)
-np.save("params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
+np.save("data/truesigsamples.npy", sigsamples)
+np.save("data/meassigsamples.npy", sigsamples_measured)
+np.save("data/truebkgsamples.npy", bkgsamples)
+np.save("data/measbkgsamples.npy", bkgsamples_measured)
+np.save("data/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                         [lambdaval, nevents, truelogmass]]))

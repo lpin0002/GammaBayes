@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from scipy import integrate, interpolate
-import os, sys
+import os, sys, warnings
 import numpy as np
 simpson =  integrate.simps
 from gammapy.astro.darkmatter import (
@@ -118,10 +118,10 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
         # plt.xlim([0,mDM])
         # plt.show()
         
-
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
         fullspectrum = interpolate.interp1d(y=np.log(yvals), x = np.log10(eaxis),
                                               assume_sorted=True, bounds_error=False, fill_value=-np.inf)
-
+        warnings.filterwarnings('default', category=RuntimeWarning)
         return fullspectrum
 
     return dm_fullspec(logmDM=logmDM)

@@ -18,6 +18,7 @@ axis = np.log10(edispkernel.axes['energy'].center.value)
 axis = axis[18:227]
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
+logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 
 # def edisp(logerecon,logetrue):
@@ -35,9 +36,9 @@ def makedist(centre, spread=0.3):
     return func
 
 
-# bkgdist = lambda logenerg: np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
+bkgdist = lambda logenerg: np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
-bkgdist = makedist(-0.5)
+# bkgdist = makedist(-0.5)
 
 
 

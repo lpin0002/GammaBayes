@@ -1,5 +1,6 @@
 
 from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, color,logjacob
+from rundynesty import rundynesty
 from scipy import integrate, special, interpolate, stats
 import numpy as np
 import os, time, random, warnings, concurrent.futures
@@ -22,7 +23,8 @@ def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, a
        tempsigdist = sigdistsetup(logmass)
        tempsigdistaxis = tempsigdist(axis) - special.logsumexp(tempsigdist(axis)+logjacob)
        for i, sample in enumerate(measuredvals):
-              tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+logjacob)
+              tempsigmargfullvalarray = rundynesty(sample, tempsigdist, edisplist[i], axis=axis)
+              tempsigmarg = tempsigmargfullvalarray.logz[-1]
               tempmarglogmassrow.append(tempsigmarg)
        return np.array(tempmarglogmassrow)
 
@@ -39,6 +41,7 @@ def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
        return tempmargval
 
 if __name__ == '__main__':
+       warnings.filterwarnings('ignore',category=UserWarning)
        sigdistsetup = makedist
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
        np.seterr(divide='ignore', invalid='ignore')
@@ -68,14 +71,15 @@ if __name__ == '__main__':
               lambdaupperbound=1
        if lambdalowerbound<0:
               lambdalowerbound=0
-       nbins = 81
+       nbinslogmass = 41
+       nbinslambda = 161
 
-       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbins)
-       lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbins)
+       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbinslogmass)
+       lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
        # logmassrange = np.linspace(axis[1],axis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
-       np.save('data/logmassrange.npy',logmassrange)
-       np.save('data/lambdarange.npy',lambdarange)
+       np.save('data/logmassrange_Nested.npy',logmassrange)
+       np.save('data/lambdarange_Nested.npy',lambdarange)
        # lambdarange = np.array([0.45, 0.5])
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
@@ -139,7 +143,7 @@ if __name__ == '__main__':
 
        print("\n")
        normedlogposterior = logmassposterior - special.logsumexp(logmassposterior)
-       np.save("data/normedlogposteriorDirect.npy", normedlogposterior)
+       np.save("data/normedlogposterior_Nested.npy", normedlogposterior)
 
 
        chime.info('sonic')

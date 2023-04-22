@@ -22,11 +22,11 @@ truelambdaval   = float(params[1,0])
 truevals            = np.concatenate((sigsamples, bkgsamples))
 measuredvals        = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
-logmassrange = np.load('data/logmassrange.npy')
-lambdarange = np.load('data/lambdarange.npy')
+logmassrange = np.load('data/logmassrange_Nested.npy')
+lambdarange = np.load('data/lambdarange_Nested.npy')
 
 print(lambdarange)
-normedlogposterior = np.load("data/normedlogposteriorDirect.npy")
+normedlogposterior = np.load("data/normedlogposterior_Nested.npy")
 
 
 plt.figure(dpi=100)
@@ -40,8 +40,8 @@ plt.axvline(truelambdaval, c='r')
 plt.grid(False)
 if measuredvals.shape[0]>10000:
        plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"Figures/posterior%H%M_{measuredvals.shape[0]}Direct.pdf"))
-plt.savefig("Figures/LatestFigures/posteriorDirect.pdf")
+       plt.savefig(time.strftime(f"Figures/posterior%H%M_{measuredvals.shape[0]}_Nested.pdf"))
+plt.savefig("Figures/LatestFigures/posterior_Nested.pdf")
 plt.show()
 
 plt.figure()
@@ -50,10 +50,10 @@ plt.axvline(truelogmass, c='r', label=params[1,2])
 plt.xlabel("log mass [TeV]")
 plt.ylabel("Probability density (slice) [1/TeV]")
 plt.legend()
-plt.savefig("Figures/LatestFigures/logmasssliceDirect.pdf")
+plt.savefig("Figures/LatestFigures/logmassslice_Nested.pdf")
 if measuredvals.shape[0]>10000:
        plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"Figures/logmassslice%H%M_{measuredvals.shape[0]}Direct.pdf"))
+       plt.savefig(time.strftime(f"Figures/logmassslice%H%M_{measuredvals.shape[0]}_Nested.pdf"))
 plt.show()
 
 
@@ -65,6 +65,6 @@ plt.axvline(truelambdaval,c='r', label=params[1,0])
 plt.legend()
 if measuredvals.shape[0]>10000:
        plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"Figures/lambdaslice%H%M_{measuredvals.shape[0]}Direct.pdf"))
-plt.savefig("Figures/LatestFigures/lambdasliceDirect.pdf")
+       plt.savefig(time.strftime(f"Figures/lambdaslice%H%M_{measuredvals.shape[0]}_Nested.pdf"))
+plt.savefig("Figures/LatestFigures/lambdaslice_Nested.pdf")
 plt.show()
