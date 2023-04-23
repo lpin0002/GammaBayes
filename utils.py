@@ -62,7 +62,7 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
 
 
 # Purely for different looking terminal outputs
-class color:
+class COLOR:
    PURPLE = '\033[95m'
    CYAN = '\033[96m'
    DARKCYAN = '\033[36m'
@@ -74,3 +74,27 @@ class color:
    UNDERLINE = '\033[4m'
    END = '\033[0m'
 
+
+def printimportant(numevents, truelogmass, truelambda, axis=axis, logmassrange=None, lambdarange=None):
+
+    stringtoprint ="\n\n"
+
+    stringtoprint +=f"""{COLOR.BOLD}{COLOR.GREEN}IMPORTANT PARAMETERS: {COLOR.END}"""
+    stringtoprint +=f"""{COLOR.YELLOW}number of events{COLOR.END} being analysed/were simulated is {nevents:.1e}."""
+
+    stringtoprint +=f"""{COLOR.YELLOW}true log mass value{COLOR.END} used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}."""
+
+    stringtoprint +=f"""{COLOR.YELLOW}fraction of signal events to total events{COLOR.END} is {truelambdaval}."""
+
+    stringtoprint +=f"""{COLOR.YELLOW}bounds for the log energy range{COLOR.END} are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}."""
+
+    if not(logmassrange ==None): 
+        stringtoprint +=f"""{COLOR.YELLOW}bounds for the log mass range [TeV]{COLOR.END} are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV]."""
+
+    
+    if not(lambdarange==None):
+        stringtoprint +=f"""{COLOR.YELLOW}bounds for the lambda range{COLOR.END} are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}."""
+
+    stringtoprint+="\n"
+
+    print(stringtoprint)

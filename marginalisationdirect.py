@@ -1,5 +1,5 @@
 
-from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, color,logjacob
+from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, COLOR,logjacob
 from scipy import integrate, special, interpolate, stats
 import numpy as np
 import os, time, random, warnings, concurrent.futures
@@ -68,10 +68,11 @@ if __name__ == '__main__':
               lambdaupperbound=1
        if lambdalowerbound<0:
               lambdalowerbound=0
-       nbins = 81
+       nbinslogmass = 81
+       nbinslambda = 161
 
-       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbins)
-       lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbins)
+       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbinslogmass)
+       lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
        # logmassrange = np.linspace(axis[1],axis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
        np.save('data/logmassrange.npy',logmassrange)
@@ -80,32 +81,32 @@ if __name__ == '__main__':
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
 
-       print(color.BOLD+f"""\n\n{color.BOLD}{color.GREEN}IMPORTANT PARAMETERS: {color.END}
-       {color.YELLOW}number of events{color.END} being analysed/were simulated is {nevents:.1e}. 
+       print(COLOR.BOLD+f"""\n\n{COLOR.BOLD}{COLOR.GREEN}IMPORTANT PARAMETERS: {COLOR.END}
+       {COLOR.YELLOW}number of events{COLOR.END} being analysed/were simulated is {nevents:.1e}. 
 
-       {color.YELLOW}true log mass value{color.END} used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}.
+       {COLOR.YELLOW}true log mass value{COLOR.END} used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}.
 
-       {color.YELLOW}fraction of signal events to total events{color.END} is {truelambdaval}.
+       {COLOR.YELLOW}fraction of signal events to total events{COLOR.END} is {truelambdaval}.
 
-       {color.YELLOW}bounds for the log energy range{color.END} are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}.
+       {COLOR.YELLOW}bounds for the log energy range{COLOR.END} are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}.
 
-       {color.YELLOW}bounds for the log mass range [TeV]{color.END} are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV].
+       {COLOR.YELLOW}bounds for the log mass range [TeV]{COLOR.END} are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV].
 
-       {color.YELLOW}bounds for the lambda range{color.END} are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}.
+       {COLOR.YELLOW}bounds for the lambda range{COLOR.END} are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}.
 
        \n""")
 
        edispnorms = np.array([special.logsumexp(edisp(axis,axisval)+logjacob) for axisval in axis])
 
        if -np.inf in edispnorms:
-              print(color.BOLD+"Your energy dispersion normalisation has -np.inf inside, which will almostly definitely mean your energy dispersion or the normalisation is wrong."+color.END)
+              print(COLOR.BOLD+"Your energy dispersion normalisation has -np.inf inside, which will almostly definitely mean your energy dispersion or the normalisation is wrong."+COLOR.END)
 
        edisplist = []
        bkgmarglist = []
        bkgdistnormed = bkgdist(axis) - special.logsumexp(bkgdist(axis)+logjacob)
 
 
-       print(f"There are {color.BLUE}{nevents}{color.END} events being analyzed.")
+       print(f"There are {COLOR.BLUE}{nevents}{COLOR.END} events being analyzed.")
        for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100):
               edisplist.append(edisp(sample,axis)-edispnorms)
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))

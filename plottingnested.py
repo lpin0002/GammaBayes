@@ -1,4 +1,4 @@
-from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, color
+from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod
 from scipy import integrate, special, interpolate, stats
 import numpy as np
 import os, time, random
