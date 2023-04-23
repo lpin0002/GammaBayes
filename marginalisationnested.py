@@ -84,20 +84,7 @@ if __name__ == '__main__':
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
 
-       print(COLOR.BOLD+f"""\n\n{COLOR.BOLD}{COLOR.GREEN}IMPORTANT PARAMETERS: {COLOR.END}
-       {COLOR.YELLOW}number of events{COLOR.END} being analysed/were simulated is {nevents:.1e}. 
-
-       {COLOR.YELLOW}true log mass value{COLOR.END} used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}.
-
-       {COLOR.YELLOW}fraction of signal events to total events{COLOR.END} is {truelambdaval}.
-
-       {COLOR.YELLOW}bounds for the log energy range{COLOR.END} are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}.
-
-       {COLOR.YELLOW}bounds for the log mass range [TeV]{COLOR.END} are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV].
-
-       {COLOR.YELLOW}bounds for the lambda range{COLOR.END} are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}.
-
-       \n""")
+       
 
        edispnorms = np.array([special.logsumexp(edisp(axis,axisval)+logjacob) for axisval in axis])
 
