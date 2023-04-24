@@ -62,9 +62,8 @@ plt.colorbar(label="Probability Density [1/TeV]")
 plt.axhline(truelogmass, c='r')
 plt.axvline(truelambdaval, c='r')
 plt.grid(False)
-if totalevents>10000:
-       plt.title(str(totalevents))
-       plt.savefig(time.strftime(f"data/{identifier}/posterior%H%M_{totalevents}{integrationtype}.pdf"))
+plt.title(str(totalevents))
+plt.savefig(time.strftime(f"data/{identifier}/posterior%H%M_{totalevents}{integrationtype}.pdf"))
 plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
 plt.show()
 
@@ -75,9 +74,8 @@ plt.xlabel("log mass [TeV]")
 plt.ylabel("Probability density (slice) [1/TeV]")
 plt.legend()
 plt.savefig(f"Figures/LatestFigures/logmassslice{integrationtype}.pdf")
-if totalevents>10000:
-       plt.title(str(totalevents))
-       plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H%M_{totalevents}{integrationtype}.pdf"))
+plt.title(str(totalevents))
+plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H%M_{totalevents}{integrationtype}.pdf"))
 plt.show()
 
 
@@ -87,9 +85,8 @@ plt.xlabel("lambda = signal events/total events")
 plt.ylabel("Probability density (slice) []")
 plt.axvline(truelambdaval,c='r', label=params[1,0])
 plt.legend()
-if totalevents>10000:
-       plt.title(str(totalevents))
-       plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H%M_{totalevents}{integrationtype}.pdf"))
+plt.title(str(totalevents))
+plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H%M_{totalevents}{integrationtype}.pdf"))
 plt.savefig(f"Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
 plt.show()
 

@@ -45,7 +45,7 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, mar
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {margcores} {nbinslogmass} {nbinslambda}"""
+srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {margcores} {nbinslogmass} {nbinslambda} {int(numberofruns*singlerunevents)}"""
 
         with open(f"{workingfolder}/{stemdirname}/SRM{runnum}.sh", 'w') as f:
             f.write(str)
@@ -74,7 +74,7 @@ except:
 try:
     margmemory = int(sys.argv[11])
 except:
-    margmemory = 200
+    margmemory = 1000
 
 makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, 
-               margcores=margcores, marghour=marghour, margminute=margminute, identifier = identifier, nbinslogmass=nbinslogmass, nbinslambda=nbinslambda, margmemory = 200)
+               margcores=margcores, marghour=marghour, margminute=margminute, identifier = identifier, nbinslogmass=nbinslogmass, nbinslambda=nbinslambda, margmemory = 1000)

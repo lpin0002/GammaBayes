@@ -76,6 +76,10 @@ if __name__ == '__main__':
               nbinslambda = int(sys.argv[8])
        except:
               nbinslambda = 21
+       try:
+              totalrunevents = int(sys.argv[9])
+       except:
+              totalrunevents = nevents
        
 
        
@@ -141,11 +145,11 @@ if __name__ == '__main__':
        truevals             = np.concatenate((sigsamples, bkgsamples))
        measuredvals         = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
-       logmasswindowwidth   = 2/np.sqrt(nevents)
+       logmasswindowwidth   = 2/np.sqrt(totalrunevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 
-       lambdavalwindowwidth = 5/np.sqrt(nevents)
+       lambdavalwindowwidth = 5/np.sqrt(totalrunevents)
        lambdalowerbound     = truelambdaval-lambdavalwindowwidth
        lambdaupperbound     = truelambdaval+lambdavalwindowwidth
        if logmasslowerbound<axis[0]:
