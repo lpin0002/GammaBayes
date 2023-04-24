@@ -64,15 +64,19 @@ if __name__ == '__main__':
               truelambdaval = float(sys.argv[5])
        except:
               truelambdaval = 0.5
-
        try:
-              nbinslogmass = int(sys.argv[6])
+              margcores = int(sys.argv[6])
+       except:
+              margcores = 10
+       try:
+              nbinslogmass = int(sys.argv[7])
        except:
               nbinslogmass = 21
        try:
-              nbinslambda = int(sys.argv[7])
+              nbinslambda = int(sys.argv[8])
        except:
               nbinslambda = 21
+       
 
        
        
@@ -173,7 +177,7 @@ if __name__ == '__main__':
        bkgdistnormed = bkgdist(axis) - special.logsumexp(bkgdist(axis)+logjacob)
 
 
-       print(f"There are {COLOR.BLUE}{nevents}{COLOR.END} events being analyzed.")
+       print(f"There are {nevents} events being analyzed.")
        for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100):
               edisplist.append(edisp(sample,axis)-edispnorms)
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
@@ -183,9 +187,9 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/bkgmarglist_nested.npy', bkgmarglist)
 
        sigmarglogzvals = []
-       num_cores = multiprocessing.cpu_count()
-       print(f"You have {COLOR.YELLOW}{num_cores}{COLOR.END} cores on your machine")
-       with Pool(num_cores) as pool:
+       # num_cores = multiprocessing.cpu_count()
+       print(f"You have allocated {margcores} cores on your machine")
+       with Pool(margcores) as pool:
               func = functools.partial(sigmargwrapper, edisplist=edisplist, sigdistsetup=sigdistsetup, measuredvals=measuredvals)
             
               for result in tqdm(pool.imap(func, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):

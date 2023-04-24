@@ -45,7 +45,7 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, mar
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {nbinslogmass} {nbinslambda}"""
+srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {margcores} {nbinslogmass} {nbinslambda}"""
 
         with open(f"{workingfolder}/{stemdirname}/SRM{runnum}.sh", 'w') as f:
             f.write(str)
