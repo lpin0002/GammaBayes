@@ -6,7 +6,7 @@ import numpy as np
 import os, time, random, warnings, concurrent.futures, sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import chime
+# import chime
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
@@ -45,30 +45,95 @@ if __name__ == '__main__':
               identifier = sys.argv[1]
        except:
               identifier = time.strftime("%d%m%H")
+       try:
+              runnum = sys.argv[2]
+       except:
+              runnum = 1
 
        try:
-              nbinslogmass = int(sys.argv[2])
+              nevents = int(sys.argv[3])
+       except:
+              nevents = 10
+
+       try:
+              truelogmass = float(sys.argv[4])
+       except:
+              truelogmass = 0
+
+       try:
+              truelambdaval = float(sys.argv[5])
+       except:
+              truelambdaval = 0.5
+
+       try:
+              nbinslogmass = int(sys.argv[6])
        except:
               nbinslogmass = 21
        try:
-              nbinslambda = int(sys.argv[3])
+              nbinslambda = int(sys.argv[7])
        except:
               nbinslambda = 21
+
+       
        
        warnings.filterwarnings('ignore',category=UserWarning)
        sigdistsetup = makedist
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
        np.seterr(divide='ignore', invalid='ignore')
 
-       sigsamples           = np.load(f"data/{identifier}/truesigsamples.npy")
-       sigsamples_measured  = np.load(f"data/{identifier}/meassigsamples.npy")
-       bkgsamples           = np.load(f"data/{identifier}/truebkgsamples.npy")
-       bkgsamples_measured  = np.load(f"data/{identifier}/measbkgsamples.npy")
-       params               = np.load(f"data/{identifier}/params.npy")
-       params[1,:]          = params[1,:]
-       truelogmass          = float(params[1,2])
-       nevents              = int(params[1,1])
-       truelambdaval        = float(params[1,0])
+       try:
+              os.mkdir('data')
+       except:
+              print("data folder already exists (good)")
+       try:
+              os.mkdir(f'data/{identifier}')
+       except:
+              print("Stem Folder Already Exists (good)")
+       try:
+              os.mkdir(f'data/{identifier}/{runnum}')
+       except:
+              raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
+
+
+       sigdist = sigdistsetup(truelogmass)
+
+
+       nsig = int(np.round(truelambdaval*nevents))
+       nbkg = int(np.round((1-truelambdaval)*nevents))
+       sigsamples = axis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
+
+       sigsamples_measured = []
+       for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
+              sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample)+logjacob,Nsamples=1)])
+       sigsamples_measured = np.array(sigsamples_measured)
+
+
+       bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+logjacob,nbkg)]
+
+       bkgsamples_measured = []
+       for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals", ncols=100):
+              bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample)+logjacob,Nsamples=1)])
+       bkgsamples_measured = np.array(bkgsamples_measured)
+
+
+       backgroundintegrals = []
+       signalintegrals = []
+       for i in range(len(axis[1:])):
+              evals = np.linspace(10**axis[i],10**axis[i+1],100)
+              signalintegrals.append(np.exp(special.logsumexp(sigdist(np.log10(evals))+np.log(evals))))
+              backgroundintegrals.append(np.exp(special.logsumexp(bkgdist(np.log10(evals))+np.log(evals))))
+       signalintegrals = np.array(signalintegrals)
+       signalintegrals = np.array(signalintegrals)
+
+
+       np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", sigsamples)
+       np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", sigsamples_measured)
+       np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", bkgsamples)
+       np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", bkgsamples_measured)
+       np.save(f"data/{identifier}/{runnum}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
+                                          [truelambdaval, nevents, truelogmass]]))
+
+       print("Done simulation.")
        truevals             = np.concatenate((sigsamples, bkgsamples))
        measuredvals         = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
@@ -90,8 +155,8 @@ if __name__ == '__main__':
        lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
        # logmassrange = np.linspace(axis[1],axis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
-       np.save(f'data/{identifier}/logmassrange_nested.npy',logmassrange)
-       np.save(f'data/{identifier}/lambdarange_nested.npy',lambdarange)
+       np.save(f'data/{identifier}/{runnum}/logmassrange_nested.npy',logmassrange)
+       np.save(f'data/{identifier}/{runnum}/lambdarange_nested.npy',lambdarange)
        # lambdarange = np.array([0.45, 0.5])
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
@@ -114,8 +179,8 @@ if __name__ == '__main__':
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
        edisplist = np.array(edisplist)
        
-       np.save(f'data/{identifier}/edisplist_nested.npy', edisplist)
-       np.save(f'data/{identifier}/bkgmarglist_nested.npy', bkgmarglist)
+       np.save(f'data/{identifier}/{runnum}/edisplist_nested.npy', edisplist)
+       np.save(f'data/{identifier}/{runnum}/bkgmarglist_nested.npy', bkgmarglist)
 
        sigmarglogzvals = []
        num_cores = multiprocessing.cpu_count()
@@ -129,10 +194,10 @@ if __name__ == '__main__':
               pool.close()
        print("Done calculating the signal marginalisations.")
 
-       np.save(f'data/{identifier}/sigmarglogzvals_nested.npy', sigmarglogzvals)
+       np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_nested.npy', sigmarglogzvals)
 
 
-       chime.info('sonic')
+       # chime.info('sonic')
 
 
 

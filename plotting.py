@@ -92,3 +92,45 @@ if totalevents>10000:
        plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H%M_{totalevents}{integrationtype}.pdf"))
 plt.savefig(f"Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
 plt.show()
+
+# centrevals = axis[:-1]+0.5*(axis[1]-axis[0])
+# backgroundintegrals = []
+# signalintegrals = []
+# for i in range(len(axis[1:])):
+#     evals = np.linspace(10**axis[i],10**axis[i+1],100)
+#     signalintegrals.append(np.exp(special.logsumexp(sigdist(np.log10(evals))+np.log(evals))))
+#     backgroundintegrals.append(np.exp(special.logsumexp(bkgdist(np.log10(evals))+np.log(evals))))
+# signalintegrals = np.array(signalintegrals)
+# signalintegrals = np.array(signalintegrals)
+# 
+# plt.figure()
+# plt.title("signal true values")
+# sighistvals = plt.hist(sigsamples, bins=centrevals, alpha=0.7, label='Measured signal')
+# sigdistvals = np.exp(sigdist(axis))*eaxis
+# plt.plot(axis, sigdistvals/np.max(sigdistvals)*np.max(sighistvals[0]), label='point signal with jacobian')
+# plt.plot(centrevals, signalintegrals/np.max(signalintegrals)*np.max(sighistvals[0]), label='signal integral vals')
+# plt.legend()
+# plt.savefig("Figures/LatestFigures/TrueValsSignal.pdf")
+# plt.show()
+
+
+
+# plt.figure()
+# plt.title("background true values")
+# bkghistvals = plt.hist(bkgsamples, bins=centrevals, alpha=0.7, label="Measured background")
+# bkgdistvals = np.exp(bkgdist(axis))*eaxis
+# plt.plot(axis, bkgdistvals/np.max(bkgdistvals)*np.max(bkghistvals[0]), label='point background with jacobian')
+# plt.plot(centrevals, backgroundintegrals/np.max(backgroundintegrals)*np.max(bkghistvals[0]), label='background integral vals')
+
+# plt.legend()
+# plt.savefig("Figures/LatestFigures/TrueValsBackground.pdf")
+# plt.show()
+
+
+# plt.figure()
+# plt.title("measured values")
+# plt.hist(sigsamples_measured, bins=centrevals, alpha=0.7, label='pseudo-measured signal')
+# plt.hist(bkgsamples_measured, bins=centrevals, alpha=0.7, label='pseudo-measured background')
+# plt.legend()
+# plt.savefig("Figures/LatestFigures/MeasuredVals.pdf")
+# plt.show()

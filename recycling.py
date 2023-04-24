@@ -23,14 +23,23 @@ if __name__ == '__main__':
 
     print(rundirs)
     print(len(rundirs))
-    for runnum in range(1,len(rundirs)+1):
+    runnum=1
+    print("runnum: ", runnum)
+    params              = np.load(f"data/{identifier}/{runnum}/params.npy")
+    logmassrange = np.load(f'data/{identifier}/{runnum}/logmassrange{integrationtype}.npy')
+    lambdarange = np.load(f'data/{identifier}/{runnum}/lambdarange{integrationtype}.npy')
+    edisplist = np.load(f'data/{identifier}/{runnum}/edisplist{integrationtype}.npy')
+    bkgmarglist = np.load(f'data/{identifier}/{runnum}/bkgmarglist{integrationtype}.npy')
+    sigmarglogzvals = np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy')
+
+    for runnum in range(2,len(rundirs)+1):
         print("runnum: ", runnum)
         params              = np.load(f"data/{identifier}/{runnum}/params.npy")
         logmassrange = np.load(f'data/{identifier}/{runnum}/logmassrange{integrationtype}.npy')
         lambdarange = np.load(f'data/{identifier}/{runnum}/lambdarange{integrationtype}.npy')
-        edisplist = np.load(f'data/{identifier}/{runnum}/edisplist{integrationtype}.npy')
-        bkgmarglist = np.load(f'data/{identifier}/{runnum}/bkgmarglist{integrationtype}.npy')
-        sigmarglogzvals = np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy')
+        edisplist = np.concatenate((edisplist, np.load(f'data/{identifier}/{runnum}/edisplist{integrationtype}.npy')))
+        bkgmarglist = np.concatenate((bkgmarglist, np.load(f'data/{identifier}/{runnum}/bkgmarglist{integrationtype}.npy')))
+        sigmarglogzvals = np.concatenate((sigmarglogzvals.T, np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy').T)).T
 
         # return logmassrange, lambdarange, edisplist, bkgmarglist, sigmarglogzvals
     logmassposterior = []
