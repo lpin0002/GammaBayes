@@ -2,7 +2,7 @@
 from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, COLOR,logjacob
 from scipy import integrate, special, interpolate, stats
 import numpy as np
-import os, time, random, warnings, concurrent.futures
+import os, time, random, warnings, concurrent.futures, sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import chime
@@ -39,15 +39,28 @@ def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
        return tempmargval
 
 if __name__ == '__main__':
+       try:
+              identifier = sys.argv[1]
+       except:
+              identifier = time.strftime("%d%m%H")
+
+       try:
+              nbinslogmass = int(sys.argv[2])
+       except:
+              nbinslogmass = 21
+       try:
+              nbinslambda = int(sys.argv[3])
+       except:
+              nbinslambda = 21
        sigdistsetup = makedist
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
        np.seterr(divide='ignore', invalid='ignore')
 
-       sigsamples           = np.load("data/truesigsamples.npy")
-       sigsamples_measured  = np.load("data/meassigsamples.npy")
-       bkgsamples           = np.load("data/truebkgsamples.npy")
-       bkgsamples_measured  = np.load("data/measbkgsamples.npy")
-       params               = np.load("data/params.npy")
+       sigsamples           = np.load(f"data/{identifier}/truesigsamples.npy")
+       sigsamples_measured  = np.load(f"data/{identifier}/meassigsamples.npy")
+       bkgsamples           = np.load(f"data/{identifier}/truebkgsamples.npy")
+       bkgsamples_measured  = np.load(f"data/{identifier}/measbkgsamples.npy")
+       params               = np.load(f"data/{identifier}/params.npy")
        params[1,:]          = params[1,:]
        truelogmass          = float(params[1,2])
        nevents              = int(params[1,1])
@@ -68,15 +81,14 @@ if __name__ == '__main__':
               lambdaupperbound=1
        if lambdalowerbound<0:
               lambdalowerbound=0
-       nbinslogmass = 81
-       nbinslambda = 161
+       
 
        logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbinslogmass)
        lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
        # logmassrange = np.linspace(axis[1],axis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
-       np.save('data/logmassrange.npy',logmassrange)
-       np.save('data/lambdarange.npy',lambdarange)
+       np.save(f'data/{identifier}/logmassrange_Direct.npy',logmassrange)
+       np.save(f'data/{identifier}/lambdarange_Direct.npy',lambdarange)
        # lambdarange = np.array([0.45, 0.5])
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
@@ -112,7 +124,10 @@ if __name__ == '__main__':
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
        edisplist = np.array(edisplist)
        
-       
+       np.save(f'data/{identifier}/edisplist_Direct.npy', edisplist)
+       np.save(f'data/{identifier}/bkgmarglist_Direct.npy', bkgmarglist)
+
+
        sigmarglogzvals = []
        num_cores = multiprocessing.cpu_count()
        print(f"You have {num_cores} cores on your machine")
@@ -124,23 +139,7 @@ if __name__ == '__main__':
 
               pool.close()
        print("Done calculating the signal marginalisations.")
-
-       logmassposterior = []
-       for j in tqdm(range(len(logmassrange)), ncols=100, desc="Computing log posterior in lambda and logmDM"):
-              # templogmassrow = []
-              # for lambdaval in lambdarange:
-              #        tempmargval = np.sum(np.logaddexp(np.log(lambdaval)+sigmarglogzvals[j],np.log(1-lambdaval)+bkgmarglist))
-                     
-              #        templogmassrow.append(tempmargval)
-                     
-              # logmassposterior.append(templogmassrow)
-              templogmassrow = np.sum(np.logaddexp(np.matrix(np.log(lambdarange))+np.matrix(sigmarglogzvals[j]).T,np.matrix(np.log(1-lambdarange))+np.matrix(bkgmarglist).T),axis=0)
-              templogmassrow = list(np.concatenate(np.array(templogmassrow.T)))
-              logmassposterior.append(templogmassrow)
-
-       print("\n")
-       normedlogposterior = logmassposterior - special.logsumexp(logmassposterior)
-       np.save("data/normedlogposteriorDirect.npy", normedlogposterior)
+       np.save(f'data/{identifier}/sigmarglogzvals_Direct.npy', sigmarglogzvals)
 
 
        chime.info('sonic')

@@ -1,20 +1,25 @@
 from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod
 from scipy import integrate, special, interpolate, stats
-import numpy as np
-import os, time, random
+import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, chime, warnings
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-import chime
 from BFCalc.BFInterp import DM_spectrum_setup
-import warnings
 
+try:
+    identifier = sys.argv[1]
+except:
+    identifier = time.strftime("%d%m%H")
+try:
+       integrationtype = sys.argv[2]
+except:
+       integrationtype = "nested"
 
+integrationtype = "_"+integrationtype.lower()
 
-sigsamples          = np.load("data/truesigsamples.npy")
-sigsamples_measured = np.load("data/meassigsamples.npy")
-bkgsamples          = np.load("data/truebkgsamples.npy")
-bkgsamples_measured = np.load("data/measbkgsamples.npy")
-params              = np.load("data/params.npy")
+sigsamples          = np.load(f"data/{identifier}/truesigsamples.npy")
+sigsamples_measured = np.load(f"data/{identifier}/meassigsamples.npy")
+bkgsamples          = np.load(f"data/{identifier}/truebkgsamples.npy")
+bkgsamples_measured = np.load(f"data/{identifier}/measbkgsamples.npy")
+params              = np.load(f"data/{identifier}/params.npy")
 params[1,:]         = params[1,:]
 truelogmass     = float(params[1,2])
 nevents         = int(params[1,1])
@@ -22,11 +27,11 @@ truelambdaval   = float(params[1,0])
 truevals            = np.concatenate((sigsamples, bkgsamples))
 measuredvals        = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
-logmassrange = np.load('data/logmassrange_Nested.npy')
-lambdarange = np.load('data/lambdarange_Nested.npy')
+logmassrange = np.load(f'data/{identifier}/logmassrange{integrationtype}.npy')
+lambdarange = np.load(f'data/{identifier}/lambdarange{integrationtype}.npy')
 
 print(lambdarange)
-normedlogposterior = np.load("data/normedlogposterior_Nested.npy")
+normedlogposterior = np.load(f"data/{identifier}/normedlogposterior{integrationtype}.npy")
 
 
 plt.figure(dpi=100)
@@ -40,8 +45,8 @@ plt.axvline(truelambdaval, c='r')
 plt.grid(False)
 if measuredvals.shape[0]>10000:
        plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"Figures/posterior%H%M_{measuredvals.shape[0]}_Nested.pdf"))
-plt.savefig("Figures/LatestFigures/posterior_Nested.pdf")
+       plt.savefig(time.strftime(f"data/{identifier}/posterior%H%M_{measuredvals.shape[0]}{integrationtype}.pdf"))
+plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
 plt.show()
 
 plt.figure()
@@ -50,10 +55,10 @@ plt.axvline(truelogmass, c='r', label=params[1,2])
 plt.xlabel("log mass [TeV]")
 plt.ylabel("Probability density (slice) [1/TeV]")
 plt.legend()
-plt.savefig("Figures/LatestFigures/logmassslice_Nested.pdf")
+plt.savefig(f"Figures/LatestFigures/logmassslice{integrationtype}.pdf")
 if measuredvals.shape[0]>10000:
        plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"Figures/logmassslice%H%M_{measuredvals.shape[0]}_Nested.pdf"))
+       plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H%M_{measuredvals.shape[0]}{integrationtype}.pdf"))
 plt.show()
 
 
@@ -65,6 +70,6 @@ plt.axvline(truelambdaval,c='r', label=params[1,0])
 plt.legend()
 if measuredvals.shape[0]>10000:
        plt.title(str(measuredvals.shape[0]))
-       plt.savefig(time.strftime(f"Figures/lambdaslice%H%M_{measuredvals.shape[0]}_Nested.pdf"))
-plt.savefig("Figures/LatestFigures/lambdaslice_Nested.pdf")
+       plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H%M_{measuredvals.shape[0]}{integrationtype}.pdf"))
+plt.savefig("Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
 plt.show()

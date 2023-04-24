@@ -1,5 +1,5 @@
 from scipy import integrate, special, interpolate, stats
-import os, sys, time, random, chime, numpy as np, matplotlib.pyplot as plt
+import os, sys, time, random, chime, numpy as np, matplotlib.pyplot as plt, warnings
 from tqdm import tqdm
 from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist, eaxis_mod, eaxis, logjacob
 from BFCalc.BFInterp import DM_spectrum_setup
@@ -9,16 +9,41 @@ np.seterr(divide='ignore', invalid='ignore')
 try:
     identifier = sys.argv[1]
 except:
-    identifier = time.strftime("%d%m%H%M")
+    identifier = time.strftime("%d%m%H")
+
+
+try:
+    nevents = int(sys.argv[2])
+except:
+    nevents = 10
+
+try:
+    truelogmass = float(sys.argv[3])
+except:
+    truelogmass = 0
+
+try:
+    lambdaval = float(sys.argv[4])
+except:
+    lambdaval = 0.5
+
+try:
+    os.mkdir('data')
+except:
+    print("data folder already exists (good)")
+try:
+    os.mkdir(f'data/{identifier}')
+except:
+    raise Exception(f"The folder data/{identifier} already exists, stopping computation so files are not accidentally overwritten.")
+
+
 sigdistsetup = makedist
 
-truelogmass = 1.3
+
 
 sigdist = sigdistsetup(truelogmass)
 
 
-nevents = 10
-lambdaval = 0.5
 nsig = int(np.round(lambdaval*nevents))
 nbkg = int(np.round((1-lambdaval)*nevents))
 sigsamples = axis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
@@ -84,9 +109,9 @@ plt.savefig("Figures/LatestFigures/MeasuredVals.pdf")
 plt.show()
 
 
-np.save("data/truesigsamples.npy", sigsamples)
-np.save("data/meassigsamples.npy", sigsamples_measured)
-np.save("data/truebkgsamples.npy", bkgsamples)
-np.save("data/measbkgsamples.npy", bkgsamples_measured)
-np.save("data/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
+np.save(f"data/{identifier}/truesigsamples.npy", sigsamples)
+np.save(f"data/{identifier}/meassigsamples.npy", sigsamples_measured)
+np.save(f"data/{identifier}/truebkgsamples.npy", bkgsamples)
+np.save(f"data/{identifier}/measbkgsamples.npy", bkgsamples_measured)
+np.save(f"data/{identifier}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                         [lambdaval, nevents, truelogmass]]))
