@@ -11,19 +11,23 @@ try:
 except:
     identifier = time.strftime("%d%m%H")
 
+try:
+    runnum = int(sys.argv[2])
+except:
+    runnum = 1
 
 try:
-    nevents = int(sys.argv[2])
+    nevents = int(sys.argv[3])
 except:
     nevents = 10
 
 try:
-    truelogmass = float(sys.argv[3])
+    truelogmass = float(sys.argv[4])
 except:
     truelogmass = 0
 
 try:
-    lambdaval = float(sys.argv[4])
+    lambdaval = float(sys.argv[5])
 except:
     lambdaval = 0.5
 
@@ -34,8 +38,11 @@ except:
 try:
     os.mkdir(f'data/{identifier}')
 except:
-    raise Exception(f"The folder data/{identifier} already exists, stopping computation so files are not accidentally overwritten.")
-
+    print("Stem Folder Already Exists (good)")
+try:
+    os.mkdir(f'data/{identifier}/{runnum}')
+except:
+    raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
 sigdistsetup = makedist
 
@@ -109,9 +116,9 @@ plt.savefig("Figures/LatestFigures/MeasuredVals.pdf")
 plt.show()
 
 
-np.save(f"data/{identifier}/truesigsamples.npy", sigsamples)
-np.save(f"data/{identifier}/meassigsamples.npy", sigsamples_measured)
-np.save(f"data/{identifier}/truebkgsamples.npy", bkgsamples)
-np.save(f"data/{identifier}/measbkgsamples.npy", bkgsamples_measured)
-np.save(f"data/{identifier}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
+np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", sigsamples)
+np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", sigsamples_measured)
+np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", bkgsamples)
+np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", bkgsamples_measured)
+np.save(f"data/{identifier}/{runnum}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                         [lambdaval, nevents, truelogmass]]))

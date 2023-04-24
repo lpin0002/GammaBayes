@@ -43,24 +43,29 @@ if __name__ == '__main__':
               identifier = sys.argv[1]
        except:
               identifier = time.strftime("%d%m%H")
+       try:
+              runnum = sys.argv[2]
+       except:
+              runnum = 1
 
        try:
-              nbinslogmass = int(sys.argv[2])
+              nbinslogmass = int(sys.argv[3])
        except:
               nbinslogmass = 21
        try:
-              nbinslambda = int(sys.argv[3])
+              nbinslambda = int(sys.argv[4])
        except:
               nbinslambda = 21
+       
        sigdistsetup = makedist
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
        np.seterr(divide='ignore', invalid='ignore')
 
-       sigsamples           = np.load(f"data/{identifier}/truesigsamples.npy")
-       sigsamples_measured  = np.load(f"data/{identifier}/meassigsamples.npy")
-       bkgsamples           = np.load(f"data/{identifier}/truebkgsamples.npy")
-       bkgsamples_measured  = np.load(f"data/{identifier}/measbkgsamples.npy")
-       params               = np.load(f"data/{identifier}/params.npy")
+       sigsamples           = np.load(f"data/{identifier}/{runnum}/truesigsamples.npy")
+       sigsamples_measured  = np.load(f"data/{identifier}/{runnum}/meassigsamples.npy")
+       bkgsamples           = np.load(f"data/{identifier}/{runnum}/truebkgsamples.npy")
+       bkgsamples_measured  = np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy")
+       params               = np.load(f"data/{identifier}/{runnum}/params.npy")
        params[1,:]          = params[1,:]
        truelogmass          = float(params[1,2])
        nevents              = int(params[1,1])
@@ -87,8 +92,8 @@ if __name__ == '__main__':
        lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
        # logmassrange = np.linspace(axis[1],axis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
-       np.save(f'data/{identifier}/logmassrange_Direct.npy',logmassrange)
-       np.save(f'data/{identifier}/lambdarange_Direct.npy',lambdarange)
+       np.save(f'data/{identifier}/{runnum}/logmassrange_Direct.npy',logmassrange)
+       np.save(f'data/{identifier}/{runnum}/lambdarange_Direct.npy',lambdarange)
        # lambdarange = np.array([0.45, 0.5])
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
@@ -124,8 +129,8 @@ if __name__ == '__main__':
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
        edisplist = np.array(edisplist)
        
-       np.save(f'data/{identifier}/edisplist_Direct.npy', edisplist)
-       np.save(f'data/{identifier}/bkgmarglist_Direct.npy', bkgmarglist)
+       np.save(f'data/{identifier}/{runnum}/edisplist_Direct.npy', edisplist)
+       np.save(f'data/{identifier}/{runnum}/bkgmarglist_Direct.npy', bkgmarglist)
 
 
        sigmarglogzvals = []
@@ -139,7 +144,7 @@ if __name__ == '__main__':
 
               pool.close()
        print("Done calculating the signal marginalisations.")
-       np.save(f'data/{identifier}/sigmarglogzvals_Direct.npy', sigmarglogzvals)
+       np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_Direct.npy', sigmarglogzvals)
 
 
        chime.info('sonic')
