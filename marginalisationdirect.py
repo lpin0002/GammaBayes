@@ -92,8 +92,8 @@ if __name__ == '__main__':
        lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
        # logmassrange = np.linspace(axis[1],axis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
-       np.save(f'data/{identifier}/{runnum}/logmassrange_Direct.npy',logmassrange)
-       np.save(f'data/{identifier}/{runnum}/lambdarange_Direct.npy',lambdarange)
+       np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
+       np.save(f'data/{identifier}/{runnum}/lambdarange_direct.npy',lambdarange)
        # lambdarange = np.array([0.45, 0.5])
        print("logmassrange: ", logmassrange[0], logmassrange[-1])
        print("lambdarange: ", lambdarange[0], lambdarange[-1])
@@ -129,8 +129,8 @@ if __name__ == '__main__':
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
        edisplist = np.array(edisplist)
        
-       np.save(f'data/{identifier}/{runnum}/edisplist_Direct.npy', edisplist)
-       np.save(f'data/{identifier}/{runnum}/bkgmarglist_Direct.npy', bkgmarglist)
+       np.save(f'data/{identifier}/{runnum}/edisplist_direct.npy', edisplist)
+       np.save(f'data/{identifier}/{runnum}/bkgmarglist_direct.npy', bkgmarglist)
 
 
        sigmarglogzvals = []
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
               pool.close()
        print("Done calculating the signal marginalisations.")
-       np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_Direct.npy', sigmarglogzvals)
+       np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_direct.npy', sigmarglogzvals)
 
 
        chime.info('sonic')
