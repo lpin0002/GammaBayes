@@ -197,7 +197,7 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/edisplist_nested.npy', edisplist)
        np.save(f'data/{identifier}/{runnum}/bkgmarglist_nested.npy', bkgmarglist)
 
-       sigmargsamplers = []
+       # sigmargsamplers = []
        sigmarglogzvals = []
        # num_cores = multiprocessing.cpu_count()
        print(f"You have allocated {margcores} cores on your machine")
@@ -207,13 +207,13 @@ if __name__ == '__main__':
               for result in tqdm(pool.imap(func, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
                      evidencevals, samplers = result
                      sigmarglogzvals.append(evidencevals)
-                     sigmargsamplers.append(samplers)
+                     # sigmargsamplers.append(samplers)
 
               pool.close()
        print("Done calculating the signal marginalisations.")
 
        np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_nested.npy', sigmarglogzvals)
-       np.save(f'data/{identifier}/{runnum}/sigmargsamplers_nested.npy', sigmargsamplers)
+       # np.save(f'data/{identifier}/{runnum}/sigmargsamplers_nested.npy', sigmargsamplers)
 
 
        # chime.info('sonic')
