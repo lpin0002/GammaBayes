@@ -13,34 +13,38 @@ from multiprocessing import Pool, freeze_support
 import multiprocessing
 # chime.info('sonic')
 
+log10eaxis = axis
 
 
 
-
-def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, axis=axis):
+def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, log10eaxis=log10eaxis, print_progress=False):
        tempsigdist = sigdistsetup(logmass)
        tempmarglogmassrow = []
+       tempmarglogmassrowsamplers = []
        tempsigdist = sigdistsetup(logmass)
-       tempsigdistaxis = tempsigdist(axis) - special.logsumexp(tempsigdist(axis)+logjacob)
        for i, sample in enumerate(measuredvals):
-              tempsigmargfullvalarray = rundynesty(sample, tempsigdist, edisplist[i], axis=axis)
+              tempsigmargfullvalarray = rundynesty(tempsigdist, edisplist[i], log10eaxis=log10eaxis, print_progress=print_progress)
+              tempmarglogmassrowsamplers.append(tempsigmargfullvalarray)
               tempsigmarg = tempsigmargfullvalarray.logz[-1]
               tempmarglogmassrow.append(tempsigmarg)
-       return np.array(tempmarglogmassrow)
+       return np.array(tempmarglogmassrow), tempmarglogmassrowsamplers
 
 
-def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals):
-       return sigmarg(logmass, edisplist, sigdistsetup, measuredvals)
+def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals, print_progress):
+       return sigmarg(logmass=logmass, edisplist=edisplist, sigdistsetup=sigdistsetup, measuredvals=measuredvals, print_progress=print_progress)
 
-def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
-       tempmargval = 0
-       for i, sample in enumerate(measuredvals):
-              tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[j][i],np.log(1-lambdaval)+bkgmarglist[i])
-       # print(f"{tempmargval:.2e}", end='\r')
-              
-       return tempmargval
+
+def bkgmarg(index, edisplist, bkgdist, log10eaxis=log10eaxis, print_progress=False):
+       bkgmargsampler = rundynesty(bkgdist, edisplist[index], log10eaxis=log10eaxis, print_progress=print_progress)
+       return bkgmargsampler.logz[-1]
+
+
+def bkgmargwrapper(index, edisplist, bkgdist, log10eaxis, print_progress):
+       return bkgmarg(index, edisplist, bkgdist, log10eaxis, print_progress)
+
 
 if __name__ == '__main__':
+       np.seterr(divide="ignore")
        try:
               identifier = sys.argv[1]
        except:
@@ -103,35 +107,27 @@ if __name__ == '__main__':
               raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
 
+
        sigdist = sigdistsetup(truelogmass)
 
 
        nsig = int(np.round(truelambdaval*nevents))
        nbkg = int(np.round((1-truelambdaval)*nevents))
-       sigsamples = axis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
+       sigsamples = log10eaxis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
+
 
        sigsamples_measured = []
        for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
-              sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample)+logjacob,Nsamples=1)])
+              sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(axis,sigsample)+logjacob,Nsamples=1)])
        sigsamples_measured = np.array(sigsamples_measured)
 
 
-       bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+logjacob,nbkg)]
+       bkgsamples = log10eaxis[inverse_transform_sampling(bkgdist(log10eaxis)+logjacob,nbkg)]
 
        bkgsamples_measured = []
        for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals", ncols=100):
-              bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample)+logjacob,Nsamples=1)])
+              bkgsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,bkgsample)+logjacob,Nsamples=1)])
        bkgsamples_measured = np.array(bkgsamples_measured)
-
-
-       backgroundintegrals = []
-       signalintegrals = []
-       for i in range(len(axis[1:])):
-              evals = np.linspace(10**axis[i],10**axis[i+1],100)
-              signalintegrals.append(np.exp(special.logsumexp(sigdist(np.log10(evals))+np.log(evals))))
-              backgroundintegrals.append(np.exp(special.logsumexp(bkgdist(np.log10(evals))+np.log(evals))))
-       signalintegrals = np.array(signalintegrals)
-       signalintegrals = np.array(signalintegrals)
 
 
        np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", sigsamples)
@@ -171,38 +167,53 @@ if __name__ == '__main__':
 
        
 
-       edispnorms = np.array([special.logsumexp(edisp(axis,axisval)+logjacob) for axisval in axis])
+       edispnorms = np.array([special.logsumexp(edisp(log10eaxis,axisval)+logjacob) for axisval in log10eaxis])
 
        if -np.inf in edispnorms:
               print(COLOR.BOLD+"Your energy dispersion normalisation has -np.inf inside, which will almostly definitely mean your energy dispersion or the normalisation is wrong."+COLOR.END)
 
        edisplist = []
-       bkgmarglist = []
-       bkgdistnormed = bkgdist(axis) - special.logsumexp(bkgdist(axis)+logjacob)
+       # bkgmarglist = []
+       bkgdistnormed = bkgdist(log10eaxis) - special.logsumexp(bkgdist(log10eaxis)+logjacob)
 
 
        print(f"There are {nevents} events being analyzed.")
-       for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100):
-              edisplist.append(edisp(sample,axis)-edispnorms)
-              bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
+       for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals", ncols=100):
+              edisplist.append(edisp(sample,log10eaxis)-edispnorms)
+              # bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
        edisplist = np.array(edisplist)
+
+       bkgmarglist = []
+       indices = np.arange(len(list(measuredvals)))
+       with Pool(margcores) as pool:
+              bkgfunc = functools.partial(bkgmarg, edisplist=edisplist, bkgdist=bkgdist,log10eaxis=log10eaxis, print_progress=False)
+
+              for result in tqdm(pool.imap(bkgfunc, indices), ncols=100, desc="Calculating background marginalisations..."):
+                     bkgmarglist.append(result)
+              
+              pool.close()
+       print("Done calculating the background marginalisations")
        
        np.save(f'data/{identifier}/{runnum}/edisplist_nested.npy', edisplist)
        np.save(f'data/{identifier}/{runnum}/bkgmarglist_nested.npy', bkgmarglist)
 
+       sigmargsamplers = []
        sigmarglogzvals = []
        # num_cores = multiprocessing.cpu_count()
        print(f"You have allocated {margcores} cores on your machine")
        with Pool(margcores) as pool:
-              func = functools.partial(sigmargwrapper, edisplist=edisplist, sigdistsetup=sigdistsetup, measuredvals=measuredvals)
-            
+              func = functools.partial(sigmargwrapper, edisplist=edisplist, sigdistsetup=sigdistsetup, measuredvals=measuredvals, print_progress=False)
+       
               for result in tqdm(pool.imap(func, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
-                     sigmarglogzvals.append(result)
+                     evidencevals, samplers = result
+                     sigmarglogzvals.append(evidencevals)
+                     sigmargsamplers.append(samplers)
 
               pool.close()
        print("Done calculating the signal marginalisations.")
 
        np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_nested.npy', sigmarglogzvals)
+       np.save(f'data/{identifier}/{runnum}/sigmargsamplers_nested.npy', sigmargsamplers)
 
 
        # chime.info('sonic')
