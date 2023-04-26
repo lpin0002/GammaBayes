@@ -135,9 +135,9 @@ if __name__ == '__main__':
        bkgmargresults = []
        indices = np.arange(len(list(measuredvals)))
        with Pool(margcores) as pool:
-              bkgfunc = functools.partial(marg, edisplist=edisplist, dist=bkgdist,log10eaxis=log10eaxis, print_progress=False)
+              bkgfunc = functools.partial(marg, edisplist=edisplist, dist=bkgdist, log10eaxis=log10eaxis, print_progress=False)
 
-              for result in tqdm(pool.imap(bkgfunc, indices), ncols=100, desc="Calculating background marginalisations"):
+              for result in tqdm(pool.imap(bkgfunc, indices), ncols=100, total=len(list(measuredvals)), desc="Calculating background marginalisations"):
                      bkgmargresults.append(result)
               
               pool.close()
@@ -146,11 +146,10 @@ if __name__ == '__main__':
        
 
        propmargresults = []
-       indices = np.arange(len(list(measuredvals)))
        with Pool(margcores) as pool:
               propfunc = functools.partial(marg, edisplist=edisplist, dist=logpropdist,log10eaxis=log10eaxis, print_progress=False)
 
-              for result in tqdm(pool.imap(propfunc, indices), ncols=100, desc="Calculating proposal marginalisations"):
+              for result in tqdm(pool.imap(propfunc, indices), ncols=100, total=len(list(measuredvals)), desc="Calculating proposal marginalisations"):
                      propmargresults.append(result)
               
               pool.close()
