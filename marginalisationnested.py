@@ -6,7 +6,7 @@ import numpy as np
 import os, time, random, warnings, concurrent.futures, sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import chime
+# import chime
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
@@ -161,7 +161,7 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/propmargresults.npy', propmargresults)
 
 
-       chime.info('sonic')
+       # chime.info('sonic')
 
 
 
