@@ -1,7 +1,7 @@
 
 import os, sys, numpy as np, time, math
 
-def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, marghour, margminute, identifier = None, nbinslogmass=21, nbinslambda=81, immediate_run=1, margmemory = 200):
+def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, marghour, margminute, identifier = None, immediate_run=1, margmemory = 200):
     
     if int(margminute)<10:
         margminute = "10"
@@ -45,7 +45,7 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, mar
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {margcores} {nbinslogmass} {nbinslambda} {int(numberofruns*singlerunevents)}"""
+srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {margcores}"""
 
         with open(f"{workingfolder}/{stemdirname}/SRM{runnum}.sh", 'w') as f:
             f.write(str)
@@ -60,21 +60,10 @@ margcores = int(sys.argv[5])
 marghour = int(sys.argv[6])
 margminute = int(sys.argv[7])
 identifier = sys.argv[8]
-
 try:
-    nbinslogmass = int(sys.argv[9])
-except:
-    nbinslogmass = 21
-
-try:
-    nbinslambda=int(sys.argv[10])
-except:
-    nbinslambda = 81
-
-try:
-    margmemory = int(sys.argv[11])
+    margmemory = int(sys.argv[9])
 except:
     margmemory = 1000
 
 makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, 
-               margcores=margcores, marghour=marghour, margminute=margminute, identifier = identifier, nbinslogmass=nbinslogmass, nbinslambda=nbinslambda, margmemory = 1000)
+               margcores=margcores, marghour=marghour, margminute=margminute, identifier = identifier, margmemory = margmemory)

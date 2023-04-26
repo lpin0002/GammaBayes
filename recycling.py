@@ -1,18 +1,19 @@
 
 import os, sys, numpy as np, time
-from scipy import special
+from scipy import special, stats
 from tqdm import tqdm
+from runrecycle import runrecycle
+from utils import logpropdist, makedist
 
 if __name__ == '__main__':
     try:
         identifier = sys.argv[1]
     except:
         identifier = time.strftime("%d%m%H")
-    try:
-         integrationtype = sys.argv[2]
-         integrationtype = "_"+integrationtype
-    except:
-         integrationtype = ""
+
+    sigdistsetup = makedist
+
+    
 
 
     currentdirecyory = os.getcwd()
@@ -25,32 +26,34 @@ if __name__ == '__main__':
     print(len(rundirs))
     runnum=1
     print("runnum: ", runnum)
-    params              = np.load(f"data/{identifier}/{runnum}/params.npy")
-    logmassrange = np.load(f'data/{identifier}/{runnum}/logmassrange{integrationtype}.npy')
-    lambdarange = np.load(f'data/{identifier}/{runnum}/lambdarange{integrationtype}.npy')
-    edisplist = np.load(f'data/{identifier}/{runnum}/edisplist{integrationtype}.npy')
-    bkgmarglist = np.load(f'data/{identifier}/{runnum}/bkgmarglist{integrationtype}.npy')
-    sigmarglogzvals = np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy')
+    params              = np.load(f"{rundirs[0]}/params.npy")
+    bkgmargresults = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
+    propmargresults = np.load(f'{rundirs[0]}/propmargresults.npy', allow_pickle=True)
+    totalevents = int(params[1,1])
+    truelambda = float(params[1,0])
+    truelogmass = float(params[1,2])
 
-    dontincludenums = []
-    for runnum in range(2,len(rundirs)+1):
-        if not(runnum in dontincludenums):
-            print("runnum: ", runnum)
-            params              = np.load(f"data/{identifier}/{runnum}/params.npy")
-            logmassrange = np.load(f'data/{identifier}/{runnum}/logmassrange{integrationtype}.npy')
-            lambdarange = np.load(f'data/{identifier}/{runnum}/lambdarange{integrationtype}.npy')
-            edisplist = np.concatenate((edisplist, np.load(f'data/{identifier}/{runnum}/edisplist{integrationtype}.npy')))
-            bkgmarglist = np.concatenate((bkgmarglist, np.load(f'data/{identifier}/{runnum}/bkgmarglist{integrationtype}.npy')))
-            sigmarglogzvals = np.concatenate((sigmarglogzvals.T, np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy').T)).T
+    for rundir in rundirs[1:]:
+        bkgmargresults    = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
+        propmargresults   = np.concatenate((propmargresults, np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)))
+        tempparams      = np.load(f"{rundir}/params.npy")
+        totalevents     += int(tempparams[1,1])
+        if truelambda!=tempparams[1,0]:
+            raise Exception("The value of lambda is not constant across your runs")
+        
+        if truelogmass!=tempparams[1,2]:
+            raise Exception("The value of truelogmass is not constant across your runs")
+        
+    print(f"Total events: {totalevents}")
+    print(f"True lambda val: {truelambda}")
+    print(f"True logmassval: {truelogmass}")
 
-        # return logmassrange, lambdarange, edisplist, bkgmarglist, sigmarglogzvals
-    logmassposterior = []
-    print(logmassrange.shape)
-    for j in tqdm(range(logmassrange.shape[0]), ncols=100, desc="Computing log posterior in lambda and logmDM"):
-            templogmassrow = np.sum(np.logaddexp(np.matrix(np.log(lambdarange))+np.matrix(sigmarglogzvals[j]).T,np.matrix(np.log(1-lambdarange))+np.matrix(bkgmarglist).T),axis=0)
-            templogmassrow = list(np.concatenate(np.array(templogmassrow.T)))
-            logmassposterior.append(templogmassrow)
+    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = 10, nlive = 500, print_progress=True)
 
-    print("\n")
-    normedlogposterior = logmassposterior - special.logsumexp(logmassposterior)
-    np.save(f"data/{identifier}/normedlogposterior{integrationtype}.npy", normedlogposterior)
+    np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
+        
+    
+
+
+
+    

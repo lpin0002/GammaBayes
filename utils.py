@@ -35,10 +35,15 @@ def makedist(centre, spread=0.3):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
 
-def bkgdist(logenerg):
-    return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
+# def bkgdist(logenerg):
+#     return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
-# bkgdist = makedist(-0.5)
+def bkgdist(log10eval):
+    return makedist(-0.5)(log10eval)
+
+def logpropdist(logeval):
+    func = stats.uniform(loc=10**axis[0], scale=10**axis[-1]-10**axis[0])
+    return func.logpdf(10**logeval)
 
 
 
@@ -79,21 +84,21 @@ def printimportant(numevents, truelogmass, truelambda, axis=axis, logmassrange=N
 
     stringtoprint ="\n\n"
 
-    stringtoprint +=f"""{COLOR.BOLD}{COLOR.GREEN}IMPORTANT PARAMETERS: {COLOR.END}"""
-    stringtoprint +=f"""{COLOR.YELLOW}number of events{COLOR.END} being analysed/were simulated is {nevents:.1e}."""
+    stringtoprint +=f"""IMPORTANT PARAMETERS:"""
+    stringtoprint +=f"""number of events  being analysed/were simulated is {numevents:.1e}."""
 
-    stringtoprint +=f"""{COLOR.YELLOW}true log mass value{COLOR.END} used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}."""
+    stringtoprint +=f"""true log mass value  used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}."""
 
-    stringtoprint +=f"""{COLOR.YELLOW}fraction of signal events to total events{COLOR.END} is {truelambdaval}."""
+    stringtoprint +=f"""fraction of signal events to total events is {truelambda}."""
 
-    stringtoprint +=f"""{COLOR.YELLOW}bounds for the log energy range{COLOR.END} are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}."""
+    stringtoprint +=f"""bounds for the log energy range  are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}."""
 
     if not(logmassrange ==None): 
-        stringtoprint +=f"""{COLOR.YELLOW}bounds for the log mass range [TeV]{COLOR.END} are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV]."""
+        stringtoprint +=f"""bounds for the log mass range [TeV]  are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV]."""
 
     
     if not(lambdarange==None):
-        stringtoprint +=f"""{COLOR.YELLOW}bounds for the lambda range{COLOR.END} are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}."""
+        stringtoprint +=f"""bounds for the lambda range are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}."""
 
     stringtoprint+="\n"
 
