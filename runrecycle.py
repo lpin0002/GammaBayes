@@ -54,7 +54,7 @@ def ptform(u):
 
 
 
-def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcores = 10, nlive = 2000, print_progress=False):
+def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcores = 10, nlive = 1000, print_progress=False):
 
     # Setting up the likelihood. Which in our case is a product of the point spread function and energy dispersion for the CTA
 
@@ -67,7 +67,7 @@ def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcore
         sampler = dynesty.NestedSampler(
             pool.loglike,
             pool.prior_transform,
-            ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores, update_interval=1.0)
+            ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores)
 
         sampler.run_nested(dlogz=0.1, print_progress=print_progress)
 

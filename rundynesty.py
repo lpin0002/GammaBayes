@@ -5,7 +5,7 @@ import dynesty, warnings
 import matplotlib.pyplot as plt
 
 
-def rundynesty(logprior, logedisplist, log10eaxis, nlive = 2000, print_progress=False):
+def rundynesty(logprior, logedisplist, log10eaxis, nlive = 4000, print_progress=False):
     eaxis = 10**log10eaxis
     logjacob = np.log(eaxis)+np.log(np.log(10))
     def makeloglike(loglikearray=logedisplist):
@@ -35,7 +35,7 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 2000, print_progress=
 
 
     sampler = dynesty.NestedSampler(makeloglike(loglikearray=logedisplist), makeptform(logpriorfunc=logprior), ndim=1, 
-                                    nlive=nlive, bound='multi', update_interval=1.0)
+                                    nlive=nlive, bound='single', update_interval=1.0)
     
     warnings.filterwarnings("ignore", category=UserWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)

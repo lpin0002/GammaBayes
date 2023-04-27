@@ -1,7 +1,7 @@
 
 import os, sys, numpy as np, time, math
 
-def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, marghour, margminute, identifier = None, immediate_run=1, margmemory = 200):
+def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, marghour, margminute, reccores, rechour, recminute, identifier = None, immediate_run=1, margmemory = 200, recmemory = 500):
     
     if int(margminute)<10:
         margminute = "10"
@@ -52,6 +52,23 @@ srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {l
         if immediate_run:
             os.system(f"sbatch {workingfolder}/{stemdirname}/SRM{runnum}.sh")
 
+    str =f"""#!/bin/bash
+#
+#SBATCH --job-name=CR{logmass}_{ltrue}_{int(math.log10(numberofruns*singlerunevents))}
+#SBATCH --output=data/LatestFolder/CR{logmass}_{ltrue}_{int(numberofruns*singlerunevents)}.txt
+#
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task={reccores}
+#SBATCH --time={rechour}:{recminute}:00
+#SBATCH --mem-per-cpu={recmemory}
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=progressemail1999@gmail.com
+source activate DMPipe
+srun python3 recycling.py {identifier}"""
+
+    with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
+        f.write(str)
+
 logmass = float(sys.argv[1])
 ltrue = float(sys.argv[2])
 numberofruns = int(sys.argv[3])
@@ -59,11 +76,18 @@ singlerunevents = int(sys.argv[4])
 margcores = int(sys.argv[5])
 marghour = int(sys.argv[6])
 margminute = int(sys.argv[7])
-identifier = sys.argv[8]
+reccores = int(sys.argv[8])
+rechour = int(sys.argv[9])
+recminute = int(sys.argv[10])
+identifier = sys.argv[11]
 try:
-    margmemory = int(sys.argv[9])
+    margmemory = int(sys.argv[12])
 except:
     margmemory = 1000
+try:
+    recmemory = int(sys.argv[13])
+except:
+    recmemory = 1000    
 
 makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, 
                margcores=margcores, marghour=marghour, margminute=margminute, identifier = identifier, margmemory = margmemory)

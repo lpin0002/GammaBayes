@@ -4,8 +4,9 @@ from scipy import special, stats
 from tqdm import tqdm
 from runrecycle import runrecycle
 from utils import logpropdist, makedist
-
+# import chime
 if __name__ == '__main__':
+    # chime.info('sonic')
     try:
         identifier = sys.argv[1]
     except:
@@ -48,9 +49,11 @@ if __name__ == '__main__':
     print(f"True lambda val: {truelambda}")
     print(f"True logmassval: {truelogmass}")
 
-    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = 10, nlive = 500, print_progress=True)
+    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = 8, nlive = 500, print_progress=True)
 
     np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
+
+    # chime.info('sonic')
         
     
 

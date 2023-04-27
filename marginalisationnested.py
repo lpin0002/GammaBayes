@@ -1,17 +1,14 @@
 
-from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, COLOR,logjacob, logpropdist
+from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, COLOR,logjacob, logpropdist
 from rundynesty import rundynesty
-from scipy import integrate, special, interpolate, stats
+from scipy import special
 import numpy as np
-import os, time, random, warnings, concurrent.futures, sys
+import os, time,  warnings, sys
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 # import chime
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
-import multiprocessing
-# chime.info('sonic')
 
 log10eaxis = axis
 
@@ -29,6 +26,8 @@ def margwrapper(index, edisplist, dist, log10eaxis, print_progress):
 
 
 if __name__ == '__main__':
+       # chime.info('sonic')
+
        np.seterr(divide="ignore")
        try:
               identifier = sys.argv[1]

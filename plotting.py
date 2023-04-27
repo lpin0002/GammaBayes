@@ -71,7 +71,7 @@ if integrationtype=='_nested':
               # labels=[r"log$_{10}$ $m_\chi$"],
               show_titles=True,
               title_kwargs={"fontsize": 12},
-              bins = [50,50],
+              bins = [20,20],
               truths=[truelogmass, truelambda],
               labelpad=-0.2,
               truth_color='r'
