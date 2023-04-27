@@ -23,12 +23,12 @@ if __name__ == '__main__':
 
     currentdirecyory = os.getcwd()
     stemdirectory = currentdirecyory+f'/data/{identifier}'
-    print(stemdirectory)
+    print(f'Stem directory: {stemdirectory}')
 
     rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 
     print(rundirs)
-    print(len(rundirs))
+    print(f'Number of runs: {len(rundirs)}')
     runnum=1
     print("runnum: ", runnum)
     params              = np.load(f"{rundirs[0]}/params.npy")
