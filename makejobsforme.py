@@ -35,7 +35,7 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, mar
         #TODO: Adjust time allocation based on number of cores, accuracy and number of events
         str =f"""#!/bin/bash
 #
-#SBATCH --job-name=DM{logmass}_{ltrue}_{runnum}_{int(math.log10(numberofruns*singlerunevents))}
+#SBATCH --job-name=DM{logmass}|{ltrue}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}
 #SBATCH --output=data/LatestFolder/DM{logmass}_{ltrue}_{runnum}_{int(numberofruns*singlerunevents)}.txt
 #
 #SBATCH --ntasks=1
@@ -54,7 +54,7 @@ srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {l
 
     str =f"""#!/bin/bash
 #
-#SBATCH --job-name=CR{logmass}_{ltrue}_{int(math.log10(numberofruns*singlerunevents))}
+#SBATCH --job-name=CR{logmass}|{ltrue}|{int(math.log10(numberofruns*singlerunevents))}
 #SBATCH --output=data/LatestFolder/CR{logmass}_{ltrue}_{int(numberofruns*singlerunevents)}.txt
 #
 #SBATCH --ntasks=1
