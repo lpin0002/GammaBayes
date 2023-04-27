@@ -35,8 +35,8 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, margcores, mar
         #TODO: Adjust time allocation based on number of cores, accuracy and number of events
         str =f"""#!/bin/bash
 #
-#SBATCH --job-name=DM{logmass}_{runnum}_{ltrue}_{int(math.log10(numberofruns*singlerunevents))}
-#SBATCH --output=data/LatestFolder/DM{logmass}_{runnum}_{ltrue}_{int(numberofruns*singlerunevents)}.txt
+#SBATCH --job-name=DM{logmass}_{ltrue}_{runnum}_{int(math.log10(numberofruns*singlerunevents))}
+#SBATCH --output=data/LatestFolder/DM{logmass}_{ltrue}_{runnum}_{int(numberofruns*singlerunevents)}.txt
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={margcores}
