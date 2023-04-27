@@ -64,7 +64,7 @@ srun python3 marginalisationnested.py {identifier} {runnum} {singlerunevents} {l
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 recycling.py {identifier}"""
+srun python3 recycling.py {identifier} {reccores}"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
         f.write(str)
