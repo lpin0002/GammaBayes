@@ -90,4 +90,6 @@ except:
     recmemory = 1000    
 
 makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, 
-               margcores=margcores, marghour=marghour, margminute=margminute, identifier = identifier, margmemory = margmemory)
+               margcores=margcores, marghour=marghour, margminute=margminute, 
+               reccores=reccores, rechour=rechour, recminute=recminute, 
+               identifier = identifier, margmemory = margmemory, recmemory=recmemory)
