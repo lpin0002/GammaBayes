@@ -11,6 +11,10 @@ if __name__ == '__main__':
         identifier = sys.argv[1]
     except:
         identifier = time.strftime("%d%m%H")
+    try:
+        reccores = int(sys.argv[2])
+    except:
+        reccores = int(10)
 
     sigdistsetup = makedist
 
@@ -49,7 +53,7 @@ if __name__ == '__main__':
     print(f"True lambda val: {truelambda}")
     print(f"True logmassval: {truelogmass}")
 
-    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = 8, nlive = 500, print_progress=True)
+    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = reccores, nlive = 500, print_progress=True)
 
     np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
 
