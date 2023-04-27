@@ -38,15 +38,17 @@ if __name__ == '__main__':
     truelambda = float(params[1,0])
     truelogmass = float(params[1,2])
 
+
+
     for rundir in rundirs[1:]:
         bkgmargresults    = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
         propmargresults   = np.concatenate((propmargresults, np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)))
         tempparams      = np.load(f"{rundir}/params.npy")
         totalevents     += int(tempparams[1,1])
-        if truelambda!=tempparams[1,0]:
+        if truelambda!=float(tempparams[1,0]):
             raise Exception("The value of lambda is not constant across your runs")
         
-        if truelogmass!=tempparams[1,2]:
+        if truelogmass!=float(tempparams[1,2]):
             raise Exception("The value of truelogmass is not constant across your runs")
         
     print(f"Total events: {totalevents}")
