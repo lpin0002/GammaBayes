@@ -55,7 +55,8 @@ if __name__ == '__main__':
     print(f"True lambda val: {truelambda}")
     print(f"True logmassval: {truelogmass}")
 
-    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = reccores, nlive = 500, print_progress=True)
+    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = reccores, 
+                                  nlive = 200, print_progress=True)
 
     np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
 

@@ -86,7 +86,7 @@ if integrationtype=='_nested':
        figure.set_dpi(200)
        #plt.tight_layout()
        
-       plt.savefig(time.strftime(f'{stemdirectory}/Hyperparameter_Posterior_%H.pdf'))
+       plt.savefig(time.strftime(f'{stemdirectory}/Hyperparameter_Posterior_%H%M.pdf'))
        plt.show()
 
 

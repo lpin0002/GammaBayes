@@ -35,7 +35,7 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 2000, print_progress=
 
 
     sampler = dynesty.NestedSampler(makeloglike(loglikearray=logedisplist), makeptform(logpriorfunc=logprior), ndim=1, 
-                                    nlive=nlive, bound='single', update_interval=1.0)
+                                    nlive=nlive, bound='single')
     
     warnings.filterwarnings("ignore", category=UserWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
