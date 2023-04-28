@@ -6,30 +6,19 @@ import dynesty.pool as dypool
 import functools
 
 
+def singlesamplemixture(proposalresult, bkgresult, lambdaval, logproposalprior, logtargetprior):
+    bkgcomp = np.log(1 - lambdaval) + bkgresult.logz[-1]
+    logfrac = special.logsumexp(logtargetprior(proposalresult.samples_equal()) - logproposalprior(proposalresult.samples_equal()))
+    sigcomp = np.log(lambdaval) + proposalresult.logz[-1] + logfrac-np.log(proposalresult.samples_equal().shape[0])
+    value = np.logaddexp(bkgcomp, sigcomp)
+    
+    return value
+
 def log_pt_recycling(lambdaval, proposalresults, bkgresults, logproposalprior, logtargetprior):
-    prod = 0
+    partialmixturefunc = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
+    prodlist = [partialmixturefunc(proposalresult, bkgresult) for proposalresult, bkgresult in zip(proposalresults, bkgresults)]
 
-    for proposalres, bkgres in zip(proposalresults, bkgresults):
-        # The background contributino to the hyperparameter likelihood
-        logbkgcomp                 = np.log(1 - lambdaval) + bkgres.logz[-1]
-
-        # Accessing the __equally weighted__ samples from the marginalisation with the proposal prior
-        propposal_posteriorsamples    = proposalres.samples_equal()
-
-        # Probability values for log_10(E) samples
-        logtargetprior_comp     = logtargetprior(propposal_posteriorsamples)
-        logproposalprior_comp   = logproposalprior(propposal_posteriorsamples)
-
-        # Doing the division
-        logfrac                 = logtargetprior_comp - logproposalprior_comp
-
-        # The signal contribution to the hyperparameter likelihood
-        logsigcomp                 = np.log(lambdaval) + proposalres.logz[-1] + special.logsumexp(logfrac) -np.log(propposal_posteriorsamples.shape[0])
-
-
-        prod += np.logaddexp(logbkgcomp, logsigcomp)
-
-    return prod
+    return np.sum(prodlist)
 
 
 
@@ -50,7 +39,7 @@ def ptform(u):
 
     # lambdavals already should be uniform between 0 and 1
     u[1] = u[1]
-    return u
+    return u[0], u[1]
 
 
 
@@ -67,7 +56,7 @@ def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcore
         sampler = dynesty.NestedSampler(
             pool.loglike,
             pool.prior_transform,
-            ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores)
+            ndim=2, nlive=nlive, bound='single', pool=pool, queue_size=recyclingcores)
 
         sampler.run_nested(dlogz=0.1, print_progress=print_progress)
 

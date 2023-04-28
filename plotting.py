@@ -16,22 +16,18 @@ except:
 
 integrationtype = "_"+integrationtype.lower()
 
-# sigsamples          = np.load(f"data/{identifier}/truesigsamples.npy")
-# sigsamples_measured = np.load(f"data/{identifier}/meassigsamples.npy")
-# bkgsamples          = np.load(f"data/{identifier}/truebkgsamples.npy")
-# bkgsamples_measured = np.load(f"data/{identifier}/measbkgsamples.npy")
 
 currentdirecyory = os.getcwd()
 stemdirectory = currentdirecyory+f'/data/{identifier}'
-print("stem directory: ", stemdirectory)
+print("\nstem directory: ", stemdirectory, '\n')
 
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
-print("list of run directories: ", rundirs)
+print("number of run directories: ", len(rundirs), '\n')
 
 if integrationtype=='_nested':
        params               = np.load(f"{rundirs[0]}/params.npy")
-       bkgmargresults       = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
-       propmargresults      = np.load(f'{rundirs[0]}/propmargresults.npy', allow_pickle=True)
+       # bkgmargresults       = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
+       # propmargresults      = np.load(f'{rundirs[0]}/propmargresults.npy', allow_pickle=True)
        totalevents          = int(params[1,1])
        truelambda           = float(params[1,0])
        truelogmass          = float(params[1,2])
@@ -40,15 +36,18 @@ if integrationtype=='_nested':
        meassigsamples    = np.load(f"{rundirs[0]}/meassigsamples.npy")
        measbkgsamples    = np.load(f"{rundirs[0]}/measbkgsamples.npy")
 
-       print("Done simulation.")
        truesamples             = np.concatenate((truesigsamples, truebkgsamples))
        meassamples          = np.concatenate((meassigsamples, measbkgsamples))
 
        for rundir in rundirs[1:]:
-              bkgmargresults       = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
-              propmargresults      = np.concatenate((propmargresults,np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)))
+              # bkgmargresults       = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
+              # propmargresults      = np.concatenate((propmargresults,np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)))
               tempparams           = np.load(f"{rundir}/params.npy")
               totalevents          += int(tempparams[1,1])
+              truesigsamples       =np.concatenate((truesigsamples, np.load(f"{rundir}/truesigsamples.npy")))
+              truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
+              meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
+              measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
               truetempsamples    = np.concatenate((np.load(f"{rundir}/truesigsamples.npy"),np.load(f"{rundir}/truebkgsamples.npy")))
               meastempsamples    = np.concatenate((np.load(f"{rundir}/meassigsamples.npy"),np.load(f"{rundir}/measbkgsamples.npy")))
 
@@ -56,28 +55,34 @@ if integrationtype=='_nested':
               meassamples          = np.concatenate((meassamples, meastempsamples))
 
        
-       print(f"Total events: {totalevents}")
-       print(f"True lambda val: {truelambda}")
-       print(f"True logmassval: {truelogmass}")
+       print(f"Total events: {totalevents}\n")
+       
        recyclingresults     = np.load(f'{stemdirectory}/recyclingresults.npy', allow_pickle=True)
 
        recyclingresults = recyclingresults.item()
        runsamples = recyclingresults.samples_equal()
 
-       print(runsamples)
 
        figure = corner(
               runsamples,
-              # labels=[r"log$_{10}$ $m_\chi$"],
+              labels=[r"log$_{10}$ $m_\chi$", r"$\lambda$"],
               show_titles=True,
               title_kwargs={"fontsize": 12},
-              bins = [20,20],
+              bins = [25,25],
               truths=[truelogmass, truelambda],
-              labelpad=-0.2,
-              truth_color='r'
+              labelpad=-0.1,
+              tick_kwargs={'rotation':90},
+              color='#0072C1',
+              truth_color='tab:orange',
+              plot_density=False, 
+              plot_datapoints=True, 
+              fill_contours=True,
+              max_n_ticks=3, 
+              hist_kwargs=dict(density=True),
+              smooth=0.9,
        )
        # plt.suptitle(f"Nevents = {totalevents}", size=16)
-       figure.set_size_inches(5,5)
+       figure.set_size_inches(8,8)
        figure.set_dpi(200)
        #plt.tight_layout()
        
@@ -85,29 +90,29 @@ if integrationtype=='_nested':
        plt.show()
 
 
-       sampleindex = -3
-       bkgsamples = bkgmargresults[sampleindex].samples_equal()
+       # sampleindex = -3
+       # bkgsamples = bkgmargresults[sampleindex].samples_equal()
 
-       print(runsamples)
+       # print(runsamples)
 
-       figure = corner(
-              bkgsamples,
-              # labels=[r"log$_{10}$ $m_\chi$"],
-              show_titles=True,
-              title_kwargs={"fontsize": 12},
-              bins = [250],
-              truths=[truesamples[sampleindex]],
-              labelpad=-0.2,
-              truth_color='r',
-              range=[(axis[np.abs(axis-truesamples[sampleindex]).argmin()-16],axis[np.abs(axis-truesamples[sampleindex]).argmin()+16])]
-       )
-       # plt.suptitle(f"Nevents = {totalevents}", size=16)
-       figure.set_size_inches(5,5)
-       figure.set_dpi(200)
-       #plt.tight_layout()
+       # figure = corner(
+       #        bkgsamples,
+       #        # labels=[r"log$_{10}$ $m_\chi$"],
+       #        show_titles=True,
+       #        title_kwargs={"fontsize": 12},
+       #        bins = [250],
+       #        truths=[truesamples[sampleindex]],
+       #        labelpad=-0.2,
+       #        truth_color='r',
+       #        range=[(axis[np.abs(axis-truesamples[sampleindex]).argmin()-16],axis[np.abs(axis-truesamples[sampleindex]).argmin()+16])]
+       # )
+       # # plt.suptitle(f"Nevents = {totalevents}", size=16)
+       # figure.set_size_inches(5,5)
+       # figure.set_dpi(200)
+       # #plt.tight_layout()
        
-       plt.savefig(time.strftime(f'{stemdirectory}/TrueEnergy_Posterior_%H.pdf'))
-       plt.show()
+       # plt.savefig(time.strftime(f'{stemdirectory}/TrueEnergy_Posterior_%H.pdf'))
+       # plt.show()
 
 
 
@@ -188,8 +193,11 @@ centrevals = axis[:-1]+0.5*(axis[1]-axis[0])
 # signalintegrals = np.array(signalintegrals)
 
 plt.figure()
-plt.title("signal true values")
-truegistvals = plt.hist(truesamples, bins=centrevals, alpha=0.7, label='True samples')
+plt.title("true values")
+truesightvals = plt.hist(truesigsamples, bins=axis[::5]-0.01, alpha=0.7, label='True sig samples', color='forestgreen')
+truebkghtvals = plt.hist(truebkgsamples, bins=axis[::5]-0.01, alpha=0.7, label='True bkg samples', color='royalblue')
+plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
+plt.xlabel('True $log_10(E)$ [TeV]')
 plt.legend()
 plt.savefig("Figures/LatestFigures/TrueVals.pdf")
 plt.show()
@@ -210,7 +218,10 @@ plt.show()
 
 plt.figure()
 plt.title("measured values")
-plt.hist(meassamples, bins=centrevals, alpha=0.7, label='pseudo-measured values')
+meassightvals = plt.hist(meassigsamples, bins=axis[::5]-0.01, alpha=0.7, label='pseudo-measured sig samples', color='forestgreen')
+measbkghtvals = plt.hist(measbkgsamples, bins=axis[::5]-0.01, alpha=0.7, label='pseudo-measured bkg samples', color='royalblue')
+plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
+plt.xlabel('Reconstructed (Measured) $log_10(E)$ [TeV]')
 plt.legend()
 plt.savefig("Figures/LatestFigures/MeasuredVals.pdf")
 plt.show()
