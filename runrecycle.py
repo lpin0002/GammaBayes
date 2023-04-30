@@ -4,7 +4,6 @@ from multiprocessing import Pool
 import dynesty
 import dynesty.pool as dypool
 import functools
-import ultranest
 
 
 def singlesamplemixture(proposalresult, bkgresult, lambdaval, logproposalprior, logtargetprior):
