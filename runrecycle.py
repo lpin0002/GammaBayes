@@ -17,9 +17,9 @@ def singlesamplemixture(proposalresult, bkgresult, lambdaval, logproposalprior, 
 def log_pt_recycling(lambdaval, proposalresults, bkgresults, logproposalprior, logtargetprior):
     
     mixture_onlyresultsinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
-    prodlist = [mixture_onlyresultsinput(proposalresult, bkgresult) for proposalresult, bkgresult in zip(proposalresults, bkgresults)]
+    listof_logprobabilityvalues = [mixture_onlyresultsinput(proposalresult, bkgresult) for proposalresult, bkgresult in zip(proposalresults, bkgresults)]
 
-    return np.sum(prodlist)
+    return np.sum(listof_logprobabilityvalues)
 
 
 

@@ -35,6 +35,13 @@ def makedist(centre, spread=0.5):
     func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
     return func
 
+
+def makedist(centre, spread=0.5):
+    energycentre = 10**centre
+    espread = spread*energycentre
+    func = lambda logenergy: np.log((2*np.pi)**(-0.5)*espread**-1)-(10**logenergy-energycentre)**2/(2*espread**2)
+    return func
+
 # def bkgdist(logenerg):
 #     return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
