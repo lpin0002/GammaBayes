@@ -29,18 +29,32 @@ if __name__ == '__main__':
 
     print(rundirs)
     print(f'Number of runs: {len(rundirs)}')
-    runnum=1
-    print("runnum: ", runnum)
-    params              = np.load(f"{rundirs[0]}/params.npy")
-    bkgmargresults = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
-    propmargresults = np.load(f'{rundirs[0]}/propmargresults.npy', allow_pickle=True)
-    totalevents = int(params[1,1])
-    truelambda = float(params[1,0])
-    truelogmass = float(params[1,2])
+    runaccess_startingindex=1
+    print("runnum: ", rundirs[0])
+    try:
+        params              = np.load(f"{rundirs[0]}/params.npy")
+        bkgmargresults = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
+        propmargresults = np.load(f'{rundirs[0]}/propmargresults.npy', allow_pickle=True)
+        totalevents = int(params[1,1])
+        truelambda = float(params[1,0])
+        truelogmass = float(params[1,2])
+    except:
+        print(f"Could not access information from run directory = {rundirs[0]}.")
+        print(f"Accessing baseline parameters and information from the next run directory = {rundirs[runaccess_startingindex]}")
+        
+        params              = np.load(f"{rundirs[runaccess_startingindex]}/params.npy")
+        bkgmargresults = np.load(f'{rundirs[runaccess_startingindex]}/bkgmargresults.npy', allow_pickle=True)
+        propmargresults = np.load(f'{rundirs[runaccess_startingindex]}/propmargresults.npy', allow_pickle=True)
+        totalevents = int(params[1,1])
+        truelambda = float(params[1,0])
+        truelogmass = float(params[1,2])
+        
+        runaccess_startingindex+=1
+        
 
 
 
-    for rundir in rundirs[1:]:
+    for rundir in rundirs[runaccess_startingindex:]:
         try:
             bkgmargresults    = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
             propmargresults   = np.concatenate((propmargresults, np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)))
@@ -52,7 +66,7 @@ if __name__ == '__main__':
             if truelogmass!=float(tempparams[1,2]):
                 raise Exception("The value of truelogmass is not constant across your runs")
         except:
-            print(f"You are missing information from rundir={rundir}")
+            print(f"You are missing information from the run directory={rundir}")
         
     print(f"Total events: {totalevents}")
     print(f"True lambda val: {truelambda}")
