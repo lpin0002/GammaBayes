@@ -36,8 +36,8 @@ if integrationtype=='_nested':
        meassigsamples    = np.load(f"{rundirs[0]}/meassigsamples.npy")
        measbkgsamples    = np.load(f"{rundirs[0]}/measbkgsamples.npy")
 
-       truesamples             = np.concatenate((truesigsamples, truebkgsamples))
-       meassamples          = np.concatenate((meassigsamples, measbkgsamples))
+       truesamples             = np.array(list(truesigsamples)+list(truebkgsamples))
+       meassamples          = np.array(list(meassigsamples)+list(measbkgsamples))
 
        for rundir in rundirs[1:]:
               # bkgmargresults       = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))

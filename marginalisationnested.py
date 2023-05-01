@@ -113,8 +113,10 @@ if __name__ == '__main__':
                                           [truelambdaval, nevents, truelogmass]]))
 
        print("Done simulation.")
-       truevals             = np.concatenate((sigsamples, bkgsamples))
-       measuredvals         = np.concatenate((sigsamples_measured,bkgsamples_measured))
+       print(sigsamples)
+       
+       truevals             = np.array(list(sigsamples)+list(bkgsamples))
+       measuredvals         = np.array(list(sigsamples_measured)+list(bkgsamples_measured))
 
        
 

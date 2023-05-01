@@ -7,16 +7,17 @@ import functools
 
 
 def singlesamplemixture(proposalresult, bkgresult, lambdaval, logproposalprior, logtargetprior):
-    bkgcomp = np.log(1 - lambdaval) + bkgresult.logz[-1]
+    logbkgcomponent = np.log(1 - lambdaval) + bkgresult.logz[-1]
     logfrac = special.logsumexp(logtargetprior(proposalresult.samples_equal()) - logproposalprior(proposalresult.samples_equal()))
-    sigcomp = np.log(lambdaval) + proposalresult.logz[-1] + logfrac-np.log(proposalresult.samples_equal().shape[0])
-    value = np.logaddexp(bkgcomp, sigcomp)
+    logsignalcomponent = np.log(lambdaval) + proposalresult.logz[-1] + logfrac-np.log(proposalresult.samples_equal().shape[0])
+    value = np.logaddexp(logbkgcomponent, logsignalcomponent)
     
     return value
 
 def log_pt_recycling(lambdaval, proposalresults, bkgresults, logproposalprior, logtargetprior):
-    partialmixturefunc = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
-    prodlist = [partialmixturefunc(proposalresult, bkgresult) for proposalresult, bkgresult in zip(proposalresults, bkgresults)]
+    
+    mixture_onlyresultsinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
+    prodlist = [mixture_onlyresultsinput(proposalresult, bkgresult) for proposalresult, bkgresult in zip(proposalresults, bkgresults)]
 
     return np.sum(prodlist)
 
@@ -34,24 +35,20 @@ def inputloglike(cube, propresults, bkgresults, logproposalprior, logtargetprior
 
 
 def ptform(u):
-    # log mass vals to go from 10 GeV to 1 PeV
-    u[0] = 5*u[0]-2
+    # log mass [TeV]
+    logmassval = 5*u[0]-2
 
-    # lambdavals already should be uniform between 0 and 1
-    u[1] = u[1]
-    return u[0], u[1]
-
+    lambdavals = u[1]
+    return logmassval, lambdavals
 
 
-def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcores = 10, nlive = 1000, print_progress=False):
+
+def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcores = 10, nlive = 2000, print_progress=False):
 
     # Setting up the likelihood. Which in our case is a product of the point spread function and energy dispersion for the CTA
-
     inputloglikefunc = functools.partial(inputloglike, propresults=propres, bkgresults=bkgres, logproposalprior=logpropprior, logtargetpriorsetup=logtargetpriorsetup)
-        
-    ptprior = ptform
-
-    with dypool.Pool(recyclingcores, inputloglikefunc, ptprior) as pool:
+    
+    with dypool.Pool(recyclingcores, inputloglikefunc, ptform) as pool:
         # print(dir(pool))
         sampler = dynesty.NestedSampler(
             pool.loglike,

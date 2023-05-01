@@ -41,15 +41,17 @@ if __name__ == '__main__':
     except:
         print(f"Could not access information from run directory = {rundirs[0]}.")
         print(f"Accessing baseline parameters and information from the next run directory = {rundirs[runaccess_startingindex]}")
-        
-        params              = np.load(f"{rundirs[runaccess_startingindex]}/params.npy")
-        bkgmargresults = np.load(f'{rundirs[runaccess_startingindex]}/bkgmargresults.npy', allow_pickle=True)
-        propmargresults = np.load(f'{rundirs[runaccess_startingindex]}/propmargresults.npy', allow_pickle=True)
-        totalevents = int(params[1,1])
-        truelambda = float(params[1,0])
-        truelogmass = float(params[1,2])
-        
-        runaccess_startingindex+=1
+        try:
+            params              = np.load(f"{rundirs[runaccess_startingindex]}/params.npy")
+            bkgmargresults = np.load(f'{rundirs[runaccess_startingindex]}/bkgmargresults.npy', allow_pickle=True)
+            propmargresults = np.load(f'{rundirs[runaccess_startingindex]}/propmargresults.npy', allow_pickle=True)
+            totalevents = int(params[1,1])
+            truelambda = float(params[1,0])
+            truelogmass = float(params[1,2])
+            
+            runaccess_startingindex+=1
+        except:
+            raise Exception("You have more than two runs that have no results. Aborting.")
         
 
 
