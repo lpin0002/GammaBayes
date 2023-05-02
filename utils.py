@@ -36,12 +36,12 @@ def makedist(centre, spread=0.5, eaxis=eaxis):
     func = lambda x: stats.norm(loc=centre, scale=spread*centre).logpdf(np.power(10., x))
     return func
 
-def bkgdist(logenerg):
-    return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
+# def bkgdist(logenerg):
+#     return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
 
-# def bkgdist(log10eval):
-#     return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
+def bkgdist(log10eval):
+    return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
 
 def logpropdist(logeval):
     func = stats.uniform(loc=10**axis[0], scale=10**axis[-1]-10**axis[0])

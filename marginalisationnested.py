@@ -151,7 +151,7 @@ if __name__ == '__main__':
        propmargresults = []
        with Pool(margcores) as pool:
               propfunc = functools.partial(marg, edisplist=edisplist, dist=logpropdist,log10eaxis=log10eaxis, print_progress=False)
-
+              
               for result in tqdm(pool.imap(propfunc, indices), ncols=100, total=len(list(measuredvals)), desc="Calculating proposal marginalisations"):
                      propmargresults.append(result)
               
