@@ -134,6 +134,8 @@ if __name__ == '__main__':
        for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals", ncols=100):
               edisplist.append(edisp(sample,log10eaxis)-edispnorms)
        edisplist = np.array(edisplist)
+       
+       print("edisplist: ", edisplist)
 
        bkgmargresults = []
        indices = np.arange(len(list(measuredvals)))

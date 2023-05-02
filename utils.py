@@ -15,17 +15,17 @@ bkgfull = irfs['bkg'].to_2d()
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 axis = np.log10(edispkernel.axes['energy'].center.value)
-axis = axis[18:227]
+axis = axis[19:226]
 log10eaxis = axis
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
 logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 
-# def edisp(logerecon,logetrue):
-#     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
-#     norm = special.logsumexp(logjacob+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
-#     return val -norm
+def edisp(logerecon,logetrue):
+    val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
+    # norm = special.logsumexp(logjacob+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
+    return val #- norm
 
 
 edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5).logpdf(10**logerecon)
@@ -62,7 +62,6 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
     pmf = np.exp(logpmf)
     cdf = np.cumsum(pmf)  # compute the cumulative distribution function
     # print(cdf)
-    random.seed(42)
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]
     return indices
