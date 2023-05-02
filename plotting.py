@@ -124,7 +124,7 @@ if integrationtype=='_nested':
                      truths=[truesamples[sampleindex]],
                      labelpad=-0.2,
                      truth_color='r',
-                     range=[(axis[np.abs(axis-truesamples[sampleindex]).argmin()-16],axis[np.abs(axis-truesamples[sampleindex]).argmin()+16])]
+                     range=[(-3,2)]
               )
               # plt.suptitle(f"Nevents = {totalevents}", size=16)
               figure.set_size_inches(5,5)
