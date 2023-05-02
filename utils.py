@@ -22,13 +22,13 @@ eaxis_mod = np.log(eaxis)
 logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 
-# def edisp(logerecon,logetrue):
-#     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
-#     norm = special.logsumexp(logjacob+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
-#     return val-norm
+def edisp(logerecon,logetrue):
+    val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
+    norm = special.logsumexp(logjacob+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
+    return val-norm
 
 
-edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5).logpdf(10**logerecon)
+# edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5).logpdf(10**logerecon)
 
 
 
@@ -36,12 +36,12 @@ def makedist(centre, spread=0.5, eaxis=eaxis):
     func = lambda x: stats.norm(loc=10**centre, scale=spread*10**centre).logpdf(np.power(10., x))
     return func
 
-# def bkgdist(logenerg):
-#     return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
+def bkgdist(logenerg):
+    return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
 
-def bkgdist(log10eval):
-    return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
+# def bkgdist(log10eval):
+#     return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
 
 def logpropdist(logeval):
     func = stats.uniform(loc=10**axis[0], scale=10**axis[-1]-10**axis[0])
