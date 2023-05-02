@@ -33,7 +33,7 @@ def edisp(logerecon,logetrue):
 
 
 def makedist(centre, spread=0.5, eaxis=eaxis):
-    func = lambda x: stats.norm(loc=centre, scale=spread*centre).logpdf(np.power(10., x))
+    func = lambda x: stats.norm(loc=10**centre, scale=spread*10**centre).logpdf(np.power(10., x))
     return func
 
 # def bkgdist(logenerg):
