@@ -28,7 +28,7 @@ def edisp(logerecon,logetrue):
     return val #- norm
 
 
-edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5).logpdf(10**logerecon)
+# edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5).logpdf(10**logerecon)
 
 
 
