@@ -4,6 +4,7 @@ from scipy import special, stats
 from tqdm import tqdm
 from runrecycle import runrecycle
 from utils import logpropdist, makedist
+from BFCalc.BFInterp import DM_spectrum_setup
 # import chime
 if __name__ == '__main__':
     # chime.info('sonic')
@@ -16,7 +17,7 @@ if __name__ == '__main__':
     except:
         reccores = int(10)
 
-    sigdistsetup = makedist
+    sigdistsetup = DM_spectrum_setup
 
     
 

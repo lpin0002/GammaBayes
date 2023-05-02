@@ -78,7 +78,7 @@ if integrationtype=='_nested':
               plot_datapoints=True, 
               fill_contours=True,
               max_n_ticks=3, 
-              #hist_kwargs=dict(density=True),
+              hist_kwargs=dict(density=True),
               smooth=0.9,
               #smooth1d=0.5
        )
