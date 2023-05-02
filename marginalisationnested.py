@@ -85,6 +85,8 @@ if __name__ == '__main__':
 
        sigdist = sigdistsetup(truelogmass, eaxis=10**log10eaxis)
        
+       print(sigdist(log10eaxis))
+       print("Proposal: ", logpropdist(log10eaxis))
 
 
        nsig = int(np.round(truelambdaval*nevents))
