@@ -7,6 +7,12 @@ from gammapy.astro.darkmatter import (
     PrimaryFlux,
 )
 import matplotlib.pyplot as plt
+from scipy import special
+
+import sys
+sys.path.append("..")
+
+from utils import logjacob
 
 
 # The below saves the absolute path to the folder containing __this__ file
@@ -119,10 +125,12 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
         # plt.show()
         
         warnings.filterwarnings('ignore', category=RuntimeWarning)
-        fullspectrum = interpolate.interp1d(y=np.log(yvals), x = np.log10(eaxis),
+        norm = special.logsumexp(np.log(yvals)+logjacob)
+        fullspectrum = interpolate.interp1d(y=np.log(yvals)-norm, x = np.log10(eaxis),
                                               assume_sorted=True, bounds_error=False, fill_value=-np.inf)
+        
         warnings.filterwarnings('default', category=RuntimeWarning)
-        return fullspectrum
+        return fullspectrum 
 
     return dm_fullspec(logmDM=logmDM)
 

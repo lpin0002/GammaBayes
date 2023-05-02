@@ -9,7 +9,7 @@ from tqdm import tqdm
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
-
+import matplotlib.pyplot as plt
 log10eaxis = axis
 
 #### Inputs for script in correct order an type are
@@ -83,7 +83,9 @@ if __name__ == '__main__':
 
 
 
-       sigdist = sigdistsetup(truelogmass)
+       sigdist = sigdistsetup(truelogmass, eaxis=10**log10eaxis)
+       
+       print(sigdist(log10eaxis))
 
 
        nsig = int(np.round(truelambdaval*nevents))

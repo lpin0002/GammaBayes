@@ -3,7 +3,7 @@ import os, sys, numpy as np, time
 from scipy import special, stats
 from tqdm import tqdm
 from runrecycle import runrecycle
-from utils import logpropdist, makedist
+from utils import logpropdist, makedist, log10eaxis
 from BFCalc.BFInterp import DM_spectrum_setup
 # import chime
 if __name__ == '__main__':
@@ -75,8 +75,8 @@ if __name__ == '__main__':
     print(f"True lambda val: {truelambda}")
     print(f"True logmassval: {truelogmass}")
 
-    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, recyclingcores = reccores, 
-                                  nlive = 200, print_progress=True)
+    recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, log10eaxis=log10eaxis, recyclingcores = reccores, 
+                                  nlive = 500, print_progress=True)
 
     np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
 

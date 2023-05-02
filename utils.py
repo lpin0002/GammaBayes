@@ -16,6 +16,7 @@ bkgfull = irfs['bkg'].to_2d()
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 axis = np.log10(edispkernel.axes['energy'].center.value)
 axis = axis[18:227]
+log10eaxis = axis
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
 logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
@@ -23,7 +24,7 @@ logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 def edisp(logerecon,logetrue):
     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
-    norm = special.logsumexp(eaxis_mod+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
+    norm = special.logsumexp(logjacob+np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,axis)*u.TeV).value))
     return val-norm
 
 
@@ -31,16 +32,16 @@ def edisp(logerecon,logetrue):
 
 
 
-def makedist(centre, spread=0.5):
-    func = lambda x: stats.norm(loc=np.power(10., centre), scale=spread*np.power(10.,centre)).logpdf(np.power(10., x))
+def makedist(centre, spread=0.5, eaxis=eaxis):
+    func = lambda x: stats.norm(loc=centre, scale=spread*centre).logpdf(np.power(10., x))
     return func
 
 def bkgdist(logenerg):
     return np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
 
 
-def bkgdist(log10eval):
-    return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
+# def bkgdist(log10eval):
+#     return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
 
 def logpropdist(logeval):
     func = stats.uniform(loc=10**axis[0], scale=10**axis[-1]-10**axis[0])
@@ -61,6 +62,11 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
     pmf = np.exp(logpmf)
     cdf = np.cumsum(pmf)  # compute the cumulative distribution function
     # print(cdf)
+    if Nsamples>1:
+        plt.figure()
+        plt.plot(cdf)
+        plt.show()
+    
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]
     return indices

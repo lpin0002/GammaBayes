@@ -10,7 +10,20 @@ def singlesamplemixture(proposalresult, bkgresult, lambdaval, logproposalprior, 
     logbkgcomponent = np.log(1 - lambdaval) + bkgresult.logz[-1]
     logfrac = special.logsumexp(logtargetprior(proposalresult.samples_equal()) - logproposalprior(proposalresult.samples_equal()))
     logsignalcomponent = np.log(lambdaval) + proposalresult.logz[-1] + logfrac-np.log(proposalresult.samples_equal().shape[0])
-    value = np.logaddexp(logbkgcomponent, logsignalcomponent)
+    
+    if np.isnan(logsignalcomponent) or np.isnan(logbkgcomponent):
+        if np.isnan(logsignalcomponent):
+            if np.isnan(logbkgcomponent):
+                value = -np.inf
+            else:
+                value = logbkgcomponent
+        if np.isnan(logbkgcomponent):
+            if np.isnan(logsignalcomponent):
+                value = -np.inf
+            else:
+                value = logsignalcomponent
+    else:
+        value = np.logaddexp(logbkgcomponent, logsignalcomponent)
     
     return value
 
@@ -23,11 +36,11 @@ def log_pt_recycling(lambdaval, proposalresults, bkgresults, logproposalprior, l
 
 
 
-def inputloglike(cube, propresults, bkgresults, logproposalprior, logtargetpriorsetup):
+def inputloglike(cube, log10eaxis, propresults, bkgresults, logproposalprior, logtargetpriorsetup):
     logmassval = cube[0]
     lambdaval = cube[1]
 
-    logtargetprior = logtargetpriorsetup(logmassval)
+    logtargetprior = logtargetpriorsetup(logmassval, eaxis=10**log10eaxis)
 
     output = log_pt_recycling(lambdaval, propresults, bkgresults, logproposalprior, logtargetprior)
     return output
@@ -43,10 +56,12 @@ def ptform(u):
 
 
 
-def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, recyclingcores = 10, nlive = 2000, print_progress=False):
+def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, log10eaxis, recyclingcores = 10, nlive = 2000, print_progress=False):
 
     # Setting up the likelihood. Which in our case is a product of the point spread function and energy dispersion for the CTA
-    inputloglikefunc = functools.partial(inputloglike, propresults=propres, bkgresults=bkgres, logproposalprior=logpropprior, logtargetpriorsetup=logtargetpriorsetup)
+    inputloglikefunc = functools.partial(inputloglike, propresults=propres, bkgresults=bkgres, 
+                                         logproposalprior=logpropprior, logtargetpriorsetup=logtargetpriorsetup,
+                                         log10eaxis=log10eaxis)
     
     with dypool.Pool(recyclingcores, inputloglikefunc, ptform) as pool:
         # print(dir(pool))

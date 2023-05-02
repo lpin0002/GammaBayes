@@ -40,7 +40,9 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 3600, print_progress=
     warnings.filterwarnings("ignore", category=UserWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-    sampler.run_nested(dlogz=0.05, print_progress=print_progress)
+    # The maxcall is meant to be a rediculous number for evaluating integrals in up to three dimensions
+        # if you are doing larger integrals here, maybe change that number?
+    sampler.run_nested(dlogz=0.05, print_progress=print_progress, maxcall=1000000)
     res = sampler.results
     warnings.filterwarnings("default")
     # To get equally weighted samples like MCMC use res.samples_equal()
