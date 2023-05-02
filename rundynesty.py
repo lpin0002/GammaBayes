@@ -13,7 +13,6 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 5000, print_progress=
         def gaussfull(cube):
             logevalue = cube[0]
             output = loglike(logevalue)
-            print(output)
             return output
         return gaussfull
 
