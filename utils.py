@@ -15,7 +15,7 @@ bkgfull = irfs['bkg'].to_2d()
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 axis = np.log10(edispkernel.axes['energy'].center.value)
-axis = axis[19:226]
+axis = axis[18:227]
 log10eaxis = axis
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
@@ -32,7 +32,7 @@ def edisp(logerecon,logetrue):
 
 
 def makedist(centre, spread=0.5, eaxis=eaxis):
-    func = lambda x: stats.norm(loc=10**centre, scale=spread*10**centre).logpdf(np.power(10., x))
+    func = lambda x: stats.norm(loc=10**centre, scale=spread*10**centre).logpdf(10**x)
     return func
 
 def bkgdist(logenerg):
