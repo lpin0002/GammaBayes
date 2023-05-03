@@ -61,7 +61,7 @@ if __name__ == '__main__':
        
        
        warnings.filterwarnings('ignore',category=UserWarning)
-       sigdistsetup = DM_spectrum_setup
+       sigdistsetup = makedist
 
        
        
