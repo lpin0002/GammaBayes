@@ -68,9 +68,9 @@ def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, log10eaxis, r
         sampler = dynesty.NestedSampler(
             pool.loglike,
             pool.prior_transform,
-            ndim=2, nlive=nlive, bound='single', pool=pool, queue_size=recyclingcores)
+            ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores)
 
-        sampler.run_nested(dlogz=0.1, print_progress=print_progress)
+        sampler.run_nested(dlogz=0.05, print_progress=print_progress)
 
     # Extracting the results from the sampler
     results = sampler.results
