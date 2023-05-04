@@ -5,12 +5,17 @@ from scipy import special
 import numpy as np
 import os, time,  warnings, sys
 from tqdm import tqdm
-# import chime
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
 import matplotlib.pyplot as plt
+
+import chime
+
+
 log10eaxis = axis
+
+
 
 #### Inputs for script in correct order an type are
 # identifier (whatever type you want), run number (int), nevents (int), true log_10 mass (float), true lambda val (float), marg cores (int)
@@ -26,7 +31,7 @@ def margwrapper(index, edisplist, dist, log10eaxis, print_progress):
 
 
 if __name__ == '__main__':
-       # chime.info('sonic')
+       chime.info('sonic')
 
        try:
               identifier = sys.argv[1]
@@ -60,7 +65,7 @@ if __name__ == '__main__':
        
        
        warnings.filterwarnings('ignore',category=UserWarning)
-       sigdistsetup = makedist
+       sigdistsetup = DM_spectrum_setup
 
        
        
@@ -163,7 +168,7 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/propmargresults.npy', propmargresults)
 
 
-       # chime.info('sonic')
+       chime.info('sonic')
 
 
 

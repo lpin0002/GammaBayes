@@ -6,43 +6,31 @@ import dynesty.pool as dypool
 import functools
 
 
-def singlesamplemixture(proposalresult, bkgresult, lambdaval, logproposalprior, logtargetprior):
-    logbkgcomponent = np.log(1 - lambdaval) + bkgresult.logz[-1]
-    logfrac = special.logsumexp(logtargetprior(proposalresult.samples_equal()) - logproposalprior(proposalresult.samples_equal()))
-    logsignalcomponent = np.log(lambdaval) + proposalresult.logz[-1] + logfrac-np.log(proposalresult.samples_equal().shape[0])
+def singlesamplemixture(proposallogzresult, proposalmargsamplelist, bkglogzresult, lambdaval, logproposalprior, logtargetprior):
+    logbkgcomponent = np.log(1 - lambdaval) + bkglogzresult
+    logfrac = special.logsumexp(logtargetprior(proposalmargsamplelist) - logproposalprior(proposalmargsamplelist))
+    logsignalcomponent = np.log(lambdaval) + proposallogzresult + logfrac-np.log(proposalmargsamplelist.shape[0])
     
-    if np.isnan(logsignalcomponent) or np.isnan(logbkgcomponent):
-        if np.isnan(logsignalcomponent):
-            if np.isnan(logbkgcomponent):
-                value = -np.inf
-            else:
-                value = logbkgcomponent
-        if np.isnan(logbkgcomponent):
-            if np.isnan(logsignalcomponent):
-                value = -np.inf
-            else:
-                value = logsignalcomponent
-    else:
-        value = np.logaddexp(logbkgcomponent, logsignalcomponent)
-    
+    value = np.logaddexp(logbkgcomponent, logsignalcomponent)
     return value
 
-def log_pt_recycling(lambdaval, proposalresults, bkgresults, logproposalprior, logtargetprior):
+def log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior):
     
     mixture_onlyresultsinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
-    listof_logprobabilityvalues = [mixture_onlyresultsinput(proposalresult, bkgresult) for proposalresult, bkgresult in zip(proposalresults, bkgresults)]
+    listof_logprobabilityvalues = [mixture_onlyresultsinput(proposallogzresult, proposalmargsamplelist, bkglogzresult) for proposallogzresult, proposalmargsamplelist, bkglogzresult in zip(proposallogzresults, proposalmargsamples, bkglogevidencevalues)]
 
     return np.sum(listof_logprobabilityvalues)
 
 
 
-def inputloglike(cube, log10eaxis, propresults, bkgresults, logproposalprior, logtargetpriorsetup):
+def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetpriorsetup):
     logmassval = cube[0]
     lambdaval = cube[1]
 
     logtargetprior = logtargetpriorsetup(logmassval, eaxis=10**log10eaxis)
 
-    output = log_pt_recycling(lambdaval, propresults, bkgresults, logproposalprior, logtargetprior)
+    output = log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior)
+    
     return output
 
 
@@ -56,10 +44,12 @@ def ptform(u):
 
 
 
-def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, log10eaxis, recyclingcores = 10, nlive = 200, print_progress=False):
-
+def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, log10eaxis, recyclingcores = 10, nlive = 200, print_progress=False):
+    bkglogevidencevalues = [bkgmargresult.logz[-1] for bkgmargresult in bkgmargresults]
+    proposallogzresults = [propresult.logz[-1] for propresult in propresults]
+    proposalmargsamples = [propresult.samples_equal() for propresult in propresults]
     # Setting up the likelihood. Which in our case is a product of the point spread function and energy dispersion for the CTA
-    inputloglikefunc = functools.partial(inputloglike, propresults=propres, bkgresults=bkgres, 
+    inputloglikefunc = functools.partial(inputloglike, proposallogzresults=proposallogzresults, proposalmargsamples=proposalmargsamples, bkglogevidencevalues=bkglogevidencevalues, 
                                          logproposalprior=logpropprior, logtargetpriorsetup=logtargetpriorsetup,
                                          log10eaxis=log10eaxis)
     
@@ -70,7 +60,7 @@ def runrecycle(propres, bkgres, logpropprior, logtargetpriorsetup, log10eaxis, r
             pool.prior_transform,
             ndim=2, nlive=nlive, bound='single', pool=pool, queue_size=recyclingcores)
 
-        sampler.run_nested(dlogz=0.05, print_progress=print_progress)
+        sampler.run_nested(dlogz=0.1, print_progress=print_progress)
 
     # Extracting the results from the sampler
     results = sampler.results

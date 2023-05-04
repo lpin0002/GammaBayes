@@ -34,8 +34,9 @@ def edisp(logerecon,logetrue):
 
 
 def makedist(centre, spread=0.5, eaxis=eaxis):
-    func = lambda x: stats.norm(loc=10**centre, scale=spread*10**centre).logpdf(10**x)
-    return func
+    def distribution(x):
+        return stats.norm(loc=np.power(10., centre), scale=spread*np.power(10., centre)).logpdf(np.power(10., x))
+    return distribution
 
 def bkgdist(logenerg):
     np.seterr(divide='ignore')

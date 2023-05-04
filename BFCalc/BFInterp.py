@@ -79,7 +79,8 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     interpedchannels = [Bfw_interped,Bfz_interped,Bfh_interped,Bfb_interped,
                         Bfc_interped,Bfl_interped,Bfg_interped,Bft_interped]
     
-    logjacob = np.log(eaxis)
+    logjacob = np.log(eaxis) + np.log(np.log(10))+np.log(np.log10(eaxis)[1]-np.log10(eaxis)[0])
+
 
     # os.system("echo here2? $GAMMAPY_DATA")
     def singlechannel_spec(logmDM=logmDM, channel="W", energrange = eaxis):
@@ -126,8 +127,11 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
         # plt.xlim([0,mDM])
         # plt.show()
         
-        norm = special.logsumexp(np.log(yvals)+logjacob)
         
+        norm = special.logsumexp(np.log(yvals)+logjacob)
+
+        if np.isneginf(norm):
+            norm=0 
         fullspectrum = interpolate.interp1d(y=np.log(yvals)-norm, x = np.log10(eaxis),
                                               assume_sorted=True, bounds_error=False, fill_value=-np.inf)
         
