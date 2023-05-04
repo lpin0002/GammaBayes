@@ -72,6 +72,9 @@ if integrationtype=='_nested':
               truesamples          = np.concatenate((truesamples, truetempsamples))
               meassamples          = np.concatenate((meassamples, meastempsamples))
 
+       print(f"{params[0,0]} = {params[1,0]}")
+       print(f"{params[0,2]} = {params[1,2]}")
+       
        
        print(f"Total events: {totalevents}\n")
        
@@ -111,13 +114,13 @@ if integrationtype=='_nested':
               plt.show()
 
        if whattoplot[1]:
-              sampleindex = -1
-              bkgsamples = bkgmargresults[sampleindex].samples_equal()
+              sampleindex = -2
+              nuisancemargsamples = bkgmargresults[sampleindex].samples_equal()
 
 
               figure = corner(
-                     bkgsamples,
-                     # labels=[r"log$_{10}$ $m_\chi$"],
+                     nuisancemargsamples,
+                     labels=[r"log$_{10}$ E$_t$"],
                      show_titles=True,
                      title_kwargs={"fontsize": 12},
                      bins = [250],

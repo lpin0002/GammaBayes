@@ -28,7 +28,6 @@ def margwrapper(index, edisplist, dist, log10eaxis, print_progress):
 if __name__ == '__main__':
        # chime.info('sonic')
 
-       np.seterr(divide="ignore")
        try:
               identifier = sys.argv[1]
        except:
@@ -61,7 +60,7 @@ if __name__ == '__main__':
        
        
        warnings.filterwarnings('ignore',category=UserWarning)
-       sigdistsetup = DM_spectrum_setup
+       sigdistsetup = makedist
 
        
        
