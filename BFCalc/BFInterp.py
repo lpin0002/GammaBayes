@@ -6,7 +6,7 @@ simpson =  integrate.simps
 from gammapy.astro.darkmatter import (
     PrimaryFlux,
 )
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from scipy import special
 
 import sys

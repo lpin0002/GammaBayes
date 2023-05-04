@@ -1,7 +1,7 @@
 from scipy import integrate, special, interpolate, stats
 import numpy as np
 import os
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import random
 from tqdm import tqdm
 from gammapy.irf import load_cta_irfs

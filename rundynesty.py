@@ -2,7 +2,7 @@
 from scipy import integrate, interpolate, special
 import numpy as np
 import dynesty, warnings
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 def rundynesty(logprior, logedisplist, log10eaxis, nlive = 6000, print_progress=False):

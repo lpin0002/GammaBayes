@@ -8,7 +8,7 @@ from tqdm import tqdm
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # import chime
 
