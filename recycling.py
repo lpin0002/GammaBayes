@@ -5,9 +5,9 @@ from tqdm import tqdm
 from runrecycle import runrecycle
 from utils import logpropdist, makedist, log10eaxis
 from BFCalc.BFInterp import DM_spectrum_setup
-import chime
+# import chime
 if __name__ == '__main__':
-    chime.info('sonic')
+    # chime.info('sonic')
     try:
         identifier = sys.argv[1]
     except:
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
 
-    chime.info('sonic')
+    # chime.info('sonic')
         
     
 
