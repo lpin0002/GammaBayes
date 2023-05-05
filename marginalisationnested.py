@@ -143,7 +143,7 @@ if __name__ == '__main__':
        bkgmargresults = []
        indices = np.arange(len(list(measuredvals)))
        with Pool(margcores) as pool:
-              bkgfunc = functools.partial(marg, edisplist=edisplist, dist=bkgdist, log10eaxis=log10eaxis, print_progress=True)
+              bkgfunc = functools.partial(marg, edisplist=edisplist, dist=bkgdist, log10eaxis=log10eaxis, print_progress=False)
 
               for result in tqdm(pool.imap(bkgfunc, indices), ncols=100, total=len(list(measuredvals)), desc="Calculating background marginalisations"):
                      bkgmargresults.append(result)
