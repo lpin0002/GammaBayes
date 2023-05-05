@@ -22,8 +22,12 @@ try:
 except:
     showsamples = 1
     
+try:
+    integrationtype = str(sys.argv[5])
+except:
+    integrationtype = "nested"
+    
 
-integrationtype = "nested"
 
 
        
@@ -105,7 +109,7 @@ if integrationtype=='_nested':
                      smooth=0.9,
                      smooth1d=0.5
               )
-              # plt.suptitle(f"Nevents = {totalevents}", size=16)
+              plt.suptitle(f"Nevents = {totalevents}", size=16)
               figure.set_size_inches(8,8)
               figure.set_dpi(200)
               #plt.tight_layout()
@@ -114,8 +118,8 @@ if integrationtype=='_nested':
               plt.show()
 
        if whattoplot[1]:
-              sampleindex = -2
-              nuisancemargsamples = bkgmargresults[sampleindex].samples_equal()
+              sampleindex = -7
+              nuisancemargsamples = propmargresults[sampleindex].samples_equal()
 
 
               figure = corner(
@@ -140,7 +144,7 @@ if integrationtype=='_nested':
 
 
 
-if integrationtype=='direct':
+if integrationtype=='_direct':
 
        totalevents = 0
        for rundir in rundirs:
@@ -206,7 +210,7 @@ if integrationtype=='direct':
 
 if whattoplot[2]:
 
-       centrevals = axis[:-1]+0.5*(axis[1]-axis[0])
+       centrevals = axis[:-1:6]+0.001*(axis[1]-axis[0])
        # backgroundintegrals = []
        # signalintegrals = []
        # for i in range(len(axis[1:])):
@@ -218,8 +222,8 @@ if whattoplot[2]:
 
        plt.figure()
        plt.title("true values")
-       truesightvals = plt.hist(truesigsamples, bins=axis[::5]-0.01, alpha=0.7, label='True sig samples', color='forestgreen')
-       truebkghtvals = plt.hist(truebkgsamples, bins=axis[::5]-0.01, alpha=0.7, label='True bkg samples', color='royalblue')
+       truesightvals = plt.hist(truesigsamples, bins=centrevals, alpha=0.7, label='True sig samples', color='forestgreen')
+       truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
        plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
        plt.xlabel(r'True $log_{10}(E)$ [TeV]')
        plt.ylabel('Number of samples')
@@ -243,8 +247,8 @@ if whattoplot[2]:
 
        plt.figure()
        plt.title("measured values")
-       meassightvals = plt.hist(meassigsamples, bins=axis[::5]-0.01, alpha=0.7, label='pseudo-measured sig samples', color='forestgreen')
-       measbkghtvals = plt.hist(measbkgsamples, bins=axis[::5]-0.01, alpha=0.7, label='pseudo-measured bkg samples', color='royalblue')
+       meassightvals = plt.hist(meassigsamples, bins=centrevals, alpha=0.7, label='pseudo-measured sig samples', color='forestgreen')
+       measbkghtvals = plt.hist(measbkgsamples, bins=centrevals, alpha=0.7, label='pseudo-measured bkg samples', color='royalblue')
        plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
        plt.xlabel(r'Reconstructed (Measured) $log_{10}(E)$ [TeV]')
        plt.ylabel('Number of samples')

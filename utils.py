@@ -25,7 +25,7 @@ logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 def edisp(logerecon,logetrue):
     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
-    norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value))
+    norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
     return val - norm
 
 
@@ -42,7 +42,7 @@ def bkgdist(logenerg):
     np.seterr(divide='ignore')
     val  = np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, offset=1*u.deg).value)
     norm = special.logsumexp(np.log(bkgfull.evaluate(energy=np.power(10.,log10eaxis)*u.TeV, offset=1*u.deg).value)+logjacob)
-    np.seterr(divide='ignore')
+    np.seterr(divide='warn')
     return val - norm
 
 

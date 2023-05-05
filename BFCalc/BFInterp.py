@@ -12,7 +12,6 @@ from scipy import special
 import sys
 sys.path.append("..")
 
-from utils import logjacob
 
 
 # The below saves the absolute path to the folder containing __this__ file
@@ -48,7 +47,9 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
   
     Lambda = dataArr[0,:,1]
     m_DM = dataArr[:,0,0]
-    relic = dataArr[:,:,2]
+    
+    print(np.log10(m_DM)-3)
+    # relic = dataArr[:,:,2]
     Bfw = dataArr[:,:,3]
     Bfz = dataArr[:,:,4]
     Bfh = dataArr[:,:,5]
@@ -57,9 +58,9 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     Bfl = dataArr[:,:,8]
     Bfg = dataArr[:,:,9]
     Bft = dataArr[:,:,10]
-    smoothing = 0.0
+    smoothing = 0.0001
     k = 1
-    relicdensityinterped = interpolate.RectBivariateSpline(m_DM, Lambda, relic, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
+    # relicdensityinterped = interpolate.RectBivariateSpline(m_DM, Lambda, relic, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfw_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfw, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfz_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfz, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfh_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfh, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
@@ -74,15 +75,14 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     #     respectively, lead to a relic density larger  than the observed value of 0.12. Thus, the output of this routine 
     #     is not physically possible. We suggest increasing the coupling value and decreasing the mass value if possible.""")
 
-    possiblechannels = ["W", "Z", "h", "b", "c", "tau", "g", "t"]
+    # possiblechannels = ["W", "Z", "h", "b", "c", "tau", "g", "t"]
 
-    interpedchannels = [Bfw_interped,Bfz_interped,Bfh_interped,Bfb_interped,
-                        Bfc_interped,Bfl_interped,Bfg_interped,Bft_interped]
+    # interpedchannels = [Bfw_interped,Bfz_interped,Bfh_interped,Bfb_interped,
+    #                     Bfc_interped,Bfl_interped,Bfg_interped,Bft_interped]
     
     logjacob = np.log(eaxis) + np.log(np.log(10))+np.log(np.log10(eaxis)[1]-np.log10(eaxis)[0])
 
 
-    # os.system("echo here2? $GAMMAPY_DATA")
     def singlechannel_spec(logmDM=logmDM, channel="W", energrange = eaxis):
         mDM = np.power(10., logmDM)
         DMfluxobj = PrimaryFlux(mDM=f"{mDM} TeV", channel=channel)
@@ -101,11 +101,8 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
         # plt.title(f"{channel}, {energrange[0]}")
         # plt.plot(energrange, func(energrange))
         # plt.yscale('log')
-        # plt.xlim([0,mDM])
+        # plt.xlim([0,mDM+0.1*np.abs(mDM)])
         # plt.show()
-        # option = input("Continue?:")
-        # if "N" in option:
-        #     print(1/0)
 
 
         return func(energrange)
@@ -124,7 +121,7 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
         # plt.figure()
         # plt.plot(np.logspace(-6, 4, 3000), yvals)
         # plt.yscale('log')
-        # plt.xlim([0,mDM])
+        # plt.xlim([0,mDM+0.1*np.abs(mDM)])
         # plt.show()
         
         
