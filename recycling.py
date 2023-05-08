@@ -17,7 +17,7 @@ if __name__ == '__main__':
     except:
         reccores = int(10)
 
-    sigdistsetup = makedist
+    sigdistsetup = DM_spectrum_setup
 
     
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     print(f"True logmassval: {truelogmass}")
 
     recyclingresults = runrecycle(propmargresults, bkgmargresults, logpropdist, sigdistsetup, log10eaxis=log10eaxis, recyclingcores = reccores, 
-                                  nlive = 250, print_progress=True)
+                                  nlive = 150, print_progress=True)
 
     np.save(f'{stemdirectory}/recyclingresults.npy', recyclingresults)
 

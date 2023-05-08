@@ -23,13 +23,13 @@ eaxis_mod = np.log(eaxis)
 logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 
-def edisp(logerecon,logetrue):
-    val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
-    norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
-    return val - norm
+# def edisp(logerecon,logetrue):
+#     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
+#     norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
+#     return val - norm
 
 
-# edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5*10**logetrue).logpdf(10**logerecon)
+edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5*10**logetrue).logpdf(10**logerecon)
 
 
 

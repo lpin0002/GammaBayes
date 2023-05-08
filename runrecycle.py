@@ -5,57 +5,46 @@ import dynesty
 import dynesty.pool as dypool
 import functools
 
+def singlesamplemixture(proposallogzresult, proposalmargsamplelist, bkglogzresult, lambdaval, logproposalprior, logtargetprior):
+    logbkgcomponent = np.log(1 - lambdaval) + bkglogzresult
+    logfrac = special.logsumexp(logtargetprior(proposalmargsamplelist) - logproposalprior(proposalmargsamplelist))
+    logsignalcomponent = np.log(lambdaval) + proposallogzresult + logfrac-np.log(proposalmargsamplelist.shape[0])
+    
+    value = np.logaddexp(logbkgcomponent, logsignalcomponent)
+    return value
 
+def log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior):
+    
+    mixture_singlesampleinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
+    listof_logprobabilityvalues = [mixture_singlesampleinput(proposallogzresult, proposalmargsamplelist, bkglogzresult) for proposallogzresult, proposalmargsamplelist, bkglogzresult in zip(proposallogzresults, proposalmargsamples, bkglogevidencevalues)]
+
+    return np.sum(listof_logprobabilityvalues)
+
+
+
+def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetpriorsetup):
+    logmassval = cube[0]
+    lambdaval = cube[1]
+
+    logtargetprior = logtargetpriorsetup(logmassval, eaxis=10**log10eaxis)
+
+    output = log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior)
+    
+    return output
+
+
+
+def ptform(u):
+    # log mass [TeV]
+    logmassval = 5*u[0]-2
+
+    lambdavals = u[1]
+    return logmassval, lambdavals
 
 
 
 
 def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, log10eaxis, recyclingcores = 10, nlive = 200, print_progress=False):
-    
-    
-    
-    
-    
-    def singlesamplemixture(proposallogzresult, proposalmargsamplelist, bkglogzresult, lambdaval, logproposalprior, logtargetprior):
-        logbkgcomponent = np.log(1 - lambdaval) + bkglogzresult
-        logfrac = special.logsumexp(logtargetprior(proposalmargsamplelist) - logproposalprior(proposalmargsamplelist))
-        logsignalcomponent = np.log(lambdaval) + proposallogzresult + logfrac-np.log(proposalmargsamplelist.shape[0])
-        
-        value = np.logaddexp(logbkgcomponent, logsignalcomponent)
-        return value
-
-    def log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior):
-        
-        mixture_singlesampleinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
-        listof_logprobabilityvalues = [mixture_singlesampleinput(proposallogzresult, proposalmargsamplelist, bkglogzresult) for proposallogzresult, proposalmargsamplelist, bkglogzresult in zip(proposallogzresults, proposalmargsamples, bkglogevidencevalues)]
-
-        return np.sum(listof_logprobabilityvalues)
-
-
-
-    def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetpriorsetup):
-        logmassval = cube[0]
-        lambdaval = cube[1]
-
-        logtargetprior = logtargetpriorsetup(logmassval, eaxis=10**log10eaxis)
-
-        output = log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior)
-        
-        return output
-
-
-
-    def ptform(u):
-        # log mass [TeV]
-        logmassval = 5*u[0]-2
-
-        lambdavals = u[1]
-        return logmassval, lambdavals
-    
-    
-    
-    
-    
     
     bkglogevidencevalues = [bkgmargresult.logz[-1] for bkgmargresult in bkgmargresults]
     proposallogzresults = [propresult.logz[-1] for propresult in propresults]
