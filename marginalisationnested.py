@@ -65,7 +65,7 @@ if __name__ == '__main__':
        
        
        warnings.filterwarnings('ignore',category=UserWarning)
-       sigdistsetup = makedist
+       sigdistsetup = DM_spectrum_setup
 
        
        
@@ -155,9 +155,9 @@ if __name__ == '__main__':
 
        propmargresults = []
        with Pool(margcores) as pool:
-              propfunc = functools.partial(marg, edisplist=edisplist, dist=logpropdist,log10eaxis=log10eaxis, print_progress=False)
+              proposal_func = functools.partial(marg, edisplist=edisplist, dist=logpropdist,log10eaxis=log10eaxis, print_progress=False)
               
-              for result in tqdm(pool.imap(propfunc, indices), ncols=100, total=len(list(measuredvals)), desc="Calculating proposal marginalisations"):
+              for result in tqdm(pool.imap(proposal_func, indices), ncols=100, total=len(list(measuredvals)), desc="Calculating proposal marginalisations"):
                      propmargresults.append(result)
               
               pool.close()

@@ -17,10 +17,11 @@ import multiprocessing
 
 
 def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, axis=axis):
-       tempsigdist = sigdistsetup(logmass)
+       tempsigdist = sigdistsetup(logmass,eaxis=10**axis)
        tempmarglogmassrow = []
-       tempsigdist = sigdistsetup(logmass)
-       tempsigdistaxis = tempsigdist(axis) - special.logsumexp(tempsigdist(axis)+logjacob)
+       lognorm = special.logsumexp(tempsigdist(axis)+logjacob)
+       print(np.exp(lognorm))
+       tempsigdistaxis = tempsigdist(axis) - lognorm
        for i, sample in enumerate(measuredvals):
               tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+logjacob)
               tempmarglogmassrow.append(tempsigmarg)
@@ -33,7 +34,7 @@ def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals):
 def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
        tempmargval = 0
        for i, sample in enumerate(measuredvals):
-              tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[j][i],np.log(1-lambdaval)+bkgmarglist[i])
+              tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[i],np.log(1-lambdaval)+bkgmarglist[i])
        # print(f"{tempmargval:.2e}", end='\r')
               
        return tempmargval
@@ -57,7 +58,7 @@ if __name__ == '__main__':
        except:
               nbinslambda = 21
        
-       sigdistsetup = makedist
+       sigdistsetup = DM_spectrum_setup
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
        np.seterr(divide='ignore', invalid='ignore')
 
@@ -73,7 +74,7 @@ if __name__ == '__main__':
        truevals             = np.concatenate((sigsamples, bkgsamples))
        measuredvals         = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
-       logmasswindowwidth   = 2/np.sqrt(nevents)
+       logmasswindowwidth   = 5/np.sqrt(nevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 
@@ -95,8 +96,8 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
        np.save(f'data/{identifier}/{runnum}/lambdarange_direct.npy',lambdarange)
        # lambdarange = np.array([0.45, 0.5])
-       print("logmassrange: ", logmassrange[0], logmassrange[-1])
-       print("lambdarange: ", lambdarange[0], lambdarange[-1])
+       # print("logmassrange: ", logmassrange[0], logmassrange[-1])
+       # print("lambdarange: ", lambdarange[0], lambdarange[-1])
 
        print(COLOR.BOLD+f"""\n\n{COLOR.BOLD}{COLOR.GREEN}IMPORTANT PARAMETERS: {COLOR.END}
        {COLOR.YELLOW}number of events{COLOR.END} being analysed/were simulated is {nevents:.1e}. 

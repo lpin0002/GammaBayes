@@ -44,7 +44,7 @@ try:
 except:
     raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
-sigdistsetup = makedist
+sigdistsetup = DM_spectrum_setup
 
 
 

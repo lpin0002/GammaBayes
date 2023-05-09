@@ -6,9 +6,9 @@ simpson =  integrate.simps
 from gammapy.astro.darkmatter import (
     PrimaryFlux,
 )
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from scipy import special
-
+from .creategriddata_and_check import getnormedspectrafunc
 import sys
 sys.path.append("..")
 
@@ -48,7 +48,7 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     Lambda = dataArr[0,:,1]
     m_DM = dataArr[:,0,0]
     
-    print(np.log10(m_DM)-3)
+    # print(np.log10(m_DM)-3)
     # relic = dataArr[:,:,2]
     Bfw = dataArr[:,:,3]
     Bfz = dataArr[:,:,4]
@@ -58,8 +58,8 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     Bfl = dataArr[:,:,8]
     Bfg = dataArr[:,:,9]
     Bft = dataArr[:,:,10]
-    smoothing = 0.0001
-    k = 1
+    smoothing = 0.05
+    k = 2
     # relicdensityinterped = interpolate.RectBivariateSpline(m_DM, Lambda, relic, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfw_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfw, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfz_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfz, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
@@ -70,6 +70,7 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     Bfg_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfg, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bft_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bft, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
 
+    BFnorm = Bfw_interped+Bfz_interped+Bfh_interped+Bfb_interped+Bfc_interped+Bfl_interped+Bfg_interped+Bft_interped
     # if relicdensityinterped>0.12:
     #     warnings.warn(f"""The mass and higgs coupling constant values you have chosen, {mDM} GeV and {lambdainput} 
     #     respectively, lead to a relic density larger  than the observed value of 0.12. Thus, the output of this routine 
@@ -83,51 +84,48 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
     logjacob = np.log(eaxis) + np.log(np.log(10))+np.log(np.log10(eaxis)[1]-np.log10(eaxis)[0])
 
 
-    def singlechannel_spec(logmDM=logmDM, channel="W", energrange = eaxis):
-        mDM = np.power(10., logmDM)
-        DMfluxobj = PrimaryFlux(mDM=f"{mDM} TeV", channel=channel)
-        DMfluxDict = DMfluxobj.table_model.to_dict().get('spectral')
+    # def singlechannel_spec(logmDM=logmDM, channel="W", energrange = eaxis):
+    #     mDM = np.power(10., logmDM)
+    #     DMfluxobj = PrimaryFlux(mDM=f"{mDM} TeV", channel=channel)
+    #     DMfluxDict = DMfluxobj.table_model.to_dict().get('spectral')
 
-        energies = np.array(DMfluxDict.get('energy').get('data'))/1000  # in TeV
-        difffluxes = np.array(DMfluxDict.get('values').get('data'))*1000  # in 1/TeV
+    #     energies = np.array(DMfluxDict.get('energy').get('data'))/1000  # in TeV
+    #     difffluxes = np.array(DMfluxDict.get('values').get('data'))*1000  # in 1/TeV
         
-        #print(DMfluxDict.get('values').get('unit'))
+    #     #print(DMfluxDict.get('values').get('unit'))
 
-        func = interpolate.interp1d(x=energies, y=difffluxes, assume_sorted=True,# y=fluxes/norm, assume_sorted=True,
-                                    bounds_error=False, kind='cubic',
-                                    fill_value=0)
-        # The below creates a normalised pdf, but in log Energy. As that is typically what the sampling goes off of
-        # plt.figure()
-        # plt.title(f"{channel}, {energrange[0]}")
-        # plt.plot(energrange, func(energrange))
-        # plt.yscale('log')
-        # plt.xlim([0,mDM+0.1*np.abs(mDM)])
-        # plt.show()
+    #     func = interpolate.interp1d(x=energies, y=difffluxes, assume_sorted=True,# y=fluxes/norm, assume_sorted=True,
+    #                                 bounds_error=False, kind='cubic',
+    #                                 fill_value=0)
+    #     # The below creates a normalised pdf, but in log Energy. As that is typically what the sampling goes off of
+    #     # plt.figure()
+    #     # plt.title(f"{channel}, {energrange[0]}")
+    #     # plt.plot(energrange, func(energrange))
+    #     # plt.yscale('log')
+    #     # plt.xlim([0,mDM+0.1*np.abs(mDM)])
+    #     # plt.show()
 
 
-        return func(energrange)
+    #     return func(energrange)
 
     def dm_fullspec(logmDM=logmDM):
         """A function that returns a function """
-        yvals = Bfw_interped * singlechannel_spec(logmDM=logmDM, channel="W") \
-            + singlechannel_spec(logmDM=logmDM, channel="Z") * Bfz_interped \
-            + singlechannel_spec(logmDM=logmDM, channel="h") * Bfh_interped \
-            + singlechannel_spec(logmDM=logmDM, channel="b") * Bfb_interped \
-            + singlechannel_spec(logmDM=logmDM, channel="c") * Bfc_interped \
-            + singlechannel_spec(logmDM=logmDM, channel="tau") * Bfl_interped \
-            + singlechannel_spec(logmDM=logmDM, channel="g") * Bfg_interped \
-            + singlechannel_spec(logmDM=logmDM, channel="t") * Bft_interped
+        mDM = 10**logmDM
+        yvals = Bfw_interped * getnormedspectrafunc(mDM=mDM, channel="W")(eaxis) \
+            + getnormedspectrafunc(mDM=mDM, channel="Z")(eaxis) * Bfz_interped \
+            + getnormedspectrafunc(mDM=mDM, channel="h")(eaxis) * Bfh_interped \
+            + getnormedspectrafunc(mDM=mDM, channel="b")(eaxis) * Bfb_interped \
+            + getnormedspectrafunc(mDM=mDM, channel="c")(eaxis) * Bfc_interped \
+            + getnormedspectrafunc(mDM=mDM, channel="tau")(eaxis) * Bfl_interped \
+            + getnormedspectrafunc(mDM=mDM, channel="g")(eaxis) * Bfg_interped \
+            + getnormedspectrafunc(mDM=mDM, channel="t")(eaxis) * Bft_interped
             
-        # plt.figure()
-        # plt.plot(np.logspace(-6, 4, 3000), yvals)
-        # plt.yscale('log')
-        # plt.xlim([0,mDM+0.1*np.abs(mDM)])
-        # plt.show()
+        yvals = np.squeeze(yvals/BFnorm)
         
         
         norm = special.logsumexp(np.log(yvals)+logjacob)
 
-        if np.isneginf(norm):
+        if np.isneginf(norm) or np.isnan(norm):
             norm=0 
         fullspectrum = interpolate.interp1d(y=np.log(yvals)-norm, x = np.log10(eaxis),
                                               assume_sorted=True, bounds_error=False, fill_value=-np.inf)
@@ -136,8 +134,9 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, eaxis=np.logspace(-3, 4, 300
 
     return dm_fullspec(logmDM=logmDM)
 
-# examplespec = DM_spectrum_setup(logmDM=10.0)
+# examplespec = DM_spectrum_setup(logmDM=1.0)
 
 # plt.figure()
-# plt.plot(np.linspace(-2,2), examplespec(np.linspace(-2,2)))
+# plt.plot(np.linspace(-2,2,401), examplespec(np.linspace(-2,2,401)), label=special.logsumexp(examplespec(np.linspace(-2,2,401))+np.log(np.logspace(-2,2,401))))
+# plt.xlim([-2,2])
 # plt.show()
