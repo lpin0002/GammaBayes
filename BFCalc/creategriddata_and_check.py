@@ -9,7 +9,7 @@ from gammapy.astro.darkmatter import (
 
 from astropy.table import Table
 # import matplotlib.pyplot as plt
-from scipy import special
+from scipy import special, interpolate
 import matplotlib.pyplot as plt
 import sys
 import pandas as pd
@@ -58,6 +58,9 @@ immediatespectratable = Table.read(
                 guess=False,
                 delimiter=" ",)
 
+
+
+    
 # # print(immediatespectratable)
 
 # subtable = immediatespectratable[immediatespectratable["mDM"] == immediatespectratable["mDM"][0]]
@@ -76,7 +79,7 @@ def singlechannel_diffflux(mass, channel):
 
 massvalues  = immediatespectratable["mDM"].data
 massvalues = np.unique(massvalues)
-energyvalues = np.logspace(-3,2,1001)
+energyvalues = np.logspace(-6,2,1001)
 
 # massenergygrid = np.meshgrid(massvalues, energyvalues)
 def singlechannelgrid(channel):
@@ -85,7 +88,7 @@ def singlechannelgrid(channel):
     difffluxgrid = []
     for massvalue in massvalues:
         energies, dN_dE = singlechannel_diffflux(massvalue, channel)
-        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE, kind='linear', fill_value=0, bounds_error=False)
+        massvalueinterp1d = interpolate.interp1d(x=energies, y=dN_dE, kind='quadratic', fill_value=0, bounds_error=False)
         difffluxgrid.append(massvalueinterp1d(energyvalues))
         
     return difffluxgrid
@@ -94,6 +97,7 @@ def getnormedspectrafunc(mDM, channel):
     gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy")
     massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
     energyvalues        = np.load(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy")
+    
     func =  interpolate.interp2d(massvalues/1e3, energyvalues, np.array(gridtointerpolate).T, kind='linear')
     
     return lambda energy: func(mDM, energy)

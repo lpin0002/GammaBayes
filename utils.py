@@ -16,7 +16,7 @@ bkgfull = irfs['bkg'].to_2d()
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 axis = np.log10(edispkernel.axes['energy'].center.value)
-axis = axis[18:227]
+# axis = axis[18:227]
 log10eaxis = axis
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)

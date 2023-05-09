@@ -20,7 +20,7 @@ def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, a
        tempsigdist = sigdistsetup(logmass,eaxis=10**axis)
        tempmarglogmassrow = []
        lognorm = special.logsumexp(tempsigdist(axis)+logjacob)
-       print(np.exp(lognorm))
+       # print(np.exp(lognorm))
        tempsigdistaxis = tempsigdist(axis) - lognorm
        for i, sample in enumerate(measuredvals):
               tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+logjacob)
