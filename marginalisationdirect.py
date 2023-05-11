@@ -17,7 +17,7 @@ import multiprocessing
 
 
 def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, axis=axis):
-       tempsigdist = sigdistsetup(logmass,eaxis=10**axis)
+       tempsigdist = sigdistsetup(logmass,normeaxis=10**axis)
        tempmarglogmassrow = []
        lognorm = special.logsumexp(tempsigdist(axis)+logjacob)
        # print(np.exp(lognorm))
@@ -74,11 +74,11 @@ if __name__ == '__main__':
        truevals             = np.concatenate((sigsamples, bkgsamples))
        measuredvals         = np.concatenate((sigsamples_measured,bkgsamples_measured))
 
-       logmasswindowwidth   = 5/np.sqrt(nevents)
+       logmasswindowwidth   = 50/np.sqrt(nevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 
-       lambdavalwindowwidth = 5/np.sqrt(nevents)
+       lambdavalwindowwidth = 50/np.sqrt(nevents)
        lambdalowerbound     = truelambdaval-lambdavalwindowwidth
        lambdaupperbound     = truelambdaval+lambdavalwindowwidth
        if logmasslowerbound<axis[0]:
@@ -125,7 +125,7 @@ if __name__ == '__main__':
 
 
        print(f"There are {COLOR.BLUE}{nevents}{COLOR.END} events being analyzed.")
-       for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100):
+       for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100, total=len(list(measuredvals))):
               edisplist.append(edisp(sample,axis)-edispnorms)
               bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
        edisplist = np.array(edisplist)

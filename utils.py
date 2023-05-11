@@ -15,25 +15,28 @@ bkgfull = irfs['bkg'].to_2d()
 
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
+edispkernel.normalize(axis_name='energy')
 axis = np.log10(edispkernel.axes['energy'].center.value)
-# axis = axis[18:227]
+axis = axis[18:227]
+# newaxis = np.linspace(axis[0],axis[-1],10*(axis.shape[0]-1)+1)
+# axis = newaxis
 log10eaxis = axis
 eaxis = np.power(10., axis)
 eaxis_mod = np.log(eaxis)
 logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
 
 
-# def edisp(logerecon,logetrue):
-#     val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
-#     norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
-#     return val - norm
+def edisp(logerecon,logetrue):
+    val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
+    norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
+    return val - norm
 
 
-edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5*10**logetrue).logpdf(10**logerecon)
+# edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5*10**logetrue).logpdf(10**logerecon)
 
 
 
-def makedist(centre, spread=0.5, eaxis=eaxis):
+def makedist(centre, spread=0.5, normeaxis=eaxis):
     def distribution(x):
         return stats.norm(loc=np.power(10., centre), scale=spread*np.power(10., centre)).logpdf(np.power(10., x))
     return distribution

@@ -12,7 +12,7 @@ if __name__ == '__main__':
          integrationtype = sys.argv[2]
          integrationtype = "_"+integrationtype
     except:
-         integrationtype = "direct"
+         integrationtype = "_direct"
 
 
     currentdirecyory = os.getcwd()

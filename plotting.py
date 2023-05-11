@@ -1,4 +1,4 @@
-from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod
+from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, log10eaxis
 from scipy import integrate, special, interpolate, stats
 import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, chime, warnings, corner.corner as corner
 from tqdm import tqdm
@@ -105,9 +105,9 @@ if integrationtype=='_nested':
                      plot_datapoints=True, 
                      fill_contours=True,
                      max_n_ticks=3, 
-                     #hist_kwargs=dict(density=True),
-                     smooth=0.9,
-                     smooth1d=0.5
+                    #  hist_kwargs=dict(density=True),
+                     smooth=1.0,
+                    #  smooth1d=0.9
               )
               plt.suptitle(f"Nevents = {totalevents}", size=16)
               figure.set_size_inches(8,8)
@@ -200,7 +200,10 @@ if integrationtype=='_direct':
         plt.show()
 
         plt.figure()
-        plt.plot(logmassrange, np.exp(normedlogposterior[:,np.abs(truelambdaval-lambdarange).argmin()]))
+        plt.plot(logmassrange, np.sum(np.exp(normedlogposterior), axis=1))
+        # plt.axvline(log10eaxis[np.abs(log10eaxis-truelogmass).argmin()])
+        # plt.axvline(log10eaxis[np.abs(log10eaxis-truelogmass).argmin()+1])
+        # plt.axvline(log10eaxis[np.abs(log10eaxis-truelogmass).argmin()-1])
         plt.axvline(truelogmass, c='r', label=params[1,2])
         plt.xlabel("log mass [TeV]")
         plt.ylabel("Probability density (slice) [1/TeV]")
@@ -212,7 +215,7 @@ if integrationtype=='_direct':
 
 
         plt.figure()
-        plt.plot(lambdarange, np.exp(normedlogposterior[np.abs(truelogmass-logmassrange).argmin(),:]))
+        plt.plot(lambdarange, np.sum(np.exp(normedlogposterior),axis=0))
         plt.xlabel("lambda = signal events/total events")
         plt.ylabel("Probability density (slice) []")
         plt.axvline(truelambdaval,c='r', label=params[1,0])

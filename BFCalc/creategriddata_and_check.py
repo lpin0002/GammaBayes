@@ -88,12 +88,12 @@ def singlechannelgrid(channel):
     difffluxgrid = []
     for massvalue in massvalues:
         energies, dN_dE = singlechannel_diffflux(massvalue, channel)
-        massvalueinterp1d = interpolate.interp1d(x=energies, y=dN_dE, kind='quadratic', fill_value=0, bounds_error=False)
+        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE, kind='quadratic', fill_value=0, bounds_error=False)
         difffluxgrid.append(massvalueinterp1d(energyvalues))
         
     return difffluxgrid
 
-def getnormedspectrafunc(mDM, channel):
+def getspectrafunc(mDM, channel):
     gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy")
     massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
     energyvalues        = np.load(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy")

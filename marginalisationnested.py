@@ -10,7 +10,7 @@ import functools
 from multiprocessing import Pool, freeze_support
 # import matplotlib.pyplot as plt
 
-# import chime
+import chime
 
 
 log10eaxis = axis
@@ -31,7 +31,7 @@ def margwrapper(index, edisplist, dist, log10eaxis, print_progress):
 
 
 if __name__ == '__main__':
-       # chime.info('sonic')
+       chime.info('sonic')
 
        try:
               identifier = sys.argv[1]
@@ -65,7 +65,7 @@ if __name__ == '__main__':
        
        
        warnings.filterwarnings('ignore',category=UserWarning)
-       sigdistsetup = DM_spectrum_setup
+       sigdistsetup = makedist
 
        
        
@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
 
 
-       sigdist = sigdistsetup(truelogmass, eaxis=10**log10eaxis)
+       sigdist = sigdistsetup(truelogmass, normeaxis=10**log10eaxis)
        
        print(sigdist(log10eaxis))
        print("Proposal: ", logpropdist(log10eaxis))
@@ -168,7 +168,7 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/propmargresults.npy', propmargresults)
 
 
-       # chime.info('sonic')
+       chime.info('sonic')
 
 
 

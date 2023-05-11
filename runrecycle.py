@@ -26,7 +26,7 @@ def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkg
     logmassval = cube[0]
     lambdaval = cube[1]
 
-    logtargetprior = logtargetpriorsetup(logmassval, eaxis=10**log10eaxis)
+    logtargetprior = logtargetpriorsetup(logmassval, normeaxis=10**log10eaxis)
 
     output = log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior)
     
@@ -36,7 +36,7 @@ def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkg
 
 def ptform(u):
     # log mass [TeV]
-    logmassval = 5*u[0]-2
+    logmassval = 3.*u[0]-1.
 
     lambdavals = u[1]
     return logmassval, lambdavals
