@@ -5,7 +5,7 @@ import dynesty, warnings
 # import matplotlib.pyplot as plt
 
 
-def rundynesty(logprior, logedisplist, log10eaxis, nlive = 8000, print_progress=False):
+def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress=False):
     eaxis = 10**log10eaxis
     logjacob = np.log(eaxis)+np.log(np.log(10))
     def makeloglike(loglikearray=logedisplist):
@@ -42,7 +42,7 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 8000, print_progress=
 
     # The maxcall is meant to be a rediculous number for evaluating integrals in up to three dimensions
         # if you are doing larger integrals here, maybe change that number?
-    sampler.run_nested(dlogz=0.05, print_progress=print_progress)
+    sampler.run_nested(dlogz=0.02, print_progress=print_progress)
     res = sampler.results
     warnings.filterwarnings("default")
     # To get equally weighted samples like MCMC use res.samples_equal()

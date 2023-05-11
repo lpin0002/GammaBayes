@@ -39,6 +39,7 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, normeaxis=np.logspace(-6, 4,
         dmfullspec: (Generator) A function of the natural log of the spectra that takes in log base 10 energy values.
     """
     eaxis=np.logspace(-6, 4, 3001)
+    # eaxis = normeaxis
     os.environ["GAMMAPY_DATA"]   = modulefolderpath
     # Annoying scaling thing with microOMEGAS. The only unit I could give it was in GeV, but the rest of my code is
         # is TeV, so here's a basic adhoc solution.
@@ -124,22 +125,22 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, normeaxis=np.logspace(-6, 4,
         BFnorm = Bfw_interped+Bfz_interped+Bfh_interped+Bfb_interped+Bfc_interped+Bfl_interped+Bfg_interped+Bft_interped
         log10eaxis = np.log10(normeaxis)
         yvals = np.squeeze(yvals/BFnorm)
-        # whereobject = np.where(log10eaxis>=logmDM)
-        # try:
-        #     stopindex = whereobject[0][0]
-        # except:
-        #     if logmDM<log10eaxis[0]:
-        #         stopindex = 2
-        #     elif logmDM>log10eaxis[-1]:
-        #         stopindex = -1
-        #     else:
-        #         raise Exception("Bounds on the index are incompatible with stopping index.")
+        whereobject = np.where(log10eaxis>=logmDM)
+        try:
+            stopindex = whereobject[0][0]
+        except:
+            if logmDM<log10eaxis[0]:
+                stopindex = 2
+            elif logmDM>log10eaxis[-1]:
+                stopindex = -1
+            else:
+                raise Exception("Bounds on the index are incompatible with stopping index.")
                 
-        # if stopindex<2:
-        #     stopindex=2
+        if stopindex<2:
+            stopindex=2
         
-        yvals = np.log(yvals)#[:stopindex]
-        log10eaxis = log10eaxis#[:stopindex]
+        yvals = np.log(yvals)[:stopindex]
+        log10eaxis = log10eaxis[:stopindex]
                 
         norm = special.logsumexp(yvals+np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0]))
 
