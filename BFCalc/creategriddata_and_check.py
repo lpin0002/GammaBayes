@@ -12,7 +12,6 @@ from astropy.table import Table
 from scipy import special, interpolate
 import matplotlib.pyplot as plt
 import sys
-import pandas as pd
 
 sys.path.append("..")
 
