@@ -38,8 +38,8 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, normeaxis=np.logspace(-6, 4,
     Returns: dmfullsoec
         dmfullspec: (Generator) A function of the natural log of the spectra that takes in log base 10 energy values.
     """
-    eaxis=np.logspace(-6, 4, 3001)
-    # eaxis = normeaxis
+    # eaxis=np.logspace(-6, 4, 3001)
+    eaxis = normeaxis
     os.environ["GAMMAPY_DATA"]   = modulefolderpath
     # Annoying scaling thing with microOMEGAS. The only unit I could give it was in GeV, but the rest of my code is
         # is TeV, so here's a basic adhoc solution.
@@ -60,8 +60,8 @@ def DM_spectrum_setup(logmDM=-0.7, lambdainput=0.1, normeaxis=np.logspace(-6, 4,
     Bfl = dataArr[:,:,8]
     Bfg = dataArr[:,:,9]
     Bft = dataArr[:,:,10]
-    smoothing = 0.3
-    k = 2
+    smoothing = 0.
+    k = 1
     # relicdensityinterped = interpolate.RectBivariateSpline(m_DM, Lambda, relic, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfw_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfw, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]
     Bfz_interped = interpolate.RectBivariateSpline(m_DM, Lambda, Bfz, s=smoothing, kx = k, ky=k)(lambdainput,mDM)[0]

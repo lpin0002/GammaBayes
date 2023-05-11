@@ -5,7 +5,7 @@ import dynesty, warnings
 # import matplotlib.pyplot as plt
 
 
-def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress=False):
+def rundynesty(logprior, logedisplist, log10eaxis, nlive = 20000, print_progress=False):
     eaxis = 10**log10eaxis
     logjacob = np.log(eaxis)+np.log(np.log(10))
     def makeloglike(loglikearray=logedisplist):
