@@ -16,14 +16,13 @@ bkgfull = irfs['bkg'].to_2d()
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 edispkernel.normalize(axis_name='energy')
-axis = np.log10(edispkernel.axes['energy'].center.value)
-axis = axis[18:227]
-# newaxis = np.linspace(axis[0],axis[-1],10*(axis.shape[0]-1)+1)
-# axis = newaxis
-log10eaxis = axis
-eaxis = np.power(10., axis)
+log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
+log10eaxis = log10eaxis[18:227]
+newaxis = np.linspace(log10eaxis[0],log10eaxis[-1],10*(log10eaxis.shape[0]-1)+1)
+log10eaxis = newaxis
+eaxis = np.power(10., log10eaxis)
 eaxis_mod = np.log(eaxis)
-logjacob = np.log(np.log(10))+eaxis_mod+np.log(axis[1]-axis[0])
+logjacob = np.log(np.log(10))+eaxis_mod+np.log(log10eaxis[1]-log10eaxis[0])
 
 
 def edisp(logerecon,logetrue):
@@ -53,7 +52,7 @@ def bkgdist(logenerg):
 #     return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
 
 def logpropdist(logeval):
-    func = stats.uniform(loc=10**axis[0], scale=10**axis[-1]-10**axis[0])
+    func = stats.loguniform(a=10**log10eaxis[0], b=10**log10eaxis[-1])
     return func.logpdf(10**logeval)
 
 
@@ -91,26 +90,3 @@ class COLOR:
    END = '\033[0m'
 
 
-def printimportant(numevents, truelogmass, truelambda, axis=axis, logmassrange=None, lambdarange=None):
-
-    stringtoprint ="\n\n"
-
-    stringtoprint +=f"""IMPORTANT PARAMETERS:"""
-    stringtoprint +=f"""number of events  being analysed/were simulated is {numevents:.1e}."""
-
-    stringtoprint +=f"""true log mass value  used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}."""
-
-    stringtoprint +=f"""fraction of signal events to total events is {truelambda}."""
-
-    stringtoprint +=f"""bounds for the log energy range  are {axis[0]:.2e} and {axis[-1]:.2e} translating into energy bounds of {np.power(10.,axis[0]):.2e} and {np.power(10.,axis[-1]):.2e}."""
-
-    if not(logmassrange ==None): 
-        stringtoprint +=f"""bounds for the log mass range [TeV]  are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV]."""
-
-    
-    if not(lambdarange==None):
-        stringtoprint +=f"""bounds for the lambda range are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}."""
-
-    stringtoprint+="\n"
-
-    print(stringtoprint)

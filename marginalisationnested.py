@@ -1,5 +1,5 @@
 
-from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, COLOR,logjacob, logpropdist
+from utils import inverse_transform_sampling, log10eaxis, bkgdist, makedist, edisp, COLOR,logjacob, logpropdist
 from rundynesty import rundynesty
 from scipy import special
 import numpy as np
@@ -13,7 +13,6 @@ from multiprocessing import Pool, freeze_support
 # import chime
 
 
-log10eaxis = axis
 
 
 
@@ -95,12 +94,12 @@ if __name__ == '__main__':
 
        nsig = int(np.round(truelambdaval*nevents))
        nbkg = int(np.round((1-truelambdaval)*nevents))
-       sigsamples = log10eaxis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
+       sigsamples = log10eaxis[inverse_transform_sampling(sigdist(log10eaxis)+logjacob,nsig)]
 
 
        sigsamples_measured = []
        for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
-              sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(axis,sigsample)+logjacob,Nsamples=1)])
+              sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,sigsample)+logjacob,Nsamples=1)])
        sigsamples_measured = np.array(sigsamples_measured)
 
 

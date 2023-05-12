@@ -1,4 +1,4 @@
-from utils import inverse_transform_sampling, axis, bkgdist, makedist, edisp, eaxis_mod, log10eaxis
+from utils import inverse_transform_sampling, bkgdist, makedist, edisp, eaxis_mod, log10eaxis
 from scipy import integrate, special, interpolate, stats
 import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, chime, warnings, corner.corner as corner
 from tqdm import tqdm
@@ -87,6 +87,7 @@ if integrationtype=='_nested':
               recyclingresults     = np.load(f'{stemdirectory}/recyclingresults.npy', allow_pickle=True)
 
               recyclingresults = recyclingresults.item()
+              recyclingresults.samples_equal()
               runsamples = recyclingresults.samples_equal()
 
 
@@ -105,7 +106,7 @@ if integrationtype=='_nested':
                      plot_datapoints=True, 
                      fill_contours=True,
                      max_n_ticks=3, 
-                    #  hist_kwargs=dict(density=True),
+                     hist_kwargs=dict(density=True),
                      smooth=0.9,
                     #  smooth1d=0.9
               )
@@ -228,7 +229,7 @@ if integrationtype=='_direct':
 
 if whattoplot[2]:
 
-       centrevals = axis[:-1:6]+0.001*(axis[1]-axis[0])
+       centrevals = log10eaxis[:-1:6]+0.001*(log10eaxis[1]-log10eaxis[0])
        # backgroundintegrals = []
        # signalintegrals = []
        # for i in range(len(axis[1:])):

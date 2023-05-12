@@ -59,15 +59,6 @@ immediatespectratable = Table.read(
 
 
 
-    
-# # print(immediatespectratable)
-
-# subtable = immediatespectratable[immediatespectratable["mDM"] == immediatespectratable["mDM"][0]]
-# energypast = (10 ** subtable["Log[10,x]"]) * immediatespectratable["mDM"][0]
-# badindices = []
-# plt.figure()
-
-
 def singlechannel_diffflux(mass, channel):
     subtable = immediatespectratable[immediatespectratable["mDM"] == mass]
     energies = (10 ** subtable["Log[10,x]"]) * mass
@@ -78,16 +69,17 @@ def singlechannel_diffflux(mass, channel):
 
 massvalues  = immediatespectratable["mDM"].data
 massvalues = np.unique(massvalues)
-energyvalues = np.logspace(-6,2,1001)
+energyvalues = np.logspace(-6,2,3001)
 
 # massenergygrid = np.meshgrid(massvalues, energyvalues)
 def singlechannelgrid(channel):
     massvalues  = immediatespectratable["mDM"].data
     massvalues = np.unique(massvalues)
     difffluxgrid = []
+    
     for massvalue in massvalues:
         energies, dN_dE = singlechannel_diffflux(massvalue, channel)
-        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE, kind='quadratic', fill_value=0, bounds_error=False)
+        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE*1e3, kind='linear', fill_value=0, bounds_error=False)
         difffluxgrid.append(massvalueinterp1d(energyvalues))
         
     return difffluxgrid
@@ -113,47 +105,3 @@ def getspectrafunc(mDM, channel):
 # np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
 # np.save(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy", energyvalues)
 
-# gridtointerpolate = singlechannelgrid('W')
-
-# print(np.array(gridtointerpolate).shape)
-
-
-# Wchannelinterped = interpolate.interp2d(massvalues/1e3, energyvalues, np.array(gridtointerpolate).T, kind='linear')
-
-# print("interped value: ", Wchannelinterped(1,1))
-
-# os.environ["GAMMAPY_DATA"]   = modulefolderpath
-# difffluxvalues = []
-# massaxis = np.logspace(-3,2,251)
-# for mass in massaxis:
-#         DMfluxobj = PrimaryFlux(mDM=f"{mass} TeV", channel='W')
-#         DMfluxDict = DMfluxobj.table_model.to_dict().get('spectral')
-
-#         energies = np.array(DMfluxDict.get('energy').get('data'))/1000  # in TeV
-#         difffluxes = np.array(DMfluxDict.get('values').get('data'))*1000
-        
-#         difffluxval = difffluxes[np.abs(energies-1).argmin()]
-        
-#         difffluxvalues.append(difffluxval)
-        
-
-        
-
-# plt.figure()
-# plt.plot(np.log10(massaxis), difffluxvalues, label='gammapy')
-# plt.plot(np.log10(massaxis), Wchannelinterped(massaxis, np.logspace(-1,1,21)).T, label='Mine')
-# plt.xlabel(r"$log_10(m)$")
-# plt.ylabel("Differential Flux [1/TeV]")
-# plt.show()
-
-
-
-# plt.figure()
-# plt.plot(energyvalues, getspectrafunc(0.1,"W")(energyvalues), label='mDM=0.1 TeV')
-# plt.plot(energyvalues, getspectrafunc(1,"W")(energyvalues), label='mDM=1 TeV')
-# plt.plot(energyvalues, getspectrafunc(10,"W")(energyvalues), label='mDM=10 TeV')
-# plt.legend()
-# plt.xlabel(r"Energy [TeV]")
-# plt.loglog()
-# plt.ylabel("Differential Flux [1/TeV]")
-# plt.show()
