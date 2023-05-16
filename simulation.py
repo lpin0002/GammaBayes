@@ -1,7 +1,7 @@
 from scipy import integrate, special, interpolate, stats
 import os, sys, time, random, chime, numpy as np, matplotlib.pyplot as plt, warnings
 from tqdm import tqdm
-from utils import inverse_transform_sampling, axis, makedist, edisp, bkgdist, eaxis_mod, eaxis, logjacob
+from utils import inverse_transform_sampling, log10eaxis, makedist, edisp, bkgdist, eaxis_mod, eaxis, logjacob
 from BFCalc.BFInterp import DM_spectrum_setup
 # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
 np.seterr(divide='ignore', invalid='ignore')
@@ -22,7 +22,7 @@ except:
     nevents = 10
 
 try:
-    truelogmass = float(sys.argv[4])
+    truelogmass = float(sys.argv[4]) 
 except:
     truelogmass = 0
 
@@ -53,19 +53,19 @@ sigdist = sigdistsetup(truelogmass)
 
 nsig = int(np.round(lambdaval*nevents))
 nbkg = int(np.round((1-lambdaval)*nevents))
-sigsamples = axis[inverse_transform_sampling(sigdist(axis)+logjacob,nsig)]
+sigsamples = log10eaxis[inverse_transform_sampling(sigdist(log10eaxis)+logjacob,nsig)]
 
 sigsamples_measured = []
 for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
-    sigsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,sigsample)+logjacob,Nsamples=1)])
+    sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,sigsample)+logjacob,Nsamples=1)])
 sigsamples_measured = np.array(sigsamples_measured)
 
 
-bkgsamples = axis[inverse_transform_sampling(bkgdist(axis)+logjacob,nbkg)]
+bkgsamples = log10eaxis[inverse_transform_sampling(bkgdist(log10eaxis)+logjacob,nbkg)]
 
 bkgsamples_measured = []
 for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals", ncols=100):
-    bkgsamples_measured.append(axis[inverse_transform_sampling(edisp(axis,bkgsample)+logjacob,Nsamples=1)])
+    bkgsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,bkgsample)+logjacob,Nsamples=1)])
 bkgsamples_measured = np.array(bkgsamples_measured)
 
 

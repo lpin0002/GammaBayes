@@ -69,7 +69,7 @@ def singlechannel_diffflux(mass, channel):
 
 massvalues  = immediatespectratable["mDM"].data
 massvalues = np.unique(massvalues)
-energyvalues = np.logspace(-6,2,3001)
+energyvalues = np.logspace(-6,4,20001)
 
 # massenergygrid = np.meshgrid(massvalues, energyvalues)
 def singlechannelgrid(channel):
@@ -79,7 +79,7 @@ def singlechannelgrid(channel):
     
     for massvalue in massvalues:
         energies, dN_dE = singlechannel_diffflux(massvalue, channel)
-        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE*1e3, kind='linear', fill_value=0, bounds_error=False)
+        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE*1e3, kind='linear', fill_value=(dN_dE[0]*1e3,0), bounds_error=False)
         difffluxgrid.append(massvalueinterp1d(energyvalues))
         
     return difffluxgrid

@@ -25,7 +25,7 @@ modulefolderpath = os.path.join(os.path.dirname(__file__))
 
 
 def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
-    # eaxis=np.logspace(-6, 4, 3001)
+    # eaxis=np.logspace(np.log10(normeaxis[0]), np.log10(normeaxis[-1]), 200001)
     eaxis = normeaxis
     
 
@@ -37,21 +37,22 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
         
         log10eaxis = np.log10(eaxis)
         
-        try:
-            stopindex = np.where(log10eaxis>=logmDM)
-            stopindex = stopindex[0][0]
-        except:
-            if log10eaxis[-1]<logmDM:
-                stopindex = -1
-            else:
-                stopindex = 2
-                yvals = 0*yvals
+        # try:
+        #     stopindex = np.where(log10eaxis>=logmDM)
+        #     stopindex = stopindex[0][0]
+        # except:
+        #     if log10eaxis[-1]<logmDM:
+        #         stopindex = -1
+        #     else:
+        #         stopindex = 0
+        
+        
             
         
         logyvals = np.squeeze(np.log(yvals))
         
         # To get rid of interpolation artefacts
-        logyvals[stopindex:] = -np.inf
+        # logyvals[stopindex:] = -np.inf
 
                 
         norm = special.logsumexp(logyvals+np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0]))
@@ -61,8 +62,7 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
             
         # print(special.logsumexp(logyvals-norm+np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])))
         
-        # Nearest decreases computation time an would be equivalent to linear as we are interpolating on the input axis
-        fullspectrum = interpolate.interp1d(y=logyvals-norm, x =log10eaxis, kind='nearest',
+        fullspectrum = interpolate.interp1d(y=logyvals-norm, x =log10eaxis, kind='linear',
                                               assume_sorted=True, bounds_error=False, fill_value=-np.inf)
         
         return fullspectrum 

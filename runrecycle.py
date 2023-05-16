@@ -55,7 +55,7 @@ def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkg
 
 def ptform(u):
     # log mass [TeV] (currently from 0.1 TeV to 10 TeV)
-    logmassval = 2.*u[0]-1.
+    logmassval = 3.05*u[0]-1.05
 
     # Fraction of signal to total events
     lambdavals = u[1]
@@ -85,7 +85,7 @@ def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, l
             pool.prior_transform,
             ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores)
 
-        sampler.run_nested(dlogz=0.1, print_progress=print_progress)
+        sampler.run_nested(dlogz=0.05, print_progress=print_progress)
 
     # Extracting the results from the sampler
     results = sampler.results

@@ -87,28 +87,27 @@ if integrationtype=='_nested':
               recyclingresults     = np.load(f'{stemdirectory}/recyclingresults.npy', allow_pickle=True)
 
               recyclingresults = recyclingresults.item()
-              recyclingresults.samples_equal()
               runsamples = recyclingresults.samples_equal()
 
 
               figure = corner(
-                     runsamples,
-                     labels=[r"log$_{10}$ $m_\chi$", r"$\lambda$"],
-                     show_titles=True,
-                     title_kwargs={"fontsize": 12},
-                     bins = [25,25],
-                     truths=[truelogmass, truelambda],
-                     labelpad=-0.1,
-                     tick_kwargs={'rotation':90},
-                     color='#0072C1',
-                     truth_color='tab:orange',
-                     plot_density=False, 
-                     plot_datapoints=True, 
-                     fill_contours=True,
-                     max_n_ticks=3, 
-                     hist_kwargs=dict(density=True),
-                     smooth=0.9,
-                    #  smooth1d=0.9
+                        runsamples,
+                        labels=[r"log$_{10}$ $m_\chi$", r"$\lambda$"],
+                        show_titles=True,
+                        title_kwargs={"fontsize": 12},
+                        bins = [25,25],
+                        truths=[truelogmass, truelambda],
+                        labelpad=-0.1,
+                        tick_kwargs={'rotation':90},
+                        color='#0072C1',
+                        truth_color='tab:orange',
+                        plot_density=0, 
+                        plot_datapoints=True, 
+                        fill_contours=True,
+                        max_n_ticks=7,
+                        hist_kwargs=dict(density=True),
+                        smooth=0.9,
+                        # smooth1d=0.9
               )
               plt.suptitle(f"Nevents = {totalevents}", size=16)
               figure.set_size_inches(8,8)
@@ -187,15 +186,15 @@ if integrationtype=='_direct':
 
 
         plt.figure(dpi=100)
-        pcol = plt.pcolor(lambdarange, logmassrange, np.exp(normedlogposterior), snap=True)
+        pcol = plt.pcolor(logmassrange, lambdarange, np.exp(normedlogposterior).T, snap=True)
         pcol.set_edgecolor('face')
-        plt.ylabel(r"$log_{10}$(mass) [TeV]")
-        plt.xlabel("lambda = signal events/total events")
+        plt.xlabel(r"$log_{10}$(mass) [TeV]")
+        plt.ylabel("lambda = signal events/total events")
         plt.colorbar(label="Probability Density [1/TeV]")
-        plt.axhline(truelogmass, c='r')
-        plt.axvline(truelambdaval, c='r')
+        plt.axvline(truelogmass, c='r')
+        plt.axhline(truelambdaval, c='r')
         plt.grid(False)
-        plt.title(str(totalevents))
+        plt.title(f"{totalevents} total events")
         plt.savefig(time.strftime(f"data/{identifier}/posterior%H%M_{totalevents}{integrationtype}.pdf"))
         plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
         plt.show()

@@ -18,8 +18,8 @@ edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 edispkernel.normalize(axis_name='energy')
 log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 log10eaxis = log10eaxis[18:227]
-newaxis = np.linspace(log10eaxis[0],log10eaxis[-1],10*(log10eaxis.shape[0]-1)+1)
-log10eaxis = newaxis
+# newaxis = np.linspace(log10eaxis[0],log10eaxis[-1],30*(log10eaxis.shape[0]-1)+1)
+# log10eaxis = newaxis
 eaxis = np.power(10., log10eaxis)
 eaxis_mod = np.log(eaxis)
 logjacob = np.log(np.log(10))+eaxis_mod+np.log(log10eaxis[1]-log10eaxis[0])
