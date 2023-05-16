@@ -74,7 +74,7 @@ if __name__ == '__main__':
        truevals             = np.array(list(sigsamples)+list(bkgsamples))
        measuredvals         = np.array(list(sigsamples_measured)+list(bkgsamples_measured))
 
-       logmasswindowwidth   = 5/np.sqrt(nevents)
+       logmasswindowwidth   = 10/np.sqrt(nevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 

@@ -209,6 +209,7 @@ if integrationtype=='_direct':
         plt.ylabel("Probability density (slice) [1/TeV]")
         plt.legend()
         plt.savefig(f"Figures/LatestFigures/logmassslice{integrationtype}.pdf")
+        plt.ylim([0, None])
         plt.title(str(totalevents))
         plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H%M_{totalevents}{integrationtype}.pdf"))
         plt.show()
@@ -221,6 +222,8 @@ if integrationtype=='_direct':
         plt.axvline(truelambdaval,c='r', label=params[1,0])
         plt.legend()
         plt.title(str(totalevents))
+        plt.ylim([0, None])
+
         plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H%M_{totalevents}{integrationtype}.pdf"))
         plt.savefig(f"Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
         plt.show()
