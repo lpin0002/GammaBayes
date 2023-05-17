@@ -52,6 +52,7 @@ if integrationtype=='_nested':
        totalevents          = int(params[1,1])
        truelambda           = float(params[1,0])
        truelogmass          = float(params[1,2])
+       
        truesigsamples    = np.load(f"{rundirs[0]}/truesigsamples.npy")
        truebkgsamples    = np.load(f"{rundirs[0]}/truebkgsamples.npy")
        meassigsamples    = np.load(f"{rundirs[0]}/meassigsamples.npy")
@@ -70,11 +71,11 @@ if integrationtype=='_nested':
               truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
               meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
               measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
-              truetempsamples    = np.concatenate((np.load(f"{rundir}/truesigsamples.npy"),np.load(f"{rundir}/truebkgsamples.npy")))
-              meastempsamples    = np.concatenate((np.load(f"{rundir}/meassigsamples.npy"),np.load(f"{rundir}/measbkgsamples.npy")))
+              truetempsamples    = np.array(list(np.load(f"{rundir}/truesigsamples.npy"))+list(np.load(f"{rundir}/truebkgsamples.npy")))
+              meastempsamples    = np.array(list(np.load(f"{rundir}/meassigsamples.npy"))+list(np.load(f"{rundir}/measbkgsamples.npy")))
 
-              truesamples          = np.concatenate((truesamples, truetempsamples))
-              meassamples          = np.concatenate((meassamples, meastempsamples))
+              truesamples          = np.array(list(truesamples)+list(truetempsamples))
+              meassamples          = np.array(list(meassamples)+list(meastempsamples))
 
        print(f"{params[0,0]} = {params[1,0]}")
        print(f"{params[0,2]} = {params[1,2]}")
@@ -92,6 +93,7 @@ if integrationtype=='_nested':
 
               figure = corner(
                         runsamples,
+                        levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
                         labels=[r"log$_{10}$ $m_\chi$", r"$\lambda$"],
                         show_titles=True,
                         title_kwargs={"fontsize": 12},

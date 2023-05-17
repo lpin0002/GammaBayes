@@ -4,7 +4,7 @@ import numpy as np
 import dynesty, warnings
 # import matplotlib.pyplot as plt
 
-def rundynesty(logprior, logedisplist, log10eaxis, nlive = 8000, print_progress=False):
+def rundynesty(logprior, logedisplist, log10eaxis, nlive = 12000, print_progress=False):
     eaxis = 10**log10eaxis
     logjacob = np.log(eaxis)+np.log(np.log(10))
     def makeloglike(loglikearray=logedisplist):
@@ -38,7 +38,7 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 8000, print_progress=
     warnings.filterwarnings("ignore", category=UserWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-    sampler.run_nested(dlogz=0.05, print_progress=print_progress, maxcall=int(2e6))
+    sampler.run_nested(dlogz=0.05, print_progress=print_progress, maxcall=int(5e6))
     res = sampler.results
     warnings.filterwarnings("default")
     # To get equally weighted samples like MCMC use res.samples_equal()
