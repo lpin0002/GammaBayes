@@ -55,7 +55,7 @@ def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkg
 
 def ptform(u):
     # log mass [TeV] (currently from 0.1 TeV to 10 TeV)
-    logmassval = 3.05*u[0]-1.05
+    logmassval = 3.0*u[0]-1.0
 
     # Fraction of signal to total events
     lambdavals = u[1]
