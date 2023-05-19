@@ -79,7 +79,9 @@ def singlechannelgrid(channel):
     
     for massvalue in massvalues:
         energies, dN_dE = singlechannel_diffflux(massvalue, channel)
-        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE*1e3, kind='linear', fill_value=(dN_dE[0]*1e3,0), bounds_error=False)
+        
+        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE*1e3, 
+                                                 kind='linear', fill_value=(dN_dE[0],0), bounds_error=False)
         difffluxgrid.append(massvalueinterp1d(energyvalues))
         
     return difffluxgrid
@@ -89,9 +91,9 @@ def getspectrafunc(mDM, channel):
     massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
     energyvalues        = np.load(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy")
     
-    func =  interpolate.interp2d(massvalues/1e3, energyvalues, np.array(gridtointerpolate).T, kind='linear')
+    func =  interpolate.interp2d(np.log10(massvalues/1e3), np.log10(energyvalues), np.array(gridtointerpolate).T, kind='linear', bounds_error=False, fill_value=0)
     
-    return lambda energy: func(mDM, energy)
+    return lambda energy: func(np.log10(mDM), np.log10(energy))
 
 
 
@@ -99,9 +101,8 @@ def getspectrafunc(mDM, channel):
 
 
 
-
-# for channel, channelstored in channel_registry.items():
-#     np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
-# np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
-# np.save(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy", energyvalues)
+for channel, channelstored in channel_registry.items():
+    np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
+np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
+np.save(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy", energyvalues)
 
