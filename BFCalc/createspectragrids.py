@@ -106,8 +106,8 @@ def getspectrafunc(mDM, channel):
 
 
 
-for channel, channelstored in channel_registry.items():
-    np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
-np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
-np.save(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy", log10xvals)
+# for channel, channelstored in channel_registry.items():
+#     np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
+# np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
+# np.save(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy", log10xvals)
 
