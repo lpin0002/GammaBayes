@@ -57,19 +57,26 @@ immediatespectratable = Table.read(
                 guess=False,
                 delimiter=" ",)
 
-
-
+# p p test
+# Transient mailing list
+# Convert to logx
 def singlechannel_diffflux(mass, channel):
-    subtable = immediatespectratable[immediatespectratable["mDM"] == mass]
-    energies = (10 ** subtable["Log[10,x]"]) * mass
-    dN_dlogx = subtable[channel]
-    dN_dE = dN_dlogx / (energies * np.log(10))
+    # Mass in GeV
     
-    return energies, dN_dE
+    subtable = immediatespectratable[immediatespectratable["mDM"] == mass]
+    log10x= subtable["Log[10,x]"].data
+    energies = (10 ** subtable["Log[10,x]"].data) * mass
+    dN_dlogx = subtable[channel].data
+    dN_dE = dN_dlogx / (energies * np.log(10))
+    return log10x, dN_dE
 
+
+# Are in GeV
 massvalues  = immediatespectratable["mDM"].data
 massvalues = np.unique(massvalues)
-energyvalues = np.logspace(-6,4,20001)
+log10xvals  = immediatespectratable["Log[10,x]"].data
+log10xvals = np.unique(log10xvals)
+
 
 # massenergygrid = np.meshgrid(massvalues, energyvalues)
 def singlechannelgrid(channel):
@@ -78,22 +85,20 @@ def singlechannelgrid(channel):
     difffluxgrid = []
     
     for massvalue in massvalues:
-        energies, dN_dE = singlechannel_diffflux(massvalue, channel)
-        
-        massvalueinterp1d = interpolate.interp1d(x=energies/1e3, y=dN_dE*1e3, 
-                                                 kind='linear', fill_value=(dN_dE[0],0), bounds_error=False)
-        difffluxgrid.append(massvalueinterp1d(energyvalues))
+        log10xvals, dN_dE = singlechannel_diffflux(massvalue, channel)
+        difffluxgrid.append(dN_dE)
         
     return difffluxgrid
 
 def getspectrafunc(mDM, channel):
     gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy")
     massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
-    energyvalues        = np.load(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy")
+    log10xvals        = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
     
-    func =  interpolate.interp2d(np.log10(massvalues/1e3), np.log10(energyvalues), np.array(gridtointerpolate).T, kind='linear', bounds_error=False, fill_value=0)
+    func =  interpolate.interp2d(np.log10(massvalues/1e3), log10xvals, np.array(gridtointerpolate).T, 
+                                 kind='linear', bounds_error=False, fill_value=0)
     
-    return lambda energy: func(np.log10(mDM), np.log10(energy))
+    return lambda energy: func(np.log10(mDM), np.log10(energy/mDM))
 
 
 
@@ -104,5 +109,5 @@ def getspectrafunc(mDM, channel):
 for channel, channelstored in channel_registry.items():
     np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
 np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
-np.save(modulefolderpath+f"/griddata/energyvals_massenergy_diffflux_grid.npy", energyvalues)
+np.save(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy", log10xvals)
 

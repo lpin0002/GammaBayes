@@ -56,7 +56,11 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
             fullspectrum = interpolate.interp1d(y=logyvals-norm, x =log10eaxis, kind='linear',
                                                 assume_sorted=True, bounds_error=False, fill_value=-np.inf)
         else:
-            fullspectrum = lambda energ: -np.inf*energ
+            def fullspectrum(energ):
+                if type(energ)==np.ndarray:
+                    return np.full(energ.shape, -np.inf)
+                else:
+                    return -np.inf
         
         return fullspectrum 
 
