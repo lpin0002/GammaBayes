@@ -1,0 +1,5 @@
+/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/deactivate: /fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/conda: /apps/skylake/software/core/anaconda3/5.0.1/bin/python: bad interpreter: No such file or directory
+/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/activate: line 94: sed: command not found
+/apps/skylake/software/core/anaconda3/5.0.1/bin/python: can't open file '/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/conda': [Errno 2] No such file or directory
+/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/activate: line 97: [: =: unary operator expected
+/jobfs/local/slurm/job35237324/slurm_script: line 13: srun: command not found

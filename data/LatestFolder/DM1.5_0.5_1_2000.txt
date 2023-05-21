@@ -1,0 +1,103 @@
+data folder already exists (good)
+Stem Folder Already Exists (good)
+[ 2.75242302e+00  2.70179311e+00  2.65153755e+00  2.60185409e+00
+  2.54957255e+00  2.50073979e+00  2.44939941e+00  2.39841006e+00
+  2.34797284e+00  2.29485595e+00  2.24528894e+00  2.19313631e+00
+  2.14131814e+00  2.09004104e+00  2.03599180e+00  1.98539440e+00
+  1.93209986e+00  1.87911349e+00  1.82664939e+00  1.77127972e+00
+  1.71957946e+00  1.66505985e+00  1.61081998e+00  1.55708228e+00
+  1.50029199e+00  1.44727607e+00  1.39129136e+00  1.33556269e+00
+  1.28032479e+00  1.22185632e+00  1.16709469e+00  1.10915964e+00
+  1.05142585e+00  9.94141142e-01  9.33374381e-01  8.76724485e-01
+  8.16671679e-01  7.56823580e-01  6.97454949e-01  6.34338006e-01
+  5.75627000e-01  5.13252856e-01  4.51088518e-01  3.89440631e-01
+  3.23741130e-01  2.62674172e-01  1.97634073e-01  1.32691848e-01
+  6.81705943e-02 -8.02560146e-04 -6.46398976e-02 -1.32831999e-01
+ -2.00761399e-01 -2.68021542e-01 -3.40133902e-01 -4.06461378e-01
+ -4.77502721e-01 -5.48359276e-01 -6.18591417e-01 -6.94131209e-01
+ -7.63629448e-01 -8.38320858e-01 -9.12657182e-01 -9.86090501e-01
+ -1.06534672e+00 -1.13754016e+00 -1.21535381e+00 -1.29279639e+00
+ -1.36924920e+00 -1.45203447e+00 -1.52719538e+00 -1.60846801e+00
+ -1.68934544e+00 -1.76912185e+00 -1.85581860e+00 -1.93455290e+00
+ -2.02002014e+00 -2.10508712e+00 -2.18893815e+00 -2.28046907e+00
+ -2.36268094e+00 -2.45226191e+00 -2.54136973e+00 -2.62905077e+00
+ -2.72516512e+00 -2.81101904e+00 -2.90494206e+00 -2.99836189e+00
+ -3.09017786e+00 -3.19128428e+00 -3.28151755e+00 -3.38070769e+00
+ -3.47926986e+00 -3.57587822e+00 -3.68282770e+00 -3.77725310e+00
+ -3.88153326e+00 -3.98523912e+00 -4.08685818e+00 -4.19998399e+00
+ -4.29889502e+00 -4.40867415e+00 -4.51778526e+00 -4.62444014e+00
+ -4.74384347e+00 -4.84806051e+00 -4.96441592e+00 -5.07996775e+00
+ -5.19254922e+00 -5.31943232e+00 -5.42842044e+00 -5.55075665e+00
+ -5.67219259e+00 -5.79018540e+00 -5.92398638e+00 -6.03774077e+00
+ -6.16611624e+00 -6.29331972e+00 -6.41631871e+00 -6.55659660e+00
+ -6.67463957e+00 -6.80850528e+00 -6.94050815e+00 -7.06694602e+00
+ -7.21171627e+00 -7.33065876e+00 -7.46568279e+00 -7.59774530e+00
+ -7.72261214e+00 -7.86532571e+00 -7.97953211e+00 -8.10848362e+00
+ -8.23266037e+00 -8.34762161e+00 -8.47753657e+00 -8.57447200e+00
+ -8.68182258e+00 -8.78101650e+00 -8.86812110e+00 -8.96354320e+00
+ -9.02875573e+00 -9.09851943e+00 -9.15737962e+00 -9.20302417e+00
+ -9.25085222e+00 -9.26059379e+00 -9.27043118e+00 -9.25823920e+00
+ -9.22480246e+00 -9.19244765e+00 -9.07080685e+00 -8.96237074e+00
+ -8.73917127e+00 -8.46314428e+00 -8.24705956e+00 -8.06324662e+00
+ -7.90803195e+00            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf            -inf            -inf            -inf
+            -inf]
+Proposal:  [ 1.49366619  1.44761447  1.40156275  1.35551106  1.30945937  1.26340769
+  1.21735601  1.17130431  1.12525261  1.0792009   1.0331492   0.98709748
+  0.94104577  0.89499405  0.84894232  0.80289063  0.75683895  0.71078726
+  0.66473553  0.61868383  0.57263214  0.52658044  0.48052877  0.43447706
+  0.38842533  0.34237362  0.29632193  0.25027025  0.20421856  0.15816686
+  0.11211512  0.0660634   0.02001173 -0.02603996 -0.07209167 -0.11814338
+ -0.16419506 -0.21024675 -0.25629848 -0.30235019 -0.34840191 -0.39445361
+ -0.44050528 -0.48655699 -0.53260871 -0.5786604  -0.6247121  -0.67076382
+ -0.71681552 -0.76286723 -0.80891892 -0.85497059 -0.90102231 -0.94707403
+ -0.99312573 -1.03917741 -1.0852291  -1.13128084 -1.17733254 -1.22338423
+ -1.26943593 -1.31548762 -1.36153932 -1.40759103 -1.45364276 -1.49969446
+ -1.54574612 -1.59179781 -1.63784954 -1.68390125 -1.72995293 -1.77600465
+ -1.82205638 -1.86810809 -1.91415979 -1.96021148 -2.00626315 -2.05231483
+ -2.09836654 -2.14441826 -2.19046998 -2.23652167 -2.28257338 -2.32862509
+ -2.37467681 -2.42072849 -2.46678019 -2.51283189 -2.55888356 -2.60493528
+ -2.650987   -2.6970387  -2.7430904  -2.7891421  -2.83519379 -2.88124549
+ -2.92729719 -2.97334888 -3.01940058 -3.06545227 -3.11150401 -3.15755572
+ -3.20360742 -3.24965911 -3.2957108  -3.34176254 -3.38781424 -3.43386593
+ -3.47991764 -3.52596932 -3.57202101 -3.61807273 -3.66412445 -3.71017618
+ -3.75622785 -3.80227955 -3.84833125 -3.89438293 -3.94043461 -3.98648632
+ -4.03253802 -4.07858975 -4.12464147 -4.17069315 -4.21674484 -4.26279655
+ -4.30884825 -4.35489993 -4.40095163 -4.44700336 -4.49305507 -4.53910676
+ -4.58515848 -4.63121017 -4.67726185 -4.72331355 -4.76936527 -4.81541699
+ -4.86146868 -4.90752039 -4.9535721  -4.99962379 -5.04567549 -5.09172717
+ -5.13777886 -5.18383058 -5.2298823  -5.275934   -5.32198571 -5.3680374
+ -5.41408909 -5.46014079 -5.50619248 -5.5522442  -5.59829592 -5.64434759
+ -5.69039929 -5.73645102 -5.78250271 -5.82855437 -5.8746061  -5.92065784
+ -5.96670955 -6.01276125 -6.05881296 -6.10486465 -6.15091636 -6.19696806
+ -6.24301973 -6.28907143 -6.33512315 -6.38117483 -6.42722652 -6.47327824
+ -6.51932995 -6.56538165 -6.61143335 -6.65748504 -6.70353675 -6.74958843
+ -6.79564014 -6.84169186 -6.88774355 -6.93379525 -6.97984696 -7.02589865
+ -7.07195035 -7.11800204 -7.16405373 -7.21010545 -7.25615717 -7.30220887
+ -7.34826059 -7.39431231 -7.44036402 -7.48641569 -7.53246737 -7.57851908
+ -7.6245708  -7.6706225  -7.71667417 -7.76272588 -7.80877759 -7.85482931
+ -7.900881   -7.94693269 -7.99298439 -8.0390361  -8.08508782]
+Creating measured signal vals:   0%|                                        | 0/100 [00:00<?, ?it/s]Creating measured signal vals:  59%|█████████████████▋            | 59/100 [00:00<00:00, 589.27it/s]Creating measured signal vals: 100%|█████████████████████████████| 100/100 [00:00<00:00, 594.99it/s]
+Creating measured background vals:   0%|                                    | 0/100 [00:00<?, ?it/s]/fred/oz233/lpinchbe/DMPipe/utils.py:29: RuntimeWarning: divide by zero encountered in log
+  val = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,logerecon)*u.TeV).value)
+/fred/oz233/lpinchbe/DMPipe/utils.py:30: RuntimeWarning: divide by zero encountered in log
+  norm = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
+Creating measured background vals:  61%|███████████████▊          | 61/100 [00:00<00:00, 603.91it/s]Creating measured background vals: 100%|█████████████████████████| 100/100 [00:00<00:00, 605.46it/s]
+Done simulation.
+There are 200 events being analyzed.
+Calculating edisp vals: 0it [00:00, ?it/s]Calculating edisp vals: 66it [00:00, 654.28it/s]Calculating edisp vals: 132it [00:00, 656.55it/s]Calculating edisp vals: 199it [00:00, 658.66it/s]Calculating edisp vals: 200it [00:00, 657.46it/s]
+Calculating background marginalisations:   0%|                              | 0/200 [00:00<?, ?it/s]Calculating background marginalisations:   0%|                    | 1/200 [00:24<1:22:50, 24.98s/it]Calculating background marginalisations:   1%|▏                     | 2/200 [00:28<41:23, 12.54s/it]Calculating background marginalisations:   2%|▎                     | 3/200 [00:35<33:04, 10.07s/it]Calculating background marginalisations:   2%|▌                     | 5/200 [00:46<23:50,  7.34s/it]Calculating background marginalisations:   4%|▉                   | 9/200 [02:33<1:01:22, 19.28s/it]Calculating background marginalisations:  12%|██▌                  | 24/200 [02:33<13:15,  4.52s/it]Calculating background marginalisations:  12%|██▋                  | 25/200 [02:35<12:36,  4.32s/it]Calculating background marginalisations:  16%|███▍                 | 33/200 [03:22<13:50,  4.97s/it]Calculating background marginalisations:  22%|████▌                | 43/200 [03:26<07:47,  2.98s/it]Calculating background marginalisations:  22%|████▌                | 44/200 [03:33<08:19,  3.20s/it]Calculating background marginalisations:  22%|████▋                | 45/200 [03:45<10:02,  3.89s/it]Calculating background marginalisations:  24%|█████▏               | 49/200 [03:56<08:56,  3.56s/it]Calculating background marginalisations:  26%|█████▌               | 53/200 [03:57<06:15,  2.56s/it]Calculating background marginalisations:  27%|█████▋               | 54/200 [04:16<10:15,  4.22s/it]Calculating background marginalisations:  29%|██████               | 58/200 [04:17<06:26,  2.72s/it]Calculating background marginalisations:  30%|██████▏              | 59/200 [04:26<08:04,  3.44s/it]Calculating background marginalisations:  31%|██████▌              | 62/200 [04:32<07:01,  3.05s/it]Calculating background marginalisations:  32%|██████▏            | 65/200 [11:43<1:47:45, 47.89s/it]Calculating background marginalisations:  78%|███████████████▌    | 155/200 [12:13<02:40,  3.57s/it]Calculating background marginalisations:  81%|████████████████▏   | 162/200 [12:14<02:03,  3.25s/it]Calculating background marginalisations:  83%|████████████████▌   | 166/200 [12:30<01:52,  3.30s/it]Calculating background marginalisations:  86%|█████████████████   | 171/200 [12:37<01:29,  3.08s/it]Calculating background marginalisations:  86%|█████████████████▏  | 172/200 [12:41<01:27,  3.12s/it]Calculating background marginalisations:  86%|█████████████████▎  | 173/200 [12:45<01:25,  3.16s/it]Calculating background marginalisations:  88%|█████████████████▌  | 176/200 [12:53<01:13,  3.07s/it]Calculating background marginalisations:  88%|█████████████████▋  | 177/200 [13:09<01:30,  3.95s/it]Calculating background marginalisations:  90%|█████████████████▉  | 179/200 [13:32<01:49,  5.24s/it]Calculating background marginalisations:  93%|██████████████████▌ | 186/200 [13:39<00:46,  3.35s/it]Calculating background marginalisations:  94%|██████████████████▊ | 188/200 [13:41<00:35,  2.98s/it]Calculating background marginalisations:  94%|██████████████████▉ | 189/200 [13:52<00:40,  3.72s/it]Calculating background marginalisations:  98%|███████████████████▌| 195/200 [13:55<00:11,  2.28s/it]Calculating background marginalisations:  98%|███████████████████▌| 196/200 [14:02<00:10,  2.68s/it]Calculating background marginalisations:  98%|███████████████████▋| 197/200 [14:12<00:10,  3.63s/it]Calculating background marginalisations: 100%|███████████████████▉| 199/200 [14:25<00:04,  4.41s/it]Calculating background marginalisations: 100%|████████████████████| 200/200 [14:25<00:00,  4.33s/it]
+Done calculating the background marginalisations
+Calculating proposal marginalisations:   0%|                                | 0/200 [00:00<?, ?it/s]Calculating proposal marginalisations:   0%|                      | 1/200 [00:21<1:10:08, 21.15s/it]Calculating proposal marginalisations:   2%|▎                       | 3/200 [00:21<18:31,  5.64s/it]Calculating proposal marginalisations:   2%|▌                       | 5/200 [00:22<09:38,  2.97s/it]Calculating proposal marginalisations:   4%|█                       | 9/200 [00:24<04:44,  1.49s/it]Calculating proposal marginalisations:   6%|█▎                     | 11/200 [00:39<10:37,  3.37s/it]Calculating proposal marginalisations:   6%|█▍                     | 12/200 [00:45<11:44,  3.75s/it]Calculating proposal marginalisations:   8%|█▋                     | 15/200 [00:47<07:16,  2.36s/it]Calculating proposal marginalisations:  10%|██▍                    | 21/200 [01:00<06:57,  2.33s/it]Calculating proposal marginalisations:  11%|██▌                    | 22/200 [01:01<06:23,  2.15s/it]Calculating proposal marginalisations:  12%|██▊                    | 24/200 [01:06<06:40,  2.28s/it]Calculating proposal marginalisations:  14%|███▎                   | 29/200 [01:07<03:35,  1.26s/it]Calculating proposal marginalisations:  15%|███▍                   | 30/200 [01:22<08:19,  2.94s/it]Calculating proposal marginalisations:  16%|███▊                   | 33/200 [01:29<07:24,  2.66s/it]Calculating proposal marginalisations:  20%|████▌                  | 40/200 [01:39<05:28,  2.05s/it]Calculating proposal marginalisations:  20%|████▋                  | 41/200 [01:40<05:11,  1.96s/it]Calculating proposal marginalisations:  21%|████▊                  | 42/200 [01:46<06:25,  2.44s/it]Calculating proposal marginalisations:  24%|█████▌                 | 48/200 [02:03<06:39,  2.63s/it]Calculating proposal marginalisations:  26%|█████▉                 | 52/200 [02:03<04:23,  1.78s/it]Calculating proposal marginalisations:  26%|██████                 | 53/200 [02:06<04:40,  1.91s/it]Calculating proposal marginalisations:  27%|██████▏                | 54/200 [02:09<04:50,  1.99s/it]Calculating proposal marginalisations:  28%|██████▌                | 57/200 [02:11<03:33,  1.49s/it]Calculating proposal marginalisations:  29%|██████▋                | 58/200 [02:12<03:22,  1.43s/it]Calculating proposal marginalisations:  30%|██████▊                | 59/200 [02:22<06:58,  2.96s/it]Calculating proposal marginalisations:  30%|███████                | 61/200 [02:38<10:40,  4.61s/it]Calculating proposal marginalisations:  33%|███████▌               | 66/200 [02:43<05:57,  2.67s/it]Calculating proposal marginalisations:  35%|████████               | 70/200 [02:48<04:29,  2.07s/it]Calculating proposal marginalisations:  37%|████████▌              | 74/200 [02:53<03:45,  1.79s/it]Calculating proposal marginalisations:  38%|████████▋              | 75/200 [02:56<03:59,  1.92s/it]Calculating proposal marginalisations:  38%|████████▊              | 77/200 [03:13<07:12,  3.52s/it]Calculating proposal marginalisations:  42%|█████████▋             | 84/200 [03:15<03:24,  1.76s/it]Calculating proposal marginalisations:  42%|█████████▊             | 85/200 [03:15<03:05,  1.61s/it]Calculating proposal marginalisations:  43%|█████████▉             | 86/200 [03:19<03:32,  1.86s/it]Calculating proposal marginalisations:  44%|██████████             | 88/200 [03:22<03:22,  1.80s/it]Calculating proposal marginalisations:  44%|██████████▏            | 89/200 [03:28<04:27,  2.41s/it]Calculating proposal marginalisations:  46%|██████████▌            | 92/200 [03:31<03:24,  1.90s/it]Calculating proposal marginalisations:  46%|██████████▋            | 93/200 [03:32<03:03,  1.72s/it]Calculating proposal marginalisations:  48%|██████████▉            | 95/200 [03:39<03:56,  2.25s/it]Calculating proposal marginalisations:  48%|███████████▏           | 97/200 [03:39<02:42,  1.58s/it]Calculating proposal marginalisations:  49%|███████████▎           | 98/200 [03:44<03:47,  2.23s/it]Calculating proposal marginalisations:  50%|███████████▍           | 99/200 [03:46<03:37,  2.16s/it]Calculating proposal marginalisations:  50%|███████████           | 100/200 [03:47<03:20,  2.00s/it]Calculating proposal marginalisations:  50%|███████████           | 101/200 [03:52<04:13,  2.56s/it]Calculating proposal marginalisations:  51%|███████████▏          | 102/200 [04:04<08:20,  5.10s/it]Calculating proposal marginalisations:  55%|███████████▉          | 109/200 [04:08<02:44,  1.81s/it]Calculating proposal marginalisations:  55%|████████████          | 110/200 [04:09<02:30,  1.68s/it]Calculating proposal marginalisations:  56%|████████████▏         | 111/200 [04:25<05:55,  3.99s/it]Calculating proposal marginalisations:  60%|█████████████         | 119/200 [04:28<02:16,  1.69s/it]Calculating proposal marginalisations:  60%|█████████████▏        | 120/200 [04:29<02:10,  1.63s/it]Calculating proposal marginalisations:  61%|█████████████▍        | 122/200 [04:30<01:39,  1.28s/it]Calculating proposal marginalisations:  62%|█████████████▌        | 123/200 [04:36<02:29,  1.94s/it]Calculating proposal marginalisations:  62%|█████████████▋        | 124/200 [04:38<02:31,  1.99s/it]Calculating proposal marginalisations:  62%|█████████████▊        | 125/200 [04:41<02:42,  2.17s/it]Calculating proposal marginalisations:  63%|█████████████▊        | 126/200 [04:45<03:06,  2.52s/it]Calculating proposal marginalisations:  64%|██████████████▏       | 129/200 [04:45<01:39,  1.41s/it]Calculating proposal marginalisations:  65%|██████████████▎       | 130/200 [04:49<02:04,  1.78s/it]Calculating proposal marginalisations:  66%|██████████████▍       | 131/200 [04:51<02:08,  1.87s/it]Calculating proposal marginalisations:  66%|██████████████▋       | 133/200 [04:54<01:56,  1.73s/it]Calculating proposal marginalisations:  67%|██████████████▋       | 134/200 [04:58<02:33,  2.32s/it]Calculating proposal marginalisations:  68%|██████████████▊       | 135/200 [05:15<06:03,  5.59s/it]Calculating proposal marginalisations:  72%|███████████████▊      | 144/200 [05:18<01:34,  1.69s/it]Calculating proposal marginalisations:  72%|███████████████▉      | 145/200 [05:22<01:43,  1.89s/it]Calculating proposal marginalisations:  73%|████████████████      | 146/200 [05:24<01:46,  1.97s/it]Calculating proposal marginalisations:  74%|████████████████▏     | 147/200 [05:27<01:49,  2.06s/it]Calculating proposal marginalisations:  74%|████████████████▍     | 149/200 [05:27<01:16,  1.50s/it]Calculating proposal marginalisations:  75%|████████████████▌     | 150/200 [05:28<01:08,  1.37s/it]Calculating proposal marginalisations:  76%|████████████████▌     | 151/200 [05:30<01:13,  1.51s/it]Calculating proposal marginalisations:  76%|████████████████▋     | 152/200 [05:31<01:04,  1.33s/it]Calculating proposal marginalisations:  76%|████████████████▊     | 153/200 [05:34<01:21,  1.73s/it]Calculating proposal marginalisations:  77%|████████████████▉     | 154/200 [05:53<04:47,  6.26s/it]Calculating proposal marginalisations:  79%|█████████████████▍    | 158/200 [06:02<02:40,  3.82s/it]Calculating proposal marginalisations:  82%|██████████████████    | 164/200 [06:06<01:15,  2.09s/it]Calculating proposal marginalisations:  82%|██████████████████▏   | 165/200 [06:07<01:08,  1.95s/it]Calculating proposal marginalisations:  84%|██████████████████▍   | 168/200 [06:09<00:47,  1.48s/it]Calculating proposal marginalisations:  84%|██████████████████▌   | 169/200 [06:24<01:43,  3.34s/it]Calculating proposal marginalisations:  86%|██████████████████▊   | 171/200 [06:26<01:18,  2.70s/it]Calculating proposal marginalisations:  88%|███████████████████▎  | 176/200 [06:44<01:15,  3.15s/it]Calculating proposal marginalisations:  91%|████████████████████  | 182/200 [06:55<00:45,  2.54s/it]Calculating proposal marginalisations:  94%|████████████████████▌ | 187/200 [07:05<00:31,  2.40s/it]Calculating proposal marginalisations:  98%|█████████████████████▌| 196/200 [07:09<00:05,  1.46s/it]Calculating proposal marginalisations:  98%|█████████████████████▋| 197/200 [07:14<00:05,  1.69s/it]Calculating proposal marginalisations:  99%|█████████████████████▊| 198/200 [07:26<00:05,  2.58s/it]Calculating proposal marginalisations: 100%|██████████████████████| 200/200 [07:26<00:00,  2.23s/it]
+Done calculating the proposal marginalisations.
