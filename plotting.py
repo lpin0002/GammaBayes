@@ -128,7 +128,7 @@ if integrationtype=='_nested':
               plt.show()
 
        if whattoplot[1]:
-              sampleindex = -7
+              sampleindex = -2
               nuisancemargsamples = propmargresults[sampleindex].samples_equal()
 
 
@@ -143,7 +143,7 @@ if integrationtype=='_nested':
                      truth_color='r',
                      range=[(-3,2)]
               )
-              # plt.suptitle(f"Nevents = {totalevents}", size=16)
+              plt.title(f"Nevents = {len(list(nuisancemargsamples))}", size=16)
               figure.set_size_inches(5,5)
               figure.set_dpi(200)
               #plt.tight_layout()
