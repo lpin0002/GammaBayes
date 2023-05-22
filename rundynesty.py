@@ -4,11 +4,11 @@ import numpy as np
 import dynesty, warnings
 # import matplotlib.pyplot as plt
 
-def rundynesty(logprior, logedisplist, log10eaxis, nlive = 12000, print_progress=False):
+def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress=False):
     eaxis = 10**log10eaxis
-    logjacob = np.log(eaxis)+np.log(np.log(10))
+    logjacob = np.log(eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
     def makeloglike(loglikearray=logedisplist):
-        loglike = interpolate.interp1d(x=log10eaxis, y=loglikearray, bounds_error=False, fill_value=(loglikearray[0], loglikearray[-1]))
+        loglike = interpolate.interp1d(x=log10eaxis, y=loglikearray, bounds_error=False, fill_value=(-np.inf, -np.inf))
         def gaussfull(cube):
             logevalue = cube[0]
             output = loglike(logevalue)
@@ -23,7 +23,8 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 12000, print_progress
         logcdfarray = np.logaddexp.accumulate(logpriorarray)
         cdfarray = np.exp(logcdfarray-logcdfarray[-1])
         # print(cdfarray[-1])
-        interpfunc = interpolate.interp1d(y=np.arange(0,len(cdfarray)), x=cdfarray, bounds_error=False, fill_value=(0,len(cdfarray)-1), kind='nearest')
+        interpfunc = interpolate.interp1d(y=np.arange(0,len(cdfarray)), x=cdfarray, bounds_error=False, 
+                                          fill_value=(0,len(cdfarray)-1), kind='nearest')
         
         def ptform(u):
             index = int(interpfunc(u[0]))
@@ -33,7 +34,7 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 12000, print_progress
 
 
     sampler = dynesty.NestedSampler(makeloglike(loglikearray=logedisplist), makeptform(logpriorfunc=logprior), ndim=1, 
-                                    nlive=nlive, bound='single')
+                                    nlive=nlive, bound='multi')
     
     warnings.filterwarnings("ignore", category=UserWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)

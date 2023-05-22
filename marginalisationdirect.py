@@ -74,15 +74,15 @@ if __name__ == '__main__':
        truevals             = np.array(list(sigsamples)+list(bkgsamples))
        measuredvals         = np.array(list(sigsamples_measured)+list(bkgsamples_measured))
 
-       logmasswindowwidth   = 10/np.sqrt(nevents)
+       logmasswindowwidth   = 50/np.sqrt(nevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 
-       lambdavalwindowwidth = 10/np.sqrt(nevents)
+       lambdavalwindowwidth = 50/np.sqrt(nevents)
        lambdalowerbound     = truelambdaval-lambdavalwindowwidth
        lambdaupperbound     = truelambdaval+lambdavalwindowwidth
-       if logmasslowerbound<-1.05:
-              logmasslowerbound = -1.05
+       if logmasslowerbound<-1.00:
+              logmasslowerbound = -1.00
        if logmassupperbound>2:
               logmassupperbound = 2
        if lambdaupperbound>1.:
