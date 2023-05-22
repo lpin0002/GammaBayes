@@ -1,6 +1,8 @@
 from utils import inverse_transform_sampling, bkgdist, makedist, edisp, eaxis_mod, log10eaxis
 from scipy import integrate, special, interpolate, stats
 import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, chime, warnings, corner.corner as corner
+from matplotlib import colormaps as cm
+
 from tqdm import tqdm
 from BFCalc.BFInterp import DM_spectrum_setup
 
@@ -28,7 +30,13 @@ except:
     integrationtype = "nested"
     
 
-
+def findprobindices(problist, fractioncontained, axis=None):
+    if axis is None:
+        axis = np.arange(len(list(problist)))
+        
+    problistcumsum = np.cumsum(problist/np.sum(problist))
+    
+    return [np.abs(problistcumsum-((1-fractioncontained)/2)).argmin(),np.abs(problistcumsum-(fractioncontained+(1-fractioncontained)/2)).argmin()]
 
        
 
@@ -185,35 +193,59 @@ if integrationtype=='_direct':
 
         print(lambdarange)
         normedlogposterior = np.load(f"data/{identifier}/normedlogposterior{integrationtype}.npy")
+        
+        
 
-
+        print(special.logsumexp(normedlogposterior))
         plt.figure(dpi=100)
+        # logmassrange, lambdarange, 
         pcol = plt.pcolor(logmassrange, lambdarange, np.exp(normedlogposterior).T, snap=True)
         pcol.set_edgecolor('face')
+
+        # Plot the contours
+        
+        mean = np.mean(np.exp(normedlogposterior).T)
+        std = np.std(np.exp(normedlogposterior).T)
+        contour_levels = [mean + std, mean + 2*std, mean + 3*std]
+        plt.contour(logmassrange, lambdarange,np.exp(normedlogposterior).T, contour_levels, cmap='autumn')
+
+        # plt.legend()
+        
+        
         plt.xlabel(r"$log_{10}$(mass) [TeV]")
         plt.ylabel("lambda = signal events/total events")
-        plt.colorbar(label="Probability Density [1/TeV]")
-        plt.axvline(truelogmass, c='r')
-        plt.axhline(truelambdaval, c='r')
+        plt.colorbar(pcol, label="Probability Density [1/TeV]")
+        plt.axvline(truelogmass, c='tab:pink')
+        plt.axhline(truelambdaval, c='tab:pink')
         plt.grid(False)
         plt.title(f"{totalevents} total events")
-        plt.savefig(time.strftime(f"data/{identifier}/posterior%H%M_{totalevents}{integrationtype}.pdf"))
+        plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.pdf"))
         plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
         plt.show()
 
+        logmassslice = np.sum(np.exp(normedlogposterior), axis=1)
+        colormap = cm.get_cmap('winter')
+
+        
+        
         plt.figure()
-        plt.plot(logmassrange, np.sum(np.exp(normedlogposterior), axis=1))
-        # plt.axvline(log10eaxis[np.abs(log10eaxis-truelogmass).argmin()])
-        # plt.axvline(log10eaxis[np.abs(log10eaxis-truelogmass).argmin()+1])
-        # plt.axvline(log10eaxis[np.abs(log10eaxis-truelogmass).argmin()-1])
-        plt.axvline(truelogmass, c='r', label=params[1,2])
+        plt.plot(logmassrange, logmassslice)
+        
+        plt.axvline(logmassrange[findprobindices(logmassslice, 0.68)[0]], color=colormap(0), linestyle='--', label="1 sigma")
+        plt.axvline(logmassrange[findprobindices(logmassslice, 0.68)[1]], color=colormap(0), linestyle='--')
+        plt.axvline(logmassrange[findprobindices(logmassslice, 0.95)[0]], color=colormap(0.2), linestyle='--', label="2 sigma")
+        plt.axvline(logmassrange[findprobindices(logmassslice, 0.95)[1]], color=colormap(0.2), linestyle='--')
+        plt.axvline(logmassrange[findprobindices(logmassslice, 0.997)[0]], color=colormap(0.5), linestyle='--', label="3 sigma")
+        plt.axvline(logmassrange[findprobindices(logmassslice, 0.997)[1]], color=colormap(0.5), linestyle='--')
+
+        plt.axvline(truelogmass, c='red', label=params[1,2])
         plt.xlabel("log mass [TeV]")
         plt.ylabel("Probability density (slice) [1/TeV]")
         plt.legend()
         plt.savefig(f"Figures/LatestFigures/logmassslice{integrationtype}.pdf")
         plt.ylim([0, None])
         plt.title(str(totalevents))
-        plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H%M_{totalevents}{integrationtype}.pdf"))
+        plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H_{totalevents}{integrationtype}.pdf"))
         plt.show()
 
 
@@ -226,7 +258,7 @@ if integrationtype=='_direct':
         plt.title(str(totalevents))
         plt.ylim([0, None])
 
-        plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H%M_{totalevents}{integrationtype}.pdf"))
+        plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H_{totalevents}{integrationtype}.pdf"))
         plt.savefig(f"Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
         plt.show()
 
