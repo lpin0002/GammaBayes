@@ -17,10 +17,23 @@ print("\nstem directory: ", stemdirectory, '\n')
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 print("number of run directories: ", len(rundirs), '\n')
 
+try:
+    os.mkdir(f'{stemdirectory}/singleeventresults')
+except:
+    print("singleevenetresults folder already exists.")
+    
+bkgcounter = 0
+propcounter = 0
 
+rundirs.pop(rundirs.index(f'{stemdirectory}/singleeventresults'))
+
+print(rundirs)
 for rundir in tqdm(rundirs, total=len(rundirs)):
     bkgmargresults       = np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)
     propmargresults      = np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)
-    np.savez_compressed(f'{rundir}/bkgmargresults.npz', bkgmargresults = bkgmargresults)
-    np.savez_compressed(f'{rundir}/propmargresults.npz', bkgmargresults = bkgmargresults)
-    
+    for bkgeventresult in bkgmargresults:
+        bkgcounter+=1
+        np.save(f'{stemdirectory}/singleeventresults/bkgresult{bkgcounter}', bkgeventresult)
+    for propeventresult in propmargresults:
+        propcounter+=1
+        np.save(f'{stemdirectory}/singleeventresults/propresult{propcounter}', propeventresult)
