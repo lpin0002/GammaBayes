@@ -1,5 +1,6 @@
 data/nestedsamplingtest8*
 *margresults.npy
+*margresults.npz
 *sigmarglogz*
 *bkgmarglogz*
 *edisplist_direct*
