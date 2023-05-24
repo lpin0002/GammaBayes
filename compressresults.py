@@ -18,10 +18,9 @@ rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 print("number of run directories: ", len(rundirs), '\n')
 
 
-for rundir in rundirs:
+for rundir in tqdm(rundirs, total=len(rundirs)):
     bkgmargresults       = np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)
     propmargresults      = np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)
     np.savez_compressed(f'{rundir}/bkgmargresults.npz', bkgmargresults = bkgmargresults)
     np.savez_compressed(f'{rundir}/propmargresults.npz', bkgmargresults = bkgmargresults)
     
-print(19/52)
