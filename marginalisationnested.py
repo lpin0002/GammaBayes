@@ -141,6 +141,8 @@ if __name__ == '__main__':
 
        bkgmargresults = []
        indices = np.arange(len(list(measuredvals)))
+       warnings.filterwarnings("ignore", category=DeprecationWarning)
+
        with Pool(margcores) as pool:
               bkgfunc = functools.partial(marg, edisplist=edisplist, dist=bkgdist, log10eaxis=log10eaxis, print_progress=False)
 

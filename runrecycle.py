@@ -83,7 +83,7 @@ def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, l
         sampler = dynesty.NestedSampler(
             pool.loglike,
             pool.prior_transform,
-            ndim=2, nlive=nlive, bound='balls', sample='rslice', pool=pool, queue_size=recyclingcores)
+            ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores)
 
         sampler.run_nested(dlogz=0.05, print_progress=print_progress)
 
