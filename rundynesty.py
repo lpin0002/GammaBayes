@@ -34,14 +34,14 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress
 
 
     sampler = dynesty.NestedSampler(makeloglike(loglikearray=logedisplist), makeptform(logpriorfunc=logprior), ndim=1, 
-                                    nlive=nlive)
+                                    nlive=nlive, sample='rwalk')
     
     warnings.filterwarnings("ignore", category=UserWarning)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)
 
     
-    sampler.run_nested(dlogz=0.05, print_progress=print_progress, maxcall=int(5e6), n_effective=70000)
+    sampler.run_nested(dlogz=0.05, print_progress=print_progress, maxcall=int(5e6), n_effective=100000)
     res = sampler.results
     warnings.filterwarnings("default")
     # To get equally weighted samples like MCMC use res.samples_equal()

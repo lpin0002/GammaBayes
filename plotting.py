@@ -22,12 +22,12 @@ except:
 try:
     showsamples = int(sys.argv[4])
 except:
-    showsamples = 1
+    showsamples = 0
     
 try: 
     shownumberofsamples = int(sys.argv[5])
 except:
-    shownumberofsamples = 1
+    shownumberofsamples = 0
 try:
     integrationtype = str(sys.argv[6])
 except:
