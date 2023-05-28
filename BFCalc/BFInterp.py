@@ -33,7 +33,7 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
         """A function that returns a function """
         mDM = 10**logmDM
         
-        logyvals = np.log(getspectrafunc(mDM=mDM, channel="W")(eaxis))
+        logyvals = np.log(getspectrafunc(mDM=mDM, channel="b")(eaxis))
         logyvals = np.squeeze(logyvals)
 
         log10eaxis = np.log10(eaxis)
@@ -56,7 +56,7 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
                 
             # print(special.logsumexp(logyvals-norm+np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])))
             
-            fullspectrum = interpolate.interp1d(y=logyvals-norm, x =log10eaxis, kind='cubic',
+            fullspectrum = interpolate.interp1d(y=logyvals-norm, x =log10eaxis, kind='linear',
                                                 assume_sorted=True, bounds_error=False, fill_value=-np.inf)
         else:
             def fullspectrum(energ):
