@@ -35,20 +35,22 @@ def edisp(logerecon,logetrue):
 
 
 
-def makedist(logmass, spread=0.5, normeaxis=eaxis):
+def makedist(logmass, spread=1, normeaxis=eaxis):
     def distribution(x):
         log10eaxis = np.log10(normeaxis)
         logjacob = np.log(normeaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
-        nicefunc = stats.norm(loc=np.power(10., logmass-4), scale=spread*np.power(10., logmass)).logpdf
-        normfactor = special.logsumexp(nicefunc(10**log10eaxis[log10eaxis<logmass])+logjacob[log10eaxis<logmass])
+        
+        nicefunc = stats.norm(loc=logmass-6, scale=spread).logpdf
+        
+        normfactor = special.logsumexp(nicefunc(log10eaxis[log10eaxis<logmass])+logjacob[log10eaxis<logmass])
         if type(x)==np.ndarray:
             result = np.empty(x.shape)
-            result[x<logmass] = nicefunc(np.power(10., x[x<logmass]))
+            result[x<logmass] = nicefunc(x[x<logmass])
             result[x>=logmass] = np.full((x[x>=logmass]).shape, -np.inf)
             return result-normfactor
         else:
             if x<logmass:
-                return nicefunc(np.power(10., x))-normfactor
+                return nicefunc(x)-normfactor
             else:
                 return -np.inf
     return distribution
@@ -80,8 +82,8 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
         A random integer index between 0 and len(pmf) - 1, inclusive.
     """
     logpmf = logpmf - special.logsumexp(logpmf)
-    pmf = np.exp(logpmf)
-    cdf = np.cumsum(pmf)  # compute the cumulative distribution function
+    logcdf = np.logaddexp.accumulate(logpmf)
+    cdf = np.exp(logcdf-logcdf[-1])  # compute the cumulative distribution function
     # print(cdf)
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]

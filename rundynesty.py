@@ -8,7 +8,7 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress
     eaxis = 10**log10eaxis
     logjacob = np.log(eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
     def makeloglike(loglikearray=logedisplist):
-        loglike = interpolate.interp1d(x=log10eaxis, y=loglikearray, bounds_error=False, fill_value=(-np.inf, -np.inf))
+        loglike = interpolate.interp1d(x=log10eaxis, y=loglikearray, bounds_error=False, fill_value=(-np.inf, -np.inf), kind='nearest')
         def gaussfull(cube):
             logevalue = cube[0]
             output = loglike(logevalue)
