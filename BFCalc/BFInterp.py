@@ -49,7 +49,7 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
             
             logjacob = np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
                     
-            norm = special.logsumexp(logyvals+logjacob)
+            norm = special.logsumexp(logyvals+logjacob) 
 
             if np.isneginf(norm) or np.isnan(norm):
                 norm=0 
