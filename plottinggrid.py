@@ -66,9 +66,8 @@ def plotonerun(identifier):
                 smooth=0.9,
                 # smooth1d=0.9
     )
-    plt.suptitle(f"Nevents = {totalevents}", size=16)
-    figure.set_size_inches(8,8)
-    figure.set_dpi(400)
+    figure.set_size_inches(6,6)
+    figure.set_dpi(100)
     #plt.tight_layout()
     plt.close()
     return figure

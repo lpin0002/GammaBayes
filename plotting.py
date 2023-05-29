@@ -126,7 +126,7 @@ if 'nested' in integrationtype:
                 )
                 plt.suptitle(f"Nevents = {totalevents}", size=16)
                 figure.set_size_inches(8,8)
-                figure.set_dpi(200)
+                figure.set_dpi(100)
                 #plt.tight_layout()
                 
                 plt.savefig(time.strftime(f'{stemdirectory}/Hyperparameter_Posterior_%H.pdf'))
