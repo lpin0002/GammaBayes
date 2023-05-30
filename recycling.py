@@ -32,6 +32,9 @@ if __name__ == '__main__':
     print(f'Number of runs: {len(rundirs)}')
     runaccess_startingindex=1
     print("runnum: ", rundirs[0])
+    
+    
+    ## Until the comment "END OF EXTRACTION" the following extracts all the relevant data from any runs that are associated with the identifier
     try:
         params              = np.load(f"{rundirs[0]}/params.npy")
         bkgmargresults = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
@@ -55,8 +58,6 @@ if __name__ == '__main__':
             raise Exception("You have more than two runs that have no results. Aborting.")
         
 
-
-
     for rundir in rundirs[runaccess_startingindex:]:
         try:
             bkgmargresults    = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
@@ -71,6 +72,8 @@ if __name__ == '__main__':
         except:
             print(f"You are missing information from the run directory={rundir}")
         
+    ## END OF EXTRACTION
+    
     print(f"Total events: {totalevents}")
     print(f"True lambda val: {truelambda}")
     print(f"True logmassval: {truelogmass}")
