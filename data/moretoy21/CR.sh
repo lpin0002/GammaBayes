@@ -5,7 +5,7 @@
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
-#SBATCH --time=2:30:00
+#SBATCH --time=4:30:00
 #SBATCH --mem-per-cpu=1200
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
