@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from scipy import integrate, interpolate
-import os, sys, warnings
+from scipy import interpolate
+import os, sys
 import numpy as np
-simpson =  integrate.simps
 from gammapy.astro.darkmatter import (
     PrimaryFlux,
 )
-import matplotlib.pyplot as plt
+from utils import makelogjacob
 from scipy import special
 from .createspectragrids import getspectrafunc
 import sys
@@ -33,30 +32,23 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
         """A function that returns a function """
         mDM = 10**logmDM
         
-        logyvals = np.log(getspectrafunc(mDM=mDM, channel="b")(eaxis))
-        logyvals = np.squeeze(logyvals)
-
+        logdN_dE = np.log(getspectrafunc(mDM=mDM, channel="b")(eaxis))
+        logdN_dE = np.squeeze(logdN_dE)
         log10eaxis = np.log10(eaxis)
-        
-        logyvals = logyvals[log10eaxis<logmDM]
+        logdN_dE = logdN_dE[log10eaxis<logmDM]
         log10eaxis = log10eaxis[log10eaxis<logmDM]
 
-        
         if log10eaxis.shape[0]>1:
-            
-            
-            logyvals = np.squeeze(logyvals)
-            
-            logjacob = np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
-                    
-            norm = special.logsumexp(logyvals+logjacob) 
+            logdN_dE = np.squeeze(logdN_dE)
+            logjacob = makelogjacob(log10eaxis)
+            norm = special.logsumexp(logdN_dE+logjacob) 
 
             if np.isneginf(norm) or np.isnan(norm):
                 norm=0 
                 
             # print(special.logsumexp(logyvals-norm+np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])))
             
-            fullspectrum = interpolate.interp1d(y=logyvals-norm, x =log10eaxis, kind='linear',
+            fullspectrum = interpolate.interp1d(y=logdN_dE-norm, x =log10eaxis, kind='linear',
                                                 assume_sorted=True, bounds_error=False, fill_value=-np.inf)
         else:
             def fullspectrum(energ):

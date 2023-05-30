@@ -64,7 +64,7 @@ def ptform(u):
 
 
 
-def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, log10eaxis, recyclingcores = 10, nlive = 200, print_progress=False):
+def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, log10eaxis, recyclingcores = 10, nlive = 300, print_progress=False):
     
     # Extracting the key aspects needed from the nested sampler
     bkglogevidencevalues = [bkgmargresult.logz[-1] for bkgmargresult in bkgmargresults]  # The log evidence values from marginalising with the background
@@ -83,7 +83,8 @@ def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, l
         sampler = dynesty.NestedSampler(
             pool.loglike,
             pool.prior_transform,
-            ndim=2, nlive=nlive, bound='multi', pool=pool, queue_size=recyclingcores)
+            ndim=2, nlive=nlive, bound='multi', # Other bounding methods tested are `balls' and `single'
+            pool=pool, queue_size=recyclingcores)
 
         sampler.run_nested(dlogz=0.05, print_progress=print_progress)
 

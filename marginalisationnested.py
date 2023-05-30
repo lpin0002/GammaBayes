@@ -1,5 +1,5 @@
 
-from utils import inverse_transform_sampling, log10eaxis, bkgdist, makedist, edisp, COLOR,logjacob, logpropdist
+from utils import inverse_transform_sampling, log10eaxis, bkgdist, makedist, edisp, COLOR,logjacob, logpropdist, makelogjacob
 from rundynesty import rundynesty
 from scipy import special
 import numpy as np
@@ -64,6 +64,8 @@ if __name__ == '__main__':
        
        
        warnings.filterwarnings('ignore',category=UserWarning)
+       
+       # Setting up the function that will create the signal prior distributions. Must be of the form as makedist within utils.py
        sigdistsetup = makedist
 
        
@@ -94,54 +96,46 @@ if __name__ == '__main__':
 
        nsig = int(np.round(truelambdaval*nevents))
        nbkg = int(np.round((1-truelambdaval)*nevents))
-       sigsamples = log10eaxis[inverse_transform_sampling(sigdist(log10eaxis)+logjacob,nsig)]
+       truesignal_samples = log10eaxis[inverse_transform_sampling(sigdist(log10eaxis)+logjacob,nsig)]
 
 
        sigsamples_measured = []
-       for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
+       for sigsample in tqdm(truesignal_samples, desc="Creating measured signal vals", ncols=100):
               sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,sigsample)+logjacob,Nsamples=1)])
        sigsamples_measured = np.array(sigsamples_measured)
 
 
-       bkgsamples = log10eaxis[inverse_transform_sampling(bkgdist(log10eaxis)+logjacob,nbkg)]
+       truebkgsamples = log10eaxis[inverse_transform_sampling(bkgdist(log10eaxis)+logjacob,nbkg)]
 
        bkgsamples_measured = []
-       for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals", ncols=100):
+       for bkgsample in tqdm(truebkgsamples, desc="Creating measured background vals", ncols=100):
               bkgsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,bkgsample)+logjacob,Nsamples=1)])
        bkgsamples_measured = np.array(bkgsamples_measured)
 
 
-       np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", sigsamples)
+       np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", truesignal_samples)
        np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", sigsamples_measured)
-       np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", bkgsamples)
+       np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", truebkgsamples)
        np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", bkgsamples_measured)
        np.save(f"data/{identifier}/{runnum}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                           [truelambdaval, nevents, truelogmass]]))
 
        print("Done simulation.")
        
-       truevals             = np.array(list(sigsamples)+list(bkgsamples))
+       truevals             = np.array(list(truesignal_samples)+list(truebkgsamples))
        measuredvals         = np.array(list(sigsamples_measured)+list(bkgsamples_measured))
 
        
 
-       edispnorms = np.array([special.logsumexp(edisp(log10eaxis,axisval)+logjacob) for axisval in log10eaxis])
-
-       if -np.inf in edispnorms:
-              print(COLOR.BOLD+"Your energy dispersion normalisation has -np.inf inside, which will almostly definitely mean your energy dispersion or the normalisation is wrong."+COLOR.END)
-
        edisplist = []
-
-
        print(f"There are {nevents} events being analyzed.")
        for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals", ncols=100):
-              edisplist.append(edisp(sample,log10eaxis)-edispnorms)
+              edisplist.append(edisp(sample,log10eaxis))
        edisplist = np.array(edisplist)
        
 
        bkgmargresults = []
        indices = np.arange(len(list(measuredvals)))
-       warnings.filterwarnings("ignore", category=DeprecationWarning)
 
        with Pool(margcores) as pool:
               bkgfunc = functools.partial(marg, edisplist=edisplist, dist=bkgdist, log10eaxis=log10eaxis, print_progress=False)
@@ -162,13 +156,22 @@ if __name__ == '__main__':
                      propmargresults.append(result)
               
               pool.close()
+              
+              
+       
        print("Done calculating the proposal marginalisations.")
+
+
+
+
 
        np.save(f'data/{identifier}/{runnum}/edisplist.npy', edisplist)
        np.save(f'data/{identifier}/{runnum}/bkgmargresults.npy', bkgmargresults)
        np.save(f'data/{identifier}/{runnum}/propmargresults.npy', propmargresults)
 
 
+
+       # If the chime module is installed in your environment then this line will make a sound indicating that the script has finished
        # chime.info('sonic')
 
 
