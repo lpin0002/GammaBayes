@@ -66,7 +66,7 @@ if __name__ == '__main__':
        warnings.filterwarnings('ignore',category=UserWarning)
        
        # Setting up the function that will create the signal prior distributions. Must be of the form as makedist within utils.py
-       sigdistsetup = makedist
+       sigdistsetup = DM_spectrum_setup
 
        
        

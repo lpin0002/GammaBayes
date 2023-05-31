@@ -17,7 +17,7 @@ if __name__ == '__main__':
     except:
         reccores = int(10)
 
-    sigdistsetup = makedist
+    sigdistsetup = DM_spectrum_setup
 
     
 
