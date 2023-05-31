@@ -22,42 +22,48 @@ modulefolderpath = os.path.join(os.path.dirname(__file__))
 # bfmlambdaarray = np.load(modulefolderpath+'/bfmlambdaarray.npy')
 
 
-
 def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
-    # eaxis=np.logspace(np.log10(normeaxis[0]), np.log10(normeaxis[-1]), 200001)
     eaxis = normeaxis
-    
-
-    def dm_fullspec(logmDM=logmDM):
-        """A function that returns a function """
-        mDM = 10**logmDM
-        
-        logdN_dE = np.log(getspectrafunc(mDM=mDM, channel="b")(eaxis))
-        logdN_dE = np.squeeze(logdN_dE)
+    def dm_fullspec(logenerg):
         log10eaxis = np.log10(eaxis)
-        logdN_dE = logdN_dE[log10eaxis<logmDM]
-        log10eaxis = log10eaxis[log10eaxis<logmDM]
-
-        if log10eaxis.shape[0]>1:
-            logdN_dE = np.squeeze(logdN_dE)
-            logjacob = makelogjacob(log10eaxis)
-            norm = special.logsumexp(logdN_dE+logjacob) 
-
-            if np.isneginf(norm) or np.isnan(norm):
-                norm=0 
-                
-            # print(special.logsumexp(logyvals-norm+np.log(10**log10eaxis)+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])))
-            
-            fullspectrum = interpolate.interp1d(y=logdN_dE-norm, x =log10eaxis, kind='linear',
-                                                assume_sorted=True, bounds_error=False, fill_value=-np.inf)
-        else:
-            def fullspectrum(energ):
-                if type(energ)==np.ndarray:
-                    return np.full(energ.shape, -np.inf)
-                else:
-                    return -np.inf
+        logjacob = makelogjacob(log10eaxis)
         
-        return fullspectrum 
+        spectralfunc = getspectrafunc(mDM=10**logmDM, channel="b")
+        
+        logdN_dE_fullaxis = np.squeeze(np.log(spectralfunc(eaxis)))
+        
+        normfactor = special.logsumexp(logdN_dE_fullaxis[log10eaxis<logmDM]+logjacob[log10eaxis<logmDM])         
+        
+        if type(logenerg)==np.ndarray:
+            result = np.empty(logenerg.shape)            
+            # This step is using the output of the spectrum for values below the logmass 
+            #   and then setting all values above to 0 probability essentially 
+            #   as annihilation shouldn't create particles heavier than the original annihilation pair
+            energbelowmass = 10**logenerg[logenerg<logmDM]
+            
+            
+            
+            try:
+                logvals = np.squeeze(np.log(spectralfunc(energbelowmass)))
+                np.putmask(result, logenerg<logmDM ,logvals)
+            except:
+                if list(energbelowmass)==[]:
+                    pass
+                else:
+                    raise Exception("There is a problem with your normalised spectra")
+            
+            
+            np.putmask(result, logenerg>=logmDM ,-np.inf)
+            
+            
+                      
+            return np.squeeze(result-normfactor)
 
-    return dm_fullspec(logmDM=logmDM)
+        else:
+            if logenerg<logmDM:
+                return np.log(spectralfunc(10**logenerg))-normfactor
+            else:
+                return -np.inf
+        
+    return dm_fullspec
 
