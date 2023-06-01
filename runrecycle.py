@@ -4,36 +4,45 @@ from multiprocessing import Pool
 import dynesty
 import dynesty.pool as dypool
 import functools
-from utils import log10eaxis, logjacob
+from utils import log10eaxis, logjacob, makelogjacob
 
-def singlesamplemixture(proposallogzresult, proposalmargsamplelist, bkglogzresult, lambdaval, logproposalprior, logtargetprior):
+def singlesamplemixture(proposallogzresult, proposalmargsamplelist, bkglogzresult, lambdaval, logproposalprior, logtargetprior, log10eaxis=log10eaxis):
     
     # Log of the background component of the mixture
     logbkgcomponent = np.log(1 - lambdaval) + bkglogzresult
     
-    # Normalisation factor for the target prior
-    lognorm = special.logsumexp(logtargetprior(log10eaxis)+logjacob)
+    
+    logsigvals = np.squeeze(logtargetprior(proposalmargsamplelist))
+    
+    # Triple checking that the target prior is normalised
+    logsignorm = special.logsumexp(logtargetprior(log10eaxis)+makelogjacob(log10eaxis))
     
     # Calculating the sum of the fraction of the value of the target prior of the proposal prior for an event
-    logfrac = special.logsumexp(logtargetprior(proposalmargsamplelist)-lognorm - logproposalprior(proposalmargsamplelist))
+    logfrac = special.logsumexp(logsigvals - logsignorm - np.squeeze(logproposalprior(proposalmargsamplelist)))
+    
+    
     
     # Calculating the rest of the signal component of the mixture model
     logsignalcomponent = np.log(lambdaval) + proposallogzresult + logfrac-np.log(proposalmargsamplelist.shape[0])
     
+    
     # Adding the two components
     value = np.logaddexp(logbkgcomponent, logsignalcomponent)
     
+    
     return value
 
-def log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior):
+def log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior, log10eaxis=log10eaxis):
     
     # Input the common keyword arguments for the samples from marginalising over the nuisance parameters with the proposal prior to reweight with the target prior
-    mixture_singlesampleinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior)
+    mixture_singlesampleinput = functools.partial(singlesamplemixture, lambdaval=lambdaval, logproposalprior=logproposalprior, logtargetprior=logtargetprior, log10eaxis=log10eaxis)
     
     # Need to vectorise
     listof_logprobabilityvalues = [mixture_singlesampleinput(proposallogzresult, proposalmargsamplelist, bkglogzresult) for proposallogzresult, proposalmargsamplelist, bkglogzresult in zip(proposallogzresults, proposalmargsamples, bkglogevidencevalues)]
-
-    return np.sum(listof_logprobabilityvalues)
+    summedloglike = np.nansum(listof_logprobabilityvalues)
+    
+    # print("summedloglike: ", summedloglike)
+    return summedloglike
 
 
 
@@ -45,11 +54,12 @@ def inputloglike(cube, log10eaxis, proposallogzresults, proposalmargsamples, bkg
     
     # Setting up the target prior for a specific mass and energy axis for normalisation
     logtargetprior = logtargetpriorsetup(logmassval, normeaxis=10**log10eaxis)
-    
     # Generating the log-likelihood
-    loglikelihoodoutput = log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior)
+    loglikelihoodoutput = log_pt_recycling(lambdaval, proposallogzresults, proposalmargsamples, bkglogevidencevalues, logproposalprior, logtargetprior, log10eaxis=log10eaxis)
     
-    return loglikelihoodoutput
+    
+    
+    return np.squeeze(loglikelihoodoutput)
 
 
 
@@ -70,7 +80,11 @@ def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, l
     bkglogevidencevalues = [bkgmargresult.logz[-1] for bkgmargresult in bkgmargresults]  # The log evidence values from marginalising with the background
     proposallogzresults = [propresult.logz[-1] for propresult in propresults] # The log evidence values from marginalisaing with the proposal
     
-    proposalmargsamples = [propresult.samples_equal() for propresult in propresults] # Extracting the samples representing of the nuisance parameter posterior with the proposal prior
+    proposalmargsamples = [np.squeeze(propresult.samples_equal()) for propresult in propresults] # Extracting the samples representing of the nuisance parameter posterior with the proposal prior
+    
+    
+    
+    
     
     # Setting up the likelihood. Which in our case is the energy dispersion for the CTA
     inputloglikefunc = functools.partial(inputloglike, proposallogzresults=proposallogzresults, proposalmargsamples=proposalmargsamples, bkglogevidencevalues=bkglogevidencevalues, 

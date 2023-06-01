@@ -63,8 +63,11 @@ def makedist(logmass, spread=1, normeaxis=eaxis):
             # This step is using the output of the gaussian for values below the logmass 
             #   and then setting all values above to 0 probability essentially 
             #   as annihilation shouldn't create particles heavier than the original annihilation pair
-            result[x<logmass] = nicefunc(x[x<logmass])
-            result[x>=logmass] = np.full((x[x>=logmass]).shape, -np.inf)
+            
+            np.putmask(result, x<logmass, nicefunc(x[x<logmass]))
+            np.putmask(result, x>=logmass, -np.inf)
+            # result[x<logmass] = nicefunc(x[x<logmass])
+            # result[x>=logmass] = np.full((x[x>=logmass]).shape, -np.inf)
             return result-normfactor
         else:
             if x<logmass:
@@ -73,16 +76,16 @@ def makedist(logmass, spread=1, normeaxis=eaxis):
                 return -np.inf
     return distribution
 
-def bkgdist(logenerg):
-    val  = np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, 
-                                   offset=1*u.deg).value)
-    norm = special.logsumexp(np.log(bkgfull.evaluate(energy=np.power(10.,log10eaxis)*u.TeV, 
-                                                     offset=1*u.deg).value)+logjacob)
-    return val - norm
+# def bkgdist(logenerg):
+#     val  = np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, 
+#                                    offset=1*u.deg).value)
+#     norm = special.logsumexp(np.log(bkgfull.evaluate(energy=np.power(10.,log10eaxis)*u.TeV, 
+#                                                      offset=1*u.deg).value)+logjacob)
+#     return val - norm
 
-## Testing distribution for the background
-# def bkgdist(log10eval):
-#     return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
+# Testing distribution for the background
+def bkgdist(log10eval):
+    return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
 
 def logpropdist(logeval):
     func = stats.loguniform(a=10**log10eaxis[0], b=10**log10eaxis[-1])
