@@ -5,7 +5,7 @@ import dynesty, warnings
 from utils import makelogjacob
 # import matplotlib.pyplot as plt
 
-def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress=False):
+def rundynesty(logprior, logedisplist, log10eaxis, nlive = 500, print_progress=False):
     logjacob = makelogjacob(log10eaxis)
     def makeloglike(loglikearray=logedisplist):
         loglikelihood = interpolate.interp1d(x=log10eaxis, y=loglikearray, bounds_error=False, fill_value=(-np.inf, -np.inf), kind='nearest')

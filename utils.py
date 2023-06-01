@@ -37,9 +37,9 @@ logjacob = makelogjacob(log10eaxis)
 
 
 def edisp(logerecon,logetrue):
-    probabilityval = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, 
+    probabilityval = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                  energy = np.power(10.,logerecon)*u.TeV).value)
-    normalisationfactor = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV, 
+    normalisationfactor = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                                         energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
     return probabilityval - normalisationfactor
 
@@ -60,8 +60,8 @@ def makedist(logmass, spread=1, normeaxis=eaxis):
         if type(x)==np.ndarray:
             result = np.empty(x.shape)
             
-            # This step is using the output of the gaussian for values below the logmass 
-            #   and then setting all values above to 0 probability essentially 
+            # This step is using the output of the gaussian for values below the logmass
+            #   and then setting all values above to 0 probability essentially
             #   as annihilation shouldn't create particles heavier than the original annihilation pair
             
             np.putmask(result, x<logmass, nicefunc(x[x<logmass]))
@@ -76,16 +76,16 @@ def makedist(logmass, spread=1, normeaxis=eaxis):
                 return -np.inf
     return distribution
 
-# def bkgdist(logenerg):
-#     val  = np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV, 
-#                                    offset=1*u.deg).value)
-#     norm = special.logsumexp(np.log(bkgfull.evaluate(energy=np.power(10.,log10eaxis)*u.TeV, 
-#                                                      offset=1*u.deg).value)+logjacob)
-#     return val - norm
+def bkgdist(logenerg):
+    val  = np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV,
+                                   offset=1*u.deg).value)
+    norm = special.logsumexp(np.log(bkgfull.evaluate(energy=np.power(10.,log10eaxis)*u.TeV,
+                                                     offset=1*u.deg).value)+logjacob)
+    return val - norm
 
-# Testing distribution for the background
-def bkgdist(log10eval):
-    return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
+# # Testing distribution for the background
+# def bkgdist(log10eval):
+#     return stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf(10**log10eval)
 
 def logpropdist(logeval):
     func = stats.loguniform(a=10**log10eaxis[0], b=10**log10eaxis[-1])

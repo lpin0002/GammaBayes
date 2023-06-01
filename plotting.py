@@ -148,7 +148,7 @@ if 'nested' in integrationtype:
                         truth_color='r',
                         range=[(-3,2)]
                 )
-                plt.title(f"Nevents = {len(list(nuisancemargsamples))}", size=16)
+                plt.title(f"Nsamples = {len(list(nuisancemargsamples))}", size=16)
                 figure.set_size_inches(5,5)
                 figure.set_dpi(200)
                 #plt.tight_layout()
