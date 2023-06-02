@@ -105,6 +105,8 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
     logpmf = logpmf - special.logsumexp(logpmf)
     logcdf = np.logaddexp.accumulate(logpmf)
     cdf = np.exp(logcdf-logcdf[-1])  # compute the cumulative distribution function
+    
+    assert cdf[-1] ==1.0
 
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]

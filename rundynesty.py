@@ -22,6 +22,8 @@ def rundynesty(logprior, logedisplist, log10eaxis, nlive = 10000, print_progress
         logpriorarray = logpriorarray-special.logsumexp(logpriorarray)
         logcdfarray = np.logaddexp.accumulate(logpriorarray)
         cdfarray = np.exp(logcdfarray-logcdfarray[-1])
+        
+        assert cdfarray[-1]==1.0
         # print(cdfarray[-1])
         interp_inverse_cdf = interpolate.interp1d(y=np.arange(0,len(cdfarray)), x=cdfarray, bounds_error=False, 
                                           fill_value=(0,len(cdfarray)-1), kind='nearest')

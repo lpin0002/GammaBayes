@@ -133,8 +133,9 @@ if 'nested' in integrationtype:
                 plt.show()
 
         if shownuisanceparameterposterior:
-                sampleindex = -2
-                nuisancemargsamples = propmargresults[sampleindex].samples_equal()
+                sampleindex = np.where(truesamples<log10eaxis[-2])[0][0]
+                print(sampleindex)
+                nuisancemargsamples = (propmargresults[sampleindex]).samples_equal()
 
 
                 figure = corner(

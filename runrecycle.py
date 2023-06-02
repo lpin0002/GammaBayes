@@ -80,7 +80,7 @@ def runrecycle(propresults, bkgmargresults, logpropprior, logtargetpriorsetup, l
     bkglogevidencevalues = [bkgmargresult.logz[-1] for bkgmargresult in bkgmargresults]  # The log evidence values from marginalising with the background
     proposallogzresults = [propresult.logz[-1] for propresult in propresults] # The log evidence values from marginalisaing with the proposal
     
-    proposalmargsamples = [np.squeeze(propresult.samples_equal()) for propresult in propresults] # Extracting the samples representing of the nuisance parameter posterior with the proposal prior
+    proposalmargsamples = [np.squeeze(propresult.samples) for propresult in propresults] # Extracting the samples representing of the nuisance parameter posterior with the proposal prior
     
     
     
