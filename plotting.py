@@ -1,6 +1,6 @@
 from utils import inverse_transform_sampling, bkgdist, makedist, edisp, eaxis_mod, log10eaxis
 from scipy import integrate, special, interpolate, stats
-import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, chime, warnings, corner.corner as corner
+import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, warnings, corner.corner as corner
 from matplotlib import colormaps as cm
 
 from tqdm import tqdm

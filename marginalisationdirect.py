@@ -5,12 +5,10 @@ import numpy as np
 import os, time, random, warnings, concurrent.futures, sys
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import chime
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
 import multiprocessing
-# chime.info('sonic')
 
 
 
@@ -152,7 +150,6 @@ if __name__ == '__main__':
        np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_direct.npy', sigmarglogzvals)
 
 
-       chime.info('sonic')
 
 
 

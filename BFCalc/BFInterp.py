@@ -28,7 +28,7 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
         log10eaxis = np.log10(eaxis)
         logjacob = makelogjacob(log10eaxis)
         
-        spectralfunc = getspectrafunc(mDM=10**logmDM, channel="W")
+        spectralfunc = getspectrafunc(mDM=10**logmDM, channel="tau")
         
         logdN_dE_fullaxis = np.squeeze(np.log(spectralfunc(eaxis)))
         

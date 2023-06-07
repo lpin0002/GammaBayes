@@ -1,5 +1,5 @@
 from scipy import integrate, special, interpolate, stats
-import os, sys, time, random, chime, numpy as np, matplotlib.pyplot as plt, warnings
+import os, sys, time, random, numpy as np, matplotlib.pyplot as plt, warnings
 from tqdm import tqdm
 from utils import inverse_transform_sampling, log10eaxis, makedist, edisp, bkgdist, eaxis_mod, eaxis, logjacob
 from BFCalc.BFInterp import DM_spectrum_setup

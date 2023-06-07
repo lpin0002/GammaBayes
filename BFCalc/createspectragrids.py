@@ -89,7 +89,7 @@ def singlechannelgrid(channel):
         difffluxgrid.append(dN_dE)
         
     return difffluxgrid
-gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel=W_massenergy_diffflux_grid.npy")
+gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel=tau_massenergy_diffflux_grid.npy")
 massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
 log10xvals        = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
 
