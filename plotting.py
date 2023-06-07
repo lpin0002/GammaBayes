@@ -31,7 +31,7 @@ except:
 try:
     integrationtype = str(sys.argv[6])
 except:
-    integrationtype = "nested"
+    integrationtype = "brute"
     
 print("Integration type: ", integrationtype)
 
@@ -56,39 +56,13 @@ print("\nstem directory: ", stemdirectory, '\n')
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 print("number of run directories: ", len(rundirs), '\n')
 
-if 'nested' in integrationtype:
+if 'brute' in integrationtype:
         params               = np.load(f"{rundirs[0]}/params.npy")
         
-        if shownuisanceparameterposterior or shownumberofsamples:
-                bkgmargresults       = np.load(f'{rundirs[0]}/bkgmargresults.npy', allow_pickle=True)
-                propmargresults      = np.load(f'{rundirs[0]}/propmargresults.npy', allow_pickle=True)
         totalevents          = int(params[1,1])
         truelambda           = float(params[1,0])
         truelogmass          = float(params[1,2])
-        
-        truesigsamples    = np.load(f"{rundirs[0]}/truesigsamples.npy")
-        truebkgsamples    = np.load(f"{rundirs[0]}/truebkgsamples.npy")
-        meassigsamples    = np.load(f"{rundirs[0]}/meassigsamples.npy")
-        measbkgsamples    = np.load(f"{rundirs[0]}/measbkgsamples.npy")
 
-        truesamples             = np.array(list(truesigsamples)+list(truebkgsamples))
-        meassamples          = np.array(list(meassigsamples)+list(measbkgsamples))
-
-        for rundir in rundirs[1:]:
-            if shownuisanceparameterposterior or shownumberofsamples:
-                    bkgmargresults       = np.concatenate((bkgmargresults,  np.load(f'{rundir}/bkgmargresults.npy', allow_pickle=True)))
-                    propmargresults      = np.concatenate((propmargresults,np.load(f'{rundir}/propmargresults.npy', allow_pickle=True)))
-            tempparams           = np.load(f"{rundir}/params.npy")
-            totalevents          += int(tempparams[1,1])
-            truesigsamples       =np.concatenate((truesigsamples, np.load(f"{rundir}/truesigsamples.npy")))
-            truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
-            meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
-            measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
-            truetempsamples    = np.array(list(np.load(f"{rundir}/truesigsamples.npy"))+list(np.load(f"{rundir}/truebkgsamples.npy")))
-            meastempsamples    = np.array(list(np.load(f"{rundir}/meassigsamples.npy"))+list(np.load(f"{rundir}/measbkgsamples.npy")))
-
-            truesamples          = np.array(list(truesamples)+list(truetempsamples))
-            meassamples          = np.array(list(meassamples)+list(meastempsamples))
 
         print(f"{params[0,0]} = {params[1,0]}")
         print(f"{params[0,2]} = {params[1,2]}")
@@ -98,19 +72,22 @@ if 'nested' in integrationtype:
         
         if showhyperparameterposterior:
         
-                recyclingresults     = np.load(f'{stemdirectory}/recyclingresults.npy', allow_pickle=True)
+                # recyclingresults     = np.load(f'{stemdirectory}/recyclingresults.npy', allow_pickle=True)
+                
+                brutesamplerresults = np.load(f'data/{identifier}/results_brute.npy', allow_pickle=True)
 
-                recyclingresults = recyclingresults.item()
+                recyclingresults = brutesamplerresults.item()
                 runsamples = recyclingresults.samples_equal()
 
 
                 figure = corner(
                             runsamples,
+                            quantiles=[0.025, 0.16, 0.84, 0.975],
                             levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
                             labels=[r"log$_{10}$ $m_\chi$", r"$\lambda$"],
-                            show_titles=True,
+                            # show_titles=True,
                             title_kwargs={"fontsize": 12},
-                            bins = [25,25],
+                            bins = 32,
                             truths=[truelogmass, truelambda],
                             labelpad=-0.1,
                             tick_kwargs={'rotation':90},
@@ -129,52 +106,8 @@ if 'nested' in integrationtype:
                 figure.set_dpi(100)
                 #plt.tight_layout()
                 
-                plt.savefig(time.strftime(f'{stemdirectory}/Hyperparameter_Posterior_%H.pdf'))
+                plt.savefig(time.strftime(f'{stemdirectory}/Hyperparameter_Posterior_%H_direct.pdf'))
                 plt.show()
-
-        if shownuisanceparameterposterior:
-                sampleindex = np.where(truesamples<log10eaxis[-2])[0][0]
-                print(sampleindex)
-                nuisancemargsamples = (propmargresults[sampleindex]).samples_equal()
-
-
-                figure = corner(
-                        nuisancemargsamples,
-                        labels=[r"log$_{10}$ E$_t$"],
-                        show_titles=True,
-                        title_kwargs={"fontsize": 12},
-                        bins = [250],
-                        truths=[truesamples[sampleindex]],
-                        labelpad=-0.2,
-                        truth_color='r',
-                        range=[(-3,2)]
-                )
-                plt.title(f"Nsamples = {len(list(nuisancemargsamples))}", size=16)
-                figure.set_size_inches(5,5)
-                figure.set_dpi(200)
-                #plt.tight_layout()
-                
-                plt.savefig(time.strftime(f'{stemdirectory}/TrueEnergy_Posterior_%H.pdf'))
-                plt.show()
-                
-        if shownumberofsamples:
-            propnumberofsamples = []
-            for proposal_singleevent in propmargresults:
-                propnumberofsamples.append(len(list(proposal_singleevent.samples)))
-                
-            bkgnumberofsamples = []
-            for bkg_singleevent in bkgmargresults:
-                bkgnumberofsamples.append(len(list(bkg_singleevent.samples)))
-            plt.figure()
-            plt.title("number of samples used for marginalisation of nuisance parameters")
-            plt.hist(propnumberofsamples, bins=40, label="proposal marginalisations", alpha=0.7)
-            plt.hist(bkgnumberofsamples, bins=40, label="background marginalisations", alpha=0.7)
-            plt.ylabel("Freq.")
-            plt.xlabel("Number of samples used for a single event")
-            plt.legend()
-            plt.show()
-
-
 
 
 if integrationtype=='_direct':
@@ -230,7 +163,8 @@ if integrationtype=='_direct':
     mean = np.mean(np.exp(normedlogposterior).T)
     std = np.std(np.exp(normedlogposterior).T)
     contour_levels = [mean + std, mean + 2*std, mean + 3*std]
-    plt.contour(logmassrange, lambdarange,np.exp(normedlogposterior).T, contour_levels, cmap='autumn')
+    levels =[1. - np.exp(-0.5), 1. - np.exp(-2), 1. - np.exp(-9 / 2.)],
+    plt.contour(logmassrange, lambdarange, np.exp(normedlogposterior).T, contour_levels, cmap='autumn')
 
     # plt.legend()
     
@@ -261,12 +195,16 @@ if integrationtype=='_direct':
     plt.axvline(logmassrange[findprobindices(logmassslice, 0.997)[0]], color=colormap(0.5), linestyle='--', label="3 sigma")
     plt.axvline(logmassrange[findprobindices(logmassslice, 0.997)[1]], color=colormap(0.5), linestyle='--')
 
-    plt.axvline(truelogmass, c='red', label=params[1,2])
+    
+    plt.axvline(truelogmass, c='red', label=params[1,2], linestyle=':')
     plt.xlabel("log mass [TeV]")
     plt.ylabel("Probability density (slice) [1/TeV]")
     plt.legend()
     plt.savefig(f"Figures/LatestFigures/logmassslice{integrationtype}.pdf")
     plt.ylim([0, None])
+    plt.xlim([logmassrange[0], logmassrange[-1]])
+    # for logenergval in log10eaxis:
+    #     plt.axvline(logenergval, color='green',linestyle='-.')
     plt.title(str(totalevents))
     plt.savefig(time.strftime(f"data/{identifier}/logmassslice%H_{totalevents}{integrationtype}.pdf"))
     plt.show()
@@ -280,7 +218,7 @@ if integrationtype=='_direct':
     plt.legend()
     plt.title(str(totalevents))
     plt.ylim([0, None])
-
+    plt.xlim([lambdarange[0], lambdarange[-1]])
     plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H_{totalevents}{integrationtype}.pdf"))
     plt.savefig(f"Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
     plt.show()

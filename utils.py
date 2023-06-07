@@ -23,7 +23,7 @@ log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 
 # Restricting energy axis to values that could have non-zero energy dispersion (psf for energy) values
 log10eaxis = log10eaxis[18:227]
-
+# log10eaxis = np.linspace(-1.2,2.2,1800)
 ## Testing axis of higher resolution than the ones supplied within the IRFs (artificial)
 # newaxis = np.linspace(log10eaxis[0],log10eaxis[-1],30*(log10eaxis.shape[0]-1)+1)
 # log10eaxis = newaxis
@@ -44,7 +44,7 @@ def edisp(logerecon,logetrue):
     return probabilityval - normalisationfactor
 
 ## Testing distribution for the energy dispersion
-# edisp = lambda logerecon, logetrue: stats.norm(loc=10**logetrue, scale=0.5*10**logetrue).logpdf(10**logerecon)
+# edisp = lambda logerecon, logetrue: stats.norm(loc=logetrue, scale=0.1).logpdf(logerecon)
 
 
 
@@ -56,7 +56,7 @@ def makedist(logmass, spread=1, normeaxis=eaxis):
         
         nicefunc = stats.norm(loc=logmass-6, scale=spread).logpdf
         
-        normfactor = special.logsumexp(nicefunc(log10eaxis[log10eaxis<logmass])+logjacob[log10eaxis<logmass])
+        normfactor = special.logsumexp(nicefunc(log10eaxis)+logjacob)
         if type(x)==np.ndarray:
             result = np.empty(x.shape)
             
@@ -105,8 +105,6 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
     logpmf = logpmf - special.logsumexp(logpmf)
     logcdf = np.logaddexp.accumulate(logpmf)
     cdf = np.exp(logcdf-logcdf[-1])  # compute the cumulative distribution function
-    
-    assert cdf[-1] ==1.0
 
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]

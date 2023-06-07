@@ -28,11 +28,11 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
         log10eaxis = np.log10(eaxis)
         logjacob = makelogjacob(log10eaxis)
         
-        spectralfunc = getspectrafunc(mDM=10**logmDM, channel="tau")
+        spectralfunc = getspectrafunc(mDM=10**logmDM, channel="W")
         
         logdN_dE_fullaxis = np.squeeze(np.log(spectralfunc(eaxis)))
         
-        normfactor = special.logsumexp(logdN_dE_fullaxis[log10eaxis<logmDM]+logjacob[log10eaxis<logmDM])         
+        normfactor = special.logsumexp(logdN_dE_fullaxis+logjacob)         
         
         if type(logenerg)==np.ndarray:
             result = np.empty(logenerg.shape)            

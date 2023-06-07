@@ -46,6 +46,10 @@ if __name__ == '__main__':
         # return logmassrange, lambdarange, edisplist, bkgmarglist, sigmarglogzvals
     logmassposterior = []
     print(logmassrange.shape)
+    print(np.matrix(sigmarglogzvals)[1].shape)
+    print(np.matrix(bkgmarglist).shape)
+    
+    
     for j in tqdm(range(logmassrange.shape[0]), ncols=100, desc="Computing log posterior in lambda and logmDM"):
             templogmassrow = np.sum(np.logaddexp(np.matrix(np.log(lambdarange))+np.matrix(sigmarglogzvals[j]).T,np.matrix(np.log(1-lambdarange))+np.matrix(bkgmarglist).T),axis=0)
             templogmassrow = list(np.concatenate(np.array(templogmassrow.T)))

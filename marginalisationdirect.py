@@ -33,6 +33,7 @@ def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals):
 
 def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
        tempmargval = 0
+       
        for i, sample in enumerate(measuredvals):
               tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[i],np.log(1-lambdaval)+bkgmarglist[i])
        # print(f"{tempmargval:.2e}", end='\r')
@@ -91,8 +92,8 @@ if __name__ == '__main__':
               lambdalowerbound=0
        
 
-       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbinslogmass)
-       lambdarange          = np.linspace(lambdalowerbound,lambdaupperbound,nbinslambda)
+       logmassrange         = np.linspace(-1,2,nbinslogmass)
+       lambdarange          = np.linspace(0,1,nbinslambda)
        # logmassrange = np.linspace(log10eaxis[1],log10eaxis[-1],nbins)
        # lambdarange = np.linspace(0,1,nbins)
        np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
@@ -146,6 +147,7 @@ if __name__ == '__main__':
                      sigmarglogzvals.append(result)
 
               pool.close()
+              
        print("Done calculating the signal marginalisations.")
        np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_direct.npy', sigmarglogzvals)
 

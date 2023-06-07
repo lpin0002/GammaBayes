@@ -53,6 +53,8 @@ sigdist = sigdistsetup(truelogmass)
 
 nsig = int(np.round(lambdaval*nevents))
 nbkg = int(np.round((1-lambdaval)*nevents))
+print(logjacob)
+print(sigdist(log10eaxis))
 sigsamples = log10eaxis[inverse_transform_sampling(sigdist(log10eaxis)+logjacob,nsig)]
 
 sigsamples_measured = []
@@ -60,6 +62,7 @@ for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=10
     sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,sigsample)+logjacob,Nsamples=1)])
 sigsamples_measured = np.array(sigsamples_measured)
 
+print(sigsamples_measured)
 
 bkgsamples = log10eaxis[inverse_transform_sampling(bkgdist(log10eaxis)+logjacob,nbkg)]
 
