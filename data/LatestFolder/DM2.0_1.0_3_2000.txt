@@ -1,9 +1,0 @@
-/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/activate: /fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/conda: /apps/skylake/software/core/anaconda3/5.0.1/bin/python: bad interpreter: No such file or directory
-Traceback (most recent call last):
-  File "marginalisationnested.py", line 2, in <module>
-    from utils import inverse_transform_sampling, log10eaxis, bkgdist, makedist, edisp, COLOR,logjacob, logpropdist
-  File "/fred/oz233/lpinchbe/DMPipe/utils.py", line 6, in <module>
-    from tqdm import tqdm
-ModuleNotFoundError: No module named 'tqdm'
-srun: error: john105: task 0: Exited with exit code 1
-srun: launch/slurm: _step_signal: Terminating StepId=35237301.0

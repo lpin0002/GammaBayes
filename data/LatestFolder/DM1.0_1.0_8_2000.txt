@@ -1,3 +1,0 @@
-/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/deactivate: line 84: /fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/conda: No such file or directory
-/apps/skylake/software/core/anaconda3/5.0.1/bin/python: can't open file '/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/conda': [Errno 2] No such file or directory
-/jobfs/local/slurm/job35237286/slurm_script: line 13: srun: No such file or directory

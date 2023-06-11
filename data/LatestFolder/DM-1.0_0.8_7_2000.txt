@@ -1,5 +1,0 @@
-/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/deactivate: line 84: /fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/conda: No such file or directory
-/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/activate: line 94: sed: command not found
-/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/activate: line 98: grep: command not found
-/fred/oz233/lpinchbe/.conda/envs/DMPipe/bin/activate: line 99: grep: command not found
-/jobfs/local/slurm/job35237315/slurm_script: line 13: srun: command not found
