@@ -1,7 +1,7 @@
 from scipy import integrate, special, interpolate, stats
 import os, sys, time, random, numpy as np, matplotlib.pyplot as plt, warnings
 from tqdm import tqdm
-from utils import inverse_transform_sampling, log10eaxis, makedist, edisp, bkgdist, eaxis_mod, eaxis, logjacob
+from utils import inverse_transform_sampling, log10eaxis, makedist, edisp, psf, bkgdist, eaxis_mod, eaxis, logjacob, setup_full_fake_signal_dist, offsetaxis, log10emesh, offsetmesh
 from BFCalc.BFInterp import DM_spectrum_setup
 # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
 np.seterr(divide='ignore', invalid='ignore')
@@ -29,7 +29,7 @@ except:
 try:
     lambdaval = float(sys.argv[5])
 except:
-    lambdaval = 0.5
+    lambdaval = 1.0
 
 try:
     os.mkdir('data')
@@ -44,38 +44,35 @@ try:
 except:
     raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
-sigdistsetup = DM_spectrum_setup
+sigdistsetup = setup_full_fake_signal_dist
 
 
 
-sigdist = sigdistsetup(truelogmass)
+sigdist = sigdistsetup(truelogmass, normeaxis=10**log10eaxis)
 
 
 nsig = int(np.round(lambdaval*nevents))
-nbkg = int(np.round((1-lambdaval)*nevents))
-print(logjacob)
-print(sigdist(log10eaxis))
-sigsamples = log10eaxis[inverse_transform_sampling(sigdist(log10eaxis)+logjacob,nsig)]
+sigbinnedprior = sigdist(log10emesh, offsetmesh)+logjacob
+flattened_sigbinnedprior = sigbinnedprior.flatten()
 
-sigsamples_measured = []
-for sigsample in tqdm(sigsamples, desc="Creating measured signal vals", ncols=100):
-    sigsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,sigsample)+logjacob,Nsamples=1)])
-sigsamples_measured = np.array(sigsamples_measured)
+sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_sigbinnedprior, Nsamples=nsig),sigbinnedprior.shape)
+siglogevals = log10eaxis[sigresultindices[1]]
+sigoffsetvals = offsetaxis[sigresultindices[0]]
 
-print(sigsamples_measured)
+signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, 
+                                                                                 logeval, 
+                                                                                 offsetval)+logjacob, Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
 
-bkgsamples = log10eaxis[inverse_transform_sampling(bkgdist(log10eaxis)+logjacob,nbkg)]
-
-bkgsamples_measured = []
-for bkgsample in tqdm(bkgsamples, desc="Creating measured background vals", ncols=100):
-    bkgsamples_measured.append(log10eaxis[inverse_transform_sampling(edisp(log10eaxis,bkgsample)+logjacob,Nsamples=1)])
-bkgsamples_measured = np.array(bkgsamples_measured)
+signal_offset_measured = offsetaxis[np.squeeze([inverse_transform_sampling(psf(offsetaxis, 
+                                                                               offsetval, 
+                                                                               logeval), Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
 
 
-np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", sigsamples)
-np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", sigsamples_measured)
-np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", bkgsamples)
-np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", bkgsamples_measured)
+
+np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", np.array([siglogevals,sigoffsetvals]))
+np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", np.array([signal_log10e_measured,signal_offset_measured]))
+# np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", bkgsamples)
+# np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", bkgsamples_measured)
 np.save(f"data/{identifier}/{runnum}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                         [lambdaval, nevents, truelogmass]]))
 

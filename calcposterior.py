@@ -19,7 +19,7 @@ if __name__ == '__main__':
                 numcores = 10
                 
 
-        sigdistsetup = DM_spectrum_setup
+        sigdistsetup = makedist
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
         np.seterr(divide='ignore', invalid='ignore')
 

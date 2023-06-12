@@ -213,3 +213,22 @@ def setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis):
     return full_fake_signal_dist
 
 
+
+
+def evaluateintegral(priorvals, logemeasured, offsetmeasured, log10emesh, offsetmesh):
+    
+    energyloglikelihoodvals=edisp(logemeasured, log10emesh, offsetmesh)
+    pointspreadlikelihoodvals=psf(offsetmeasured, offsetmesh, log10emesh)
+    integrand = priorvals+logjacob+energyloglikelihoodvals+pointspreadlikelihoodvals
+    return special.logsumexp(integrand)
+
+
+def evaluateformass(logmass, logemasuredvals, offsetmeasuredvals):
+    log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+
+    priorvals = setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis)(log10emesh, offsetmesh)
+        
+    product = np.sum([evaluateintegral(priorvals, logemeasured, offsetmeasured, log10emesh, offsetmesh) for logemeasured, offsetmeasured in zip(logemasuredvals, offsetmeasuredvals)])
+    
+    return product
+

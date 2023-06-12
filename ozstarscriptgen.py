@@ -60,7 +60,7 @@ srun python3 calcposterior.py {identifier} {numcores}"""
 
 if __name__=="__main__":
     logmass = float(sys.argv[1])
-    ltrue = float(sys.argv[2])
+    ltrue = float(sys.argv[2])  
     numberofruns = int(sys.argv[3])
     singlerunevents = int(sys.argv[4])
     numcores = int(sys.argv[5])

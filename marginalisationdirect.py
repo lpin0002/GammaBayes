@@ -1,10 +1,9 @@
 
-from utils import inverse_transform_sampling, log10eaxis, bkgdist, makedist, edisp, eaxis_mod, COLOR,logjacob
-from scipy import integrate, special, interpolate, stats
+from utils import log10eaxis, bkgdist, makedist, edisp, COLOR,logjacob, evaluateintegral, evaluateformass, setup_full_fake_signal_dist
+from scipy import special
 import numpy as np
-import os, time, random, warnings, concurrent.futures, sys
+import os, time, sys
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 from BFCalc.BFInterp import DM_spectrum_setup
 import functools
 from multiprocessing import Pool, freeze_support
@@ -14,29 +13,29 @@ import multiprocessing
 
 
 
-def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, log10eaxis=log10eaxis):
-       tempsigdist = sigdistsetup(logmass,normeaxis=10**log10eaxis)
-       tempmarglogmassrow = []
-       lognorm = special.logsumexp(tempsigdist(log10eaxis)+logjacob)
-       # print(np.exp(lognorm))
-       tempsigdistaxis = tempsigdist(log10eaxis) - lognorm
-       for i, sample in enumerate(measuredvals):
-              tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+logjacob)
-              tempmarglogmassrow.append(tempsigmarg)
-       return np.array(tempmarglogmassrow)
+# def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, log10eaxis=log10eaxis):
+#        tempsigdist = sigdistsetup(logmass,normeaxis=10**log10eaxis)
+#        tempmarglogmassrow = []
+#        lognorm = special.logsumexp(tempsigdist(log10eaxis)+logjacob)
+#        # print(np.exp(lognorm))
+#        tempsigdistaxis = tempsigdist(log10eaxis) - lognorm
+#        for i, sample in enumerate(measuredvals):
+#               tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+logjacob)
+#               tempmarglogmassrow.append(tempsigmarg)
+#        return np.array(tempmarglogmassrow)
 
 
-def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals):
-       return sigmarg(logmass, edisplist, sigdistsetup, measuredvals)
+# def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals):
+#        return sigmarg(logmass, edisplist, sigdistsetup, measuredvals)
 
-def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
-       tempmargval = 0
+# def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
+#        tempmargval = 0
        
-       for i, sample in enumerate(measuredvals):
-              tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[i],np.log(1-lambdaval)+bkgmarglist[i])
-       # print(f"{tempmargval:.2e}", end='\r')
+#        for i, sample in enumerate(measuredvals):
+#               tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[i],np.log(1-lambdaval)+bkgmarglist[i])
+#        # print(f"{tempmargval:.2e}", end='\r')
               
-       return tempmargval
+#        return tempmargval
 
 if __name__ == '__main__':
        try:
@@ -57,97 +56,58 @@ if __name__ == '__main__':
        except:
               nbinslambda = 21
        
-       sigdistsetup = DM_spectrum_setup
+       sigdistsetup = setup_full_fake_signal_dist
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
        np.seterr(divide='ignore', invalid='ignore')
 
        sigsamples           = np.load(f"data/{identifier}/{runnum}/truesigsamples.npy")
        sigsamples_measured  = np.load(f"data/{identifier}/{runnum}/meassigsamples.npy")
-       bkgsamples           = np.load(f"data/{identifier}/{runnum}/truebkgsamples.npy")
-       bkgsamples_measured  = np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy")
+       
+       sig_log10e_samples = sigsamples[0]
+       sig_offset_samples = sigsamples[1]
+       
+       sigsamples_log10e_measured = sigsamples_measured[0]
+       sigsamples_offset_measured = sigsamples_measured[1]
+
+       # bkgsamples           = np.load(f"data/{identifier}/{runnum}/truebkgsamples.npy")
+       # bkgsamples_measured  = np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy")
+       bkgsamples = []
+       bkgsamples_measured = []
        params               = np.load(f"data/{identifier}/{runnum}/params.npy")
        params[1,:]          = params[1,:]
        truelogmass          = float(params[1,2])
        nevents              = int(params[1,1])
-       truelambdaval        = float(params[1,0])
-       truevals             = np.array(list(sigsamples)+list(bkgsamples))
-       measuredvals         = np.array(list(sigsamples_measured)+list(bkgsamples_measured))
+       true_offset_vals             = np.array(list(sig_offset_samples)+list([]))
+       measured_offset_vals         = np.array(list(sigsamples_offset_measured)+list([]))
+       true_log10e_vals             = np.array(list(sig_log10e_samples)+list([]))
+       measured_log10e_vals         = np.array(list(sigsamples_log10e_measured)+list([]))
 
        logmasswindowwidth   = 10/np.sqrt(nevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 
-       lambdavalwindowwidth = 10/np.sqrt(nevents)
-       lambdalowerbound     = truelambdaval-lambdavalwindowwidth
-       lambdaupperbound     = truelambdaval+lambdavalwindowwidth
+       
        if logmasslowerbound<-1.00:
               logmasslowerbound = -1.00
        if logmassupperbound>2:
               logmassupperbound = 2
-       if lambdaupperbound>1.:
-              lambdaupperbound=1
-       if lambdalowerbound<0:
-              lambdalowerbound=0
        
 
        logmassrange         = np.linspace(-1,2,nbinslogmass)
-       lambdarange          = np.linspace(0,1,nbinslambda)
-       # logmassrange = np.linspace(log10eaxis[1],log10eaxis[-1],nbins)
-       # lambdarange = np.linspace(0,1,nbins)
-       np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
-       np.save(f'data/{identifier}/{runnum}/lambdarange_direct.npy',lambdarange)
-       # lambdarange = np.array([0.45, 0.5])
-       # print("logmassrange: ", logmassrange[0], logmassrange[-1])
-       # print("lambdarange: ", lambdarange[0], lambdarange[-1])
-
-       print(COLOR.BOLD+f"""\n\n{COLOR.BOLD}{COLOR.GREEN}IMPORTANT PARAMETERS: {COLOR.END}
-       {COLOR.YELLOW}number of events{COLOR.END} being analysed/were simulated is {nevents:.1e}. 
-
-       {COLOR.YELLOW}true log mass value{COLOR.END} used for the signal model is {truelogmass} or equivalently a mass of roughly {np.round(np.power(10., truelogmass),3):.2e}.
-
-       {COLOR.YELLOW}fraction of signal events to total events{COLOR.END} is {truelambdaval}.
-
-       {COLOR.YELLOW}bounds for the log energy range{COLOR.END} are {log10eaxis[0]:.2e} and {log10eaxis[-1]:.2e} translating into energy bounds of {np.power(10.,log10eaxis[0]):.2e} and {np.power(10.,log10eaxis[-1]):.2e}.
-
-       {COLOR.YELLOW}bounds for the log mass range [TeV]{COLOR.END} are {logmassrange[0]:.2e} and {logmassrange[-1]:.2e} translating into mass bounds of {np.power(10.,logmassrange[0]):.2e} and {np.power(10.,logmassrange[-1]):.2e} [TeV].
-
-       {COLOR.YELLOW}bounds for the lambda range{COLOR.END} are {lambdarange[0]:.2e} and {lambdarange[-1]:.2e}.
-
-       \n""")
-
-       edispnorms = np.array([special.logsumexp(edisp(log10eaxis,axisval)+logjacob) for axisval in log10eaxis])
-
-       if -np.inf in edispnorms:
-              print(COLOR.BOLD+"Your energy dispersion normalisation has -np.inf inside, which will almostly definitely mean your energy dispersion or the normalisation is wrong."+COLOR.END)
-
-       edisplist = []
-       bkgmarglist = []
-       bkgdistnormed = bkgdist(log10eaxis) - special.logsumexp(bkgdist(log10eaxis)+logjacob)
-
-
-       print(f"There are {COLOR.BLUE}{nevents}{COLOR.END} events being analyzed.")
-       for i, sample in tqdm(enumerate(measuredvals),desc="Calculating edisp vals and bkg marginalisation", ncols=100, total=len(list(measuredvals))):
-              edisplist.append(edisp(sample,log10eaxis)-edispnorms)
-              bkgmarglist.append(special.logsumexp(bkgdistnormed+edisplist[i]+logjacob))
-       edisplist = np.array(edisplist)
        
-       np.save(f'data/{identifier}/{runnum}/edisplist_direct.npy', edisplist)
-       np.save(f'data/{identifier}/{runnum}/bkgmarglist_direct.npy', bkgmarglist)
-
-
-       sigmarglogzvals = []
-       num_cores = multiprocessing.cpu_count()
-       print(f"You have {num_cores} cores on your machine")
-       with Pool(num_cores) as pool:
-              func = functools.partial(sigmargwrapper, edisplist=edisplist, sigdistsetup=sigdistsetup, measuredvals=measuredvals)
-            
-              for result in tqdm(pool.imap(func, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
-                     sigmarglogzvals.append(result)
-
-              pool.close()
+       np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
+       
+       produce_posterior_function = functools.partial(evaluateformass, logemasuredvals=sigsamples_log10e_measured, offsetmeasuredvals=sigsamples_offset_measured)
+       logmass_logposterior = []
+       with Pool(10) as pool: 
               
-       print("Done calculating the signal marginalisations.")
-       np.save(f'data/{identifier}/{runnum}/sigmarglogzvals_direct.npy', sigmarglogzvals)
+              for result in tqdm(pool.imap(produce_posterior_function, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
+                     logmass_logposterior.append(result)
+
+              pool.close() 
+           
+       print("Done calculating the posterior")
+       np.save(f'data/{identifier}/logmass_logposterior_direct.npy', logmass_logposterior)
 
 
 
