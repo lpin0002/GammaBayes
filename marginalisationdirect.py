@@ -1,5 +1,5 @@
 
-from utils import log10eaxis, bkgdist, makedist, edisp, COLOR,logjacob, evaluateintegral, evaluateformass, setup_full_fake_signal_dist
+from utils import log10eaxis, bkgdist, makedist, edisp,logjacob, evaluateintegral, evaluateformass, setup_full_fake_signal_dist, calcirfvals
 from scipy import special
 import numpy as np
 import os, time, sys
@@ -11,31 +11,6 @@ import multiprocessing
 
 
 
-
-
-# def sigmarg(logmass, edisplist, sigdistsetup, measuredvals, logjacob=logjacob, log10eaxis=log10eaxis):
-#        tempsigdist = sigdistsetup(logmass,normeaxis=10**log10eaxis)
-#        tempmarglogmassrow = []
-#        lognorm = special.logsumexp(tempsigdist(log10eaxis)+logjacob)
-#        # print(np.exp(lognorm))
-#        tempsigdistaxis = tempsigdist(log10eaxis) - lognorm
-#        for i, sample in enumerate(measuredvals):
-#               tempsigmarg = special.logsumexp(tempsigdistaxis+edisplist[i]+logjacob)
-#               tempmarglogmassrow.append(tempsigmarg)
-#        return np.array(tempmarglogmassrow)
-
-
-# def sigmargwrapper(logmass, edisplist, sigdistsetup, measuredvals):
-#        return sigmarg(logmass, edisplist, sigdistsetup, measuredvals)
-
-# def posteriorcalc(lambdaval, sigmarglogzvals, bkgmarglist, measuredvals):
-#        tempmargval = 0
-       
-#        for i, sample in enumerate(measuredvals):
-#               tempmargval += np.logaddexp(np.log(lambdaval)+sigmarglogzvals[i],np.log(1-lambdaval)+bkgmarglist[i])
-#        # print(f"{tempmargval:.2e}", end='\r')
-              
-#        return tempmargval
 
 if __name__ == '__main__':
        try:
@@ -82,7 +57,7 @@ if __name__ == '__main__':
        true_log10e_vals             = np.array(list(sig_log10e_samples)+list([]))
        measured_log10e_vals         = np.array(list(sigsamples_log10e_measured)+list([]))
 
-       logmasswindowwidth   = 10/np.sqrt(nevents)
+       logmasswindowwidth   = 3/np.sqrt(nevents)
        logmasslowerbound    = truelogmass-logmasswindowwidth
        logmassupperbound    = truelogmass+logmasswindowwidth
 
@@ -93,11 +68,15 @@ if __name__ == '__main__':
               logmassupperbound = 2
        
 
-       logmassrange         = np.linspace(-1,2,nbinslogmass)
+       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbinslogmass)
        
        np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
        
-       produce_posterior_function = functools.partial(evaluateformass, logemasuredvals=sigsamples_log10e_measured, offsetmeasuredvals=sigsamples_offset_measured)
+       irfvals = [calcirfvals(logemeasured, offsetmeasured) for logemeasured, offsetmeasured in tqdm(zip(sigsamples_log10e_measured, sigsamples_offset_measured), 
+                                                                                                     total=len(list(sigsamples_log10e_measured)),
+                                                                                                     desc='Calculating irfvals', ncols=100,)]
+       
+       produce_posterior_function = functools.partial(evaluateformass, irfvals=irfvals)
        logmass_logposterior = []
        with Pool(10) as pool: 
               

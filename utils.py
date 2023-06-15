@@ -17,11 +17,9 @@ psffull = irfs['psf']
 edispfull.normalize()
 bkgfull = irfs['bkg'].to_2d()
 
-offsetaxis = psffull.axes['offset'].center.value
+offsetaxis = edispfull.axes['offset'].center.value
+# offsetaxis = offsetaxis[offsetaxis<4]
 offsetaxis = np.append(-np.flip(offsetaxis),offsetaxis)
-
-# offsetaxis = np.linspace(-5.5,5.5,120)
-
 
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
@@ -30,8 +28,11 @@ log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 
 
 # Restricting energy axis to values that could have non-zero energy dispersion (psf for energy) values
-log10eaxis = log10eaxis[18:227]
+log10eaxis = log10eaxis[log10eaxis>0.0]
+log10eaxis = log10eaxis[log10eaxis<2.]
 
+
+# Usefull mesh values particularly when enforcing normalisation on functions
 log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 
 norme_vals_mesh, normoffset_vals_mesh = np.meshgrid(log10eaxis, offsetaxis)
@@ -48,32 +49,36 @@ eaxis_mod = np.log(eaxis)
 logjacob = makelogjacob(log10eaxis)
 
 
-# def edisp(logerecon,logetrue):
-#     probabilityval = np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-#                                                  energy = np.power(10.,logerecon)*u.TeV).value)
-#     normalisationfactor = special.logsumexp(np.log(edispkernel.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-#                                                                         energy = np.power(10.,log10eaxis)*u.TeV).value)+logjacob)
-#     return probabilityval - normalisationfactor
-
-## Testing distribution for the energy dispersion
-
-#norme_vals_mesh, normoffset_vals_mesh = np.meshgrid(log10eaxis, offsetaxis)
-
 def edisp(logerecon, logetrue, offsettrue):
-    scale = 10**(logetrue-1) 
-    edispfunc = lambda logerecon: -0.5*((10**logerecon-10**logetrue)**2/scale**2)
+    edispfunc = lambda logerecon: np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                  migra = np.power(10.,logerecon-logetrue), offset=np.abs(offsettrue)*u.deg).value)
     
     normvals = np.array([edispfunc(log10eaxisval) for log10eaxisval in log10eaxis])
 
     normalisation = special.logsumexp(normvals+logjacob, axis=0)
-    # normalisation = 0.0
     
     result = edispfunc(logerecon)-normalisation
 
     return result
 
+## Testing distribution for the energy dispersion
+
+
+# def edisp(logerecon, logetrue, offsettrue):
+#     scale = 10**(logetrue-1) 
+#     edispfunc = lambda logerecon: -0.5*((10**logerecon-10**logetrue)**2/scale**2)
+    
+#     normvals = np.array([edispfunc(log10eaxisval) for log10eaxisval in log10eaxis])
+
+#     normalisation = special.logsumexp(normvals+logjacob, axis=0)
+#     # normalisation = 0.0
+    
+#     result = edispfunc(logerecon)-normalisation
+
+#     return result
+
 def psf(offsetrecon, offsettrue, logetrue):
-    scale = 0.1*offsettrue
+    scale = 0.3*offsettrue
     psffunc = lambda offsetrecon: -0.5*((offsetrecon-offsettrue)/scale)**2
     
     normvals = np.array([psffunc(offsetval)for offsetval in offsetaxis])
@@ -102,7 +107,7 @@ def psf(offsetrecon, offsettrue, logetrue):
 #     return distribution
 
 
-def makedist(logmass, spread=0.4, normeaxis=10**log10eaxis):
+def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
     eaxis = normeaxis
     def distribution(x):
         log10eaxis = np.log10(eaxis)
@@ -118,20 +123,8 @@ def makedist(logmass, spread=0.4, normeaxis=10**log10eaxis):
         
     return distribution
 
-# def bkgdist(logenerg):
-#     val  = np.log(bkgfull.evaluate(energy=np.power(10.,logenerg)*u.TeV,
-#                                    offset=1*u.deg).value)
-#     norm = special.logsumexp(np.log(bkgfull.evaluate(energy=np.power(10.,log10eaxis)*u.TeV,
-#                                                      offset=1*u.deg).value)+logjacob)
-#     return val - norm
 
 # # Testing distribution for the background
-# def bkgdist(log10eval):
-#     nicefunc = stats.norm(loc=10**-0.5, scale=0.6*np.power(10.,-0.5)).logpdf
-#     normfactor = special.logsumexp(nicefunc(log10eaxis)+logjacob)
-#     return nicefunc(10**log10eval)-normfactor
-
-
 
 def bkgdist(log10eval, offsetval):
     bkgfunc = stats.multivariate_normal(mean=[-0.5,0], cov=[[0.1,0],[0,2]]).logpdf
@@ -147,43 +140,18 @@ def bkgdist(log10eval, offsetval):
     
     return pdfvalues-normfactor
 
-def logpropdist(logeval):
-    func = stats.loguniform(a=10**log10eaxis[0], b=10**log10eaxis[-1])
-    return func.logpdf(10**logeval)
-
 
 # Does not have any mention of the log of the jacobian to keep it more general.
 def inverse_transform_sampling(logpmf, Nsamples=1):
-    """Generate a random index using inverse transform sampling.
-
-    Args:
-        logpmf: A 1D array of non-negative values representing a log probability mass function.
-
-    Returns:
-        A random integer index between 0 and len(pmf) - 1, inclusive.
-    """
+    
     logpmf = logpmf - special.logsumexp(logpmf)
     logcdf = np.logaddexp.accumulate(logpmf)
-    cdf = np.exp(logcdf-logcdf[-1])  # compute the cumulative distribution function
+    cdf = np.exp(logcdf-logcdf[-1])  
 
     randvals = [random.random() for xkcd in range(Nsamples)]
     indices = [np.searchsorted(cdf, u) for u in randvals]
     return indices
 
-
-
-# Purely for different looking terminal outputs
-class COLOR:
-   PURPLE = '\033[95m'
-   CYAN = '\033[96m'
-   DARKCYAN = '\033[36m'
-   BLUE = '\033[94m'
-   GREEN = '\033[92m'
-   YELLOW = '\033[93m'
-   RED = '\033[91m'
-   BOLD = '\033[1m'
-   UNDERLINE = '\033[4m'
-   END = '\033[0m'
 
 
 
@@ -196,13 +164,17 @@ class COLOR:
 # Now including spatial dimensions!
 
 
+log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+
+
 def fake_signal_position_dist(offset):
     nicefunc = stats.multivariate_normal(mean=0, cov=1.0).logpdf
     normfactor = special.logsumexp(nicefunc(offsetaxis))
     return (nicefunc(offset.flatten())-normfactor).reshape(offset.shape)
 
 def setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis):
-    offsetintegrand = special.logsumexp(makedist(logmass, normeaxis=normeaxis)(norme_vals_mesh)+fake_signal_position_dist(normoffset_vals_mesh), axis=0)
+    
+    offsetintegrand = special.logsumexp(makedist(logmass, normeaxis=normeaxis)(log10emesh)+fake_signal_position_dist(offsetmesh), axis=0)
     
     normalisation = special.logsumexp(offsetintegrand+makelogjacob(log10eaxis))
     
@@ -215,20 +187,26 @@ def setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis):
 
 
 
-def evaluateintegral(priorvals, logemeasured, offsetmeasured, log10emesh, offsetmesh):
-    
+
+
+def calcirfvals(logemeasured, offsetmeasured, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
+    log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
     energyloglikelihoodvals=edisp(logemeasured, log10emesh, offsetmesh)
     pointspreadlikelihoodvals=psf(offsetmeasured, offsetmesh, log10emesh)
-    integrand = priorvals+logjacob+energyloglikelihoodvals+pointspreadlikelihoodvals
+    
+    return energyloglikelihoodvals+pointspreadlikelihoodvals
+
+def evaluateintegral(priorvals, irfvals):
+    integrand = priorvals+logjacob+irfvals
     return special.logsumexp(integrand)
 
 
-def evaluateformass(logmass, logemasuredvals, offsetmeasuredvals):
+def evaluateformass(logmass, irfvals):
     log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 
     priorvals = setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis)(log10emesh, offsetmesh)
         
-    product = np.sum([evaluateintegral(priorvals, logemeasured, offsetmeasured, log10emesh, offsetmesh) for logemeasured, offsetmeasured in zip(logemasuredvals, offsetmeasuredvals)])
+    product = np.sum([evaluateintegral(priorvals, irflist) for irflist in irfvals])
     
     return product
 
