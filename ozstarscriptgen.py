@@ -45,8 +45,8 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores, numh
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {numcores}
-srun python3 calcposterior.py {identifier} {numcores}"""
+srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {numcores}
+srun python3 marginalisationdirect.py {identifier} {runnum} {numcores}"""
 
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)

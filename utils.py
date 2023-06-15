@@ -18,7 +18,7 @@ edispfull.normalize()
 bkgfull = irfs['bkg'].to_2d()
 
 offsetaxis = edispfull.axes['offset'].center.value
-# offsetaxis = offsetaxis[offsetaxis<4]
+offsetaxis = offsetaxis[offsetaxis<4]
 offsetaxis = np.append(-np.flip(offsetaxis),offsetaxis)
 
 
@@ -27,9 +27,9 @@ edispkernel.normalize(axis_name='energy')
 log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 
 
-# Restricting energy axis to values that could have non-zero energy dispersion (psf for energy) values
-log10eaxis = log10eaxis[log10eaxis>0.0]
-log10eaxis = log10eaxis[log10eaxis<2.]
+# Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
+log10eaxis = log10eaxis[log10eaxis>-0.9]
+log10eaxis = log10eaxis[log10eaxis<2.0]
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
@@ -54,7 +54,7 @@ def edisp(logerecon, logetrue, offsettrue):
                                                   migra = np.power(10.,logerecon-logetrue), offset=np.abs(offsettrue)*u.deg).value)
     
     normvals = np.array([edispfunc(log10eaxisval) for log10eaxisval in log10eaxis])
-
+    # print(normvals)
     normalisation = special.logsumexp(normvals+logjacob, axis=0)
     
     result = edispfunc(logerecon)-normalisation
@@ -63,29 +63,26 @@ def edisp(logerecon, logetrue, offsettrue):
 
 ## Testing distribution for the energy dispersion
 
-
-# def edisp(logerecon, logetrue, offsettrue):
-#     scale = 10**(logetrue-1) 
-#     edispfunc = lambda logerecon: -0.5*((10**logerecon-10**logetrue)**2/scale**2)
-    
-#     normvals = np.array([edispfunc(log10eaxisval) for log10eaxisval in log10eaxis])
-
-#     normalisation = special.logsumexp(normvals+logjacob, axis=0)
-#     # normalisation = 0.0
-    
-#     result = edispfunc(logerecon)-normalisation
-
-#     return result
-
 def psf(offsetrecon, offsettrue, logetrue):
-    scale = 0.3*offsettrue
-    psffunc = lambda offsetrecon: -0.5*((offsetrecon-offsettrue)/scale)**2
+    psffunc = lambda offsetrecon: np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                  rad = (offsettrue-offsetrecon)*u.deg, offset=np.abs(offsettrue)*u.deg).value)
     
     normvals = np.array([psffunc(offsetval)for offsetval in offsetaxis])
     
     normalisation = special.logsumexp(normvals, axis=0)
     
     return psffunc(offsetrecon)-normalisation
+
+
+# def psf(offsetrecon, offsettrue, logetrue):
+#     scale = 0.3*offsettrue
+#     psffunc = lambda offsetrecon: -0.5*((offsetrecon-offsettrue)/scale)**2
+    
+#     normvals = np.array([psffunc(offsetval)for offsetval in offsetaxis])
+    
+#     normalisation = special.logsumexp(normvals, axis=0)
+    
+#     return psffunc(offsetrecon)-normalisation
 
 # def makedist(logmass, spread=1, normeaxis=10**log10eaxis):
 #     eaxis = normeaxis
@@ -189,12 +186,31 @@ def setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis):
 
 
 
-def calcirfvals(logemeasured, offsetmeasured, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
+# def calcirfvals(logemeasured, offsetmeasured, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
+#     log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+#     energyloglikelihoodvals=edisp(logemeasured, log10emesh, offsetmesh)
+#     pointspreadlikelihoodvals=psf(offsetmeasured, offsetmesh, log10emesh)
+    
+#     print(np.max(energyloglikelihoodvals))
+#     print(np.max(pointspreadlikelihoodvals))
+    
+#     return energyloglikelihoodvals+pointspreadlikelihoodvals
+
+
+
+def calcirfvals(mesauredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
+    logemeasured, offsetmeasured = mesauredcoord
     log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
     energyloglikelihoodvals=edisp(logemeasured, log10emesh, offsetmesh)
     pointspreadlikelihoodvals=psf(offsetmeasured, offsetmesh, log10emesh)
     
+    # print(np.max(energyloglikelihoodvals))
+    # print(np.max(pointspreadlikelihoodvals))
+    
     return energyloglikelihoodvals+pointspreadlikelihoodvals
+
+
+
 
 def evaluateintegral(priorvals, irfvals):
     integrand = priorvals+logjacob+irfvals

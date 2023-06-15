@@ -6,6 +6,9 @@ from BFCalc.BFInterp import DM_spectrum_setup
 # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
 np.seterr(divide='ignore', invalid='ignore')
 # Check that jacobian for this script is correct
+
+
+
 try:
     identifier = sys.argv[1]
 except:
@@ -25,11 +28,17 @@ try:
     truelogmass = float(sys.argv[4]) 
 except:
     truelogmass = 0
+    
+# try:
+#     lambdaval = float(sys.argv[5])
+# except:
+#     lambdaval = 1.0
+lambdaval = 1.0
 
 try:
-    lambdaval = float(sys.argv[5])
+    numcores = float(sys.argv[5])
 except:
-    lambdaval = 1.0
+    numcores = 10
 
 try:
     os.mkdir('data')

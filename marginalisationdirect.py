@@ -21,15 +21,15 @@ if __name__ == '__main__':
               runnum = sys.argv[2]
        except:
               runnum = 1
-
        try:
-              nbinslogmass = int(sys.argv[3])
+              numcores = int(sys.argv[3])
        except:
-              nbinslogmass = 21
-       try:
-              nbinslambda = int(sys.argv[4])
-       except:
-              nbinslambda = 21
+              numcores = 10
+       
+       nbinslogmass = 161
+       nbinslambda = 161
+              
+       
        
        sigdistsetup = setup_full_fake_signal_dist
        # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
@@ -72,13 +72,23 @@ if __name__ == '__main__':
        
        np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
        
-       irfvals = [calcirfvals(logemeasured, offsetmeasured) for logemeasured, offsetmeasured in tqdm(zip(sigsamples_log10e_measured, sigsamples_offset_measured), 
-                                                                                                     total=len(list(sigsamples_log10e_measured)),
-                                                                                                     desc='Calculating irfvals', ncols=100,)]
+       irfvals = []
+       with Pool(numcores) as pool: 
+              
+              for result in tqdm(pool.imap(calcirfvals, zip(sigsamples_log10e_measured, sigsamples_offset_measured)), 
+                                 total=len(list(sigsamples_log10e_measured)), ncols=100, desc="Calculating irfvals"):
+                     irfvals.append(result)
+
+              pool.close() 
+           
+       
+       # irfvals = [calcirfvals(measuredvals) for measuredvals in tqdm(zip(sigsamples_log10e_measured, sigsamples_offset_measured), 
+       #                                                                                               total=len(list(sigsamples_log10e_measured)),
+       #                                                                                               desc='Calculating irfvals', ncols=100,)]
        
        produce_posterior_function = functools.partial(evaluateformass, irfvals=irfvals)
        logmass_logposterior = []
-       with Pool(10) as pool: 
+       with Pool(numcores) as pool: 
               
               for result in tqdm(pool.imap(produce_posterior_function, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
                      logmass_logposterior.append(result)
