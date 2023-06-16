@@ -19,7 +19,7 @@ bkgfull = irfs['bkg'].to_2d()
 
 offsetaxis = edispfull.axes['offset'].center.value
 offsetaxis = offsetaxis[offsetaxis<4]
-offsetaxis = np.append(-np.flip(offsetaxis),offsetaxis)
+offsetaxis = np.linspace(-offsetaxis[-1],offsetaxis[-1], int(np.round((offsetaxis[-1]-offsetaxis[0])/0.02)))
 
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
@@ -28,8 +28,8 @@ log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10eaxis = log10eaxis[log10eaxis>-0.9]
-log10eaxis = log10eaxis[log10eaxis<2.0]
+log10eaxis = log10eaxis[log10eaxis>-0.5]
+log10eaxis = log10eaxis[log10eaxis<1.5]
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
