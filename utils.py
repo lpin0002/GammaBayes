@@ -8,7 +8,6 @@ from gammapy.irf import load_cta_irfs
 from astropy import units as u
 import dynesty
 
-
 # I believe this is the alpha configuration of the array as there are no LSTs
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
@@ -19,7 +18,7 @@ bkgfull = irfs['bkg'].to_2d()
 
 offsetaxis = edispfull.axes['offset'].center.value
 offsetaxis = offsetaxis[offsetaxis<4]
-offsetaxis = np.linspace(-offsetaxis[-1],offsetaxis[-1], int(np.round((offsetaxis[-1]-offsetaxis[0])/0.02)))
+offsetaxis = np.arange(-offsetaxis[-1],offsetaxis[-1]+0.02, step=0.02)
 
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
@@ -28,8 +27,8 @@ log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10eaxis = log10eaxis[log10eaxis>-0.5]
-log10eaxis = log10eaxis[log10eaxis<1.5]
+log10eaxis = log10eaxis[log10eaxis>-0.8]
+log10eaxis = log10eaxis[log10eaxis<1.8]
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
@@ -167,17 +166,21 @@ log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 def fake_signal_position_dist(offset):
     nicefunc = stats.multivariate_normal(mean=0, cov=1.0).logpdf
     normfactor = special.logsumexp(nicefunc(offsetaxis))
-    return (nicefunc(offset.flatten())-normfactor).reshape(offset.shape)
+    return nicefunc(offset)-normfactor
 
-def setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis):
+def setup_full_fake_signal_dist(logmass, specsetup, normeaxis=10**log10eaxis):
     
-    offsetintegrand = special.logsumexp(makedist(logmass, normeaxis=normeaxis)(log10emesh)+fake_signal_position_dist(offsetmesh), axis=0)
+    # offsetintegrand = special.logsumexp(specsetup(logmass, normeaxis=normeaxis)(log10emesh)+fake_signal_position_dist(offsetmesh), axis=0)
     
-    normalisation = special.logsumexp(offsetintegrand+makelogjacob(log10eaxis))
+    # normalisation = special.logsumexp(offsetintegrand+makelogjacob(log10eaxis))
     
+    normalisation = 0.0
+    
+    # TODO: Make namespace more readable to someone unfamiliar with code
+    # numpy vectorisation
     def full_fake_signal_dist(log10eval, offsetval):
-        pdfvalues = makedist(logmass, normeaxis=normeaxis)(log10eval) + fake_signal_position_dist(offsetval)
-        return pdfvalues - normalisation
+        logpdfvalues = specsetup(logmass, normeaxis=normeaxis)(log10eval) + fake_signal_position_dist(offsetval)
+        return logpdfvalues - normalisation
     
     return full_fake_signal_dist
 
@@ -217,12 +220,18 @@ def evaluateintegral(priorvals, irfvals):
     return special.logsumexp(integrand)
 
 
-def evaluateformass(logmass, irfvals):
-    log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+def evaluateformass(logmass, irfvals, specsetup):
+    priorfunc = setup_full_fake_signal_dist(logmass, specsetup=specsetup, normeaxis=10**log10eaxis)
+    
+    priorvals = []
+    for offsetval in offsetaxis:
+        priorvals.append(priorfunc(log10eaxis, offsetval))
+    priorvals = np.array(priorvals)
+    
+    normalisation = special.logsumexp(priorvals+logjacob)
 
-    priorvals = setup_full_fake_signal_dist(logmass, normeaxis=10**log10eaxis)(log10emesh, offsetmesh)
         
-    product = np.sum([evaluateintegral(priorvals, irflist) for irflist in irfvals])
+    product = np.sum([evaluateintegral(priorvals-normalisation, irflist) for irflist in irfvals])
     
     return product
 

@@ -34,6 +34,9 @@ try:
 except:
     integrationtype = "direct"
     
+    
+specsetup = DM_spectrum_setup
+    
 print("Integration type: ", integrationtype)
 integrationtype = "_"+integrationtype.lower()
 
@@ -236,7 +239,7 @@ if whattoplot[2]:
     truesightvals = plt.hist(truesigsamples[0], bins=centrelogevals, alpha=0.7, label='True sig log e samples', color='forestgreen')
     # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
     # plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
-    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=0)+logjacob)
+    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=0)+logjacob)
     plt.plot(log10eaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
     plt.xlabel(r'True $log_{10}(E)$ [TeV]')
     plt.ylabel('Number of samples')
@@ -248,7 +251,7 @@ if whattoplot[2]:
     plt.title(r"true $log_{10}$ E values")
     truesightvals = plt.hist(truesigsamples[1], bins=centreoffsetvals, alpha=0.7, label='True sig offset samples', color='forestgreen')
     # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
-    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=1))
+    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=1))
     plt.plot(offsetaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
     plt.xlabel(r'Offset [deg]')
     plt.ylabel('Number of samples')
@@ -263,7 +266,7 @@ if whattoplot[2]:
     truesightvals = plt.hist(meassigsamples[0], bins=centrelogevals, alpha=0.7, label='Measured sig log energy samples', color='forestgreen')
     # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
     
-    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=0)+logjacob)
+    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=0)+logjacob)
     plt.plot(log10eaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
     
     plt.xlabel(r'Reconstructed (Measured) $log_{10}(E)$ [TeV]')

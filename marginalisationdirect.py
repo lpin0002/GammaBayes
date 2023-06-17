@@ -25,9 +25,19 @@ if __name__ == '__main__':
               numcores = int(sys.argv[3])
        except:
               numcores = 10
+              
+       try:
+              nbinslogmass = int(sys.argv[4])
+       except:
+              nbinslogmass = 11
+
+       try:
+              nbinslambda = int(sys.argv[5])
+       except:
+              nbinslambda = 11
+              
        
-       nbinslogmass = 161
-       nbinslambda = 161
+       
               
        
        
@@ -62,8 +72,8 @@ if __name__ == '__main__':
        logmassupperbound    = truelogmass+logmasswindowwidth
 
        
-       if logmasslowerbound<-1.00:
-              logmasslowerbound = -1.00
+       if logmasslowerbound<log10eaxis[1]:
+              logmasslowerbound = log10eaxis[1]
        if logmassupperbound>2:
               logmassupperbound = 2
        
@@ -86,7 +96,7 @@ if __name__ == '__main__':
        #                                                                                               total=len(list(sigsamples_log10e_measured)),
        #                                                                                               desc='Calculating irfvals', ncols=100,)]
        
-       produce_posterior_function = functools.partial(evaluateformass, irfvals=irfvals)
+       produce_posterior_function = functools.partial(evaluateformass, irfvals=irfvals, specsetup=DM_spectrum_setup)
        logmass_logposterior = []
        with Pool(numcores) as pool: 
               

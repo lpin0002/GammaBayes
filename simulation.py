@@ -71,11 +71,25 @@ if __name__=="__main__":
 
 
 
-    sigdist = sigdistsetup(truelogmass, normeaxis=10**log10eaxis)
+    sigdist = sigdistsetup(truelogmass, specsetup=DM_spectrum_setup, normeaxis=10**log10eaxis)
 
 
     nsig = int(np.round(lambdaval*nevents))
-    sigbinnedprior = sigdist(log10emesh, offsetmesh)+logjacob
+    
+    
+    sigpriorvalues = []
+
+    for jj, offsetval in tqdm(enumerate(offsetaxis), desc='Making binned signal prior', total=offsetaxis.shape[0]):
+        singlerow = []
+        for ii, logeval in enumerate(log10eaxis):
+            singlerow.append(sigdist(logeval, offsetval))
+        sigpriorvalues.append(singlerow)
+    sigbinnedprior = np.array(sigpriorvalues)+logjacob
+    
+    
+    # sigbinnedprior = sigdist(log10emesh, offsetmesh)+logjacob
+    
+    
     flattened_sigbinnedprior = sigbinnedprior.flatten()
 
     sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_sigbinnedprior, Nsamples=nsig),sigbinnedprior.shape)

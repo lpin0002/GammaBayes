@@ -96,9 +96,8 @@ log10xvals        = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_d
 twodinterpolationfunc =  interpolate.interp2d(np.log10(massvalues/1e3), log10xvals, np.array(gridtointerpolate).T, 
                                 kind='linear', bounds_error=False, fill_value=0)
 def getspectrafunc(mDM, channel):
-    def onedinterpolationfunc(energy):
-        
-        return twodinterpolationfunc(np.log10(mDM), np.log10(energy/mDM))
+    def onedinterpolationfunc(energy):        
+        return twodinterpolationfunc(np.log10(mDM), np.log10(energy/mDM).flatten()).reshape(energy.shape)
     
     return onedinterpolationfunc
 
