@@ -180,10 +180,10 @@ if integrationtype=='_direct':
 
 
         deltalogmass = (logmassrange[1]-logmassrange[0])
-        normedposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior+np.log(deltalogmass)))
-        cdfposterior = np.cumsum(normedposterior*deltalogmass)
+        normedposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior))
+        cdfposterior = np.cumsum(normedposterior)
         print(cdfposterior[-1])
-        mean = logmassrange[np.abs(0.5-cdfposterior).argmin()]
+        mean = logmassrange[np.abs(norm.cdf(0)-cdfposterior).argmin()]
         zscores = [-3, -2,-1,1,2, 3]
         percentiles = []
         for zscore in zscores:
