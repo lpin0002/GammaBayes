@@ -79,7 +79,7 @@ if __name__=="__main__":
     
     sigpriorvalues = []
 
-    for jj, offsetval in tqdm(enumerate(offsetaxis), desc='Making binned signal prior', total=offsetaxis.shape[0]):
+    for jj, offsetval in tqdm(enumerate(offsetaxis), desc='Making binned signal prior', ncols=100, total=offsetaxis.shape[0]):
         singlerow = []
         for ii, logeval in enumerate(log10eaxis):
             singlerow.append(sigdist(logeval, offsetval))

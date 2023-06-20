@@ -122,19 +122,15 @@ def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
 
 # # Testing distribution for the background
 
-def bkgdist(log10eval, offsetval):
-    bkgfunc = stats.multivariate_normal(mean=[-0.5,0], cov=[[0.1,0],[0,2]]).logpdf
+def bkgdist(logeval, offsetval):
     
-    log10emesh, offsetmesh = np.meshgrid(log10eval, offsetval)
-
-    twodcoordinates = np.stack([log10emesh, offsetmesh], axis=-1)
-
-    pdfvalues = bkgfunc(twodcoordinates)
+    mean = np.array([-0.8, 0.0])
+    cov = np.array([[0.2,0.05],[0.05,2.0]]) # Covariance matrix, assuming unit variance for both dimensions
+    diff = np.column_stack((logeval, offsetval)) - mean
+    exponent = -0.5 * np.sum(diff * np.linalg.solve(cov, diff.T).T, axis=1)
+    log_prob = -0.5 * np.log(2 * np.pi) - 0.5 * np.log(np.linalg.det(cov)) + exponent
     
-    bkgnorm = bkgfunc(normtwodcoordinatestacked)
-    normfactor = special.logsumexp(bkgnorm.reshape((offsetaxis.shape[0], log10eaxis.shape[0])) + logjacob)
-    
-    return pdfvalues-normfactor
+    return log_prob
 
 
 # Does not have any mention of the log of the jacobian to keep it more general.
