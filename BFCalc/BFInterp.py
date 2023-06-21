@@ -26,15 +26,15 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
     eaxis = normeaxis
     def dm_fullspec(logenerg):
         log10eaxis = np.log10(eaxis)
-        logjacob = makelogjacob(log10eaxis)
+        # logjacob = makelogjacob(log10eaxis)
         
         spectralfunc = getspectrafunc(mDM=10**logmDM, channel="tau")
         
-        logdN_dE_fullaxis = np.squeeze(np.log(spectralfunc(eaxis)))
+        # logdN_dE_fullaxis = np.squeeze(np.log(spectralfunc(eaxis)))
         
-        normfactor = special.logsumexp(logdN_dE_fullaxis+logjacob)
+        # normfactor = special.logsumexp(logdN_dE_fullaxis+logjacob)
         
-        return np.log(spectralfunc(10**logenerg))-normfactor
+        return np.log(spectralfunc(10**logenerg)) #-normfactor
             
 
             

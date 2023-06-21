@@ -60,6 +60,17 @@ def edisp(logerecon, logetrue, offsettrue):
 
     return result
 
+
+# def edisp(logerecon, logetrue, offsettrue):
+#     scale = 1e-2#-1e-3*logetrue)
+#     edispfunc = lambda logerecon: -0.5*((logerecon-logetrue)/scale)**2
+    
+#     normvals = np.array([edispfunc(logerecon) for logerecon in log10eaxis])
+    
+#     normalisation = special.logsumexp(normvals+logjacob, axis=0)
+    
+#     return edispfunc(logerecon)-normalisation
+
 ## Testing distribution for the energy dispersion
 
 def psf(offsetrecon, offsettrue, logetrue):
@@ -74,7 +85,7 @@ def psf(offsetrecon, offsettrue, logetrue):
 
 
 # def psf(offsetrecon, offsettrue, logetrue):
-#     scale = 0.3*offsettrue
+#     scale = 0.1*(offsettrue+1e-3)
 #     psffunc = lambda offsetrecon: -0.5*((offsetrecon-offsettrue)/scale)**2
     
 #     normvals = np.array([psffunc(offsetval)for offsetval in offsetaxis])
@@ -83,41 +94,51 @@ def psf(offsetrecon, offsettrue, logetrue):
     
 #     return psffunc(offsetrecon)-normalisation
 
-# def makedist(logmass, spread=1, normeaxis=10**log10eaxis):
-#     eaxis = normeaxis
-#     def distribution(x):
-#         log10eaxis = np.log10(eaxis)
-#         logjacob = makelogjacob(log10eaxis)
-        
-#         specfunc = stats.norm(loc=logmass-6, scale=spread).logpdf
-        
-#         normfactor = special.logsumexp(specfunc(log10eaxis)+logjacob)
-        
-#         result = x*0
-                
-#         result[x<logmass] = specfunc(x[x<logmass])
-#         result[x>=logmass] = np.full((x[x>=logmass]).shape, -np.inf)
-        
-#         return result-normfactor
-        
-#     return distribution
-
-
 def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
     eaxis = normeaxis
     def distribution(x):
         log10eaxis = np.log10(eaxis)
         logjacob = makelogjacob(log10eaxis)
         
-        specfunc = stats.norm(loc=logmass, scale=spread).logpdf
+        # specfunc = stats.norm(loc=logmass-6, scale=spread).logpdf
         
-        normfactor = special.logsumexp(specfunc(log10eaxis)+logjacob)
-                        
-        result = specfunc(x)
+        specfunc = lambda logenergy: -0.5 * np.log(2 * np.pi * spread**2) - 0.5 * ((logenergy - (logmass-4)) / spread)**2
+        
+        normfactor = special.logsumexp(specfunc(log10eaxis[log10eaxis<logmass])+logjacob[log10eaxis<logmass])
+        
+        result = x*0
+        
+        try:
+            belowmassindices = x<logmass
+                    
+            result[belowmassindices] = specfunc(x[belowmassindices])
+            result[x>=logmass] = np.full((x[x>=logmass]).shape, -np.inf)
+        except:
+            if x<logmass:
+                result = specfunc(x)-normfactor
+            else:
+                result = -np.inf
         
         return result-normfactor
         
     return distribution
+
+
+# def makedist(logmass, spread=0.1, normeaxis=10**log10eaxis):
+#     eaxis = normeaxis
+#     def distribution(x):
+#         log10eaxis = np.log10(eaxis)
+#         logjacob = makelogjacob(log10eaxis)
+        
+#         specfunc = stats.norm(loc=logmass, scale=spread).logpdf
+        
+#         normfactor = special.logsumexp(specfunc(log10eaxis)+logjacob)
+                        
+#         result = specfunc(x)
+        
+#         return result-normfactor
+        
+#     return distribution
 
 
 # # Testing distribution for the background
@@ -166,11 +187,16 @@ def fake_signal_position_dist(offset):
 
 def setup_full_fake_signal_dist(logmass, specsetup, normeaxis=10**log10eaxis):
     
-    # offsetintegrand = special.logsumexp(specsetup(logmass, normeaxis=normeaxis)(log10emesh)+fake_signal_position_dist(offsetmesh), axis=0)
+    sigpriorvalues = []
+
+    for ii, logeval in enumerate(log10eaxis):
+        singlerow = specsetup(logmass,normeaxis=10**log10eaxis)(logeval) + fake_signal_position_dist(offsetaxis)
+        sigpriorvalues.append(singlerow)
+    sigpriorvalues = np.array(sigpriorvalues).T
     
-    # normalisation = special.logsumexp(offsetintegrand+makelogjacob(log10eaxis))
+    normalisation = special.logsumexp(sigpriorvalues+makelogjacob(log10eaxis))
     
-    normalisation = 0.0
+    # normalisation = 0.0
     
     # TODO: Make namespace more readable to someone unfamiliar with code
     # numpy vectorisation
