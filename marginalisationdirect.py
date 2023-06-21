@@ -92,10 +92,6 @@ if __name__ == '__main__':
               pool.close() 
            
        
-       # irfvals = [calcirfvals(measuredvals) for measuredvals in tqdm(zip(sigsamples_log10e_measured, sigsamples_offset_measured), 
-       #                                                                                               total=len(list(sigsamples_log10e_measured)),
-       #                                                                                               desc='Calculating irfvals', ncols=100,)]
-       
        produce_posterior_function = functools.partial(evaluateformass, irfvals=irfvals, specsetup=DM_spectrum_setup)
        logmass_logposterior = []
        with Pool(numcores) as pool: 

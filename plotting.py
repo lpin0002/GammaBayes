@@ -111,11 +111,13 @@ if integrationtype=='_direct':
     truelambdaval           = float(params[1,0])
     truelogmass          = float(params[1,2])
     truesigsamples    = np.load(f"{rundirs[0]}/truesigsamples.npy")
-    # truebkgsamples    = np.load(f"{rundirs[0]}/truebkgsamples.npy")
+    truebkgsamples    = np.load(f"{rundirs[0]}/truebkgsamples.npy", allow_pickle= True)
     meassigsamples    = np.load(f"{rundirs[0]}/meassigsamples.npy")
-    # measbkgsamples    = np.load(f"{rundirs[0]}/measbkgsamples.npy")
+    measbkgsamples    = np.load(f"{rundirs[0]}/measbkgsamples.npy", allow_pickle=True)
     if showhyperparameterposterior:
         logmassrange = np.load(f'{rundirs[0]}/logmassrange{integrationtype}.npy')
+        lambdarange = np.load(f'{rundirs[0]}/lambdarange{integrationtype}.npy')
+
     # lambdarange = np.load(f'{rundirs[0]}/lambdarange{integrationtype}.npy')
 
     truesamples             = np.array(list(truesigsamples)+list([]))
@@ -132,9 +134,9 @@ if integrationtype=='_direct':
             # sigmarglogzvals = np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy')
             params              = np.load(f"data/{identifier}/{runnum}/params.npy")
             truesigsamples       =np.concatenate((truesigsamples, np.load(f"{rundir}/truesigsamples.npy")))
-            # truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
+            truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
             meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
-            # measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
+            measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
             params[1,:]         = params[1,:]
             truelogmass     = float(params[1,2])
             nevents         = int(params[1,1])
@@ -142,37 +144,37 @@ if integrationtype=='_direct':
             truelambdaval   = float(params[1,0])
 
     if showhyperparameterposterior:
-        logmass_logposterior = np.load(f"data/{identifier}/logmass_logposterior{integrationtype}.npy")
+        
+        logposterior = np.load(f"data/{identifier}/normedlogposterior{integrationtype}.npy")
+        
+        logmass_logposterior = special.logsumexp(logposterior, axis=0)
         
             
 
-        # print(special.logsumexp(normedlogposterior))
-        # plt.figure(dpi=100)
-        # # logmassrange, lambdarange, 
-        # pcol = plt.pcolor(logmassrange, lambdarange, np.exp(normedlogposterior).T, snap=True)
-        # pcol.set_edgecolor('face')
+        print(special.logsumexp(logposterior))
+        plt.figure(dpi=100)
+        # logmassrange, lambdarange, 
+        pcol = plt.pcolor(logmassrange, lambdarange, np.exp(logposterior).T, snap=True)
+        pcol.set_edgecolor('face')
 
-        # # Plot the contours
+        # Plot the contours
         
-        # mean = np.mean(np.exp(normedlogposterior).T)
-        # std = np.std(np.exp(normedlogposterior).T)
-        # contour_levels = [mean + std, mean + 2*std, mean + 3*std]
-        # levels =[1. - np.exp(-0.5), 1. - np.exp(-2), 1. - np.exp(-9 / 2.)],
-        # plt.contour(logmassrange, lambdarange, np.exp(normedlogposterior).T, contour_levels, cmap='autumn')
-
-        # # plt.legend()
+        mean = np.mean(np.exp(logposterior).T)
+        std = np.std(np.exp(logposterior).T)
+        contour_levels = [mean + std, mean + 2*std, mean + 3*std]
+        levels =[1. - np.exp(-0.5), 1. - np.exp(-2), 1. - np.exp(-9 / 2.)],
+        plt.contour(logmassrange, lambdarange, np.exp(logposterior).T, contour_levels, cmap='autumn')
         
-        
-        # plt.xlabel(r"$log_{10}$(mass) [TeV]")
-        # plt.ylabel("lambda = signal events/total events")
-        # plt.colorbar(pcol, label="Probability Density [1/TeV]")
-        # plt.axvline(truelogmass, c='tab:pink')
-        # plt.axhline(truelambdaval, c='tab:pink')
-        # plt.grid(False)
-        # plt.title(f"{totalevents} total events")
-        # plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.pdf"))
-        # plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
-        # plt.show()
+        plt.xlabel(r"$log_{10}$(mass) [TeV]")
+        plt.ylabel("lambda = signal events/total events")
+        plt.colorbar(pcol, label="Probability Density [1/TeV]")
+        plt.axvline(truelogmass, c='tab:pink')
+        plt.axhline(truelambdaval, c='tab:pink')
+        plt.grid(False)
+        plt.title(f"{totalevents} total events")
+        plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.pdf"))
+        plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
+        plt.show()
         
         
 
@@ -236,11 +238,18 @@ if whattoplot[2]:
 
     plt.figure()
     plt.title(r"true $log_{10}$ E values")
+    truebkghtvals = plt.hist(truebkgsamples[0], bins=centrelogevals, alpha=0.7, label='True bkg log e samples', color='tab:orange')
+
     truesightvals = plt.hist(truesigsamples[0], bins=centrelogevals, alpha=0.7, label='True sig log e samples', color='forestgreen')
     # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
     # plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
-    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=0)+logjacob)
-    plt.plot(log10eaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
+    sigpriorvals = np.exp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxis, 0.0).T+logjacob)
+    
+    # 
+    bkgpriorvals = np.exp(special.logsumexp(bkgdist(log10eaxismesh.flatten(), offsetaxismesh.flatten()).reshape(log10eaxismesh.shape),axis=0)+logjacob)
+    
+    plt.plot(log10eaxis, bkgpriorvals/np.max(bkgpriorvals)*0.95*np.max(truebkghtvals[0]), color='orange')
+    plt.plot(log10eaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]), color='tab:green')
     plt.xlabel(r'True $log_{10}(E)$ [TeV]')
     plt.ylabel('Number of samples')
     plt.legend()
@@ -249,10 +258,17 @@ if whattoplot[2]:
 
     plt.figure()
     plt.title(r"true $log_{10}$ E values")
+    truebkghtvals = plt.hist(truebkgsamples[1], bins=centreoffsetvals, alpha=0.7, label='True bkg offset samples', color='tab:orange')
+
     truesightvals = plt.hist(truesigsamples[1], bins=centreoffsetvals, alpha=0.7, label='True sig offset samples', color='forestgreen')
-    # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
-    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=1))
+    
+    sigpriorvals = np.exp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(0.0, offsetaxis))
     plt.plot(offsetaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
+    
+    bkgpriorvals = np.exp(special.logsumexp(bkgdist(log10eaxismesh.flatten(), offsetaxismesh.flatten()).reshape(log10eaxismesh.shape)+logjacob, axis=1))
+    plt.plot(offsetaxis, bkgpriorvals/np.max(bkgpriorvals)*0.95*np.max(truebkghtvals[0]))
+    
+    
     plt.xlabel(r'Offset [deg]')
     plt.ylabel('Number of samples')
     plt.legend()

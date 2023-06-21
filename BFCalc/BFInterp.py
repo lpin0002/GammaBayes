@@ -36,10 +36,5 @@ def DM_spectrum_setup(logmDM=-0.7, normeaxis=np.logspace(-6, 4, 3001)):
         
         return np.log(spectralfunc(10**logenerg)) #-normfactor
             
-
-            
-            
-            
-            
     return dm_fullspec
 

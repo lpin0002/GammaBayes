@@ -144,15 +144,26 @@ def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
 # # Testing distribution for the background
 
 def bkgdist(logeval, offsetval):
-    
     mean = np.array([-0.8, 0.0])
-    cov = np.array([[0.2,0.05],[0.05,2.0]]) # Covariance matrix, assuming unit variance for both dimensions
-    diff = np.column_stack((logeval, offsetval)) - mean
+    cov = np.array([[0.2,0.1],[0.1,1.0]]) 
+    diff = np.column_stack([logeval, offsetval]) - mean
     exponent = -0.5 * np.sum(diff * np.linalg.solve(cov, diff.T).T, axis=1)
     log_prob = -0.5 * np.log(2 * np.pi) - 0.5 * np.log(np.linalg.det(cov)) + exponent
     
     return log_prob
 
+# def bkgdist(logeval, offsetval):
+#     bkgpriorvalues = []
+#     for ii, logeval in enumerate(log10eaxis):
+#         singlerow = []
+#         for jj, offsetval in enumerate(offsetaxis):
+#             singlerow.append(bkgfunc(logeval, offsetval))
+#         bkgpriorvalues.append(singlerow)
+#     bkgpriorvalues = np.array(bkgpriorvalues).T
+    
+#     normalisation = special.logsumexp(bkgpriorvalues+makelogjacob(log10eaxis))
+    
+#     return bkgfunc(logeval, offsetval)-normalisation
 
 # Does not have any mention of the log of the jacobian to keep it more general.
 def inverse_transform_sampling(logpmf, Nsamples=1):
@@ -223,8 +234,8 @@ def setup_full_fake_signal_dist(logmass, specsetup, normeaxis=10**log10eaxis):
 
 
 
-def calcirfvals(mesauredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
-    logemeasured, offsetmeasured = mesauredcoord
+def calcirfvals(measuredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
+    logemeasured, offsetmeasured = measuredcoord
     log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
     energyloglikelihoodvals=edisp(logemeasured, log10emesh, offsetmesh)
     pointspreadlikelihoodvals=psf(offsetmeasured, offsetmesh, log10emesh)
@@ -237,7 +248,7 @@ def calcirfvals(mesauredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
 
 
 
-def evaluateintegral(priorvals, irfvals):
+def evaluateintegral(irfvals, priorvals):
     integrand = priorvals+logjacob+irfvals
     return special.logsumexp(integrand)
 
@@ -253,7 +264,7 @@ def evaluateformass(logmass, irfvals, specsetup):
     normalisation = special.logsumexp(priorvals+logjacob)
 
         
-    product = np.sum([evaluateintegral(priorvals-normalisation, irflist) for irflist in irfvals])
+    signalmarginalisationvalues = [evaluateintegral(priorvals=priorvals-normalisation, irfvals=irflist) for irflist in irfvals]
     
-    return product
+    return signalmarginalisationvalues
 
