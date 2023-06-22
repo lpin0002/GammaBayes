@@ -1,4 +1,4 @@
-from utils import inverse_transform_sampling, bkgdist, makedist, edisp, eaxis_mod, log10eaxis, offsetaxis, setup_full_fake_signal_dist, logjacob
+from utils import inverse_transform_sampling, bkgdist, makedist, edisp, eaxis_mod, log10eaxis, offsetaxis, setup_full_fake_signal_dist, logjacob, confidence_ellipse
 from scipy import integrate, special, interpolate, stats
 import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, warnings, corner.corner as corner
 from matplotlib import cm
@@ -51,77 +51,26 @@ print("\nstem directory: ", stemdirectory, '\n')
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 print("number of run directories: ", len(rundirs), '\n')
 
-if 'brute' in integrationtype:
-        params               = np.load(f"{rundirs[0]}/params.npy")
-        
-        totalevents          = int(params[1,1])
-        truelambda           = float(params[1,0])
-        truelogmass          = float(params[1,2])
 
 
-        print(f"{params[0,0]} = {params[1,0]}")
-        print(f"{params[0,2]} = {params[1,2]}")
-        
-        
-        print(f"Total events: {totalevents}\n")
-        
-        if showhyperparameterposterior:
-        
-                # recyclingresults     = np.load(f'{stemdirectory}/recyclingresults.npy', allow_pickle=True)
-                
-                brutesamplerresults = np.load(f'data/{identifier}/results_brute.npy', allow_pickle=True)
-
-                recyclingresults = brutesamplerresults.item()
-                runsamples = recyclingresults.samples_equal()
-
-
-                figure = corner(
-                            runsamples,
-                            quantiles=[0.025, 0.16, 0.84, 0.975],
-                            levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.)),
-                            labels=[r"log$_{10}$ $m_\chi$", r"$\lambda$"],
-                            # show_titles=True,
-                            title_kwargs={"fontsize": 12},
-                            bins = 32,
-                            truths=[truelogmass, truelambda],
-                            labelpad=-0.1,
-                            tick_kwargs={'rotation':90},
-                            color='#0072C1',
-                            truth_color='tab:orange',
-                            plot_density=0, 
-                            plot_datapoints=True, 
-                            fill_contours=True,
-                            max_n_ticks=7,
-                            hist_kwargs=dict(density=True),
-                            smooth=0.9,
-                            # smooth1d=0.9
-                )
-                plt.suptitle(f"Nevents = {totalevents}", size=16)
-                figure.set_size_inches(8,8)
-                figure.set_dpi(100)
-                #plt.tight_layout()
-                
-                plt.savefig(time.strftime(f'{stemdirectory}/Hyperparameter_Posterior_%H_direct.pdf'))
-                plt.show()
-
-
-if integrationtype=='_direct':
-    params               = np.load(f"{rundirs[0]}/params.npy")
-    totalevents          = int(params[1,1])
+if True:
+    params                  = np.load(f"{rundirs[0]}/params.npy")
+    totalevents             = int(params[1,1])
     truelambdaval           = float(params[1,0])
-    truelogmass          = float(params[1,2])
-    truesigsamples    = np.load(f"{rundirs[0]}/truesigsamples.npy")
-    truebkgsamples    = np.load(f"{rundirs[0]}/truebkgsamples.npy", allow_pickle= True)
-    meassigsamples    = np.load(f"{rundirs[0]}/meassigsamples.npy")
-    measbkgsamples    = np.load(f"{rundirs[0]}/measbkgsamples.npy", allow_pickle=True)
+    truelogmass             = float(params[1,2])
+    truesigsamples          = np.load(f"{rundirs[0]}/truesigsamples.npy")
+    truebkgsamples          = np.load(f"{rundirs[0]}/truebkgsamples.npy", allow_pickle= True)
+    meassigsamples          = np.load(f"{rundirs[0]}/meassigsamples.npy")
+    measbkgsamples          = np.load(f"{rundirs[0]}/measbkgsamples.npy", allow_pickle=True)
+    
     if showhyperparameterposterior:
         logmassrange = np.load(f'{rundirs[0]}/logmassrange{integrationtype}.npy')
         lambdarange = np.load(f'{rundirs[0]}/lambdarange{integrationtype}.npy')
 
     # lambdarange = np.load(f'{rundirs[0]}/lambdarange{integrationtype}.npy')
 
-    truesamples             = np.array(list(truesigsamples)+list([]))
-    meassamples          = np.array(list(meassigsamples)+list([]))
+    truesamples             = np.array(list(truesigsamples)+list(meassigsamples))
+    meassamples          = np.array(list(meassigsamples)+list(measbkgsamples))
     for rundir in rundirs[1:]:
             runnum = rundir.replace(stemdirectory+'/', '')
             print("runnum: ", runnum)
@@ -145,43 +94,50 @@ if integrationtype=='_direct':
 
     if showhyperparameterposterior:
         
-        logposterior = np.load(f"data/{identifier}/normedlogposterior{integrationtype}.npy")
+        logposterior = np.load(f"data/{identifier}/normalised_logposterior{integrationtype}.npy")
         
-        logmass_logposterior = special.logsumexp(logposterior, axis=0)
         
             
 
         print(special.logsumexp(logposterior))
-        plt.figure(dpi=100)
+        fig, ax = plt.subplots(dpi=100)
         # logmassrange, lambdarange, 
-        pcol = plt.pcolor(logmassrange, lambdarange, np.exp(logposterior).T, snap=True)
+        pcol = ax.pcolor(logmassrange, lambdarange, np.exp(logposterior).T, snap=True)
+
         pcol.set_edgecolor('face')
 
         # Plot the contours
+        confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=1.0)
+        confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=2.0)
+        confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=3.0)
+
         
-        mean = np.mean(np.exp(logposterior).T)
-        std = np.std(np.exp(logposterior).T)
-        contour_levels = [mean + std, mean + 2*std, mean + 3*std]
-        levels =[1. - np.exp(-0.5), 1. - np.exp(-2), 1. - np.exp(-9 / 2.)],
-        plt.contour(logmassrange, lambdarange, np.exp(logposterior).T, contour_levels, cmap='autumn')
         
         plt.xlabel(r"$log_{10}$(mass) [TeV]")
         plt.ylabel("lambda = signal events/total events")
         plt.colorbar(pcol, label="Probability Density [1/TeV]")
         plt.axvline(truelogmass, c='tab:pink')
         plt.axhline(truelambdaval, c='tab:pink')
-        plt.grid(False)
+        plt.grid(axis='x', markevery=log10eaxis, alpha=0.1)
         plt.title(f"{totalevents} total events")
+        
+        ax.set_xlim(logmassrange[0], logmassrange[-1])
+        ax.set_ylim(lambdarange[0], lambdarange[-1])
+
         plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.pdf"))
         plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
+        plt.savefig('Figures/thousandevent_modular2d_posterior.pdf')
+
         plt.show()
         
         
 
         colormap = cm.get_cmap('Blues_r', 4)
 
+        
+        logmass_logposterior = special.logsumexp(logposterior, axis=1)
 
-        deltalogmass = (logmassrange[1]-logmassrange[0])
+
         normedposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior))
         cdfposterior = np.cumsum(normedposterior)
         print(cdfposterior[-1])
@@ -205,27 +161,54 @@ if integrationtype=='_direct':
 
         plt.axvline(truelogmass, c='tab:orange', ls='-.', label='true logmass value', alpha=0.8)
         plt.xlabel(r'log$_{10}$ mass [TeV]')
-        norm = mpl.colors.Normalize(vmin=0, vmax=5)
+        normcolor = mpl.colors.Normalize(vmin=0, vmax=5)
+        plt.grid(axis='x', markevery=log10eaxis, alpha=0.1)
 
-        cb1 = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=colormap), ticks=np.arange(1,5))
+
+        cb1 = plt.colorbar(cm.ScalarMappable(norm=normcolor, cmap=colormap), ticks=np.arange(1,5))
         cb1.set_label(r'standard deviations')
         plt.legend()
-        plt.savefig(time.strftime(f'data/{identifier}/logmassposterior_%m%d_%H%M_logmass={truelogmass}.png'))
+        plt.ylim([0,None])
+
+        plt.savefig(time.strftime(f'data/{identifier}/logmassposterior_%m%d_%H_logmass={truelogmass}.png'))
+        plt.savefig('Figures/thousandevent_modular2d_logmassposterior.pdf')
+
         plt.show()
 
 
-        # plt.figure()
-        # plt.plot(lambdarange, np.sum(np.exp(normedlogposterior),axis=0))
-        # plt.xlabel("lambda = signal events/total events")
-        # plt.ylabel("Probability density (slice) []")
-        # plt.axvline(truelambdaval,c='r', label=params[1,0])
-        # plt.legend()
-        # plt.title(str(totalevents))
-        # plt.ylim([0, None])
-        # plt.xlim([lambdarange[0], lambdarange[-1]])
-        # plt.savefig(time.strftime(f"data/{identifier}/lambdaslice%H_{totalevents}{integrationtype}.pdf"))
-        # plt.savefig(f"Figures/LatestFigures/lambdaslice{integrationtype}.pdf")
-        # plt.show()
+        
+        
+        from scipy.stats import norm
+
+        
+        lambda_logposterior = special.logsumexp(logposterior, axis=0)
+
+        normalisedlambdaposterior = np.exp(lambda_logposterior-special.logsumexp(lambda_logposterior))
+
+        cdflambdaposterior = np.cumsum(normalisedlambdaposterior)
+        meanlabda = lambdarange[np.abs(norm.cdf(0)-cdflambdaposterior).argmin()]
+        lambdapercentiles = []
+        for zscore in zscores:
+            lambdapercentiles.append(lambdarange[np.abs(norm.cdf(zscore)-cdflambdaposterior).argmin()])
+
+        plt.figure(dpi=200)
+        plt.title(f"Nevents= {totalevents}")
+        plt.plot(lambdarange,normalisedlambdaposterior, c='tab:green')
+
+        plt.axvline(meanlabda, c='tab:green', ls=':')
+
+
+        for o, percentile in enumerate(lambdapercentiles):
+                    color = colormap(np.abs(zscores[o])/4-0.01)
+
+                    plt.axvline(percentile, c=color, ls=':')
+        plt.axvline(truelambdaval, ls='--', color="tab:orange")
+        plt.ylim([0,None])
+
+        plt.xlabel(r'$\lambda$')
+        plt.savefig('Figures/thousandevent_modular2d_lambdaposterior.pdf')
+
+        plt.show()
 
 
 if whattoplot[2]:

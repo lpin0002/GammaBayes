@@ -43,14 +43,13 @@ if __name__=="__main__":
     except:
         truelogmass = 0
         
-    # try:
-    #     lambdaval = float(sys.argv[5])
-    # except:
-    #     lambdaval = 1.0
-    lambdaval = 1.0
+    try:
+        lambdaval = float(sys.argv[5])
+    except:
+        lambdaval = 0.5
 
     try:
-        numcores = int(float(sys.argv[5]))
+        numcores = int(float(sys.argv[6]))
     except:
         numcores = 10
 
@@ -67,69 +66,70 @@ if __name__=="__main__":
     except:
         raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
-    sigdistsetup = setup_full_fake_signal_dist
-
-
-
-    sigdist = sigdistsetup(truelogmass, specsetup=DM_spectrum_setup, normeaxis=10**log10eaxis)
-
-
-    nsig = int(np.round(lambdaval*nevents))
+    log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+    Nsamples=nevents
+    truelambda = lambdaval
+    truelogmassval = truelogmass
+    nsig = int(round(truelambda*Nsamples))
+    nbkg = int(round((1-truelambda)*Nsamples))
     
     
     sigpriorvalues = []
 
-    for jj, offsetval in tqdm(enumerate(offsetaxis), desc='Making binned signal prior', ncols=100, total=offsetaxis.shape[0]):
-        singlerow = []
-        for ii, logeval in enumerate(log10eaxis):
-            singlerow.append(sigdist(logeval, offsetval))
+    for ii, logeval in enumerate(log10eaxis):
+        singlerow = setup_full_fake_signal_dist(truelogmassval, specsetup=DM_spectrum_setup, normeaxis=10**log10eaxis)(logeval, offsetaxis)
         sigpriorvalues.append(singlerow)
-    sigbinnedprior = np.array(sigpriorvalues)+logjacob
+    sigpriorvalues = np.array(sigpriorvalues)
+    sigpriorvalues.shape
     
     
-    # sigbinnedprior = sigdist(log10emesh, offsetmesh)+logjacob
+    bkgpriorvalues = []
+
+    for ii, logeval in enumerate(log10eaxis):
+        singlerow = []
+        # for ii, offsetval in enumerate(offsetaxis):
+        singlerow = bkgdist(logeval, offsetaxis)
+        bkgpriorvalues.append(singlerow)
+    bkgpriorvalues = np.squeeze(np.array(bkgpriorvalues))
     
     
+    sigbinnedprior = sigpriorvalues.T+logjacob
     flattened_sigbinnedprior = sigbinnedprior.flatten()
+
+
+    bkgbinnedprior = bkgpriorvalues.T+logjacob
+    
+    bkgnormalisation = special.logsumexp(bkgbinnedprior)
+    bkgbinnedprior = bkgbinnedprior - bkgnormalisation
+    
+    flattened_bkgbinnedprior = bkgbinnedprior.flatten()
+    
+
+
 
     sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_sigbinnedprior, Nsamples=nsig),sigbinnedprior.shape)
     siglogevals = log10eaxis[sigresultindices[1]]
     sigoffsetvals = offsetaxis[sigresultindices[0]]
-
-
-    signal_log10e_measured = []
-    with Pool(numcores) as pool: 
-        for result in tqdm(pool.imap(sampleedisp, zip(siglogevals, sigoffsetvals)), 
-                            total=len(list(sigoffsetvals)), ncols=100, desc="Creating measured log energy values"):
-                signal_log10e_measured.append(log10eaxis[result])
-
-        pool.close() 
-    signal_log10e_measured = np.squeeze(np.array(signal_log10e_measured))
     
-    # signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, 
-    #                                                                                 logeval, 
-    #                                                                                 offsetval)+logjacob, Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
-
-    signal_offset_measured = []
-    with Pool(numcores) as pool: 
-        for result in tqdm(pool.imap(samplepsf, zip(siglogevals, sigoffsetvals)), 
-                            total=len(list(sigoffsetvals)), ncols=100, desc="Creating measured offset values"):
-                signal_offset_measured.append(offsetaxis[result])
-
-        pool.close() 
-    signal_offset_measured = np.squeeze(np.array(signal_offset_measured))
     
-    # signal_offset_measured = offsetaxis[np.squeeze([inverse_transform_sampling(psf(offsetaxis, 
-    #                                                                             offsetval, 
-    #                                                                             logeval), Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
+    signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, offsetval)+logjacob, Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
 
+    signal_offset_measured = offsetaxis[np.squeeze([inverse_transform_sampling(psf(offsetaxis, offsetval, logeval), Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
+
+    bkgresultindices = np.unravel_index(inverse_transform_sampling(flattened_bkgbinnedprior, Nsamples=nbkg),bkgbinnedprior.shape)
+    bkglogevals = log10eaxis[bkgresultindices[1]]
+    bkgoffsetvals = offsetaxis[bkgresultindices[0]]
+    
+    bkg_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, offsetval)+logjacob, Nsamples=1) for logeval, offsetval in tqdm(zip(bkglogevals, bkgoffsetvals), total=nbkg)])]
+    bkg_offset_measured = offsetaxis[np.squeeze([inverse_transform_sampling(psf(offsetaxis, offsetval, logeval), Nsamples=1) for logeval, offsetval in tqdm(zip(bkglogevals, bkgoffsetvals), total=nbkg)])]
 
 
     np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", np.array([siglogevals,sigoffsetvals]))
     np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", np.array([signal_log10e_measured,signal_offset_measured]))
-    # np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", bkgsamples)
-    # np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", bkgsamples_measured)
+    np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", np.array([bkglogevals,bkgoffsetvals]))
+    np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", np.array([bkg_log10e_measured,bkg_offset_measured]))
     np.save(f"data/{identifier}/{runnum}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                             [lambdaval, nevents, truelogmass]]))
+    np.save(f"data/{identifier}/{runnum}/backgroundprior.npy",bkgbinnedprior)
 
     print("Done simulation.")

@@ -52,9 +52,10 @@ def edisp(logerecon, logetrue, offsettrue):
     edispfunc = lambda logerecon: np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                   migra = np.power(10.,logerecon-logetrue), offset=np.abs(offsettrue)*u.deg).value)
     
-    normvals = np.array([edispfunc(log10eaxisval) for log10eaxisval in log10eaxis])
+    normvals = np.array([edispfunc(log10eval) for log10eval in log10eaxis])
     # print(normvals)
-    normalisation = special.logsumexp(normvals+logjacob, axis=0)
+    normalisation = special.logsumexp(normvals.T+logjacob, axis=0)
+    
     
     result = edispfunc(logerecon)-normalisation
 
@@ -77,7 +78,7 @@ def psf(offsetrecon, offsettrue, logetrue):
     psffunc = lambda offsetrecon: np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                   rad = (offsettrue-offsetrecon)*u.deg, offset=np.abs(offsettrue)*u.deg).value)
     
-    normvals = np.array([psffunc(offsetval)for offsetval in offsetaxis])
+    normvals = [psffunc(offsetval) for offsetval in offsetaxis]
     
     normalisation = special.logsumexp(normvals, axis=0)
     
@@ -143,27 +144,17 @@ def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
 
 # # Testing distribution for the background
 
-def bkgdist(logeval, offsetval):
-    mean = np.array([-0.8, 0.0])
-    cov = np.array([[0.2,0.1],[0.1,1.0]]) 
-    diff = np.column_stack([logeval, offsetval]) - mean
-    exponent = -0.5 * np.sum(diff * np.linalg.solve(cov, diff.T).T, axis=1)
-    log_prob = -0.5 * np.log(2 * np.pi) - 0.5 * np.log(np.linalg.det(cov)) + exponent
-    
-    return log_prob
-
 # def bkgdist(logeval, offsetval):
-#     bkgpriorvalues = []
-#     for ii, logeval in enumerate(log10eaxis):
-#         singlerow = []
-#         for jj, offsetval in enumerate(offsetaxis):
-#             singlerow.append(bkgfunc(logeval, offsetval))
-#         bkgpriorvalues.append(singlerow)
-#     bkgpriorvalues = np.array(bkgpriorvalues).T
+#     mean = np.array([-0.8, 0.0])
+#     cov = np.array([[0.2,0.1],[0.1,1.0]]) 
+#     diff = np.column_stack([logeval, offsetval]) - mean
+#     exponent = -0.5 * np.sum(diff * np.linalg.solve(cov, diff.T).T, axis=1)
+#     log_prob = -0.5 * np.log(2 * np.pi) - 0.5 * np.log(np.linalg.det(cov)) + exponent
     
-#     normalisation = special.logsumexp(bkgpriorvalues+makelogjacob(log10eaxis))
-    
-#     return bkgfunc(logeval, offsetval)-normalisation
+#     return log_prob
+
+def bkgdist(logeval, offsetval):
+    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, offset=np.abs(offsetval)*u.deg).value)
 
 # Does not have any mention of the log of the jacobian to keep it more general.
 def inverse_transform_sampling(logpmf, Nsamples=1):
@@ -268,3 +259,67 @@ def evaluateformass(logmass, irfvals, specsetup):
     
     return signalmarginalisationvalues
 
+
+
+import matplotlib.transforms as transforms
+import matplotlib.patches as patches
+
+def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='white',facecolor='none', **kwargs):
+    """
+    Create a plot of the covariance confidence ellipse based on a grid of probabilities.
+
+    Parameters
+    ----------
+    probabilities : array-like, shape (n, m)
+        Grid of probability values.
+
+    ax : matplotlib.axes.Axes
+        The axes object to draw the ellipse into.
+
+    n_std : float
+        The number of standard deviations to determine the ellipse's radiuses.
+
+    Returns
+    -------
+    matplotlib.patches.Ellipse
+
+    Other parameters
+    ----------------
+    kwargs : `~matplotlib.patches.Patch` properties
+    """
+    if not isinstance(probabilities, np.ndarray):
+        probabilities = np.array(probabilities)
+
+    if probabilities.ndim != 2:
+        raise ValueError("probabilities must be a 2-dimensional array")
+
+    n, m = probabilities.shape
+
+    
+    x, y = np.meshgrid(x, y)
+    x = x.flatten()
+    y = y.flatten()
+
+    cov = np.cov(x, y, aweights=probabilities.flatten())
+    pearson = cov[0, 1] / np.sqrt(cov[0, 0] * cov[1, 1])
+
+    ell_radius_x = np.sqrt(1 + pearson)
+    ell_radius_y = np.sqrt(1 - pearson)
+
+    ellipse = patches.Ellipse((0, 0),
+                              width=ell_radius_x * 2,
+                              height=ell_radius_y * 2,
+                              edgecolor = edgecolor,
+                              facecolor = facecolor,
+                              **kwargs)
+
+    scale_x = np.sqrt(cov[0, 0]) * n_std
+    mean_x = np.sum(x * probabilities.flatten()) / np.sum(probabilities)
+
+    scale_y = np.sqrt(cov[1, 1]) * n_std
+    mean_y = np.sum(y * probabilities.flatten()) / np.sum(probabilities)
+
+    transf = transforms.Affine2D().rotate_deg(45).scale(scale_x, scale_y).translate(mean_x, mean_y)
+
+    ellipse.set_transform(transf + ax.transData)
+    return ax.add_patch(ellipse)

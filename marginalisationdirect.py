@@ -41,68 +41,106 @@ if __name__ == '__main__':
               
        
        
-       sigdistsetup = setup_full_fake_signal_dist
-       # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
-       np.seterr(divide='ignore', invalid='ignore')
-
-       sigsamples           = np.load(f"data/{identifier}/{runnum}/truesigsamples.npy")
-       sigsamples_measured  = np.load(f"data/{identifier}/{runnum}/meassigsamples.npy")
        
-       sig_log10e_samples = sigsamples[0]
-       sig_offset_samples = sigsamples[1]
+       siglogevals, sigoffsetvals = np.load(f"data/{identifier}/{runnum}/truesigsamples.npy")
+       signal_log10e_measured,signal_offset_measured = np.load(f"data/{identifier}/{runnum}/meassigsamples.npy")
+       bkglogevals,bkgoffsetvals = np.load(f"data/{identifier}/{runnum}/truebkgsamples.npy")
+       bkg_log10e_measured,bkg_offset_measured = np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy")
+       bkgbinnedprior = np.load(f"data/{identifier}/{runnum}/backgroundprior.npy")
        
-       sigsamples_log10e_measured = sigsamples_measured[0]
-       sigsamples_offset_measured = sigsamples_measured[1]
-
-       # bkgsamples           = np.load(f"data/{identifier}/{runnum}/truebkgsamples.npy")
-       # bkgsamples_measured  = np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy")
-       bkgsamples = []
-       bkgsamples_measured = []
-       params               = np.load(f"data/{identifier}/{runnum}/params.npy")
-       params[1,:]          = params[1,:]
-       truelogmass          = float(params[1,2])
-       nevents              = int(params[1,1])
-       true_offset_vals             = np.array(list(sig_offset_samples)+list([]))
-       measured_offset_vals         = np.array(list(sigsamples_offset_measured)+list([]))
-       true_log10e_vals             = np.array(list(sig_log10e_samples)+list([]))
-       measured_log10e_vals         = np.array(list(sigsamples_log10e_measured)+list([]))
-
-       logmasswindowwidth   = 3/np.sqrt(nevents)
-       logmasslowerbound    = truelogmass-logmasswindowwidth
-       logmassupperbound    = truelogmass+logmasswindowwidth
-
+       truelambda, Nsamples, truelogmassval = np.load(f"data/{identifier}/{runnum}/params.npy")[1,:]
+       truelambda = float(truelambda)
+       Nsamples = int(Nsamples)
+       truelogmassval = float(truelogmassval)
        
+       
+       
+       
+       true_offset_vals             = np.array(list(sigoffsetvals)+list(bkgoffsetvals))
+       measured_offset_vals         = np.array(list(signal_offset_measured)+list(bkg_offset_measured))
+       true_log10e_vals             = np.array(list(siglogevals)+list(bkglogevals))
+       measured_log10e_vals         = np.array(list(signal_log10e_measured)+list(bkg_log10e_measured))
+
+       nsig = int(np.round(truelambda*Nsamples))
+
+       logmasswindowwidth      = 2/np.sqrt(nsig)
+
+       lambdawindowwidth       = 4/np.sqrt(Nsamples)
+
+
+       logmasslowerbound       = truelogmassval-logmasswindowwidth
+       logmassupperbound       = truelogmassval+logmasswindowwidth
+
+
+       lambdalowerbound        = truelambda-lambdawindowwidth
+       lambdaupperbound        = truelambda+lambdawindowwidth
+
+
        if logmasslowerbound<log10eaxis[1]:
               logmasslowerbound = log10eaxis[1]
        if logmassupperbound>2:
               logmassupperbound = 2
-       
+              
+              
+       if lambdalowerbound<0:
+              lambdalowerbound = 0
+       if lambdaupperbound>1:
+              lambdaupperbound = 1
 
-       logmassrange         = np.linspace(logmasslowerbound,logmassupperbound,nbinslogmass)
+
+       logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, nbinslogmass)    
+       lambdarange             = np.linspace(lambdalowerbound, lambdaupperbound, nbinslambda)
        
-       np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
-       
+       testvalue = calcirfvals([measured_log10e_vals[0], measured_offset_vals[0]])
+       print(testvalue)
        irfvals = []
        with Pool(numcores) as pool: 
-              
-              for result in tqdm(pool.imap(calcirfvals, zip(sigsamples_log10e_measured, sigsamples_offset_measured)), 
-                                 total=len(list(sigsamples_log10e_measured)), ncols=100, desc="Calculating irfvals"):
+              for result in tqdm(pool.imap(calcirfvals, zip(measured_log10e_vals, measured_offset_vals)), 
+                                   total=len(list(measured_log10e_vals)), ncols=100, desc="Calculating irfvals"):
                      irfvals.append(result)
 
               pool.close() 
-           
-       
-       produce_posterior_function = functools.partial(evaluateformass, irfvals=irfvals, specsetup=DM_spectrum_setup)
-       logmass_logposterior = []
+              
+              
+       produce_logsigmarg_function = functools.partial(evaluateformass, irfvals=irfvals, specsetup=DM_spectrum_setup)
+       signal_log_marginalisationvalues = []
        with Pool(numcores) as pool: 
               
-              for result in tqdm(pool.imap(produce_posterior_function, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
-                     logmass_logposterior.append(result)
+              for result in tqdm(pool.imap(produce_logsigmarg_function, logmassrange), total=len(list(logmassrange)), ncols=100, desc="Calculating signal marginalisations..."):
+                     signal_log_marginalisationvalues.append(result)
 
               pool.close() 
-           
-       print("Done calculating the posterior")
-       np.save(f'data/{identifier}/logmass_logposterior_direct.npy', logmass_logposterior)
+       signal_log_marginalisationvalues = np.array(signal_log_marginalisationvalues)
+       
+       
+       
+       produce_logbkgmarg_function = functools.partial(evaluateintegral, priorvals=bkgbinnedprior-logjacob)
+
+       bkg_log_marginalisationvalues = []
+       with Pool(numcores) as pool: 
+              for result in tqdm(pool.imap(produce_logbkgmarg_function, irfvals), total=len(list(irfvals)), ncols=100, desc="Calculating background marginalisations..."):
+                     bkg_log_marginalisationvalues.append(result)
+
+              pool.close() 
+       bkg_log_marginalisationvalues = np.array(bkg_log_marginalisationvalues)
+
+       
+       logposterior = []
+
+       for ii, logmass in tqdm(enumerate(logmassrange), total=len(list(logmassrange))):
+              singlerow = []
+              for jj, lambdaval in enumerate(lambdarange):
+                     product = np.sum(np.logaddexp(np.log(lambdaval)+signal_log_marginalisationvalues[ii,:], np.log(1-lambdaval)+bkg_log_marginalisationvalues))
+                     singlerow.append(product)
+              logposterior.append(singlerow)
+       logposterior = np.array(logposterior)
+
+       normalisedlogposterior = logposterior-special.logsumexp(logposterior)
+       
+       np.save(f'data/{identifier}/{runnum}/lambdarange_direct.npy',lambdarange)
+       np.save(f'data/{identifier}/{runnum}/logmassrange_direct.npy',logmassrange)
+       np.save(f'data/{identifier}/logposterior_direct.npy', logposterior)
+       np.save(f'data/{identifier}/normalised_logposterior_direct.npy', normalisedlogposterior)
 
 
 
