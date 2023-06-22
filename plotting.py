@@ -178,7 +178,6 @@ if True:
 
         
         
-        from scipy.stats import norm
 
         
         lambda_logposterior = special.logsumexp(logposterior, axis=0)

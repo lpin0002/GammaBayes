@@ -1,7 +1,7 @@
 
 import os, sys, numpy as np, time, math
 
-def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores, numhour, numminute, identifier = None, immediate_run=1, nummemory = 200):
+def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores, numhour, numminute, numlogmass, numlambda, identifier = None, immediate_run=1, nummemory = 200):
     
     if int(numminute)<10:
         numminute = "10"
@@ -45,8 +45,8 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores, numh
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {numcores}
-srun python3 marginalisationdirect.py {identifier} {runnum} {numcores}"""
+srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue} {numcores}
+srun python3 marginalisationdirect.py {identifier} {runnum} {numcores} {numlogmass}, {numlambda}"""
 
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
@@ -68,11 +68,20 @@ if __name__=="__main__":
     numminute = int(sys.argv[7])
     identifier = sys.argv[8]
     try:
-        nummemory = int(sys.argv[12])
+        numlogmass = int(sys.argv[9])
+    except:
+        numlogmass = 161
+        
+    try:
+        numlambda = int(sys.argv[10])
+    except:
+        numlambda = 161
+    try:
+        nummemory = int(sys.argv[11])
     except:
         nummemory = 1000
-    # def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores, numhour, numminute, identifier = None, immediate_run=1, nummemory = 200):
+        
 
     makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, 
-                numcores=numcores, numhour=numhour, numminute=numminute,
+                numcores=numcores, numhour=numhour, numminute=numminute, numlogmass=numlogmass, numlambda=numlambda,
                 identifier = identifier, nummemory = nummemory)
