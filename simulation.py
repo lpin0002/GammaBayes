@@ -48,10 +48,10 @@ if __name__=="__main__":
     except:
         lambdaval = 0.5
 
-    try:
-        numcores = int(float(sys.argv[6]))
-    except:
-        numcores = 10
+    # try:
+    #     numcores = int(float(sys.argv[6]))
+    # except:
+    #     numcores = 10
 
     try:
         os.mkdir('data')

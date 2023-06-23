@@ -64,8 +64,8 @@ if True:
     measbkgsamples          = np.load(f"{rundirs[0]}/measbkgsamples.npy", allow_pickle=True)
     
     if showhyperparameterposterior:
-        logmassrange = np.load(f'{rundirs[0]}/logmassrange{integrationtype}.npy')
-        lambdarange = np.load(f'{rundirs[0]}/lambdarange{integrationtype}.npy')
+        logmassrange = np.load(f'{stemdirectory}/logmassrange{integrationtype}.npy')
+        lambdarange = np.load(f'{stemdirectory}/lambdarange{integrationtype}.npy')
 
     # lambdarange = np.load(f'{rundirs[0]}/lambdarange{integrationtype}.npy')
 
@@ -75,18 +75,11 @@ if True:
             runnum = rundir.replace(stemdirectory+'/', '')
             print("runnum: ", runnum)
             params              = np.load(f"data/{identifier}/{runnum}/params.npy")
-            if showhyperparameterposterior:
-                logmassrange = np.load(f'data/{identifier}/{runnum}/logmassrange{integrationtype}.npy')
-            # lambdarange = np.load(f'data/{identifier}/{runnum}/lambdarange{integrationtype}.npy')
-            edisplist = np.load(f'data/{identifier}/{runnum}/edisplist{integrationtype}.npy')
-            # bkgmarglist = np.load(f'data/{identifier}/{runnum}/bkgmarglist{integrationtype}.npy')
-            # sigmarglogzvals = np.load(f'data/{identifier}/{runnum}/sigmarglogzvals{integrationtype}.npy')
-            params              = np.load(f"data/{identifier}/{runnum}/params.npy")
+            
             truesigsamples       =np.concatenate((truesigsamples, np.load(f"{rundir}/truesigsamples.npy")))
             truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
             meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
             measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
-            params[1,:]         = params[1,:]
             truelogmass     = float(params[1,2])
             nevents         = int(params[1,1])
             totalevents+=nevents
@@ -94,7 +87,7 @@ if True:
 
     if showhyperparameterposterior:
         
-        logposterior = np.load(f"data/{identifier}/normalised_logposterior{integrationtype}.npy")
+        logposterior = np.load(f"{stemdirectory}/normalised_logposterior{integrationtype}.npy")
         
         
             
@@ -159,7 +152,7 @@ if True:
             plt.axvline(percentile, c=color, ls=':')
             
 
-        plt.axvline(truelogmass, c='tab:orange', ls='-.', label='true logmass value', alpha=0.8)
+        plt.axvline(truelogmass, c='tab:orange', ls='-.', label='true value', alpha=0.8)
         plt.xlabel(r'log$_{10}$ mass [TeV]')
         normcolor = mpl.colors.Normalize(vmin=0, vmax=5)
         plt.grid(axis='x', markevery=log10eaxis, alpha=0.1)
@@ -190,20 +183,20 @@ if True:
         for zscore in zscores:
             lambdapercentiles.append(lambdarange[np.abs(norm.cdf(zscore)-cdflambdaposterior).argmin()])
 
-        plt.figure(dpi=200)
+        plt.figure(dpi=160, figsize=(10,5))
         plt.title(f"Nevents= {totalevents}")
-        plt.plot(lambdarange,normalisedlambdaposterior, c='tab:green')
+        plt.plot(lambdarange,normalisedlambdaposterior, c='tab:green', label="mean of posterior")
 
-        plt.axvline(meanlabda, c='tab:green', ls=':')
+        plt.axvline(meanlabda, c='tab:green', ls=':', lw=2.0)
 
 
         for o, percentile in enumerate(lambdapercentiles):
                     color = colormap(np.abs(zscores[o])/4-0.01)
 
                     plt.axvline(percentile, c=color, ls=':')
-        plt.axvline(truelambdaval, ls='--', color="tab:orange")
+        plt.axvline(truelambdaval, ls='--', color="tab:orange", label="true value")
         plt.ylim([0,None])
-
+        plt.legend()
         plt.xlabel(r'$\lambda$')
         plt.savefig('Figures/thousandevent_modular2d_lambdaposterior.pdf')
 
