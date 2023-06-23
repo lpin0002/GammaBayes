@@ -122,7 +122,7 @@ if __name__=="__main__":
     try:
         immediate_run = int(sys.argv[15])
     except:
-        analysememory = 1
+        immediate_run = 1
         
 
     makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, numcores=numcores, 
