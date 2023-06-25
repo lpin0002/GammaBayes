@@ -87,15 +87,31 @@ if True:
 
     if showhyperparameterposterior:
         
-        logposterior = np.load(f"{stemdirectory}/normalised_logposterior{integrationtype}.npy")
+        import matplotlib.colors as colors
+        
+        def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+            new_cmap = colors.LinearSegmentedColormap.from_list(
+                'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+                cmap(np.linspace(minval, maxval, n)))
+            return new_cmap
+        
+        logposterior = np.load(f"{stemdirectory}/logposterior{integrationtype}.npy")
         
         
-            
+        normalisation = special.logsumexp(logposterior)
+        
+        logposterior= logposterior-normalisation
+        
+        tempcolormap = cm.get_cmap('magma')
+        
+        newcmap = truncate_colormap(tempcolormap, minval=0.15, maxval=0.6, n=1000)
 
         print(special.logsumexp(logposterior))
-        fig, ax = plt.subplots(dpi=100)
+        print(params)
+        
+        fig, ax = plt.subplots(dpi=200, figsize=(5,4))
         # logmassrange, lambdarange, 
-        pcol = ax.pcolor(logmassrange, lambdarange, np.exp(logposterior).T, snap=True)
+        pcol = ax.pcolor(logmassrange, lambdarange, logposterior.T, snap=True)#, cmap=newcmap, alpha=1.0)
 
         pcol.set_edgecolor('face')
 
@@ -104,22 +120,26 @@ if True:
         confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=2.0)
         confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=3.0)
 
-        
+        # ax.set_alpha(0.0)
         
         plt.xlabel(r"$log_{10}$(mass) [TeV]")
-        plt.ylabel("lambda = signal events/total events")
+        plt.ylabel("signal fraction")
         plt.colorbar(pcol, label="Probability Density [1/TeV]")
         plt.axvline(truelogmass, c='tab:pink')
         plt.axhline(truelambdaval, c='tab:pink')
         plt.grid(axis='x', markevery=log10eaxis, alpha=0.1)
         plt.title(f"{totalevents} total events")
         
+        
         ax.set_xlim(logmassrange[0], logmassrange[-1])
         ax.set_ylim(lambdarange[0], lambdarange[-1])
-
+        
         plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.pdf"))
+        plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.png"),
+                    facecolor='None')
+
         plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
-        plt.savefig('Figures/thousandevent_modular2d_posterior.pdf')
+        # plt.savefig('Figures/thousandevent_modular2d_posterior.pdf')
 
         plt.show()
         
@@ -164,7 +184,7 @@ if True:
         plt.ylim([0,None])
 
         plt.savefig(time.strftime(f'data/{identifier}/logmassposterior_%m%d_%H_logmass={truelogmass}.png'))
-        plt.savefig('Figures/thousandevent_modular2d_logmassposterior.pdf')
+        # plt.savefig('Figures/thousandevent_modular2d_logmassposterior.pdf')
 
         plt.show()
 
@@ -198,7 +218,7 @@ if True:
         plt.ylim([0,None])
         plt.legend()
         plt.xlabel(r'$\lambda$')
-        plt.savefig('Figures/thousandevent_modular2d_lambdaposterior.pdf')
+        # plt.savefig('Figures/thousandevent_modular2d_lambdaposterior.pdf')
 
         plt.show()
 
