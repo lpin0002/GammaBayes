@@ -7,7 +7,7 @@ from brutesampler import brutedynesty
 
 
 if __name__ == '__main__':
-        signal_setup_function = DM_spectrum_setup
+        specsetup = DM_spectrum_setup
 
         try:
                 identifier = sys.argv[1]
@@ -19,7 +19,6 @@ if __name__ == '__main__':
                 numcores = 10
                 
 
-        sigdistsetup = makedist
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
         np.seterr(divide='ignore', invalid='ignore')
 
@@ -28,29 +27,24 @@ if __name__ == '__main__':
         print(stemdirectory)
 
         rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
+        firstrundirectory = rundirs[0]
+
 
         print(rundirs)
         print(len(rundirs))
+        
         runnum=1
         print("runnum: ", runnum)
-        params              = np.load(f"data/{identifier}/{runnum}/params.npy", allow_pickle=True)
-        sigsamples_measured = list(np.load(f"data/{identifier}/{runnum}/meassigsamples.npy"))
-        bkgsamples_measured = list(np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy"))
+         # Loading in values
+        logirfvals = np.load(f"{stemdirectory}/irfvalues.npy")
+        truelambda, Nsamples, truelogmassval = np.load(f"{firstrundirectory}/params.npy")[1,:]
+        truelogmassval = float(truelogmassval)
+        truelambda = float(truelambda)
+        totalevents = int(Nsamples)*len(rundirs)
 
-        dontincludenums = []
-        for runnum in range(2,len(rundirs)+1):
-                if not(runnum in dontincludenums):
-                        print("runnum: ", runnum)
-                        paramstmp             = np.load(f"data/{identifier}/{runnum}/params.npy", allow_pickle=True)
-                        print(paramstmp[1,:].shape)
-                        assert not np.sum(paramstmp[1,:].astype(float)-params[1,:].astype(float))
 
-                        sigsamples_measured  +=list(np.load(f"data/{identifier}/{runnum}/meassigsamples.npy"))
-                        bkgsamples_measured  +=list(np.load(f"data/{identifier}/{runnum}/measbkgsamples.npy"))
-
-        measured_events = np.array(sigsamples_measured+bkgsamples_measured)
         print("Yes it's running up to here")
         # brutedynesty(measuredevents, logsigpriorsetup, logbkgprior, logedisp, log10eaxis=log10eaxis, nlive = 1000, print_progress=False):
-        results = brutedynesty(measured_events, sigdistsetup, bkgdist, edisp, numcores=numcores)
+        results =brutedynesty(specsetup, bkgdist, logirfvals, numcores=numcores)
 
         np.save(f'data/{identifier}/results_brute.npy', results)
