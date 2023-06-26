@@ -70,8 +70,8 @@ if __name__=="__main__":
     lambdaupperbound        = truelambda+lambdawindowwidth
 
 
-    if logmasslowerbound<log10eaxis[1]:
-            logmasslowerbound = log10eaxis[1]
+    if logmasslowerbound<log10eaxis[0]:
+            logmasslowerbound = log10eaxis[0]
     if logmassupperbound>2:
             logmassupperbound = 2
             
@@ -80,6 +80,10 @@ if __name__=="__main__":
             lambdalowerbound = 0
     if lambdaupperbound>1:
             lambdaupperbound = 1
+            
+    print('logmass bounds: ', logmasslowerbound, logmassupperbound)
+    print('lambda bounds: ', lambdalowerbound, lambdaupperbound)
+
 
 
     logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, nbinslogmass)    
