@@ -20,6 +20,8 @@ offsetaxis = edispfull.axes['offset'].center.value
 offsetaxis = offsetaxis[offsetaxis<4]
 offsetaxis = np.arange(-offsetaxis[-1],offsetaxis[-1]+0.02, step=0.02)
 
+offsetaxistrue = np.arange(-offsetaxis[-1],offsetaxis[-1]+0.002, step=0.002)
+
 
 edispkernel = edispfull.to_edisp_kernel(offset=1*u.deg)
 edispkernel.normalize(axis_name='energy')
@@ -27,39 +29,29 @@ log10eaxis = np.log10(edispkernel.axes['energy'].center.value)
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10eaxis = log10eaxis[log10eaxis>-0.8]
-log10eaxis = log10eaxis[log10eaxis<1.8]
+log10estart     = -0.7
+log10eend       = 1.7
+log10erange     = log10eend - log10estart
+log10eaxis      = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
+log10eaxistrue = np.linspace(log10estart,log10eend,int(np.round(log10erange*200)))
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
-log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+# log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 
-norme_vals_mesh, normoffset_vals_mesh = np.meshgrid(log10eaxis, offsetaxis)
-normtwodcoordinatestacked = np.stack([norme_vals_mesh, normoffset_vals_mesh], axis=-1)
 
 def makelogjacob(log10eaxis=log10eaxis):
     outputlogjacob = np.log(10**log10eaxis)#+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
     return outputlogjacob
 
-
-
-eaxis = np.power(10., log10eaxis)
-eaxis_mod = np.log(eaxis)
 logjacob = makelogjacob(log10eaxis)
+logjacobtrue = makelogjacob(log10eaxistrue)
 
 
 def edisp(logerecon, logetrue, offsettrue):
-    edispfunc = lambda logerecon: np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                  migra = np.power(10.,logerecon-logetrue), offset=np.abs(offsettrue)*u.deg).value)
-    
-    normvals = np.array([edispfunc(log10eval) for log10eval in log10eaxis])
-    # print(normvals)
-    normalisation = special.logsumexp(normvals.T+logjacob, axis=0)
-    
-    
-    result = edispfunc(logerecon)-normalisation
 
-    return result
+    return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                  migra = np.power(10.,logerecon-logetrue), offset=np.abs(offsettrue)*u.deg).value)
 
 
 # def edisp(logerecon, logetrue, offsettrue):
@@ -75,14 +67,9 @@ def edisp(logerecon, logetrue, offsettrue):
 ## Testing distribution for the energy dispersion
 
 def psf(offsetrecon, offsettrue, logetrue):
-    psffunc = lambda offsetrecon: np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+    
+    return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                   rad = (offsettrue-offsetrecon)*u.deg, offset=np.abs(offsettrue)*u.deg).value)
-    
-    normvals = [psffunc(offsetval) for offsetval in offsetaxis]
-    
-    normalisation = special.logsumexp(normvals, axis=0)
-    
-    return psffunc(offsetrecon)-normalisation
 
 
 # def psf(offsetrecon, offsettrue, logetrue):
@@ -182,29 +169,22 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
 log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 
 
-def fake_signal_position_dist(offset):
-    nicefunc = stats.multivariate_normal(mean=0, cov=1.0).logpdf
-    normfactor = special.logsumexp(nicefunc(offsetaxis))
-    return nicefunc(offset)-normfactor
 
-def setup_full_fake_signal_dist(logmass, specsetup, normeaxis=10**log10eaxis):
+def setup_full_fake_signal_dist(logmass, specsetup, normeaxis=10**log10eaxistrue):
     
-    sigpriorvalues = []
-
-    for ii, logeval in enumerate(log10eaxis):
-        singlerow = specsetup(logmass,normeaxis=10**log10eaxis)(logeval) + fake_signal_position_dist(offsetaxis)
-        sigpriorvalues.append(singlerow)
-    sigpriorvalues = np.array(sigpriorvalues).T
-    
-    normalisation = special.logsumexp(sigpriorvalues+makelogjacob(log10eaxis))
-    
-    # normalisation = 0.0
-    
-    # TODO: Make namespace more readable to someone unfamiliar with code
+    spectrumfunction = specsetup(logmass, normeaxis=normeaxis)
     # numpy vectorisation
     def full_fake_signal_dist(log10eval, offsetval):
-        logpdfvalues = specsetup(logmass, normeaxis=normeaxis)(log10eval) + fake_signal_position_dist(offsetval)
-        return logpdfvalues - normalisation
+        log10eval = np.array(log10eval)
+        nicespatialfunc = stats.multivariate_normal(mean=0, cov=1.0).logpdf
+        if log10eval.ndim>1:
+            spectralvals = np.squeeze(spectrumfunction(log10eval[0,:]))
+            spatialvals = np.squeeze(nicespatialfunc(offsetval[:,0]))
+            logpdfvalues = spectralvals[np.newaxis,:]+spatialvals[:,np.newaxis]
+            return logpdfvalues
+        else:
+            logpdfvalues = spectrumfunction(log10eval)+nicespatialfunc(offsetval)
+            return logpdfvalues
     
     return full_fake_signal_dist
 
@@ -227,12 +207,10 @@ def setup_full_fake_signal_dist(logmass, specsetup, normeaxis=10**log10eaxis):
 
 def calcirfvals(measuredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
     logemeasured, offsetmeasured = measuredcoord
-    log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+    log10emesh, offsetmesh = np.meshgrid(log10eaxistrue, offsetaxistrue)
     energyloglikelihoodvals=edisp(logemeasured, log10emesh, offsetmesh)
     pointspreadlikelihoodvals=psf(offsetmeasured, offsetmesh, log10emesh)
     
-    # print(np.max(energyloglikelihoodvals))
-    # print(np.max(pointspreadlikelihoodvals))
     
     return energyloglikelihoodvals+pointspreadlikelihoodvals
 
@@ -240,22 +218,22 @@ def calcirfvals(measuredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
 
 
 def evaluateintegral(irfvals, priorvals):
-    integrand = priorvals+logjacob+irfvals
+    integrand = priorvals+logjacobtrue+irfvals
     return special.logsumexp(integrand)
 
+
+log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxistrue)
 
 def evaluateformass(logmass, irfvals, specsetup):
     priorfunc = setup_full_fake_signal_dist(logmass, specsetup=specsetup, normeaxis=10**log10eaxis)
     
-    priorvals = []
-    for offsetval in offsetaxis:
-        priorvals.append(priorfunc(log10eaxis, offsetval))
-    priorvals = np.array(priorvals)
     
-    normalisation = special.logsumexp(priorvals+logjacob)
+    sigpriorvalues = np.squeeze(priorfunc(log10emeshtrue, offsetmeshtrue))
+    
+    normalisation = special.logsumexp(sigpriorvalues+logjacobtrue)
 
         
-    signalmarginalisationvalues = [evaluateintegral(priorvals=priorvals-normalisation, irfvals=irflist) for irflist in irfvals]
+    signalmarginalisationvalues = [evaluateintegral(priorvals=sigpriorvalues-normalisation, irfvals=irflist) for irflist in irfvals]
     
     return signalmarginalisationvalues
 
@@ -265,28 +243,7 @@ import matplotlib.transforms as transforms
 import matplotlib.patches as patches
 
 def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='white',facecolor='none', **kwargs):
-    """
-    Create a plot of the covariance confidence ellipse based on a grid of probabilities.
-
-    Parameters
-    ----------
-    probabilities : array-like, shape (n, m)
-        Grid of probability values.
-
-    ax : matplotlib.axes.Axes
-        The axes object to draw the ellipse into.
-
-    n_std : float
-        The number of standard deviations to determine the ellipse's radiuses.
-
-    Returns
-    -------
-    matplotlib.patches.Ellipse
-
-    Other parameters
-    ----------------
-    kwargs : `~matplotlib.patches.Patch` properties
-    """
+    
     if not isinstance(probabilities, np.ndarray):
         probabilities = np.array(probabilities)
 

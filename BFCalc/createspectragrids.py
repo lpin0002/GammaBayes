@@ -89,19 +89,22 @@ def singlechannelgrid(channel):
         difffluxgrid.append(dN_dE)
         
     return difffluxgrid
+
 gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel=tau_massenergy_diffflux_grid.npy")
 massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
 log10xvals        = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
 
 twodinterpolationfunc =  interpolate.interp2d(np.log10(massvalues/1e3), log10xvals, np.array(gridtointerpolate).T, 
-                                kind='linear', bounds_error=False, fill_value=0)
+                                kind='linear', bounds_error=False, fill_value=1e-3000)
+
 def getspectrafunc(mDM, channel):
     def onedinterpolationfunc(energy):        
-        return twodinterpolationfunc(np.log10(mDM), np.log10(energy/mDM).flatten()).reshape(energy.shape)
+        return twodinterpolationfunc(np.log10(mDM), np.log10(energy/mDM))
     
     return onedinterpolationfunc
 
-
+def darkmatterdoubleinput(logmDM, logenergy): 
+    return np.log(twodinterpolationfunc(logmDM, logenergy-logmDM))
 
 
 

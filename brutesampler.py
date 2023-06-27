@@ -1,5 +1,5 @@
 
-from utils import log10eaxis, makelogjacob, logjacob, offsetaxis, setup_full_fake_signal_dist
+from utils import log10eaxis, makelogjacob, logjacob, offsetaxis, setup_full_fake_signal_dist, log10eaxistrue, offsetaxistrue, logjacobtrue
 import numpy as np
 import warnings
 import functools
@@ -8,24 +8,23 @@ from scipy import special
 import dynesty, warnings
 
 
-def setup_loglikelihood(cube, logirfvals, specsetup, logbkgpriorarray, log10eaxis=log10eaxis, offsetaxis=offsetaxis, logjacob=logjacob):
+log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxistrue)
+
+
+def setup_loglikelihood(cube, logirfvals, specsetup, logbkgpriorarray, log10emeshtrue=log10emeshtrue, offsetmeshtrue=offsetmeshtrue, logjacobtrue=logjacobtrue):
     log10mass_value = cube[0]
     lambda_value = cube[1]
     
     
-    signalpriorfunc = setup_full_fake_signal_dist(log10mass_value, specsetup=specsetup, normeaxis=10**log10eaxis)
+    signalpriorfunc = setup_full_fake_signal_dist(log10mass_value, specsetup=specsetup, normeaxis=10**log10eaxistrue)
     
-    signalpriorvals = []
-    for offsetval in offsetaxis:
-        signalpriorvals.append(signalpriorfunc(log10eaxis, offsetval))
-    signalpriorvals = np.squeeze(np.array(signalpriorvals))
+    sigpriorvalues = np.squeeze(signalpriorfunc(log10emeshtrue, offsetmeshtrue))
     
-    
-    signalnormalisation = special.logsumexp(signalpriorvals+logjacob)
+    signalnormalisation = special.logsumexp(sigpriorvalues+logjacobtrue)
 
     # Integration/nuisance parameter marginalisation step
-    bkg_component = np.log(1-lambda_value) + special.logsumexp(logbkgpriorarray[np.newaxis,:] + logirfvals, axis=(1,2))
-    sig_component = np.log(lambda_value) + special.logsumexp(signalpriorvals[np.newaxis,:] - signalnormalisation + logirfvals, axis=(1,2))
+    bkg_component = np.log(1-lambda_value) + special.logsumexp(logbkgpriorarray + logirfvals, axis=(1,2))
+    sig_component = np.log(lambda_value) + special.logsumexp(sigpriorvalues- signalnormalisation + logirfvals, axis=(1,2))
     
 
     unsummed_output = np.logaddexp(sig_component, bkg_component)
@@ -46,26 +45,23 @@ def ptform(u):
 
 
 
-def brutedynesty(specsetup, logbkgprior, logirfvals, log10eaxis=log10eaxis, offsetaxis=offsetaxis, nlive = 500, numcores=10, print_progress=True):
-    logjacob = makelogjacob(log10eaxis)    
+def brutedynesty(specsetup, logbkgprior, logirfvals, log10eaxistrue=log10eaxistrue, offsetaxistrue=offsetaxistrue, nlive = 500, numcores=10, print_progress=True):
     
-    logbkgpriorarray = []
-    for ii, logeval in enumerate(log10eaxis):
-        singlerow = []
-        # for ii, offsetval in enumerate(offsetaxis):
-        singlerow = logbkgprior(logeval, offsetaxis)
-        logbkgpriorarray.append(singlerow)
-    logbkgpriorarray = np.squeeze(np.array(logbkgpriorarray))
+    log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxistrue)
+
+    logjacobtrue = makelogjacob(log10eaxistrue)    
+    
+    logbkgpriorvalues = np.squeeze(logbkgprior(log10emeshtrue, offsetmeshtrue))
     
     
-    bkgnormalisation = special.logsumexp(logbkgpriorarray.T+logjacob)
+    bkgnormalisation = special.logsumexp(logbkgpriorvalues+logjacobtrue)
     
-    logbkgpriorarray = logbkgpriorarray.T - bkgnormalisation
+    logbkgpriorvalues = logbkgpriorvalues - bkgnormalisation
     
     
 
     gaussfull = functools.partial(setup_loglikelihood, logirfvals=logirfvals,
-                                  specsetup=specsetup, logbkgpriorarray=logbkgpriorarray,log10eaxis=log10eaxis, offsetaxis=offsetaxis, logjacob=logjacob)
+                                  specsetup=specsetup, logbkgpriorarray=logbkgpriorvalues,log10emeshtrue=log10emeshtrue, offsetmeshtrue=offsetmeshtrue, logjacobtrue=logjacobtrue)
 
     
     

@@ -1,7 +1,7 @@
 from scipy import integrate, special, interpolate, stats
 import os, sys, time, random, numpy as np, matplotlib.pyplot as plt, warnings
 from tqdm import tqdm
-from utils import inverse_transform_sampling, log10eaxis, makedist, edisp, psf, bkgdist, eaxis_mod, eaxis, logjacob, setup_full_fake_signal_dist, offsetaxis, log10emesh, offsetmesh
+from utils import *
 from BFCalc.BFInterp import DM_spectrum_setup
 # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
 np.seterr(divide='ignore', invalid='ignore')
@@ -66,7 +66,7 @@ if __name__=="__main__":
     except:
         raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
-    log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+    log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxis)
     Nsamples=nevents
     truelambda = lambdaval
     truelogmassval = truelogmass

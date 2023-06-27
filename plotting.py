@@ -111,7 +111,7 @@ if True:
         
         fig, ax = plt.subplots(dpi=200, figsize=(5,4))
         # logmassrange, lambdarange, 
-        pcol = ax.pcolor(logmassrange, lambdarange, logposterior.T, snap=True)#, cmap=newcmap, alpha=1.0)
+        pcol = ax.pcolor(logmassrange, lambdarange, np.exp(logposterior).T, snap=True)#, cmap=newcmap, alpha=1.0)
 
         pcol.set_edgecolor('face')
 
