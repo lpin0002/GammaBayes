@@ -11,27 +11,29 @@ import dynesty, warnings
 log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxistrue)
 
 
-def setup_loglikelihood(cube, logirfvals, specsetup, logbkgpriorarray, log10emeshtrue=log10emeshtrue, offsetmeshtrue=offsetmeshtrue, logjacobtrue=logjacobtrue):
+def setup_loglikelihood(cube, logirfvals, specfunc, bkgmargvals, log10emeshtrue=log10emeshtrue, offsetmeshtrue=offsetmeshtrue, logjacobtrue=logjacobtrue):
     log10mass_value = cube[0]
     lambda_value = cube[1]
     
     
-    signalpriorfunc = setup_full_fake_signal_dist(log10mass_value, specsetup=specsetup, normeaxis=10**log10eaxistrue)
+    signalpriorfunc = setup_full_fake_signal_dist(log10mass_value, specfunc=specfunc)
     
     sigpriorvalues = np.squeeze(signalpriorfunc(log10emeshtrue, offsetmeshtrue))
     
     signalnormalisation = special.logsumexp(sigpriorvalues+logjacobtrue)
 
     # Integration/nuisance parameter marginalisation step
-    bkg_component = np.log(1-lambda_value) + special.logsumexp(logbkgpriorarray + logirfvals, axis=(1,2))
-    sig_component = np.log(lambda_value) + special.logsumexp(sigpriorvalues- signalnormalisation + logirfvals, axis=(1,2))
+    bkg_component = np.log(1-lambda_value) + bkgmargvals
+    sig_component = np.log(lambda_value) + special.logsumexp(sigpriorvalues - signalnormalisation + logirfvals + logjacobtrue, axis=(1,2))
     
 
-    unsummed_output = np.logaddexp(sig_component, bkg_component)
-    summedoutput=np.nansum(unsummed_output)
+    summed_output = np.nansum(np.logaddexp(sig_component, bkg_component))
     
+    del bkg_component
+    del sig_component
+    del sigpriorvalues
     
-    return summedoutput
+    return summed_output
 
 def ptform(u):
     # For sampler log mass values between 100 TeV and what ever the lowest energy considered is
@@ -45,7 +47,7 @@ def ptform(u):
 
 
 
-def brutedynesty(specsetup, logbkgprior, logirfvals, log10eaxistrue=log10eaxistrue, offsetaxistrue=offsetaxistrue, nlive = 500, numcores=10, print_progress=True):
+def brutedynesty(specfunc, logbkgprior, logirfvals, log10eaxistrue=log10eaxistrue, offsetaxistrue=offsetaxistrue, nlive = 300, numcores=10, print_progress=True):
     
     log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxistrue)
 
@@ -58,10 +60,12 @@ def brutedynesty(specsetup, logbkgprior, logirfvals, log10eaxistrue=log10eaxistr
     
     logbkgpriorvalues = logbkgpriorvalues - bkgnormalisation
     
+    bkgmargvals = special.logsumexp(logbkgpriorvalues + logirfvals + logjacobtrue, axis=(1,2))
+    
     
 
     gaussfull = functools.partial(setup_loglikelihood, logirfvals=logirfvals,
-                                  specsetup=specsetup, logbkgpriorarray=logbkgpriorvalues,log10emeshtrue=log10emeshtrue, offsetmeshtrue=offsetmeshtrue, logjacobtrue=logjacobtrue)
+                                  specfunc=specfunc, bkgmargvals=bkgmargvals,log10emeshtrue=log10emeshtrue, offsetmeshtrue=offsetmeshtrue, logjacobtrue=logjacobtrue)
 
     
     
@@ -70,10 +74,10 @@ def brutedynesty(specsetup, logbkgprior, logirfvals, log10eaxistrue=log10eaxistr
         sampler = dynesty.NestedSampler(
             pool.loglike,
             pool.prior_transform,
-            ndim=2, nlive=nlive, bound='multi', # Other bounding methods tested are `balls' and `single'
+            ndim=2, nlive=nlive, bound='single', # Other bounding methods tested are `balls' and `single'
             pool=pool, queue_size=numcores)
 
-        sampler.run_nested(dlogz=0.1, 
+        sampler.run_nested(dlogz=0.3, 
                         print_progress=print_progress, 
                         maxcall=int(1e6))
 
