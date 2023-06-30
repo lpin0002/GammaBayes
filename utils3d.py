@@ -28,7 +28,7 @@ log10estart             = -1.0
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*1000)))
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*10)))
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
@@ -158,16 +158,20 @@ log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 
 def setup_full_fake_signal_dist(logmass, specfunc):
     # numpy vectorisation
-    def full_fake_signal_dist(log10eval, offsetval):
+    def full_fake_signal_dist(log10eval, lonval, latval):
         log10eval = np.array(log10eval)
-        nicespatialfunc = stats.multivariate_normal(mean=0, cov=1.0).logpdf
+        nicespatialfunc = stats.multivariate_normal(mean=[0,0], cov=[[1.0,0.0],[0.0,1.0]]).logpdf
         if log10eval.ndim>1:
-            spectralvals = np.squeeze(specfunc(logmass, log10eval[0,:]))
-            spatialvals = np.squeeze(nicespatialfunc(offsetval[:,0]))
-            logpdfvalues = spectralvals[np.newaxis,:]+spatialvals[:,np.newaxis]
+            spectralvals = np.squeeze(specfunc(logmass, log10eval[0,:,0]))
+            lonmesh, latmesh = np.meshgrid(lonval[:,0,0], latval[0,0,:])
+            spatialvals = np.squeeze(nicespatialfunc(np.array([lonmesh.flatten(), latmesh.flatten()]).T).reshape(lonmesh.shape))
+            print(spatialvals.shape)
+            print(spectralvals.shape)
+            logpdfvalues = spectralvals[np.newaxis,np.newaxis, :]+spatialvals[:,:,np.newaxis]
+            print(logpdfvalues.shape)
             return logpdfvalues
         else:
-            logpdfvalues = specfunc(logmass, log10eval)+nicespatialfunc(offsetval)
+            logpdfvalues = specfunc(logmass, log10eval)+nicespatialfunc([lonval, latval])
             return logpdfvalues
     
     return full_fake_signal_dist
