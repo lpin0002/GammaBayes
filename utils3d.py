@@ -21,11 +21,12 @@ def convertlonlat_to_offset(fov_coord):
 
 def angularseparation(coord1, coord2=None):
     # Currently assuming small angles (|angle|<=4)
-    return np.linalg.norm(coord2-coord1, axis=0)
-
-
-
-
+    
+    try:
+        
+        return np.linalg.norm(coord2-coord1, axis=0)
+    except:
+        return np.linalg.norm(coord2-coord1.T, axis=1)
 
 
 
