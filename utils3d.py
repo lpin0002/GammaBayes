@@ -41,8 +41,8 @@ offsetaxis = psf3d.axes['rad'].center.value
 
 
 spatialbound            = 5.0
-reconspatialsubdivisions = int(2*spatialbound*5)
-truespatialsubdivisions  = int(2*spatialbound*10)
+reconspatialsubdivisions = int(2*spatialbound)
+truespatialsubdivisions  = int(2*spatialbound*4)
 
 
 
@@ -53,7 +53,7 @@ spatialaxistrue          = np.linspace(-spatialbound,spatialbound, truespatialsu
 log10estart             = -1.0
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
-log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
+log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*3)))
 log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*10)))
 
 
