@@ -11,17 +11,42 @@ import dynesty
 # I believe this is the alpha configuration of the array as there are no LSTs
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
+
+
+
+def convertlonlat_to_offset(fov_coord):
+    # Currently assuming small angles (|angle|<=4)
+    return np.linalg.norm(fov_coord, axis=0)
+
+
+def angularseparation(coord1, coord2=None):
+    # Currently assuming small angles (|angle|<=4)
+    return np.linalg.norm(coord2-coord1, axis=0)
+
+
+
+
+
+
+
+
+
 edispfull = irfs['edisp']
 psffull = irfs['psf']
 edispfull.normalize()
 bkgfull = irfs['bkg']
+psf3d = psffull.to_psf3d()
+offsetaxis = psf3d.axes['rad'].center.value
 
 
-offsetbound             = 4.0
-trueoffsetsubdivisions  = int(2*offsetbound*5)
-reconoffsetsubdivisions = int(2*offsetbound*5)
-offsetaxis              = np.linspace(-offsetbound,offsetbound, reconoffsetsubdivisions)
-offsetaxistrue          = np.linspace(-offsetbound, offsetbound, trueoffsetsubdivisions)
+spatialbound            = 5.0
+reconspatialsubdivisions = int(2*spatialbound*5)
+truespatialsubdivisions  = int(2*spatialbound*10)
+
+
+
+spatialaxis              = np.linspace(-spatialbound,spatialbound, reconspatialsubdivisions)
+spatialaxistrue          = np.linspace(-spatialbound,spatialbound, truespatialsubdivisions)
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -1.0
@@ -43,12 +68,10 @@ logjacob = makelogjacob(log10eaxis)
 logjacobtrue = makelogjacob(log10eaxistrue)
 
 
-def edisp(logerecon, logetrue, offsettrue):
-    
-    
-    
+def edisp(logereconstructed, logetrue, truespatialcoord):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                    migra = np.power(10.,logerecon-logetrue), offset=np.abs(offsettrue)*u.deg).value)
+                                                    migra = np.power(10.,logereconstructed-logetrue), 
+                                                    offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
 
 
 # def edisp(logerecon, logetrue, offsettrue):
@@ -58,9 +81,10 @@ def edisp(logerecon, logetrue, offsettrue):
 
 ## Testing distribution for the energy dispersion
 
-def psf(offsetrecon, offsettrue, logetrue):
+def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
     return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                    rad = (offsettrue-offsetrecon)*u.deg, offset=np.abs(offsettrue)*u.deg).value)
+                                                    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)*u.deg, 
+                                                    offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
 
 
 # def psf(offsetrecon, offsettrue, logetrue):
@@ -152,7 +176,6 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
 # Now including spatial dimensions!
 
 
-log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
 
 
 
@@ -162,12 +185,12 @@ def setup_full_fake_signal_dist(logmass, specfunc):
         log10eval = np.array(log10eval)
         nicespatialfunc = stats.multivariate_normal(mean=[0,0], cov=[[1.0,0.0],[0.0,1.0]]).logpdf
         if log10eval.ndim>1:
-            spectralvals = np.squeeze(specfunc(logmass, log10eval[0,:,0]))
-            lonmesh, latmesh = np.meshgrid(lonval[:,0,0], latval[0,0,:])
+            spectralvals = np.squeeze(specfunc(logmass, log10eval[:,0, 0]))
+            lonmesh, latmesh = np.meshgrid(lonval[0,:,0], latval[0,0,:])
             spatialvals = np.squeeze(nicespatialfunc(np.array([lonmesh.flatten(), latmesh.flatten()]).T).reshape(lonmesh.shape))
             print(spatialvals.shape)
             print(spectralvals.shape)
-            logpdfvalues = spectralvals[np.newaxis,np.newaxis, :]+spatialvals[:,:,np.newaxis]
+            logpdfvalues = spectralvals[:, np.newaxis,np.newaxis]+spatialvals[np.newaxis, :,:]
             print(logpdfvalues.shape)
             return logpdfvalues
         else:
@@ -195,18 +218,18 @@ def setup_full_fake_signal_dist(logmass, specfunc):
 # edispnormalisations = special.logsumexp(edisp(log10eaxis, log10eaxistrue, offsetaxistrue),axis=1).shape
 # psfnormalisations = special.logsumexp(psf(offsetaxis, offsetaxistrue, log10eaxistrue),axis=1).shape
 
-offsettruemeshpsf, offsetreconmeshpsf, logetruemeshpsf = np.meshgrid(offsetaxistrue, offsetaxis, log10eaxistrue)
-psfnormalisations = special.logsumexp(psf(offsetreconmeshpsf.flatten(), offsettruemeshpsf.flatten(), logetruemeshpsf.flatten()).reshape(offsetreconmeshpsf.shape),axis=0)
+# offsettruemeshpsf, offsetreconmeshpsf, logetruemeshpsf = np.meshgrid(offsetaxistrue, offsetaxis, log10eaxistrue)
+# psfnormalisations = special.logsumexp(psf(offsetreconmeshpsf.flatten(), offsettruemeshpsf.flatten(), logetruemeshpsf.flatten()).reshape(offsetreconmeshpsf.shape),axis=0)
 
-logetruemeshedisp, logereconmeshedisp, offsettruemeshedisp,  = np.meshgrid(log10eaxistrue, log10eaxis, offsetaxistrue)
-edispnormalisations = special.logsumexp(edisp(logereconmeshedisp.flatten(), logetruemeshedisp.flatten(), offsettruemeshedisp.flatten()).reshape(logereconmeshedisp.shape).T +logjacob,axis=2)
+# logetruemeshedisp, logereconmeshedisp, offsettruemeshedisp,  = np.meshgrid(log10eaxistrue, log10eaxis, offsetaxistrue)
+# edispnormalisations = special.logsumexp(edisp(logereconmeshedisp.flatten(), logetruemeshedisp.flatten(), offsettruemeshedisp.flatten()).reshape(logereconmeshedisp.shape).T +logjacob,axis=2)
 
 
-def calcirfvals(measuredcoord, log10eaxis=log10eaxis, offsetaxis=offsetaxis):
+def calcirfvals(measuredcoord, log10eaxis=log10eaxis, spatialaxistrue=spatialaxistrue):
     logemeasured, offsetmeasured    = measuredcoord
-    log10emesh, offsetmesh          = np.meshgrid(log10eaxistrue, offsetaxistrue)
-    energyloglikelihoodvals         = edisp(logemeasured, log10emesh, offsetmesh)-edispnormalisations
-    pointspreadlikelihoodvals       = psf(offsetmeasured, offsetmesh, log10emesh)-psfnormalisations
+    log10emesh, offsetmesh          = np.meshgrid(log10eaxistrue, spatialaxistrue)
+    energyloglikelihoodvals         = edisp(logemeasured, log10emesh, offsetmesh)#-edispnormalisations
+    pointspreadlikelihoodvals       = psf(offsetmeasured, offsetmesh, log10emesh)#-psfnormalisations
     
     
     return energyloglikelihoodvals+pointspreadlikelihoodvals
@@ -219,7 +242,7 @@ def evaluateintegral(irfvals, priorvals):
     return special.logsumexp(integrand)
 
 
-log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxistrue)
+log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, spatialaxistrue)
 
 def evaluateformass(logmass, irfvals, specfunc):
     priorfunc = setup_full_fake_signal_dist(logmass, specfunc=specfunc)
@@ -277,3 +300,5 @@ def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='black',fac
 
     ellipse.set_transform(transf + ax.transData)
     return ax.add_patch(ellipse)
+
+
