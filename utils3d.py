@@ -26,8 +26,10 @@ def angularseparation(coord1, coord2=None):
         
         return np.linalg.norm(coord2-coord1, axis=0)
     except:
-        return np.linalg.norm(coord2-coord1.T, axis=1)
-
+        try:
+            return np.linalg.norm(coord2-coord1.T, axis=1)
+        except:
+            return np.linalg.norm(coord2.T-coord1, axis=1)
 
 
 
@@ -39,22 +41,26 @@ bkgfull = irfs['bkg']
 psf3d = psffull.to_psf3d()
 offsetaxis = psf3d.axes['rad'].center.value
 
+bkgfull2d = bkgfull.to_2d()
+bkgfull2doffsetaxis = bkgfull2d.axes['offset'].center.value
+offsetaxisresolution = bkgfull2doffsetaxis[1]-bkgfull2doffsetaxis[0]
 
-spatialbound            = 5.0
+
+spatialbound            = 4
 reconspatialsubdivisions = int(2*spatialbound)
 truespatialsubdivisions  = int(2*spatialbound*4)
 
 
 
-spatialaxis              = np.linspace(-spatialbound,spatialbound, reconspatialsubdivisions)
-spatialaxistrue          = np.linspace(-spatialbound,spatialbound, truespatialsubdivisions)
+spatialaxis              = np.arange(-spatialbound,spatialbound, offsetaxisresolution)
+spatialaxistrue          = np.arange(-spatialbound,spatialbound, offsetaxisresolution)
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -1.0
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
-log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*3)))
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*10)))
+log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*50)))
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
@@ -82,16 +88,21 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
 
 ## Testing distribution for the energy dispersion
 
+# def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
+#     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
+#     offset  = convertlonlat_to_offset(truespatialcoord)
+#     return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+#                                                     rad = rad*u.deg, 
+#                                                     offset=offset*u.deg).value)
+
+
 def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
-    return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)*u.deg, 
-                                                    offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
-
-
-# def psf(offsetrecon, offsettrue, logetrue):
-#     scale = 0.1*(offsettrue+1e-3)
+    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
+    offset  = convertlonlat_to_offset(truespatialcoord)
     
-#     return -0.5*((offsetrecon-offsettrue)/scale)**2
+    scale = 0.05*(offset+1e-3)
+    
+    return -0.5*(rad/scale)**2
 
 def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
     eaxis = normeaxis
@@ -189,10 +200,7 @@ def setup_full_fake_signal_dist(logmass, specfunc):
             spectralvals = np.squeeze(specfunc(logmass, log10eval[:,0, 0]))
             lonmesh, latmesh = np.meshgrid(lonval[0,:,0], latval[0,0,:])
             spatialvals = np.squeeze(nicespatialfunc(np.array([lonmesh.flatten(), latmesh.flatten()]).T).reshape(lonmesh.shape))
-            print(spatialvals.shape)
-            print(spectralvals.shape)
             logpdfvalues = spectralvals[:, np.newaxis,np.newaxis]+spatialvals[np.newaxis, :,:]
-            print(logpdfvalues.shape)
             return logpdfvalues
         else:
             logpdfvalues = specfunc(logmass, log10eval)+nicespatialfunc([lonval, latval])
