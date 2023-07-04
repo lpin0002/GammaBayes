@@ -104,6 +104,7 @@ def getspectrafunc(mDM, channel):
     return onedinterpolationfunc
 
 def darkmatterdoubleinput(logmDM, logenergy): 
+    
     return np.log(twodinterpolationfunc(logmDM, logenergy-logmDM))
 
 

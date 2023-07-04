@@ -44,11 +44,7 @@ offsetaxis = psf3d.axes['rad'].center.value
 bkgfull2d = bkgfull.to_2d()
 bkgfull2doffsetaxis = bkgfull2d.axes['offset'].center.value
 offsetaxisresolution = bkgfull2doffsetaxis[1]-bkgfull2doffsetaxis[0]
-
-
 spatialbound            = 4
-reconspatialsubdivisions = int(2*spatialbound)
-truespatialsubdivisions  = int(2*spatialbound*4)
 
 
 
@@ -60,7 +56,7 @@ log10estart             = -1.0
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*50)))
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*20)))
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
@@ -88,21 +84,21 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
 
 ## Testing distribution for the energy dispersion
 
-# def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
-#     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
-#     offset  = convertlonlat_to_offset(truespatialcoord)
-#     return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-#                                                     rad = rad*u.deg, 
-#                                                     offset=offset*u.deg).value)
-
-
 def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
     offset  = convertlonlat_to_offset(truespatialcoord)
+    return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                    rad = rad*u.deg, 
+                                                    offset=offset*u.deg).value)
+
+
+# def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
+#     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
+#     offset  = convertlonlat_to_offset(truespatialcoord)
     
-    scale = 0.05*(offset+1e-3)
+#     scale = 0.05*(offset+1e-3)
     
-    return -0.5*(rad/scale)**2
+#     return -0.5*(rad/scale)**2
 
 def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
     eaxis = normeaxis
@@ -246,23 +242,17 @@ def calcirfvals(measuredcoord, log10eaxis=log10eaxis, spatialaxistrue=spatialaxi
 
 
 
-def evaluateintegral(irfvals, priorvals):
-    integrand = priorvals+logjacobtrue+irfvals
-    return special.logsumexp(integrand)
+
 
 
 log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, spatialaxistrue)
 
-def evaluateformass(logmass, irfvals, specfunc):
-    priorfunc = setup_full_fake_signal_dist(logmass, specfunc=specfunc)
+def evaluateformass(logmass, irfvals, specfunc, lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance):
+    priorvals= setup_full_fake_signal_dist(logmass, specfunc=specfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
     
-    
-    sigpriorvalues = np.squeeze(priorfunc(log10emeshtrue, offsetmeshtrue))
-    
-    normalisation = special.logsumexp(sigpriorvalues+logjacobtrue)
+    priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
 
-        
-    signalmarginalisationvalues = [evaluateintegral(priorvals=sigpriorvalues-normalisation, irfvals=irflist) for irflist in irfvals]
+    signalmarginalisationvalues = [special.logsumexp(logjacobtrue+priorvals.T-priornormalisation+irfvalarray.T) for irfvalarray in irfvals]
     
     return signalmarginalisationvalues
 
