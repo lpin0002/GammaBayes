@@ -48,7 +48,7 @@ spatialbound            = 4
 
 
 
-spatialaxis              = np.arange(-spatialbound,spatialbound, offsetaxisresolution)
+spatialaxis              = np.arange(-spatialbound,spatialbound, offsetaxisresolution*2)
 spatialaxistrue          = np.arange(-spatialbound,spatialbound, offsetaxisresolution)
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
@@ -56,7 +56,7 @@ log10estart             = -1.0
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*20)))
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*50)))
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
