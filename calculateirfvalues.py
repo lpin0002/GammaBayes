@@ -1,12 +1,18 @@
-from utils import log10eaxis, bkgdist, makedist, edisp,logjacob, evaluateintegral, evaluateformass, setup_full_fake_signal_dist, calcirfvals
-from scipy import special
-import numpy as np
-import os, time, sys
-from tqdm import tqdm
 from BFCalc.BFInterp import DM_spectrum_setup
+from BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput
+from utils3d import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from astropy import units as u
+from scipy import special,stats
+from matplotlib import cm
+from tqdm.autonotebook import tqdm as notebook_tqdm
+import os, sys
 import functools
 from multiprocessing import Pool, freeze_support
 import multiprocessing
+sys.path.append("BFCalc")
 
 
 if __name__=="__main__":
@@ -38,26 +44,32 @@ if __name__=="__main__":
     print(firstrundirectory)
     
     
-    signal_log10e_measured,signal_offset_measured = np.load(f"{firstrundirectory}/meassigsamples.npy")
-    bkg_log10e_measured,bkg_offset_measured = np.load(f"{firstrundirectory}/measbkgsamples.npy")
+    signal_log10e_measured,  signal_lon_measured, signal_lat_measured = np.load(f"{firstrundirectory}/meassigsamples.npy")
+    bkg_log10e_measured, bkg_lon_measured, bkg_lat_measured = np.load(f"{firstrundirectory}/measbkgsamples.npy")
     
     truelambda, Nsamples, truelogmassval = np.load(f"{firstrundirectory}/params.npy")[1,:]
     truelambda = float(truelambda)
     totalevents = int(Nsamples)
     
+    logbkgpriorvalues = np.load(f"data/{identifier}/1/logbackgroundprior.npy")
+
     
     for rundir in rundirs[1:]:
         runnum = rundir.replace(stemdirectory+'/', '')
         print("runnum: ", runnum)
         params              = np.load(f"{rundir}/params.npy")
-        signal_log10e_measuredtemp,signal_offset_measuredtemp = np.load(f"{rundir}/meassigsamples.npy")
-        bkg_log10e_measuredtemp,bkg_offset_measuredtemp = np.load(f"{rundir}/measbkgsamples.npy")
+        signal_log10e_measured_temp, signal_lon_measured_temp, signal_lat_measured_temp = np.load(f"{rundir}/meassigsamples.npy")
+        bkg_log10e_measured_temp, bkg_lon_measured_temp, bkg_lat_measured_temp = np.load(f"{rundir}/measbkgsamples.npy")
         
+
         
-        signal_log10e_measured = np.concatenate((signal_log10e_measured, signal_log10e_measuredtemp))
-        signal_offset_measured = np.concatenate((signal_offset_measured, signal_offset_measuredtemp))
-        bkg_log10e_measured = np.concatenate((bkg_log10e_measured, bkg_log10e_measuredtemp))
-        bkg_offset_measured = np.concatenate((bkg_offset_measured, bkg_offset_measuredtemp))
+        signal_log10e_measured = np.concatenate((signal_log10e_measured, signal_log10e_measured_temp))
+        signal_lon_measured = np.concatenate((signal_lon_measured, signal_lon_measured_temp))
+        signal_lat_measured = np.concatenate((signal_lat_measured, signal_lat_measured_temp))
+
+        bkg_log10e_measured = np.concatenate((bkg_log10e_measured, bkg_log10e_measured_temp))
+        bkg_lon_measured = np.concatenate((bkg_lon_measured, bkg_lon_measured_temp))
+        bkg_lat_measured = np.concatenate((bkg_lat_measured, bkg_lat_measured_temp))
         
         params[1,:]         = params[1,:]
         truelogmass         = float(params[1,2])
@@ -65,20 +77,42 @@ if __name__=="__main__":
         totalevents         +=nevents
         truelambdaval       = float(params[1,0])
             
-            
-    measured_log10e_vals    = list(signal_log10e_measured)+list(bkg_log10e_measured)
-    measured_offset_vals    = list(signal_offset_measured)+list(bkg_offset_measured)
+    
+        
+    measured_log10e = list(signal_log10e_measured)+list(bkg_log10e_measured)
+    measured_lon = list(signal_lon_measured)+list(bkg_lon_measured)
+    measured_lat = list(signal_lat_measured)+list(bkg_lat_measured)
+
+
+    psfnormalisation = np.load('psfnormalisation.npy')
+    
+    lontrue_mesh_edisp, logetrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, log10eaxis)
     
     
+    edispnormalisation = edisp(logerecon_mesh_edisp.flatten(), logetrue_mesh_edisp.flatten(), np.array([lontrue_mesh_edisp.flatten(), lattrue_mesh_edisp.flatten()])).reshape(logetrue_mesh_edisp.shape)
+    edispnormalisation  = special.logsumexp(edispnormalisation+logjacob, axis=-1)
 
-    testvalue = calcirfvals([measured_log10e_vals[0], measured_offset_vals[0]])
-    print(testvalue)
-    irfvals = []
-    with Pool(numcores) as pool: 
-            for result in tqdm(pool.imap(calcirfvals, zip(measured_log10e_vals, measured_offset_vals)), 
-                                total=len(list(measured_log10e_vals)), ncols=100, desc="Calculating irfvals"):
-                    irfvals.append(result)
 
-            pool.close() 
-            
-    np.save(f"{stemdirectory}/irfvalues.npy", irfvals)
+
+
+    edispnormalisation[edispnormalisation==-np.inf] = 0
+    psfnormalisation[psfnormalisation==-np.inf] = 0   
+    
+    
+    
+    lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
+
+    irfproblist = []
+
+    for logeval, coord in notebook_tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e))):
+        irfproblist.append(psf(coord, np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()]), logetrue_mesh_nuisance.flatten()).reshape(logetrue_mesh_nuisance.shape)+\
+            edisp(logeval, logetrue_mesh_nuisance.flatten(), np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()])).reshape(logetrue_mesh_nuisance.shape) - edispnormalisation - psfnormalisation)
+        
+    print(len(irfproblist))
+    print(Nsamples)
+    
+    assert len(irfproblist) == int(Nsamples)
+    assert irfproblist[0].shape == (log10eaxistrue.shape[0], spatialaxistrue.shape[0],spatialaxistrue.shape[0])
+        
+             
+    np.save(f"{stemdirectory}/irfproblist.npy", irfproblist)

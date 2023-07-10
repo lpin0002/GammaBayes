@@ -1,24 +1,19 @@
-from scipy import integrate, special, interpolate, stats
-import os, sys, time, random, numpy as np, matplotlib.pyplot as plt, warnings
-from tqdm import tqdm
-from utils import *
 from BFCalc.BFInterp import DM_spectrum_setup
-# Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
-np.seterr(divide='ignore', invalid='ignore')
-# Check that jacobian for this script is correct
-import functools
+from BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput
+from utils3d import *
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from astropy import units as u
+from scipy import special,stats
+from matplotlib import cm
+from tqdm.autonotebook import tqdm as notebook_tqdm
+import os, sys, time, functools
 from multiprocessing import Pool, freeze_support
 import multiprocessing
+sys.path.append("BFCalc")
 
 
-def sampleedisp(measuredvals):
-    logeval, offsetval = measuredvals
-    return inverse_transform_sampling(edisp(log10eaxis, logeval, offsetval)+logjacob, Nsamples=1)
-
-
-def samplepsf(measuredvals):
-    logeval, offsetval = measuredvals
-    return inverse_transform_sampling(psf(offsetaxis, offsetval, logeval), Nsamples=1)
 
 
 if __name__=="__main__":
@@ -66,70 +61,112 @@ if __name__=="__main__":
     except:
         raise Exception(f"The folder data/{identifier}/{runnum} already exists, stopping computation so files are not accidentally overwritten.")
 
-    log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, offsetaxis)
+    lonmeshtrue, log10emeshtrue, latmeshtrue = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
+    lonmeshrecon, latmeshrecon = np.meshgrid(spatialaxis, spatialaxis)
+
+    logjacobtrue = makelogjacob(log10eaxistrue)   
+    
+    
     Nsamples=nevents
-    truelambda = lambdaval
+
+    
+    Nsamples=nevents
+    truelambda          = lambdaval
+    nsig                = int(round(truelambda*Nsamples))
+    nbkg                = int(round((1-truelambda)*Nsamples))
+
+
+    # Accounting for rounding errors
+    truelambda          = nsig/(nbkg+nsig)
+    numcores            = 9
+    
     truelogmassval = truelogmass
-    nsig = int(round(truelambda*Nsamples))
-    nbkg = int(round((1-truelambda)*Nsamples))
     
     
-    sigpriorvalues = []
+    logbkgpriorvalues = np.squeeze(bkgdist(log10emeshtrue, lonmeshtrue,latmeshtrue))
 
-    for ii, logeval in enumerate(log10eaxis):
-        singlerow = setup_full_fake_signal_dist(truelogmassval, specsetup=DM_spectrum_setup, normeaxis=10**log10eaxis)(logeval, offsetaxis)
-        sigpriorvalues.append(singlerow)
-    sigpriorvalues = np.array(sigpriorvalues)
-    sigpriorvalues.shape
-    
-    
-    bkgpriorvalues = []
+    logbkgpriorvalues = logbkgpriorvalues - special.logsumexp(logbkgpriorvalues.T+logjacobtrue)
 
-    for ii, logeval in enumerate(log10eaxis):
-        singlerow = []
-        # for ii, offsetval in enumerate(offsetaxis):
-        singlerow = bkgdist(logeval, offsetaxis)
-        bkgpriorvalues.append(singlerow)
-    bkgpriorvalues = np.squeeze(np.array(bkgpriorvalues))
+    print(f"Background prior array shape: {logbkgpriorvalues.shape}")
     
     
-    sigbinnedprior = sigpriorvalues.T+logjacob
-    flattened_sigbinnedprior = sigbinnedprior.flatten()
+    signalspecfunc = darkmatterdoubleinput
+    
+    signalfunc = setup_full_fake_signal_dist(truelogmassval, signalspecfunc)
+    
+    
+    logsigpriorvalues = signalfunc(log10emeshtrue, lonmeshtrue,latmeshtrue)
+    
+    logsigpriorvalues = (logsigpriorvalues - special.logsumexp(logsigpriorvalues.T+logjacobtrue))
 
-
-    bkgbinnedprior = bkgpriorvalues.T+logjacob
+    print(f"Signal prior array shape: {logsigpriorvalues.shape}")
     
-    bkgnormalisation = special.logsumexp(bkgbinnedprior)
-    bkgbinnedprior = bkgbinnedprior - bkgnormalisation
     
-    flattened_bkgbinnedprior = bkgbinnedprior.flatten()
     
+    # Flattening the prior arrays for use within the inverse transform sampling function which only takes in 1d arrays
+        # And adding the jacobian to 'simulate' the integral
+    logsigbinnedprior = (logsigpriorvalues.T+logjacobtrue).T
+    flattened_logsigbinnedprior = logsigbinnedprior.flatten()
 
 
-
-    sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_sigbinnedprior, Nsamples=nsig),sigbinnedprior.shape)
-    siglogevals = log10eaxis[sigresultindices[1]]
-    sigoffsetvals = offsetaxis[sigresultindices[0]]
+    logbkgbinnedprior = (logbkgpriorvalues.T+logjacobtrue).T
+    flattened_logbkgbinnedprior = logbkgbinnedprior.flatten()
     
     
-    signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, offsetval)+logjacob, Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
-
-    signal_offset_measured = offsetaxis[np.squeeze([inverse_transform_sampling(psf(offsetaxis, offsetval, logeval), Nsamples=1) for logeval, offsetval in tqdm(zip(siglogevals, sigoffsetvals), total=nsig)])]
-
-    bkgresultindices = np.unravel_index(inverse_transform_sampling(flattened_bkgbinnedprior, Nsamples=nbkg),bkgbinnedprior.shape)
-    bkglogevals = log10eaxis[bkgresultindices[1]]
-    bkgoffsetvals = offsetaxis[bkgresultindices[0]]
     
-    bkg_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, offsetval)+logjacob, Nsamples=1) for logeval, offsetval in tqdm(zip(bkglogevals, bkgoffsetvals), total=nbkg)])]
-    bkg_offset_measured = offsetaxis[np.squeeze([inverse_transform_sampling(psf(offsetaxis, offsetval, logeval), Nsamples=1) for logeval, offsetval in tqdm(zip(bkglogevals, bkgoffsetvals), total=nbkg)])]
+    ##############################################################################################################################
+    ##############################################################################################################################
+    ### True value simulation     
+    
+    # Signal event simulation
+    sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_logsigbinnedprior, Nsamples=nsig),logsigbinnedprior.shape)
+    siglogevals = log10eaxistrue[sigresultindices[0]]
+    siglonvals = spatialaxistrue[sigresultindices[1]]
+    siglatvals = spatialaxistrue[sigresultindices[2]]
+    
+    
+    # Background event simulation
+    bkgresultindices = np.unravel_index(inverse_transform_sampling(flattened_logbkgbinnedprior, Nsamples=nbkg),logbkgbinnedprior.shape)
+    bkglogevals = log10eaxistrue[bkgresultindices[0]]
+    bkglonvals = spatialaxistrue[bkgresultindices[1]]
+    bkglatvals = spatialaxistrue[bkgresultindices[2]]
+    
+    
+    
+    ##############################################################################################################################
+    ##############################################################################################################################
+    ### 'Measured' value simulation  
+    
+    # Signal measured energy simulation
+    signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])]
+    
+    # Signal measured sky position simulation
+    signal_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])
+    signal_reshaped_indices = np.unravel_index(signal_spatial_indices, shape=lonmeshrecon.shape)
+    signal_lon_measured = spatialaxis[signal_reshaped_indices[0]]
+    signal_lat_measured = spatialaxis[signal_reshaped_indices[1]]
+    
+    
+    # Background measured energy simulation
+    bkg_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)])]
+    
+    
+    # Background measured sky position simulation
+    bkg_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)])
+    bkg_reshaped_indices = np.unravel_index(bkg_spatial_indices, shape=lonmeshrecon.shape)
+    bkg_lon_measured = spatialaxis[bkg_reshaped_indices[0]]
+    bkg_lat_measured = spatialaxis[bkg_reshaped_indices[1]]
+    
+    
+    
 
 
-    np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", np.array([siglogevals,sigoffsetvals]))
-    np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", np.array([signal_log10e_measured,signal_offset_measured]))
-    np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", np.array([bkglogevals,bkgoffsetvals]))
-    np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", np.array([bkg_log10e_measured,bkg_offset_measured]))
+    np.save(f"data/{identifier}/{runnum}/truesigsamples.npy", np.array([siglogevals, siglonvals, siglatvals]))
+    np.save(f"data/{identifier}/{runnum}/meassigsamples.npy", np.array([signal_log10e_measured, signal_lon_measured, signal_lat_measured]))
+    np.save(f"data/{identifier}/{runnum}/truebkgsamples.npy", np.array([bkglogevals, bkglonvals, bkglatvals]))
+    np.save(f"data/{identifier}/{runnum}/measbkgsamples.npy", np.array([bkg_log10e_measured, bkg_lon_measured, bkg_lat_measured]))
     np.save(f"data/{identifier}/{runnum}/params.npy",         np.array([['lambda', 'Nsamples', 'logmass'],
                                             [lambdaval, nevents, truelogmass]]))
-    np.save(f"data/{identifier}/{runnum}/backgroundprior.npy",bkgbinnedprior)
+    np.save(f"data/{identifier}/{runnum}/logbackgroundprior.npy",logbkgpriorvalues)
 
     print("Done simulation.")

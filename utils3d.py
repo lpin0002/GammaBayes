@@ -44,7 +44,7 @@ offsetaxis = psf3d.axes['rad'].center.value
 bkgfull2d = bkgfull.to_2d()
 bkgfull2doffsetaxis = bkgfull2d.axes['offset'].center.value
 offsetaxisresolution = bkgfull2doffsetaxis[1]-bkgfull2doffsetaxis[0]
-spatialbound            = 4
+spatialbound            = 3.5
 
 
 
@@ -53,10 +53,10 @@ spatialaxistrue          = np.arange(-spatialbound,spatialbound, offsetaxisresol
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -1.0
-log10eend               = 1.8
+log10eend               = 2.0
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*50)))
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*100)))
 
 
 # Usefull mesh values particularly when enforcing normalisation on functions
@@ -77,8 +77,9 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
                                                     offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
 
 
-# def edisp(logerecon, logetrue, offsettrue):
-#     scale = 1e-2#-1e-3*logetrue)
+# def edisp(logerecon, logetrue, truespatialcoord):
+#     offsettrue  = convertlonlat_to_offset(truespatialcoord)
+#     scale = 7e-1#-1e-1*np.abs(logetrue-0.5*offsettrue)
     
 #     return -0.5*((logerecon-logetrue)/scale)**2
 
@@ -96,7 +97,10 @@ def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
 #     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
 #     offset  = convertlonlat_to_offset(truespatialcoord)
     
-#     scale = 0.05*(offset+1e-3)
+#     scale = 1#+3e-1*np.abs(offset)+3e-1*np.abs(logetrue+1)
+    
+#     if np.any(scale)<0:
+#         print(scale)
     
 #     return -0.5*(rad/scale)**2
 
@@ -159,7 +163,7 @@ def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
 #     return log_prob
 
 def bkgdist(logeval, lon, lat):
-    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*2*u.deg, fov_lat=np.abs(lat)*2*u.deg).value)
+    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value)
 
 # Does not have any mention of the log of the jacobian to keep it more general.
 def inverse_transform_sampling(logpmf, Nsamples=1):
@@ -240,7 +244,11 @@ def calcirfvals(measuredcoord, log10eaxis=log10eaxis, spatialaxistrue=spatialaxi
     return energyloglikelihoodvals+pointspreadlikelihoodvals
 
 
-
+def calcdemderirfvals(datatuple, lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance, edispnormalisation=0,  psfnormalisation=0):
+    logeval, coord = datatuple
+    
+    return psf(coord, np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()]), logetrue_mesh_nuisance.flatten()).reshape(logetrue_mesh_nuisance.shape)+\
+        edisp(logeval, logetrue_mesh_nuisance.flatten(), np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()])).reshape(logetrue_mesh_nuisance.shape) - edispnormalisation - psfnormalisation
 
 
 
@@ -251,8 +259,14 @@ def evaluateformass(logmass, irfvals, specfunc, lontrue_mesh_nuisance, logetrue_
     priorvals= setup_full_fake_signal_dist(logmass, specfunc=specfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
     
     priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
+    
+    priorvals = priorvals.T-priornormalisation
+    
+    
 
-    signalmarginalisationvalues = [special.logsumexp(logjacobtrue+priorvals.T-priornormalisation+irfvalarray.T) for irfvalarray in irfvals]
+    signalmarginalisationvalues = [special.logsumexp(logjacobtrue+priorvals+irfvalarray.T) for irfvalarray in irfvals]
+    
+    del priornormalisation, priorvals
     
     return signalmarginalisationvalues
 
@@ -261,7 +275,7 @@ def evaluateformass(logmass, irfvals, specfunc, lontrue_mesh_nuisance, logetrue_
 import matplotlib.transforms as transforms
 import matplotlib.patches as patches
 
-def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='black',facecolor='none', **kwargs):
+def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='white',facecolor='none', **kwargs):
     
     if not isinstance(probabilities, np.ndarray):
         probabilities = np.array(probabilities)
