@@ -2,7 +2,8 @@ from utils3d import *
 import numpy as np
 from scipy import special
 from tqdm import tqdm
-import os, sys
+import os, sys, time, functools
+from multiprocessing import Pool, freeze_support
 sys.path.append("BFCalc")
 
 
@@ -93,11 +94,26 @@ if __name__=="__main__":
     
     lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
 
+    # irfproblist = []
+
+    # for logeval, coord in tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating IRF values"):
+    #     irfproblist.append(psf(coord, np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()]), logetrue_mesh_nuisance.flatten()).reshape(logetrue_mesh_nuisance.shape)+\
+    #         edisp(logeval, logetrue_mesh_nuisance.flatten(), np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()])).reshape(logetrue_mesh_nuisance.shape) - edispnormalisation - psfnormalisation)
+    
+    
+    lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
+
     irfproblist = []
 
-    for logeval, coord in tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating IRF values"):
-        irfproblist.append(psf(coord, np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()]), logetrue_mesh_nuisance.flatten()).reshape(logetrue_mesh_nuisance.shape)+\
-            edisp(logeval, logetrue_mesh_nuisance.flatten(), np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()])).reshape(logetrue_mesh_nuisance.shape) - edispnormalisation - psfnormalisation)
+    calcdemderirfvals_temp = functools.partial(calcdemderirfvals, lontrue_mesh_nuisance=lontrue_mesh_nuisance, logetrue_mesh_nuisance=logetrue_mesh_nuisance, lattrue_mesh_nuisance=lattrue_mesh_nuisance, 
+                                            edispnormalisation=edispnormalisation,  psfnormalisation=psfnormalisation)
+        
+    with Pool(numcores) as pool: 
+            
+        for result in tqdm(pool.imap(calcdemderirfvals_temp, zip(measured_log10e, np.array([measured_lon, measured_lat]).T)), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values"):
+                irfproblist.append(result)
+
+        pool.close() 
         
     print(len(irfproblist))
     print(Nsamples)

@@ -53,8 +53,7 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue}
-srun python3 calculateirfvalues.py {identifier}"""
+srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue}"""
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
         if immediate_run:
@@ -72,6 +71,7 @@ srun python3 calculateirfvalues.py {identifier}"""
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
+srun python3 calculateirfvalues.py {identifier} {numcores}
 srun python3 gridsearch.py {identifier} {numlogmass} {numlambda} {numcores}"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:

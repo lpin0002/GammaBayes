@@ -110,15 +110,13 @@ if __name__=="__main__":
 
     signal_log_marginalisationvalues = []
     
-    start = time.perf_counter()
 
-    with Pool(10) as pool: 
+    with Pool(numcores) as pool: 
             
         signal_log_marginalisationvalues = pool.map(tempsigmargfunction, logmassrange)
 
         pool.close() 
         
-    print(time.perf_counter()-start)
         
     signal_log_marginalisationvalues = np.array(signal_log_marginalisationvalues)
     print(f"Shape of array containing the results of marginalising the nuisance parameters with the signal prior: {signal_log_marginalisationvalues.shape}")
