@@ -1,11 +1,11 @@
-from utils import inverse_transform_sampling, bkgdist, makedist, edisp, eaxis_mod, log10eaxis, offsetaxis, setup_full_fake_signal_dist, logjacob, confidence_ellipse
-from scipy import integrate, special, interpolate, stats
-import os, time, random, sys, numpy as np, matplotlib.pyplot as plt, warnings, corner.corner as corner
+from utils3d import *
+from BFCalc.createspectragrids import darkmatterdoubleinput
+from scipy import special
+import os, time, sys, numpy as np, matplotlib.pyplot as plt, corner.corner as corner
 from matplotlib import cm
 import matplotlib as mpl
 from scipy.stats import norm
 from tqdm import tqdm
-from BFCalc.BFInterp import DM_spectrum_setup
 
 
 try:
@@ -15,7 +15,7 @@ except:
 try:
     showhyperparameterposterior = int(sys.argv[2])
 except:
-    showhyperparameterposterior = 0
+    showhyperparameterposterior = 1
 try:
     shownuisanceparameterposterior = int(sys.argv[3])
 except:
@@ -35,7 +35,7 @@ except:
     integrationtype = "direct"
     
     
-specsetup = DM_spectrum_setup
+specsetup = darkmatterdoubleinput
     
 print("Integration type: ", integrationtype)
 integrationtype = "_"+integrationtype.lower()
@@ -56,7 +56,7 @@ print("number of run directories: ", len(rundirs), '\n')
 if True:
     params                  = np.load(f"{rundirs[0]}/params.npy")
     totalevents             = int(params[1,1])
-    truelambdaval           = float(params[1,0])
+    truelambda              = float(params[1,0])
     truelogmass             = float(params[1,2])
     truesigsamples          = np.load(f"{rundirs[0]}/truesigsamples.npy")
     truebkgsamples          = np.load(f"{rundirs[0]}/truebkgsamples.npy", allow_pickle= True)
@@ -76,10 +76,10 @@ if True:
             print("runnum: ", runnum)
             params              = np.load(f"data/{identifier}/{runnum}/params.npy")
             
-            truesigsamples       =np.concatenate((truesigsamples, np.load(f"{rundir}/truesigsamples.npy")))
-            truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
-            meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
-            measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
+            # truesigsamples       =np.concatenate((truesigsamples, np.load(f"{rundir}/truesigsamples.npy")))
+            # truebkgsamples       =np.concatenate((truebkgsamples, np.load(f"{rundir}/truebkgsamples.npy")))
+            # meassigsamples       =np.concatenate((meassigsamples, np.load(f"{rundir}/meassigsamples.npy")))
+            # measbkgsamples       =np.concatenate((measbkgsamples, np.load(f"{rundir}/measbkgsamples.npy")))
             truelogmass     = float(params[1,2])
             nevents         = int(params[1,1])
             totalevents+=nevents
@@ -89,111 +89,76 @@ if True:
         
         import matplotlib.colors as colors
         
-        def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
-            new_cmap = colors.LinearSegmentedColormap.from_list(
-                'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
-                cmap(np.linspace(minval, maxval, n)))
-            return new_cmap
-        
-        logposterior = np.load(f"{stemdirectory}/logposterior{integrationtype}.npy")
         
         
-        normalisation = special.logsumexp(logposterior)
         
-        logposterior= logposterior-normalisation
+        unnormalised_log_posterior = np.load(f'{stemdirectory}/unnormalised_logposterior_direct.npy')
+        log_posterior = unnormalised_log_posterior-special.logsumexp(unnormalised_log_posterior)
         
-        tempcolormap = cm.get_cmap('magma')
         
-        newcmap = truncate_colormap(tempcolormap, minval=0.15, maxval=0.6, n=1000)
+        from utils3d import confidence_ellipse
+        from scipy.stats import norm
 
-        print(special.logsumexp(logposterior))
-        print(params)
-        
-        fig, ax = plt.subplots(dpi=200, figsize=(5,4))
-        # logmassrange, lambdarange, 
-        pcol = ax.pcolor(logmassrange, lambdarange, np.exp(logposterior).T, snap=True)#, cmap=newcmap, alpha=1.0)
-
-        pcol.set_edgecolor('face')
-
-        # Plot the contours
-        confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=1.0)
-        confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=2.0)
-        confidence_ellipse(logmassrange, lambdarange, np.exp(logposterior).T, ax, n_std=3.0)
-
-        # ax.set_alpha(0.0)
-        
-        plt.xlabel(r"$log_{10}$(mass) [TeV]")
-        plt.ylabel("signal fraction")
-        plt.colorbar(pcol, label="Probability Density [1/TeV]")
-        plt.axvline(truelogmass, c='tab:pink')
-        plt.axhline(truelambdaval, c='tab:pink')
-        plt.grid(axis='x', markevery=log10eaxis, alpha=0.1)
-        plt.title(f"{totalevents} total events")
-        
-        
-        ax.set_xlim(logmassrange[0], logmassrange[-1])
-        ax.set_ylim(lambdarange[0], lambdarange[-1])
-        
-        plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.pdf"))
-        plt.savefig(time.strftime(f"data/{identifier}/posterior%H_{totalevents}{integrationtype}.png"),
-                    facecolor='None')
-
-        plt.savefig(f"Figures/LatestFigures/posterior{integrationtype}.pdf")
-        # plt.savefig('Figures/thousandevent_modular2d_posterior.pdf')
-
-        plt.show()
-        
-        
+        import time
 
         colormap = cm.get_cmap('Blues_r', 4)
 
-        
-        logmass_logposterior = special.logsumexp(logposterior, axis=1)
+        fig, ax = plt.subplots(2,2, dpi=100, figsize=(10,8))
+        plt.suptitle(f"Nevents= {totalevents}", size=24)
 
+        # Upper left plot
+        logmass_logposterior = special.logsumexp(log_posterior, axis=0)
 
-        normedposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior))
-        cdfposterior = np.cumsum(normedposterior)
-        print(cdfposterior[-1])
-        mean = logmassrange[np.abs(norm.cdf(0)-cdfposterior).argmin()]
+        normalisedlogmassposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior))
+
+        cdflogmassposterior = np.cumsum(normalisedlogmassposterior)
+        mean = logmassrange[np.abs(norm.cdf(0)-cdflogmassposterior).argmin()]
         zscores = [-3, -2,-1,1,2, 3]
-        percentiles = []
+        logmasspercentiles = []
         for zscore in zscores:
-            percentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdfposterior).argmin()])
+            logmasspercentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdflogmassposterior).argmin()])
 
 
+        ax[0,0].plot(logmassrange,normalisedlogmassposterior, c='tab:green')
 
-        plt.figure(dpi=160, figsize=(10,5))
-        plt.title(f'Nevents = {totalevents}')
-        plt.plot(logmassrange, normedposterior, c='tab:green')
-        plt.axvline(mean, c='tab:green', ls='--', alpha=1, label='mean')
-        for o, percentile in enumerate(percentiles):
-            color = colormap(np.abs(zscores[o])/4-0.01)
-
-            plt.axvline(percentile, c=color, ls=':')
-            
-
-        plt.axvline(truelogmass, c='tab:orange', ls='-.', label='true value', alpha=0.8)
-        plt.xlabel(r'log$_{10}$ mass [TeV]')
-        normcolor = mpl.colors.Normalize(vmin=0, vmax=5)
-        plt.grid(axis='x', markevery=log10eaxis, alpha=0.1)
+        ax[0,0].axvline(mean, c='tab:green', ls=':')
 
 
-        cb1 = plt.colorbar(cm.ScalarMappable(norm=normcolor, cmap=colormap), ticks=np.arange(1,5))
-        cb1.set_label(r'standard deviations')
-        plt.legend()
-        plt.ylim([0,None])
+        for o, percentile in enumerate(logmasspercentiles):
+                    color = colormap(np.abs(zscores[o])/4-0.01)
 
-        plt.savefig(time.strftime(f'data/{identifier}/logmassposterior_%m%d_%H_logmass={truelogmass}.png'))
-        # plt.savefig('Figures/thousandevent_modular2d_logmassposterior.pdf')
-
-        plt.show()
+                    ax[0,0].axvline(percentile, c=color, ls=':')
+        ax[0,0].axvline(truelogmass, ls='--', color="tab:orange")
 
 
-        
-        
+        if min(mean - logmasspercentiles)>log10eaxistrue[1]-log10eaxistrue[0]:
+            for logetrueval in log10eaxistrue:
+                ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
+        ax[0,0].set_ylim([0, None])
+        ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
 
-        
-        lambda_logposterior = special.logsumexp(logposterior, axis=0)
+        # Upper right plot
+        ax[0,1].axis('off')
+
+
+        # Lower left plot
+        # ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(normalisedlogposterior).T, cmap='Blues')
+        ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(log_posterior))
+        ax[1,0].axvline(truelogmass, c='tab:orange')
+        ax[1,0].axhline(truelambda, c='tab:orange')
+        ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
+        ax[1,0].set_ylabel(r'$\lambda$')
+
+        ax[1,0].set_ylim([lambdarange[0], lambdarange[-1]])
+        ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
+
+        extracolormap = cm.get_cmap('Blues_r')
+        confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=3.0, linewidth=1.5)
+        confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=2.0, linewidth=1.5)
+        confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=1.0, linewidth=1.5)
+
+
+        lambda_logposterior = special.logsumexp(log_posterior, axis=1)
 
         normalisedlambdaposterior = np.exp(lambda_logposterior-special.logsumexp(lambda_logposterior))
 
@@ -203,97 +168,20 @@ if True:
         for zscore in zscores:
             lambdapercentiles.append(lambdarange[np.abs(norm.cdf(zscore)-cdflambdaposterior).argmin()])
 
-        plt.figure(dpi=160, figsize=(10,5))
-        plt.title(f"Nevents= {totalevents}")
-        plt.plot(lambdarange,normalisedlambdaposterior, c='tab:green', label="mean of posterior")
 
-        plt.axvline(meanlabda, c='tab:green', ls=':', lw=2.0)
+        ax[1,1].plot(lambdarange,normalisedlambdaposterior, c='tab:green')
+
+        ax[1,1].axvline(meanlabda, c='tab:green', ls=':')
 
 
         for o, percentile in enumerate(lambdapercentiles):
                     color = colormap(np.abs(zscores[o])/4-0.01)
 
-                    plt.axvline(percentile, c=color, ls=':')
-        plt.axvline(truelambdaval, ls='--', color="tab:orange", label="true value")
-        plt.ylim([0,None])
-        plt.legend()
-        plt.xlabel(r'$\lambda$')
-        # plt.savefig('Figures/thousandevent_modular2d_lambdaposterior.pdf')
+                    ax[1,1].axvline(percentile, c=color, ls=':')
+        ax[1,1].axvline(truelambda, ls='--', color="tab:orange")
+        ax[1,1].set_xlabel(r'$\lambda$')
+        ax[1,1].set_ylim([0, None])
 
+
+        plt.savefig(time.strftime(f"Figures/TestFigures/{totalevents}events_lm{truelogmass}_l{truelambda}_%m%d_%H%M.pdf"))
         plt.show()
-
-
-if whattoplot[2]:
-
-    centrelogevals = log10eaxis-0.5*(log10eaxis[1]-log10eaxis[0])
-    centreoffsetvals = offsetaxis-0.5*(offsetaxis[1]-offsetaxis[0])
-
-    log10eaxismesh, offsetaxismesh = np.meshgrid(log10eaxis, offsetaxis)
-    
-
-    plt.figure()
-    plt.title(r"true $log_{10}$ E values")
-    truebkghtvals = plt.hist(truebkgsamples[0], bins=centrelogevals, alpha=0.7, label='True bkg log e samples', color='tab:orange')
-
-    truesightvals = plt.hist(truesigsamples[0], bins=centrelogevals, alpha=0.7, label='True sig log e samples', color='forestgreen')
-    # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
-    # plt.axvline(truelogmass, label=r'true $log_{10}(m_\chi)$ [TeV]', c="tab:orange")
-    sigpriorvals = np.exp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxis, 0.0).T+logjacob)
-    
-    # 
-    bkgpriorvals = np.exp(special.logsumexp(bkgdist(log10eaxismesh.flatten(), offsetaxismesh.flatten()).reshape(log10eaxismesh.shape),axis=0)+logjacob)
-    
-    plt.plot(log10eaxis, bkgpriorvals/np.max(bkgpriorvals)*0.95*np.max(truebkghtvals[0]), color='orange')
-    plt.plot(log10eaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]), color='tab:green')
-    plt.xlabel(r'True $log_{10}(E)$ [TeV]')
-    plt.ylabel('Number of samples')
-    plt.legend()
-    plt.savefig("Figures/LatestFigures/TrueLog10EVals.pdf")
-    plt.show()
-
-    plt.figure()
-    plt.title(r"true $log_{10}$ E values")
-    truebkghtvals = plt.hist(truebkgsamples[1], bins=centreoffsetvals, alpha=0.7, label='True bkg offset samples', color='tab:orange')
-
-    truesightvals = plt.hist(truesigsamples[1], bins=centreoffsetvals, alpha=0.7, label='True sig offset samples', color='forestgreen')
-    
-    sigpriorvals = np.exp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(0.0, offsetaxis))
-    plt.plot(offsetaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
-    
-    bkgpriorvals = np.exp(special.logsumexp(bkgdist(log10eaxismesh.flatten(), offsetaxismesh.flatten()).reshape(log10eaxismesh.shape)+logjacob, axis=1))
-    plt.plot(offsetaxis, bkgpriorvals/np.max(bkgpriorvals)*0.95*np.max(truebkghtvals[0]))
-    
-    
-    plt.xlabel(r'Offset [deg]')
-    plt.ylabel('Number of samples')
-    plt.legend()
-    plt.savefig("Figures/LatestFigures/TrueOffsetEVals.pdf")
-    plt.show()
-
-
-
-    plt.figure()
-    plt.title(r"Measured $log_{10}$ E values")
-    truesightvals = plt.hist(meassigsamples[0], bins=centrelogevals, alpha=0.7, label='Measured sig log energy samples', color='forestgreen')
-    # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
-    
-    sigpriorvals = np.exp(special.logsumexp(setup_full_fake_signal_dist(truelogmass, specsetup=specsetup, normeaxis=10**log10eaxis)(log10eaxismesh, offsetaxismesh), axis=0)+logjacob)
-    plt.plot(log10eaxis, sigpriorvals/np.max(sigpriorvals)*0.95*np.max(truesightvals[0]))
-    
-    plt.xlabel(r'Reconstructed (Measured) $log_{10}(E)$ [TeV]')
-    plt.ylabel('Number of samples')
-    plt.legend()
-    plt.savefig("Figures/LatestFigures/MeasuredLog10EVals.pdf")
-    plt.show()
-    
-    
-    plt.figure()
-    plt.title(r"Measured Offset values")
-    truesightvals = plt.hist(meassigsamples[1], bins=centreoffsetvals, alpha=0.7, label='Measured sig offset samples', color='forestgreen')
-    # truebkghtvals = plt.hist(truebkgsamples, bins=centrevals, alpha=0.7, label='True bkg samples', color='royalblue')
-    plt.xlabel(r'Reconstructed (Measured) Offset [deg]')
-    plt.ylabel('Number of samples')
-    plt.legend()
-    plt.savefig("Figures/LatestFigures/MeasuredOffsetEVals.pdf")
-    plt.show()
-    

@@ -1,17 +1,8 @@
-from BFCalc.BFInterp import DM_spectrum_setup
-from BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput
 from utils3d import *
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from astropy import units as u
-from scipy import special,stats
-from matplotlib import cm
-from tqdm.autonotebook import tqdm as notebook_tqdm
+from scipy import special
+from tqdm import tqdm
 import os, sys
-import functools
-from multiprocessing import Pool, freeze_support
-import multiprocessing
 sys.path.append("BFCalc")
 
 
@@ -104,7 +95,7 @@ if __name__=="__main__":
 
     irfproblist = []
 
-    for logeval, coord in notebook_tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e))):
+    for logeval, coord in tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating IRF values"):
         irfproblist.append(psf(coord, np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()]), logetrue_mesh_nuisance.flatten()).reshape(logetrue_mesh_nuisance.shape)+\
             edisp(logeval, logetrue_mesh_nuisance.flatten(), np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()])).reshape(logetrue_mesh_nuisance.shape) - edispnormalisation - psfnormalisation)
         

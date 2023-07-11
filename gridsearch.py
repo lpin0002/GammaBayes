@@ -1,16 +1,10 @@
-from BFCalc.BFInterp import DM_spectrum_setup
-from BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput
+from BFCalc.createspectragrids import darkmatterdoubleinput
 from utils3d import *
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from astropy import units as u
-from scipy import special,stats
-from matplotlib import cm
-from tqdm.autonotebook import tqdm as notebook_tqdm
+from scipy import special
+from tqdm import tqdm
 import os, sys, time, functools
-from multiprocessing import Pool, freeze_support
-import multiprocessing
+from multiprocessing import Pool
 sys.path.append("BFCalc")
 
 
@@ -118,7 +112,7 @@ if __name__=="__main__":
 
     with Pool(numcores) as pool: 
             
-        for result in notebook_tqdm(pool.imap(tempsigmargfunction, logmassrange), total=int(len(list(logmassrange))), ncols=100, desc="Calculating signal marginalisations..."):
+        for result in tqdm(pool.imap(tempsigmargfunction, logmassrange), total=int(len(list(logmassrange))), ncols=100, desc="Calculating signal marginalisations..."):
                 signal_log_marginalisationvalues.append(result)
 
         pool.close() 
@@ -152,7 +146,7 @@ if __name__=="__main__":
 
     log_posterior = []
 
-    for lambdaval in notebook_tqdm(lambdarange, total=lambdarange.shape[0]):
+    for lambdaval in tqdm(lambdarange, total=lambdarange.shape[0]):
         log_posterior.append([np.sum(np.logaddexp(np.log(lambdaval)+signal_log_marginalisationvalues[logmassindex,:], np.log(1-lambdaval)+bkgmargvals)) for logmassindex in range(len(list(logmassrange)))])
 
 
@@ -168,106 +162,7 @@ if __name__=="__main__":
     np.save(f'{stemdirectory}/logmassrange_direct.npy',logmassrange)
     np.save(f'{stemdirectory}/unnormalised_logposterior_direct.npy', unnormalised_log_posterior)
     
-    
-    
-    
-    
-    
-    # If this is not done, some of the below nice functionality fails (e.g. mean and sigma calculations)
-    log_posterior = log_posterior-special.logsumexp(log_posterior)
-    
-    
-    
-    
-    
-    from utils3d import confidence_ellipse
-    from scipy.stats import norm
 
-    import time
-
-    colormap = cm.get_cmap('Blues_r', 4)
-
-    fig, ax = plt.subplots(2,2, dpi=100, figsize=(10,8))
-    plt.suptitle(f"Nevents= {Nsamples}", size=24)
-
-    # Upper left plot
-    logmass_logposterior = special.logsumexp(log_posterior, axis=0)
-
-    normalisedlogmassposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior))
-
-    cdflogmassposterior = np.cumsum(normalisedlogmassposterior)
-    mean = logmassrange[np.abs(norm.cdf(0)-cdflogmassposterior).argmin()]
-    zscores = [-3, -2,-1,1,2, 3]
-    logmasspercentiles = []
-    for zscore in zscores:
-        logmasspercentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdflogmassposterior).argmin()])
-
-
-    ax[0,0].plot(logmassrange,normalisedlogmassposterior, c='tab:green')
-
-    ax[0,0].axvline(mean, c='tab:green', ls=':')
-
-
-    for o, percentile in enumerate(logmasspercentiles):
-                color = colormap(np.abs(zscores[o])/4-0.01)
-
-                ax[0,0].axvline(percentile, c=color, ls=':')
-    ax[0,0].axvline(truelogmassval, ls='--', color="tab:orange")
-
-
-    if min(mean - logmasspercentiles)>log10eaxistrue[1]-log10eaxistrue[0]:
-        for logetrueval in log10eaxistrue:
-            ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
-    ax[0,0].set_ylim([0, None])
-    ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
-
-    # Upper right plot
-    ax[0,1].axis('off')
-
-
-    # Lower left plot
-    # ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(normalisedlogposterior).T, cmap='Blues')
-    ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(log_posterior))
-    ax[1,0].axvline(truelogmassval, c='tab:orange')
-    ax[1,0].axhline(truelambda, c='tab:orange')
-    ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
-    ax[1,0].set_ylabel(r'$\lambda$')
-
-    ax[1,0].set_ylim([lambdarange[0], lambdarange[-1]])
-    ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
-
-    confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=3.0, linewidth=1.5)
-    confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=2.0, linewidth=1.5)
-    confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=1.0, linewidth=1.5)
-
-
-    lambda_logposterior = special.logsumexp(log_posterior, axis=1)
-
-    normalisedlambdaposterior = np.exp(lambda_logposterior-special.logsumexp(lambda_logposterior))
-
-    cdflambdaposterior = np.cumsum(normalisedlambdaposterior)
-    meanlambda = lambdarange[np.abs(norm.cdf(0)-cdflambdaposterior).argmin()]
-    lambdapercentiles = []
-    for zscore in zscores:
-        lambdapercentiles.append(lambdarange[np.abs(norm.cdf(zscore)-cdflambdaposterior).argmin()])
-
-
-    ax[1,1].plot(lambdarange,normalisedlambdaposterior, c='tab:green')
-
-    ax[1,1].axvline(meanlambda, c='tab:green', ls=':')
-
-
-    for o, percentile in enumerate(lambdapercentiles):
-                color = colormap(np.abs(zscores[o])/4-0.01)
-
-                ax[1,1].axvline(percentile, c=color, ls=':')
-    ax[1,1].axvline(truelambda, ls='--', color="tab:orange")
-    ax[1,1].set_xlabel(r'$\lambda$')
-    ax[1,1].set_ylim([0, None])
-
-
-    plt.savefig(time.strftime(f"Figures/TestFigures/{Nsamples}events_lm{truelogmassval}_l{truelambda}_%m%d_%H%M.pdf"))
-    plt.show()
 
 
 

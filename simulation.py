@@ -1,16 +1,9 @@
-from BFCalc.BFInterp import DM_spectrum_setup
-from BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput
+from BFCalc.createspectragrids import darkmatterdoubleinput
 from utils3d import *
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from astropy import units as u
-from scipy import special,stats
-from matplotlib import cm
-from tqdm.autonotebook import tqdm as notebook_tqdm
-import os, sys, time, functools
-from multiprocessing import Pool, freeze_support
-import multiprocessing
+from scipy import special
+from tqdm import tqdm
+import os, sys, time
 sys.path.append("BFCalc")
 
 
@@ -138,21 +131,21 @@ if __name__=="__main__":
     ### 'Measured' value simulation  
     
     # Signal measured energy simulation
-    signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])]
+    signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])]
     
     # Signal measured sky position simulation
-    signal_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])
+    signal_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])
     signal_reshaped_indices = np.unravel_index(signal_spatial_indices, shape=lonmeshrecon.shape)
     signal_lon_measured = spatialaxis[signal_reshaped_indices[0]]
     signal_lat_measured = spatialaxis[signal_reshaped_indices[1]]
     
     
     # Background measured energy simulation
-    bkg_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)])]
+    bkg_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)])]
     
     
     # Background measured sky position simulation
-    bkg_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)])
+    bkg_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)])
     bkg_reshaped_indices = np.unravel_index(bkg_spatial_indices, shape=lonmeshrecon.shape)
     bkg_lon_measured = spatialaxis[bkg_reshaped_indices[0]]
     bkg_lat_measured = spatialaxis[bkg_reshaped_indices[1]]
