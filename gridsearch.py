@@ -4,7 +4,7 @@ import numpy as np
 from scipy import special
 from tqdm import tqdm
 import os, sys, time, functools
-from multiprocessing import Pool
+from multiprocessing import Pool, freeze_support
 sys.path.append("BFCalc")
 
 
@@ -109,15 +109,16 @@ if __name__=="__main__":
     tempsigmargfunction = functools.partial(evaluateformass, irfvals=irfproblist, specfunc=signalspecfunc, lontrue_mesh_nuisance=lontrue_mesh_nuisance, logetrue_mesh_nuisance=logetrue_mesh_nuisance, lattrue_mesh_nuisance=lattrue_mesh_nuisance )
 
     signal_log_marginalisationvalues = []
+    
+    start = time.perf_counter()
 
-    with Pool(numcores) as pool: 
+    with Pool(10) as pool: 
             
-        for result in tqdm(pool.imap(tempsigmargfunction, logmassrange), total=int(len(list(logmassrange))), ncols=100, desc="Calculating signal marginalisations..."):
-                signal_log_marginalisationvalues.append(result)
+        signal_log_marginalisationvalues = pool.map(tempsigmargfunction, logmassrange)
 
         pool.close() 
         
-        
+    print(time.perf_counter()-start)
         
     signal_log_marginalisationvalues = np.array(signal_log_marginalisationvalues)
     print(f"Shape of array containing the results of marginalising the nuisance parameters with the signal prior: {signal_log_marginalisationvalues.shape}")
