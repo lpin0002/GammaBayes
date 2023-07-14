@@ -53,8 +53,8 @@ spatialaxis              = np.arange(-spatialbound,spatialbound, 0.4)
 spatialaxistrue          = np.arange(-spatialbound,spatialbound, 0.4)
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10estart             = -1.0
-log10eend               = 2.0
+log10estart             = -0.8
+log10eend               = 1.8
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
 log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*200)))

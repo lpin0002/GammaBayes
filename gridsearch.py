@@ -54,6 +54,23 @@ if __name__=="__main__":
     irfindexlist = np.load(f"{stemdirectory}/irfindexlist.npy")
     edispmatrix = np.load("edispmatrix.npy")
     psfmatrix = np.load("psfmatrix.npy")
+    
+    psfnormalisation  = special.logsumexp(psfmatrix, axis=(-2,-1))
+    edispnormalisation  = special.logsumexp(edispmatrix+logjacob, axis=-1)
+
+
+    edispnormalisation[edispnormalisation==-np.inf] = 0
+    psfnormalisation[psfnormalisation==-np.inf] = 0   
+    
+    
+    
+    edispmatrix = edispmatrix-edispnormalisation[:,:,:,np.newaxis]
+    psfmatrix = psfmatrix-psfnormalisation[:,:,:,np.newaxis, np.newaxis]
+    
+    
+    
+    
+    
     # logbackgroundprior = np.load(f"{firstrundirectory}/logbackgroundprior.npy")
     truelambda, Nsamples, truelogmassval = np.load(f"{firstrundirectory}/params.npy")[1,:]
     Nsamples = int(Nsamples)
@@ -131,7 +148,7 @@ if __name__=="__main__":
 
     # signal_log_marginalisationvalues = []
 
-
+    print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
     with Pool(numcores) as pool: 
             
         unnormalised_log_posterior = pool.map(tempsigmargfunction, tqdm(logmassrange))
@@ -139,7 +156,8 @@ if __name__=="__main__":
         pool.close() 
 
     unnormalised_log_posterior = np.array(unnormalised_log_posterior).T
-    
+    print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
+
 
     print(f"Shape of the array containing the log of the unnormalised posterior: {unnormalised_log_posterior.shape}")
 

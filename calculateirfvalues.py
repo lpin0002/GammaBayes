@@ -20,7 +20,7 @@ if __name__=="__main__":
         numcores = 10
         
     try:
-        calcirfmatrices = int(sys.argv(3))
+        calcirfmatrices = int(sys.argv[3])
     except:
         calcirfmatrices = 0
     
