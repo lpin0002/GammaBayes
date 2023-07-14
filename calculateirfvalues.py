@@ -18,6 +18,11 @@ if __name__=="__main__":
         numcores = int(sys.argv[2])
     except:
         numcores = 10
+        
+    try:
+        calcirfmatrices = int(sys.argv(3))
+    except:
+        calcirfmatrices = 0
     
     
     
@@ -75,51 +80,54 @@ if __name__=="__main__":
     measured_lon = list(signal_lon_measured)+list(bkg_lon_measured)
     measured_lat = list(signal_lat_measured)+list(bkg_lat_measured)
 
-
-    psfnormalisation = np.load('psfnormalisation.npy')
-    
-    lontrue_mesh_edisp, logetrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, log10eaxis)
-    
-    
-    edispnormalisation = edisp(logerecon_mesh_edisp.flatten(), logetrue_mesh_edisp.flatten(), np.array([lontrue_mesh_edisp.flatten(), lattrue_mesh_edisp.flatten()])).reshape(logetrue_mesh_edisp.shape)
-    edispnormalisation  = special.logsumexp(edispnormalisation+logjacob, axis=-1)
-
-
-
-
-    edispnormalisation[edispnormalisation==-np.inf] = 0
-    psfnormalisation[psfnormalisation==-np.inf] = 0   
-    
-    
-    
-    lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
-
-    # irfproblist = []
-
-    # for logeval, coord in tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating IRF values"):
-    #     irfproblist.append(psf(coord, np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()]), logetrue_mesh_nuisance.flatten()).reshape(logetrue_mesh_nuisance.shape)+\
-    #         edisp(logeval, logetrue_mesh_nuisance.flatten(), np.array([lontrue_mesh_nuisance.flatten(), lattrue_mesh_nuisance.flatten()])).reshape(logetrue_mesh_nuisance.shape) - edispnormalisation - psfnormalisation)
-    
-    
-    lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
-
-    irfproblist = []
-
-    calcdemderirfvals_temp = functools.partial(calcdemderirfvals, lontrue_mesh_nuisance=lontrue_mesh_nuisance, logetrue_mesh_nuisance=logetrue_mesh_nuisance, lattrue_mesh_nuisance=lattrue_mesh_nuisance, 
-                                            edispnormalisation=edispnormalisation,  psfnormalisation=psfnormalisation)
+    if calcirfmatrices:
+        lontrue_mesh_psf, logetrue_mesh_psf, lattrue_mesh_psf, lonrecon_mesh_psf, latrecon_mesh_psf = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, spatialaxis, spatialaxis)
+        psfmatrix = psf(np.array([lonrecon_mesh_psf.flatten(), latrecon_mesh_psf.flatten()]), np.array([lontrue_mesh_psf.flatten(), lattrue_mesh_psf.flatten()]), logetrue_mesh_psf.flatten()).reshape(logetrue_mesh_psf.shape)
+        psfnormalisation  = special.logsumexp(psfmatrix, axis=(-2,-1))
         
+        
+
+            
+        lontrue_mesh_edisp, logetrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, log10eaxis)
+        edispmatrix = edisp(logerecon_mesh_edisp.flatten(), logetrue_mesh_edisp.flatten(), np.array([lontrue_mesh_edisp.flatten(), lattrue_mesh_edisp.flatten()])).reshape(logetrue_mesh_edisp.shape)
+        edispnormalisation  = special.logsumexp(edispmatrix+logjacob, axis=-1)
+
+
+        edispnormalisation[edispnormalisation==-np.inf] = 0
+        psfnormalisation[psfnormalisation==-np.inf] = 0   
+        
+        
+        
+        edispmatrix = edispmatrix-edispnormalisation[:,:,:,np.newaxis]
+        psfmatrix = psfmatrix-psfnormalisation[:,:,:,np.newaxis, np.newaxis]
+        
+        
+        np.save("edispmatrix.npy", edispmatrix)
+        np.save("psfmatrix.npy", psfmatrix)
+        np.save("edispnormalisation.npy", edispnormalisation)
+        np.save("psfnormalisation.npy", psfnormalisation)
+    else:
+        edispmatrix = np.load("edispmatrix.npy")
+        psfmatrix = np.load("psfmatrix.npy")
+
+    irfindexlist = []
+
+    
     with Pool(numcores) as pool: 
             
-        for result in tqdm(pool.imap(calcdemderirfvals_temp, zip(measured_log10e, np.array([measured_lon, measured_lat]).T)), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values"):
-                irfproblist.append(result)
+        irfindexlist =  pool.map(calcrirfindices, tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values"))
 
         pool.close() 
+    
+    irfindexlist = np.array(irfindexlist)
+
+
         
-    print(len(irfproblist))
+    print(len(irfindexlist))
     print(Nsamples)
     
-    assert len(irfproblist) == int(Nsamples)
-    assert irfproblist[0].shape == (log10eaxistrue.shape[0], spatialaxistrue.shape[0],spatialaxistrue.shape[0])
+    assert len(irfindexlist) == int(Nsamples)
+    assert irfindexlist.ndim==2
         
              
-    np.save(f"{stemdirectory}/irfproblist.npy", irfproblist)
+    np.save(f"{stemdirectory}/irfindexlist.npy", irfindexlist)

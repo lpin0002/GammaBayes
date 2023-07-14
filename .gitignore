@@ -10,3 +10,7 @@ data/nestedsamplingtest8*
 *__pycache__*
 *irfvalues.npy
 *irfproblist*
+*edispmatrix*
+*psfmatrix*
+*edispnormalisation*
+*psfnormalisation*

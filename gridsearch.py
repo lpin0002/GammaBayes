@@ -51,7 +51,9 @@ if __name__=="__main__":
     
     
     # Loading in values
-    irfproblist = np.load(f"{stemdirectory}/irfproblist.npy")
+    irfindexlist = np.load(f"{stemdirectory}/irfindexlist.npy")
+    edispmatrix = np.load("edispmatrix.npy")
+    psfmatrix = np.load("psfmatrix.npy")
     # logbackgroundprior = np.load(f"{firstrundirectory}/logbackgroundprior.npy")
     truelambda, Nsamples, truelogmassval = np.load(f"{firstrundirectory}/params.npy")[1,:]
     Nsamples = int(Nsamples)
@@ -102,55 +104,42 @@ if __name__=="__main__":
 
     lambdarange            = np.linspace(lambdalowerbound, lambdaupperbound, nbinslambda) 
     
-    ##########################################################################################################################################################################
-    ##########################################################################################################################################################################
-    # Nuisance Parameter Marginalisation with Signal Prior
-
-    tempsigmargfunction = functools.partial(evaluateformass, irfvals=irfproblist, specfunc=signalspecfunc, lontrue_mesh_nuisance=lontrue_mesh_nuisance, logetrue_mesh_nuisance=logetrue_mesh_nuisance, lattrue_mesh_nuisance=lattrue_mesh_nuisance )
-
-    signal_log_marginalisationvalues = []
-    
-
-    with Pool(numcores) as pool: 
-            
-        signal_log_marginalisationvalues = pool.map(tempsigmargfunction, logmassrange)
-
-        pool.close() 
-        
-        
-    signal_log_marginalisationvalues = np.array(signal_log_marginalisationvalues)
-    print(f"Shape of array containing the results of marginalising the nuisance parameters with the signal prior: {signal_log_marginalisationvalues.shape}")
-    
-    
     
     ##########################################################################################################################################################################
     ##########################################################################################################################################################################
     # Nuisance Parameter Marginalisation with Background Prior
     
     bkgpriorarray  = bkgdist(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
-    bkgpriorarray = bkgpriorarray - special.logsumexp(bkgpriorarray.T+logjacobtrue)
+    bkgpriorarray = bkgpriorarray.T - special.logsumexp(bkgpriorarray.T+logjacobtrue)
+    # print(special.logsumexp(bkgpriorarray.T+logjacobtrue).shape)
 
-    bkgmargvals = [special.logsumexp(bkgpriorarray.T+irfarray.T+logjacobtrue) for irfarray in irfproblist]
+    bkgmargvals = special.logsumexp(logjacobtrue+bkgpriorarray+edispmatrix[:,:,:,irfindexlist[:,0]].T+psfmatrix[:,:,:,irfindexlist[:,1],irfindexlist[:,2]].T, axis=(1,2,3))
     bkgmargvals = np.array(bkgmargvals)
     
     print(f"Shape of array containing the results of marginalising the nuisance parameters with the background prior: {bkgmargvals.shape}")
-
-    
     
     ##########################################################################################################################################################################
     ##########################################################################################################################################################################
-    # Combine nuisance parameter marginalisation results to calculate (log) posterior
+    # Nuisance Parameter Marginalisation with Signal Prior
     
     
+    
+    
+    tempsigmargfunction = functools.partial(evaluateformass,lambdarange=lambdarange, bkgmargvals=bkgmargvals, irfindexlist=irfindexlist, specfunc=darkmatterdoubleinput, edispmatrix=edispmatrix, psfmatrix=psfmatrix, 
+                                            lontrue_mesh_nuisance=lontrue_mesh_nuisance, logetrue_mesh_nuisance=logetrue_mesh_nuisance, lattrue_mesh_nuisance=lattrue_mesh_nuisance)
 
-    log_posterior = []
 
-    for lambdaval in tqdm(lambdarange, total=lambdarange.shape[0]):
-        log_posterior.append([np.sum(np.logaddexp(np.log(lambdaval)+signal_log_marginalisationvalues[logmassindex,:], np.log(1-lambdaval)+bkgmargvals)) for logmassindex in range(len(list(logmassrange)))])
+    # signal_log_marginalisationvalues = []
 
 
-    unnormalised_log_posterior = np.array(log_posterior)
+    with Pool(numcores) as pool: 
+            
+        unnormalised_log_posterior = pool.map(tempsigmargfunction, tqdm(logmassrange))
 
+        pool.close() 
+
+    unnormalised_log_posterior = np.array(unnormalised_log_posterior).T
+    
 
     print(f"Shape of the array containing the log of the unnormalised posterior: {unnormalised_log_posterior.shape}")
 
