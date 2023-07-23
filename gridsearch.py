@@ -149,11 +149,9 @@ if __name__=="__main__":
     # signal_log_marginalisationvalues = []
 
     print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
-    with Pool(numcores) as pool: 
             
-        unnormalised_log_posterior = pool.map(tempsigmargfunction, tqdm(logmassrange))
+    unnormalised_log_posterior = [tempsigmargfunction(logmass) for logmass in logmassrange]
 
-        pool.close() 
 
     unnormalised_log_posterior = np.array(unnormalised_log_posterior).T
     print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
