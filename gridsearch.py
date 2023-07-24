@@ -19,17 +19,17 @@ if __name__=="__main__":
     try:
         nbinslogmass = int(sys.argv[2])
     except:
-        nbinslogmass = 11
+        nbinslogmass = 51
 
     try:
         nbinslambda = int(sys.argv[3])
     except:
-        nbinslambda = 11
+        nbinslambda = 81
     
     try:
         numcores = int(sys.argv[4])
     except:
-        numcores = 10
+        numcores = 8
         
     signalspecfunc = darkmatterdoubleinput
     lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
@@ -141,19 +141,33 @@ if __name__=="__main__":
     
     
     
-    
-    tempsigmargfunction = functools.partial(evaluateformass,lambdarange=lambdarange, bkgmargvals=bkgmargvals, irfindexlist=irfindexlist, specfunc=darkmatterdoubleinput, edispmatrix=edispmatrix, psfmatrix=psfmatrix, 
-                                            lontrue_mesh_nuisance=lontrue_mesh_nuisance, logetrue_mesh_nuisance=logetrue_mesh_nuisance, lattrue_mesh_nuisance=lattrue_mesh_nuisance)
-
-
-    # signal_log_marginalisationvalues = []
-
     print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
+
+    sigmargresults = []
+
+    for logmass in tqdm(logmassrange, total=logmassrange.shape[0]):
+        
+        priorvals= setup_full_fake_signal_dist(logmass, specfunc=signalspecfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
+        
+        priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
+        
+        priorvals = priorvals.T-priornormalisation
+        
+        
+        tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+        result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
+        
+        sigmargresults.append(result)
+    signal_log_marginalisationvalues = np.array(sigmargresults)
+
             
-    unnormalised_log_posterior = [tempsigmargfunction(logmass) for logmass in logmassrange]
+    unnormalised_log_posterior = []
+
+    for lambdaval in tqdm(lambdarange, total=lambdarange.shape[0]):
+        unnormalised_log_posterior.append([np.sum(np.logaddexp(np.log(lambdaval)+signal_log_marginalisationvalues[logmassindex,:], np.log(1-lambdaval)+bkgmargvals)) for logmassindex in range(len(list(logmassrange)))])
 
 
-    unnormalised_log_posterior = np.array(unnormalised_log_posterior).T
+    unnormalised_log_posterior = np.array(unnormalised_log_posterior)
     print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
 
 

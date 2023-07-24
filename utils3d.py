@@ -60,8 +60,11 @@ log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10er
 log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*200)))
 
 
-# Usefull mesh values particularly when enforcing normalisation on functions
-# log10emesh, offsetmesh = np.meshgrid(log10eaxis, offsetaxis)
+# Axes used to plotting the discrete values
+plotspatialaxis = np.append(spatialaxis-0.5*np.abs(spatialaxis[1]-spatialaxis[0]), spatialaxis[-1]+0.5*np.abs(spatialaxis[1]-spatialaxis[0]))
+plotspatialaxistrue = np.append(spatialaxistrue-0.5*np.abs(spatialaxistrue[1]-spatialaxistrue[0]), spatialaxistrue[-1]+0.5*np.abs(spatialaxistrue[1]-spatialaxistrue[0]))
+plotlog10eaxis = np.append(log10eaxis-0.5*np.abs(log10eaxis[1]-log10eaxis[0]), log10eaxis[-1]+0.5*np.abs(log10eaxis[1]-log10eaxis[0]))
+plotlog10eaxistrue = np.append(log10eaxistrue-0.5*np.abs(log10eaxistrue[1]-log10eaxistrue[0]), log10eaxistrue[-1]+0.5*np.abs(log10eaxistrue[1]-log10eaxistrue[0]))
 
 
 def makelogjacob(log10eaxis=log10eaxis):
@@ -106,11 +109,12 @@ def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
 #     return -0.5*(rad/scale)**2
 
 
-def log_squared_einasto_lb(fov_longitude, fov_latitude):
+def log_squared_einasto_lb(spatialcoords):
+    # fov_longitude, fov_latitude = spatialcoords
     # Using the einasto profile from the paper https://iopscience.iop.org/article/10.1088/1475-7516/2021/01/057/pdf
     # alpha = 0.17, r_s = 20 kpc, rho_s = 0.081 GeV/cm^3
     # distance from galactic centre ~ 8.5 kpc
-    angularoffset = convertlonlat_to_offset([fov_longitude, fov_latitude])
+    angularoffset = convertlonlat_to_offset(spatialcoords.T)
     r = 8.5 * angularoffset
     density = 0.081*np.exp(-(2/0.17)*((r/20)**0.17-1))
     return np.log(density**2)
@@ -204,8 +208,8 @@ def setup_full_fake_signal_dist(logmass, specfunc):
     # numpy vectorisation
     def full_fake_signal_dist(log10eval, lonval, latval):
         log10eval = np.array(log10eval)
-        nicespatialfunc = stats.multivariate_normal(mean=[0,0], cov=[[1.0,0.0],[0.0,1.0]]).logpdf
-        # nicespatialfunc = log_squared_einasto_lb
+        # nicespatialfunc = stats.multivariate_normal(mean=[0,0], cov=[[1.0,0.0],[0.0,1.0]]).logpdf
+        nicespatialfunc = log_squared_einasto_lb
         if log10eval.ndim>1:
             spectralvals = np.squeeze(specfunc(logmass, log10eval[:,0, 0]))
             lonmesh, latmesh = np.meshgrid(lonval[0,:,0], latval[0,0,:])
@@ -271,20 +275,12 @@ def calcrirfindices(datatuple):
     return [log10eindex, longitude_index, latitude_index]
 
 
-# log10emeshtrue, offsetmeshtrue = np.meshgrid(log10eaxistrue, spatialaxistrue)
-
-# def evaluateformass(logmass, irfindexlist, specfunc, edispmatrix, psfmatrix, lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance):
-#     priorvals= setup_full_fake_signal_dist(logmass, specfunc=specfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
+# Slower version of the marginalisation function as it only takes in
+def marginalisenuisance(irfindices, prior, edispmatrix, psfmatrix):
+    # It is presumed that the prior is normalised
+    signalmarginalisationvalues = special.logsumexp(logjacobtrue+prior+edispmatrix[:,:,:,irfindices[0]].T+psfmatrix[:,:,:,irfindices[1],irfindices[2]].T)
     
-#     priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
-    
-#     priorvals = priorvals.T-priornormalisation
-        
-#     signalmarginalisationvalues = special.logsumexp(logjacobtrue+priorvals+edispmatrix[:,:,:,irfindexlist[:,0]].T+psfmatrix[:,:,:,irfindexlist[:,1],irfindexlist[:,2]].T, axis=(1,2,3))
-    
-#     print(signalmarginalisationvalues.shape)
-        
-#     return signalmarginalisationvalues
+    return signalmarginalisationvalues
 
 
 def evaluateformass(logmass, lambdarange, bkgmargvals, irfindexlist, specfunc, edispmatrix, psfmatrix, lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance):

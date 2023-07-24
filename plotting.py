@@ -131,9 +131,9 @@ if True:
         ax[0,0].axvline(truelogmass, ls='--', color="tab:orange")
 
 
-        if min(mean - logmasspercentiles)>log10eaxistrue[1]-log10eaxistrue[0]:
-            for logetrueval in log10eaxistrue:
-                ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
+        
+        for logetrueval in log10eaxis:
+            ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
         ax[0,0].set_ylim([0, None])
         ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
 
@@ -183,5 +183,5 @@ if True:
         ax[1,1].set_ylim([0, None])
 
 
-        plt.savefig(time.strftime(f"Figures/TestFigures/{totalevents}events_lm{truelogmass}_l{truelambda}_%m%d_%H%M.pdf"))
+        plt.savefig(time.strftime(f"{stemdirectory}/{totalevents}events_lm{truelogmass}_l{truelambda}_%m%d_%H%M.pdf"))
         plt.show()

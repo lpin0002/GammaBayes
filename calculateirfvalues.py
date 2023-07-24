@@ -17,7 +17,7 @@ if __name__=="__main__":
     try:
         numcores = int(sys.argv[2])
     except:
-        numcores = 10
+        numcores = 8
         
     try:
         calcirfmatrices = int(sys.argv[3])
