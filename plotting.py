@@ -144,6 +144,7 @@ if True:
         # Lower left plot
         # ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(normalisedlogposterior).T, cmap='Blues')
         ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(log_posterior))
+        ax[1,0].grid(False)
         ax[1,0].axvline(truelogmass, c='tab:orange')
         ax[1,0].axhline(truelambda, c='tab:orange')
         ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
