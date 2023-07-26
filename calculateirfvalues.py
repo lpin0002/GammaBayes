@@ -20,22 +20,27 @@ if __name__=="__main__":
         raise Exception("Run number is not specified")
     
     try:
-        nbinslogmass = int(sys.argv[3])
+        totalnumberofruns = int(sys.argv[3])
+    except:
+        totalnumberofruns = 1
+    
+    try:
+        nbinslogmass = int(sys.argv[4])
     except:
         nbinslogmass = 51
 
     try:
-        nbinslambda = int(sys.argv[4])
+        nbinslambda = int(sys.argv[5])
     except:
-        nbinslambda = 81
+        nbinslambda = 321
     
     try:
-        numcores = int(sys.argv[5])
+        numcores = int(sys.argv[6])
     except:
         numcores = 8
         
     try:
-        calcirfmatrices = int(sys.argv[6])
+        calcirfmatrices = int(sys.argv[7])
     except:
         calcirfmatrices = 0
     
@@ -156,7 +161,7 @@ if __name__=="__main__":
 
 
 
-    nsig = int(round(truelambda*Nsamples))
+    nsig = int(round(truelambda*Nsamples*totalnumberofruns))
 
 
     # Generating the range of log mass values to be tested
@@ -174,7 +179,7 @@ if __name__=="__main__":
 
 
     # Generating the range of lambda values to be tested
-    lambdawindowwidth      = 5/np.sqrt(Nsamples)
+    lambdawindowwidth      = 5/np.sqrt(Nsamples*totalnumberofruns)
     
     lambdalowerbound       = truelambda-lambdawindowwidth
     lambdaupperbound       = truelambda+lambdawindowwidth
