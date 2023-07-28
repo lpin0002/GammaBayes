@@ -1,5 +1,5 @@
 from utils3d import *
-from BFCalc.createspectragrids import darkmatterdoubleinput
+from BFCalc.createspectragrids import darkmatterdoubleinput, energymassinputspectralfunc
 import numpy as np
 from scipy import special
 from tqdm import tqdm
@@ -7,6 +7,19 @@ import os, sys, time, functools
 from multiprocessing import Pool, freeze_support
 sys.path.append("BFCalc")
 
+
+def sigmarg(logmass, specfunc, irfindexlist, edispmatrix, psfmatrix, logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance, logjacobtrue=logjacobtrue):
+    priorvals= setup_full_fake_signal_dist(logmass, specfunc=specfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
+        
+    priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
+    
+    priorvals = priorvals.T-priornormalisation
+    
+    
+    tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+    result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
+    
+    return result
 
 if __name__=="__main__":
     
@@ -27,25 +40,27 @@ if __name__=="__main__":
     try:
         nbinslogmass = int(sys.argv[4])
     except:
-        nbinslogmass = 51
+        nbinslogmass = 101
 
     try:
         nbinslambda = int(sys.argv[5])
     except:
-        nbinslambda = 321
+        nbinslambda = 161
     
     try:
         numcores = int(sys.argv[6])
     except:
-        numcores = 8
+        numcores = 1
         
     try:
         calcirfmatrices = int(sys.argv[7])
     except:
         calcirfmatrices = 0
+    np.seterr(divide = 'ignore')
+
     
     # Setting up axis values so it doesn't re-run in any parallelisation setups
-    signalspecfunc = darkmatterdoubleinput
+    signalspecfunc = energymassinputspectralfunc
 
     lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
 
@@ -68,6 +83,7 @@ if __name__=="__main__":
     Nsamples = int(Nsamples)
     
     logbkgpriorvalues = np.load(f"{rundirectory}/logbackgroundprior.npy")
+    
 
     params              = np.load(f"{rundirectory}/params.npy")
     
@@ -82,17 +98,20 @@ if __name__=="__main__":
     measured_lat = list(signal_lat_measured)+list(bkg_lat_measured)
 
     if calcirfmatrices:
+        
+        print("Setting up point spread function matrix...")
         lontrue_mesh_psf, logetrue_mesh_psf, lattrue_mesh_psf, lonrecon_mesh_psf, latrecon_mesh_psf = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, spatialaxis, spatialaxis)
         psfmatrix = psf(np.array([lonrecon_mesh_psf.flatten(), latrecon_mesh_psf.flatten()]), np.array([lontrue_mesh_psf.flatten(), lattrue_mesh_psf.flatten()]), logetrue_mesh_psf.flatten()).reshape(logetrue_mesh_psf.shape)
-        psfnormalisation  = special.logsumexp(psfmatrix, axis=(-2,-1))
-        
         
 
-            
+        print("Setting up energy dispersion matrix...")
         lontrue_mesh_edisp, logetrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, log10eaxis)
         edispmatrix = edisp(logerecon_mesh_edisp.flatten(), logetrue_mesh_edisp.flatten(), np.array([lontrue_mesh_edisp.flatten(), lattrue_mesh_edisp.flatten()])).reshape(logetrue_mesh_edisp.shape)
-        edispnormalisation  = special.logsumexp(edispmatrix+logjacob, axis=-1)
 
+
+        print("Normalising matrices...")
+        psfnormalisation  = special.logsumexp(psfmatrix, axis=(-2,-1))
+        edispnormalisation  = special.logsumexp(edispmatrix+logjacob, axis=-1)
 
         edispnormalisation[edispnormalisation==-np.inf] = 0
         psfnormalisation[psfnormalisation==-np.inf] = 0   
@@ -107,13 +126,15 @@ if __name__=="__main__":
         np.save("psfmatrix.npy", psfmatrix)
         np.save("edispnormalisation.npy", edispnormalisation)
         np.save("psfnormalisation.npy", psfnormalisation)
+        
+        print("Done setting up matrices and saved!")
     else:
         edispmatrix = np.load("edispmatrix.npy")
         psfmatrix = np.load("psfmatrix.npy")
 
     irfindexlist = []
 
-    
+    print("Calculating the irf matrix slices for the measured events...")
     with Pool(numcores) as pool: 
             
         irfindexlist =  pool.map(calcrirfindices, tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values"))
@@ -121,7 +142,7 @@ if __name__=="__main__":
         pool.close() 
     
     irfindexlist = np.array(irfindexlist)
-    
+    print("Done with irf calculations\n")
     
     
     # Loading in values
@@ -165,7 +186,7 @@ if __name__=="__main__":
 
 
     # Generating the range of log mass values to be tested
-    logmasswindowwidth      = 5/np.sqrt(nsig)
+    logmasswindowwidth      = 3/np.sqrt(nsig)
 
     logmasslowerbound       = truelogmassval-logmasswindowwidth
     logmassupperbound       = truelogmassval+logmasswindowwidth
@@ -179,7 +200,7 @@ if __name__=="__main__":
 
 
     # Generating the range of lambda values to be tested
-    lambdawindowwidth      = 5/np.sqrt(Nsamples*totalnumberofruns)
+    lambdawindowwidth      = 3/np.sqrt(Nsamples*totalnumberofruns)
     
     lambdalowerbound       = truelambda-lambdawindowwidth
     lambdaupperbound       = truelambda+lambdawindowwidth
@@ -196,12 +217,16 @@ if __name__=="__main__":
     ##########################################################################################################################################################################
     ##########################################################################################################################################################################
     # Nuisance Parameter Marginalisation with Background Prior
-    
-    bkgpriorarray  = bkgdist(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
+    print("Calculating the marginalisation with the background model...")
+
+    bkgpriorarray  = logbkgpriorvalues
     bkgpriorarray = bkgpriorarray.T - special.logsumexp(bkgpriorarray.T+logjacobtrue)
     # print(special.logsumexp(bkgpriorarray.T+logjacobtrue).shape)
 
-    bkgmargvals = special.logsumexp(logjacobtrue+bkgpriorarray+edispmatrix[:,:,:,irfindexlist[:,0]].T+psfmatrix[:,:,:,irfindexlist[:,1],irfindexlist[:,2]].T, axis=(1,2,3))
+    bkgmargvals = []
+    for irfmatrixcoord in tqdm(irfindexlist, ncols=100):
+        bkgmargvals.append(special.logsumexp(logjacobtrue+bkgpriorarray+edispmatrix[:,:,:,irfmatrixcoord[0]].T+psfmatrix[:,:,:,irfmatrixcoord[1],irfmatrixcoord[2]].T))
+    
     bkgmargvals = np.array(bkgmargvals)
     
     print(f"Shape of array containing the results of marginalising the nuisance parameters with the background prior: {bkgmargvals.shape}")
@@ -211,24 +236,33 @@ if __name__=="__main__":
     # Nuisance Parameter Marginalisation with Signal Prior
     
     
-    
+    print("\nCalculating the marginalisation with the signal model...")
+
     print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
 
     sigmargresults = []
 
-    for logmass in tqdm(logmassrange, total=logmassrange.shape[0]):
+    # for logmass in tqdm(logmassrange, total=logmassrange.shape[0], ncols=100):
         
-        priorvals= setup_full_fake_signal_dist(logmass, specfunc=signalspecfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
+    #     priorvals= setup_full_fake_signal_dist(logmass, specfunc=signalspecfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
         
-        priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
+    #     priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
         
-        priorvals = priorvals.T-priornormalisation
+    #     priorvals = priorvals.T-priornormalisation
         
         
-        tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
-        result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
+    #     tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+    #     result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
         
-        sigmargresults.append(result)
+    #     sigmargresults.append(result)
+    
+    sigmarg_partial = functools.partial(sigmarg, specfunc=signalspecfunc, irfindexlist=irfindexlist, edispmatrix=edispmatrix, psfmatrix=psfmatrix,
+                                        logetrue_mesh_nuisance=logetrue_mesh_nuisance, lontrue_mesh_nuisance=lontrue_mesh_nuisance, 
+                                        lattrue_mesh_nuisance=lattrue_mesh_nuisance, logjacobtrue=logjacobtrue)
+    with Pool(numcores) as pool:
+        sigmargresults = pool.map(sigmarg_partial, tqdm(logmassrange, ncols=100, total=logmassrange.shape[0]))
+    print(time.strftime("Current time is %d of %b, at %H:%M:%S"))
+    print("Finished signal marginalisation. \nNow converting to numpy arrays and saving the result...")
     signal_log_marginalisationvalues = np.array(sigmargresults)
 
 

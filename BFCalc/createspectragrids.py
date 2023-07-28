@@ -10,11 +10,10 @@ from gammapy.astro.darkmatter import (
 from astropy.table import Table
 # import matplotlib.pyplot as plt
 from scipy import special, interpolate
-import matplotlib.pyplot as plt
 import sys
 
 sys.path.append("..")
-
+np.seterr(divide = 'ignore')
 
 channel_registry = {
     "eL": "eL",

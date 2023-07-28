@@ -1,4 +1,4 @@
-from BFCalc.createspectragrids import darkmatterdoubleinput
+from BFCalc.createspectragrids import darkmatterdoubleinput, energymassinputspectralfunc
 from utils3d import *
 import numpy as np
 from scipy import special
@@ -58,7 +58,7 @@ if __name__=="__main__":
     lonmeshrecon, latmeshrecon = np.meshgrid(spatialaxis, spatialaxis)
 
     logjacobtrue = makelogjacob(log10eaxistrue)   
-    
+    astrophysicalbackground = np.load("unnormalised_astrophysicalbackground.npy")
     
     Nsamples=nevents
 
@@ -76,14 +76,14 @@ if __name__=="__main__":
     truelogmassval = truelogmass
     
     
-    logbkgpriorvalues = np.squeeze(bkgdist(log10emeshtrue, lonmeshtrue,latmeshtrue))
+    logbkgpriorvalues = np.squeeze(np.squeeze(bkgdist(log10emeshtrue, lonmeshtrue,latmeshtrue))+np.log(astrophysicalbackground))
 
     logbkgpriorvalues = logbkgpriorvalues - special.logsumexp(logbkgpriorvalues.T+logjacobtrue)
 
     print(f"Background prior array shape: {logbkgpriorvalues.shape}")
     
     
-    signalspecfunc = darkmatterdoubleinput
+    signalspecfunc = energymassinputspectralfunc
     
     signalfunc = setup_full_fake_signal_dist(truelogmassval, signalspecfunc)
     

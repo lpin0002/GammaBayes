@@ -8,7 +8,7 @@ from gammapy.irf import load_cta_irfs
 from astropy import units as u
 import dynesty
 import gc
-
+np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
@@ -49,15 +49,15 @@ spatialbound            = 3.5
 
 
 
-spatialaxis              = np.arange(-spatialbound,spatialbound, 0.4)
-spatialaxistrue          = np.arange(-spatialbound,spatialbound, 0.4)
+spatialaxis              = np.linspace(-spatialbound, spatialbound, int(round(2*spatialbound/0.4))+1)
+spatialaxistrue          = np.linspace(-spatialbound, spatialbound, int(round(2*spatialbound/0.2))+1)
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -0.8
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
-log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*5)))
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*200)))
+log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*10))+1)
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
 
 
 # Axes used to plotting the discrete values

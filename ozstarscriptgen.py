@@ -47,13 +47,14 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores,
 #SBATCH --output=data/LatestFolder/SR{logmass}_{ltrue}_{runnum}_{int(numberofruns*singlerunevents)}.txt
 #
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task={numcores}
 #SBATCH --time={numsimhour}:{numsimminute}:00
 #SBATCH --mem-per-cpu={simmemory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue}"""
+srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue}
+srun python3 calculateirfvalues.py {identifier} {runnum} {numberofruns} {numlogmass} {numlambda} {numcores}"""
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
         if immediate_run:
@@ -65,14 +66,13 @@ srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {lt
 #SBATCH --output=data/LatestFolder/CR{logmass}_{ltrue}_{int(numberofruns*singlerunevents)}.txt
 #
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task={numcores}
+#SBATCH --cpus-per-task=1
 #SBATCH --time={numanalysehour}:{numanalyseminute}:00
-#SBATCH --mem-per-cpu={analysememory}
+#SBATCH --mem-per-cpu=1000
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 calculateirfvalues.py {identifier} {numcores}
-srun python3 gridsearch.py {identifier} {numlogmass} {numlambda} {numcores}"""
+srun python3 gridsearch.py {identifier}"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
         f.write(str)
