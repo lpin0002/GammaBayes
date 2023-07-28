@@ -100,7 +100,7 @@ if __name__=="__main__":
     try:
         numlogmass = int(sys.argv[11])
     except:
-        numlogmass = 161
+        numlogmass = 101
         
     try:
         numlambda = int(sys.argv[12])

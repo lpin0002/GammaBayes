@@ -76,7 +76,7 @@ if __name__=="__main__":
     truelogmassval = truelogmass
     
     
-    logbkgpriorvalues = np.squeeze(np.squeeze(bkgdist(log10emeshtrue, lonmeshtrue,latmeshtrue))+np.log(astrophysicalbackground))
+    logbkgpriorvalues = np.squeeze(np.squeeze(bkgdist(log10emeshtrue, lonmeshtrue,latmeshtrue)))#+np.log(astrophysicalbackground))
 
     logbkgpriorvalues = logbkgpriorvalues - special.logsumexp(logbkgpriorvalues.T+logjacobtrue)
 
