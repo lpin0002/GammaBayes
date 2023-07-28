@@ -7,7 +7,7 @@ data/nestedsamplingtest8*
 *_direct*
 *bkgresult*
 *propresult*
-*__pycache__*
+**__pycache__**
 *irfvalues.npy
 *irfproblist*
 *edispmatrix*

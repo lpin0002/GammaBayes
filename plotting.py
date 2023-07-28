@@ -186,3 +186,31 @@ if True:
 
         plt.savefig(time.strftime(f"{stemdirectory}/{totalevents}events_lm{truelogmass}_l{truelambda}_%m%d_%H%M.pdf"))
         plt.show()
+        
+    if showsamples:
+        
+        signal_log10e_measured,  signal_lon_measured, signal_lat_measured = np.load(f"{stemdirectory}/1/meassigsamples.npy")
+        bkg_log10e_measured, bkg_lon_measured, bkg_lat_measured = np.load(f"{stemdirectory}/1/measbkgsamples.npy")
+        siglogevals, siglonvals, siglatvals = np.load(f"{stemdirectory}/1/truesigsamples.npy")
+        bkglogevals, bkglonvals, bkglatvals= np.load(f"{stemdirectory}/1/truebkgsamples.npy")
+        
+        
+        plt.figure()
+        plt.hist2d(bkglatvals, bkglonvals, bins=[plotspatialaxistrue, plotspatialaxistrue])
+        plt.show()
+        
+        fig, ax = plt.subplots(1,2)
+        
+        
+        ax[0].hist(bkglatvals, bins=plotspatialaxistrue)
+        ax[1].hist(bkglonvals, bins=plotspatialaxistrue)
+
+        plt.show()
+        
+        fig, ax = plt.subplots(1,2)
+        
+        
+        ax[0].hist(bkg_lat_measured, bins=plotspatialaxis)
+        ax[1].hist(bkg_lon_measured, bins=plotspatialaxis)
+
+        plt.show()
