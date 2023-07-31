@@ -62,7 +62,7 @@ if __name__=="__main__":
     # Setting up axis values so it doesn't re-run in any parallelisation setups
     signalspecfunc = energymassinputspectralfunc
 
-    lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue)
+    lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(longitudeaxistrue, log10eaxistrue, latitudeaxistrue)
 
     
     
@@ -97,50 +97,21 @@ if __name__=="__main__":
     measured_lon = list(signal_lon_measured)+list(bkg_lon_measured)
     measured_lat = list(signal_lat_measured)+list(bkg_lat_measured)
 
-    if calcirfmatrices:
-        
-        print("Setting up point spread function matrix...")
-        lontrue_mesh_psf, logetrue_mesh_psf, lattrue_mesh_psf, lonrecon_mesh_psf, latrecon_mesh_psf = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, spatialaxis, spatialaxis)
-        psfmatrix = psf(np.array([lonrecon_mesh_psf.flatten(), latrecon_mesh_psf.flatten()]), np.array([lontrue_mesh_psf.flatten(), lattrue_mesh_psf.flatten()]), logetrue_mesh_psf.flatten()).reshape(logetrue_mesh_psf.shape)
-        
-
-        print("Setting up energy dispersion matrix...")
-        lontrue_mesh_edisp, logetrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(spatialaxistrue, log10eaxistrue, spatialaxistrue, log10eaxis)
-        edispmatrix = edisp(logerecon_mesh_edisp.flatten(), logetrue_mesh_edisp.flatten(), np.array([lontrue_mesh_edisp.flatten(), lattrue_mesh_edisp.flatten()])).reshape(logetrue_mesh_edisp.shape)
-
-
-        print("Normalising matrices...")
-        psfnormalisation  = special.logsumexp(psfmatrix, axis=(-2,-1))
-        edispnormalisation  = special.logsumexp(edispmatrix+logjacob, axis=-1)
-
-        edispnormalisation[edispnormalisation==-np.inf] = 0
-        psfnormalisation[psfnormalisation==-np.inf] = 0   
-        
-        
-        
-        edispmatrix = edispmatrix-edispnormalisation[:,:,:,np.newaxis]
-        psfmatrix = psfmatrix-psfnormalisation[:,:,:,np.newaxis, np.newaxis]
-        
-        
-        np.save("edispmatrix.npy", edispmatrix)
-        np.save("psfmatrix.npy", psfmatrix)
-        np.save("edispnormalisation.npy", edispnormalisation)
-        np.save("psfnormalisation.npy", psfnormalisation)
-        
-        print("Done setting up matrices and saved!")
-    else:
-        edispmatrix = np.load("edispmatrix.npy")
-        psfmatrix = np.load("psfmatrix.npy")
+    
+    # If these files do not exist run the setup.py file
+    edispmatrix = np.load("edispmatrix.npy")
+    psfmatrix = np.load("psfmatrix.npy")
 
     irfindexlist = []
 
-    print("Calculating the irf matrix slices for the measured events...")
+    
     with Pool(numcores) as pool: 
             
-        irfindexlist =  pool.map(calcrirfindices, tqdm(zip(measured_log10e, np.array([measured_lon, measured_lat]).T), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values"))
+        for result in tqdm(pool.imap(calcrirfindices, zip(measured_log10e, np.array([measured_lon, measured_lat]).T)), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values..."):
+                irfindexlist.append(result)
 
         pool.close() 
-    
+        
     irfindexlist = np.array(irfindexlist)
     print("Done with irf calculations\n")
     

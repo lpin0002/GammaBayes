@@ -196,21 +196,7 @@ if True:
         
         
         plt.figure()
-        plt.hist2d(bkglatvals, bkglonvals, bins=[plotspatialaxistrue, plotspatialaxistrue])
+        plt.hist2d(bkglonvals, bkglatvals, bins=[plotlongitudeaxistrue, plotlatitudeaxistrue])
         plt.show()
         
-        fig, ax = plt.subplots(1,2)
         
-        
-        ax[0].hist(bkglatvals, bins=plotspatialaxistrue)
-        ax[1].hist(bkglonvals, bins=plotspatialaxistrue)
-
-        plt.show()
-        
-        fig, ax = plt.subplots(1,2)
-        
-        
-        ax[0].hist(bkg_lat_measured, bins=plotspatialaxis)
-        ax[1].hist(bkg_lon_measured, bins=plotspatialaxis)
-
-        plt.show()

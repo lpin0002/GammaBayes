@@ -45,12 +45,17 @@ offsetaxis = psf3d.axes['rad'].center.value
 bkgfull2d = bkgfull.to_2d()
 bkgfull2doffsetaxis = bkgfull2d.axes['offset'].center.value
 offsetaxisresolution = bkgfull2doffsetaxis[1]-bkgfull2doffsetaxis[0] # Comes out to 0.2
-spatialbound            = 3.5
+latbound            = 3.
+lonbound            = 3.5
 
 
 
-spatialaxis              = np.linspace(-spatialbound, spatialbound, int(round(2*spatialbound/0.4))+1)
-spatialaxistrue          = np.linspace(-spatialbound, spatialbound, int(round(2*spatialbound/0.2))+1)
+latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4))+1)
+latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2))+1)
+
+longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))+1) 
+longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))+1) 
+
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -0.8
@@ -61,8 +66,11 @@ log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10er
 
 
 # Axes used to plotting the discrete values
-plotspatialaxis = np.append(spatialaxis-0.5*np.abs(spatialaxis[1]-spatialaxis[0]), spatialaxis[-1]+0.5*np.abs(spatialaxis[1]-spatialaxis[0]))
-plotspatialaxistrue = np.append(spatialaxistrue-0.5*np.abs(spatialaxistrue[1]-spatialaxistrue[0]), spatialaxistrue[-1]+0.5*np.abs(spatialaxistrue[1]-spatialaxistrue[0]))
+plotlongitudeaxis = np.append(longitudeaxis-0.5*np.abs(longitudeaxis[1]-longitudeaxis[0]), longitudeaxis[-1]+0.5*np.abs(longitudeaxis[1]-longitudeaxis[0]))
+plotlongitudeaxistrue = np.append(longitudeaxistrue-0.5*np.abs(longitudeaxistrue[1]-longitudeaxistrue[0]), longitudeaxistrue[-1]+0.5*np.abs(longitudeaxistrue[1]-longitudeaxistrue[0]))
+plotlatitudeaxis = np.append(latitudeaxis-0.5*np.abs(latitudeaxis[1]-latitudeaxis[0]), latitudeaxis[-1]+0.5*np.abs(latitudeaxis[1]-latitudeaxis[0]))
+plotlatitudeaxistrue = np.append(latitudeaxistrue-0.5*np.abs(latitudeaxistrue[1]-latitudeaxistrue[0]), latitudeaxistrue[-1]+0.5*np.abs(latitudeaxistrue[1]-latitudeaxistrue[0]))
+
 plotlog10eaxis = np.append(log10eaxis-0.5*np.abs(log10eaxis[1]-log10eaxis[0]), log10eaxis[-1]+0.5*np.abs(log10eaxis[1]-log10eaxis[0]))
 plotlog10eaxistrue = np.append(log10eaxistrue-0.5*np.abs(log10eaxistrue[1]-log10eaxistrue[0]), log10eaxistrue[-1]+0.5*np.abs(log10eaxistrue[1]-log10eaxistrue[0]))
 
@@ -212,7 +220,7 @@ def setup_full_fake_signal_dist(logmass, specfunc):
         nicespatialfunc = log_squared_einasto_lb
         if log10eval.ndim>1:
             spectralvals = np.squeeze(specfunc(logmass, log10eval[:,0, 0]))
-            lonmesh, latmesh = np.meshgrid(lonval[0,:,0], latval[0,0,:])
+            latmesh, lonmesh = np.meshgrid(latval[0,0,:], lonval[0,:,0])
             spatialvals = np.squeeze(nicespatialfunc(np.array([lonmesh.flatten(), latmesh.flatten()]).T).reshape(lonmesh.shape))
             logpdfvalues = spectralvals[:, np.newaxis,np.newaxis]+spatialvals[np.newaxis, :,:]
             return logpdfvalues
@@ -268,8 +276,8 @@ def calcrirfindices(datatuple):
     logeval, coord = datatuple
     
     log10eindex = np.squeeze(np.where(log10eaxis==logeval))
-    longitude_index = np.squeeze(np.where(spatialaxis==coord[0]))
-    latitude_index = np.squeeze(np.where(spatialaxis==coord[1]))
+    longitude_index = np.squeeze(np.where(longitudeaxis==coord[0]))
+    latitude_index = np.squeeze(np.where(latitudeaxis==coord[1]))
 
     
     return [log10eindex, longitude_index, latitude_index]
@@ -349,4 +357,17 @@ def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='white',fac
     ellipse.set_transform(transf + ax.transData)
     return ax.add_patch(ellipse)
 
+import functools
 
+def sigmarg(logmass, specfunc, irfindexlist, edispmatrix, psfmatrix, logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance, logjacobtrue=logjacobtrue):
+    priorvals= setup_full_fake_signal_dist(logmass, specfunc=specfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
+        
+    priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
+    
+    priorvals = priorvals.T-priornormalisation
+    
+    
+    tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+    result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
+    
+    return result
