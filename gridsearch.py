@@ -16,7 +16,12 @@ if __name__=="__main__":
         raise Exception("You have not input a valid identifier. Please review the name of the stemfolder for your runs.")
     
     try:
-        numcores = int(sys.argv[2])
+        nbinslambda = int(sys.argv[2])
+    except:
+        nbinslambda = 101
+    
+    try:
+        numcores = int(sys.argv[3])
     except:
         numcores = 8
         
@@ -38,11 +43,14 @@ if __name__=="__main__":
     signal_log_marginalisationvalues = np.load(rundirs[0]+'/log_signal_marginalisations.npy')
     bkg_log_marginalisationvalues = np.load(rundirs[0]+'/log_background_marginalisations.npy')
     
-    lambdarange = np.load(rundirs[0]+'/lambdarange_direct.npy')
     logmassrange = np.load(rundirs[0]+'/logmassrange_direct.npy')
 
     
-    totalevents = int(np.load(f"{rundirs[0]}/params.npy")[1,1])
+    truelambda, totalevents, truelogmass = np.load(f"{rundirs[0]}/params.npy")[1]
+    truelambda = float(truelambda)
+    totalevents = int(totalevents)
+    truelogmass = float(truelogmass)
+    
     eventaxis = np.where(np.array(list(signal_log_marginalisationvalues.shape))==totalevents)[0][0]
     print('event axis: ', eventaxis, list(signal_log_marginalisationvalues.shape), totalevents)
     
@@ -58,12 +66,30 @@ if __name__=="__main__":
         bkg_log_marginalisationvalues = np.append(bkg_log_marginalisationvalues, bkg_log_marginalisationvalues_singlerun)
     
     
+    
+    lambdawindowwidth      = 4/np.sqrt(totalevents)
+
+    lambdalowerbound       = truelambda-lambdawindowwidth
+    lambdaupperbound       = truelambda+lambdawindowwidth
+
+    if lambdalowerbound<0:
+        lambdalowerbound = 0
+    if lambdaupperbound>1:
+        lambdaupperbound = 1
+
+    lambdarange            = np.linspace(lambdalowerbound, lambdaupperbound, nbinslambda) 
+    
+    
+    # SGSO southern gamma ray survey observatory
     firstrundirectory = rundirs[0]
-            
+
+
     unnormalised_log_posterior = []
 
     for lambdaval in tqdm(lambdarange, total=lambdarange.shape[0]):
         unnormalised_log_posterior.append([np.sum(np.logaddexp(np.log(lambdaval)+signal_log_marginalisationvalues[logmassindex,:], np.log(1-lambdaval)+bkg_log_marginalisationvalues)) for logmassindex in range(len(list(logmassrange)))])
+
+    unnormalised_log_posterior = np.array(unnormalised_log_posterior)-special.logsumexp(unnormalised_log_posterior)
 
 
     unnormalised_log_posterior = np.array(unnormalised_log_posterior)
@@ -78,10 +104,3 @@ if __name__=="__main__":
     np.save(f'{stemdirectory}/lambdarange_direct.npy',lambdarange)
     np.save(f'{stemdirectory}/logmassrange_direct.npy',logmassrange)
     np.save(f'{stemdirectory}/unnormalised_logposterior_direct.npy', unnormalised_log_posterior)
-    
-
-
-
-
-
-
