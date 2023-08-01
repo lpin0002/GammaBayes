@@ -6,7 +6,6 @@ from utils3d import longitudeaxistrue, latitudeaxistrue, log10eaxistrue, logjaco
 from scipy import special
 
 # %matplotlib inline
-from IPython.display import display
 from gammapy.datasets import Datasets, MapDataset
 from gammapy.modeling.models import (
     FoVBackgroundModel,
