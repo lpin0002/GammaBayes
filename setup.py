@@ -93,11 +93,11 @@ print("Constructing geometry which the models will be applied to")
 trueenergyaxis = 10**log10eaxistrue*u.TeV
 
 energy_axis_true = MapAxis.from_nodes(trueenergyaxis, interp='log', name="energy_true")
-
+skyresolution = longitudeaxistrue[1]-longitudeaxistrue[0]
 goodgeom = WcsGeom.create(
     skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
-    binsz=0.2,
-    width=(longitudeaxistrue[-1]-longitudeaxistrue[0]+0.2, latitudeaxistrue[-1]-latitudeaxistrue[0]+0.2),
+    binsz=skyresolution,
+    width=(longitudeaxistrue[-1]-longitudeaxistrue[0]+skyresolution, latitudeaxistrue[-1]-latitudeaxistrue[0]+skyresolution),
     frame="galactic",
     proj="CAR",
     axes=[energy_axis_true],
@@ -204,7 +204,8 @@ aefftable = aefffunc(energymesh, np.sqrt((lonmesh**2)+(latmesh**2)))
 
 combinedplotmapwithaeff = aefftable*combinedplotmap
 combinedplotmapwithaeff = combinedplotmapwithaeff
-topbound=1e100
+
+topbound=1e200
 combinedplotmapwithaeff[combinedplotmapwithaeff>topbound] = topbound
 normalisation = np.sum(combinedplotmapwithaeff.T*10**log10eaxistrue)
 # combinedplotmapwithaeff=combinedplotmapwithaeff/normalisation
