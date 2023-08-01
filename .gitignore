@@ -14,3 +14,5 @@ data/nestedsamplingtest8*
 *psfmatrix*
 *edispnormalisation*
 *psfnormalisation*
+*astrophysicalbackground*
+*logbackgroundprior*

@@ -126,9 +126,16 @@ if __name__=="__main__":
     bkgpriorarray  = logbkgpriorvalues
     bkgpriorarray = bkgpriorarray.T - special.logsumexp(bkgpriorarray.T+logjacobtrue)
     
-    tempsigmargfunc = functools.partial(marginalisenuisance, prior=bkgpriorarray, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
-    bkgmargvals = [tempsigmargfunc(singleeventindices) for singleeventindices in tqdm(irfindexlist, total=irfindexlist.shape[0], 
-                                                                                      desc="Marginalising the events with the background prior")]
+    tempbkgmargfunc = functools.partial(marginalisenuisance, prior=bkgpriorarray, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+    
+    with Pool(numcores) as pool: 
+        
+            
+        bkgmargvals = pool.map(tempbkgmargfunc, tqdm(irfindexlist, total=irfindexlist.shape[0], 
+                           ncols=100, 
+                           desc="Marginalising the events with the background prior."))
+
+        pool.close() 
     bkgmargvals = np.array(bkgmargvals)
     print(f"Shape of the array containing the background marginalised probabilities: {bkgmargvals.shape}")
     
