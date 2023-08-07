@@ -43,8 +43,8 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores,
         #TODO: Adjust time allocation based on number of cores, accuracy and number of events
         str =f"""#!/bin/bash
 #
-#SBATCH --job-name=SR{logmass}|{ltrue}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}
-#SBATCH --output=data/LatestFolder/SR{logmass}_{ltrue}_{runnum}_{int(numberofruns*singlerunevents)}.txt
+#SBATCH --job-name=SR{logmass}|{ltrue}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
+#SBATCH --output=data/LatestFolder/SR{logmass}_{ltrue}_{runnum}_{int(numberofruns*singlerunevents)}_{identifier}.txt
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={numcores}
@@ -62,8 +62,8 @@ srun python3 nuisancemarginalisation.py {identifier} {runnum} {numberofruns} {nu
 
     str =f"""#!/bin/bash
 #
-#SBATCH --job-name=CR{logmass}|{ltrue}|{int(math.log10(numberofruns*singlerunevents))}
-#SBATCH --output=data/LatestFolder/CR{logmass}_{ltrue}_{int(numberofruns*singlerunevents)}.txt
+#SBATCH --job-name=CR{logmass}|{ltrue}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
+#SBATCH --output=data/LatestFolder/CR{logmass}_{ltrue}_{int(numberofruns*singlerunevents)}_{identifier}.txt
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
