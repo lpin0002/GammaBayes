@@ -128,14 +128,13 @@ if __name__=="__main__":
     
     tempbkgmargfunc = functools.partial(marginalisenuisance, prior=bkgpriorarray, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
     
-    bkgmargvals = []
+    # bkgmargvals = []
     with Pool(numcores) as pool: 
         
             
-        for result in pool.imap(tempbkgmargfunc, tqdm(irfindexlist, total=irfindexlist.shape[0], 
+        bkgmargvals = pool.map(tempbkgmargfunc, tqdm(irfindexlist, total=irfindexlist.shape[0], 
                            ncols=100, 
-                           desc="Marginalising the events with the background prior.")):
-            bkgmargvals.append(result)
+                           desc="Marginalising the events with the background prior."))
 
         pool.close() 
     bkgmargvals = np.array(bkgmargvals)
