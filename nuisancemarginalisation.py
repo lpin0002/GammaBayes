@@ -128,12 +128,14 @@ if __name__=="__main__":
     
     tempbkgmargfunc = functools.partial(marginalisenuisance, prior=bkgpriorarray, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
     
+    bkgmargvals = []
     with Pool(numcores) as pool: 
         
             
-        bkgmargvals = pool.map(tempbkgmargfunc, tqdm(irfindexlist, total=irfindexlist.shape[0], 
+        for result in pool.imap(tempbkgmargfunc, tqdm(irfindexlist, total=irfindexlist.shape[0], 
                            ncols=100, 
-                           desc="Marginalising the events with the background prior."))
+                           desc="Marginalising the events with the background prior.")):
+            bkgmargvals.append(result)
 
         pool.close() 
     bkgmargvals = np.array(bkgmargvals)
@@ -168,9 +170,11 @@ if __name__=="__main__":
                                             logetrue_mesh_nuisance=logetrue_mesh_nuisance, lontrue_mesh_nuisance=lontrue_mesh_nuisance, 
                                             lattrue_mesh_nuisance=lattrue_mesh_nuisance, logjacobtrue=logjacobtrue)
     print(time.strftime("The time before signal marginalisation is %d of %b, at %H:%M:%S"))
-
+    sigmargresults = []
     with Pool(numcores) as pool:
-        sigmargresults = pool.map(sigmarg_partial, tqdm(logmassrange, ncols=100, total=logmassrange.shape[0]))
+        for result in pool.imap(sigmarg_partial, tqdm(logmassrange, ncols=100, total=logmassrange.shape[0])):
+            sigmargresults.append(result)
+            
     print(time.strftime("The time after signal marginalisation is %d of %b, at %H:%M:%S"))
     print("Finished signal marginalisation. \nNow converting to numpy arrays and saving the result...")
     
