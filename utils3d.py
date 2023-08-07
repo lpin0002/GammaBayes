@@ -51,18 +51,18 @@ lonbound            = 3.5
 
 
 latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4))+1)
-latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.1))+1)
+latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2))+1)
 
 longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))+1) 
-longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.1))+1) 
+longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))+1) 
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -0.8
 log10eend               = 1.8
 log10erange             = log10eend - log10estart
-log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*20))+1)
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*400))+1)
+log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*800))+1)
 
 
 # Axes used to plotting the discrete values
