@@ -68,7 +68,7 @@ srun python3 nuisancemarginalisation.py {identifier} {runnum} {numberofruns} {nu
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --time={numanalysehour}:{numanalyseminute}:00
-#SBATCH --mem-per-cpu=1000
+#SBATCH --mem-per-cpu={analysememory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
