@@ -113,7 +113,7 @@ if __name__=="__main__":
     logsigbinnedprior = (logsigpriorvalues.T+logjacobtrue).T
     flattened_logsigbinnedprior = logsigbinnedprior.flatten()
 
-
+    
     logbkgbinnedprior = (logbkgpriorvalues.T+logjacobtrue).T
     flattened_logbkgbinnedprior = logbkgbinnedprior.flatten()
     
@@ -123,10 +123,15 @@ if __name__=="__main__":
     
     # Simulating the signal events
     print("\n\nSIGNAL\n\n")
-    sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_logsigbinnedprior, Nsamples=nsig),logsigbinnedprior.shape)
-    siglogevals = log10eaxistrue[sigresultindices[0]]
-    siglonvals = longitudeaxistrue[sigresultindices[1]]
-    siglatvals = latitudeaxistrue[sigresultindices[2]]
+    if truelambda!=0:
+        sigresultindices = np.unravel_index(inverse_transform_sampling(flattened_logsigbinnedprior, Nsamples=nsig),logsigbinnedprior.shape)
+        siglogevals = log10eaxistrue[sigresultindices[0]]
+        siglonvals = longitudeaxistrue[sigresultindices[1]]
+        siglatvals = latitudeaxistrue[sigresultindices[2]]
+    else:
+        siglogevals = np.asarray([])
+        siglonvals = np.asarray([])
+        siglatvals = np.asarray([])
     
     
     # Simulating the background events
@@ -140,21 +145,29 @@ if __name__=="__main__":
     ### Pseudo-Measured Event Simulation
     print("\n\nPseudo-Measured Event Simulation\n\n")
 
-    ### Simulating measured signal events
     
-    # Simulating the measured energy signal events with noise added via the energy dispersion
-    print("\n\nSIGNAL ENERGY\n\n")
+    if truelambda!=0:
+        ### Simulating measured signal events
+    
+        # Simulating the measured energy signal events with noise added via the energy dispersion
+        print("\n\nSIGNAL ENERGY\n\n")
+        signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])]
 
-    signal_log10e_measured = log10eaxis[np.squeeze([inverse_transform_sampling(edisp(log10eaxis, logeval, coord)+logjacob, Nsamples=1) for logeval,coord  in tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])]
-    
-    
-    # Simulating the measured spatial signal events with noise added via the point spread function
-    print("\n\nSIGNAL SPATIAL\n\n")
+        # Simulating the measured spatial signal events with noise added via the point spread function
+        print("\n\nSIGNAL SPATIAL\n\n")
 
-    signal_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])
-    signal_reshaped_indices = np.unravel_index(signal_spatial_indices, shape=lonmeshrecon.shape)
-    signal_lon_measured = longitudeaxis[signal_reshaped_indices[0]]
-    signal_lat_measured = latitudeaxis[signal_reshaped_indices[1]]
+        signal_spatial_indices = np.squeeze([inverse_transform_sampling(psf(np.array([lonmeshrecon.flatten(), latmeshrecon.flatten()]), coord, logeval).flatten(), Nsamples=1) for logeval, coord in tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)])
+        signal_reshaped_indices = np.unravel_index(signal_spatial_indices, shape=lonmeshrecon.shape)
+        signal_lon_measured = longitudeaxis[signal_reshaped_indices[0]]
+        signal_lat_measured = latitudeaxis[signal_reshaped_indices[1]]
+    
+    
+    else:
+        signal_log10e_measured = np.asarray([])
+        signal_lon_measured = np.asarray([])
+        signal_lat_measured = np.asarray([])
+    
+    
     
     
     ### Simulating measured backgroudn events
