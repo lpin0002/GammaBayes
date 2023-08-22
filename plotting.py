@@ -88,7 +88,9 @@ if True:
     if showhyperparameterposterior:
         
         import matplotlib.colors as colors
-        
+        lambdafraction = 1.0
+        logmassfraction = 1.0
+        eventmultiplier = 1.0
         
         
         
@@ -104,7 +106,7 @@ if True:
         colormap = cm.get_cmap('Blues_r', 4)
 
         fig, ax = plt.subplots(2,2, dpi=100, figsize=(10,8))
-        plt.suptitle(f"Nevents= {totalevents}", size=24)
+        plt.suptitle(f"Nevents= {totalevents*eventmultiplier}", size=24)
 
         # Upper left plot
         logmass_logposterior = special.logsumexp(log_posterior, axis=0)
@@ -132,10 +134,12 @@ if True:
 
 
         
-        for logetrueval in log10eaxis:
-            ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
+        # for logetrueval in log10eaxis:
+        #     ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
         ax[0,0].set_ylim([0, None])
         ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
+        ax[0,0].ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)
+
 
         # Upper right plot
         ax[0,1].axis('off')
@@ -147,16 +151,29 @@ if True:
         ax[1,0].grid(False)
         ax[1,0].axvline(truelogmass, c='tab:orange')
         ax[1,0].axhline(truelambda, c='tab:orange')
-        ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
+        ax[1,0].set_xlabel(r'$log_{10} (m_\chi)$ [TeV]')
         ax[1,0].set_ylabel(r'$\lambda$')
 
         ax[1,0].set_ylim([lambdarange[0], lambdarange[-1]])
-        ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
 
-        extracolormap = cm.get_cmap('Blues_r')
-        confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=3.0, linewidth=1.5)
-        confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=2.0, linewidth=1.5)
-        confidence_ellipse(logmassrange, lambdarange, np.exp(log_posterior), ax[1,0], n_std=1.0, linewidth=1.5)
+        ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
+        ax[1,0].ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
+
+
+        ########################################################################################################################
+        ########################################################################################################################
+        # I have no clue how this works but I've checked it against some standard distributions and it seems correct
+        normed_posterior = np.exp(log_posterior)/np.exp(log_posterior).sum()
+        n = 100000
+        t = np.linspace(0, normed_posterior.max(), n)
+        integral = ((normed_posterior >= t[:, None, None]) * normed_posterior).sum(axis=(1,2))
+
+        from scipy import interpolate
+        f = interpolate.interp1d(integral, t)
+        t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]))
+        ax[1,0].contour(normed_posterior, t_contours, extent=[logmassrange[0],logmassrange[-1], lambdarange[0],lambdarange[-1]], colors='white', linewidths=0.5)
+        ########################################################################################################################
+        ########################################################################################################################
 
 
         lambda_logposterior = special.logsumexp(log_posterior, axis=1)
@@ -169,7 +186,7 @@ if True:
         for zscore in zscores:
             lambdapercentiles.append(lambdarange[np.abs(norm.cdf(zscore)-cdflambdaposterior).argmin()])
 
-
+        print(f'\n\n\n{np.min(np.abs(meanlabda-lambdapercentiles))/np.sqrt(1e8/(eventmultiplier*totalevents))*1e5}*1e-5 \n\n')
         ax[1,1].plot(lambdarange,normalisedlambdaposterior, c='tab:green')
 
         ax[1,1].axvline(meanlabda, c='tab:green', ls=':')
@@ -182,6 +199,10 @@ if True:
         ax[1,1].axvline(truelambda, ls='--', color="tab:orange")
         ax[1,1].set_xlabel(r'$\lambda$')
         ax[1,1].set_ylim([0, None])
+        ax[1,1].set_xlim([lambdarange[0], lambdarange[-1]])
+
+        
+        ax[1,1].ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
 
 
         plt.savefig(time.strftime(f"{stemdirectory}/{totalevents}events_lm{truelogmass}_l{truelambda}_%m%d_%H%M.pdf"))

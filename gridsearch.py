@@ -67,7 +67,7 @@ if __name__=="__main__":
     
     
     
-    lambdawindowwidth      = 4/np.sqrt(totalevents)
+    lambdawindowwidth      = 6/np.sqrt(totalevents)
 
     lambdalowerbound       = truelambda-lambdawindowwidth
     lambdaupperbound       = truelambda+lambdawindowwidth

@@ -124,7 +124,7 @@ if __name__=="__main__":
 
     
     bkgpriorarray  = logbkgpriorvalues
-    bkgpriorarray = bkgpriorarray.T - special.logsumexp(bkgpriorarray.T+logjacobtrue)
+    bkgpriorarray = bkgpriorarray - special.logsumexp(bkgpriorarray.T+logjacobtrue)
     
     tempbkgmargfunc = functools.partial(marginalisenuisance, prior=bkgpriorarray, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
     
@@ -151,7 +151,7 @@ if __name__=="__main__":
 
 
     nsig                = int(round(truelambda*(Nsamples*totalnumberofruns)))
-    logmasswindowwidth      = 5/np.sqrt(nsig)
+    logmasswindowwidth      = 8/np.sqrt(nsig)
 
     logmasslowerbound       = truelogmass-logmasswindowwidth
     logmassupperbound       = truelogmass+logmasswindowwidth

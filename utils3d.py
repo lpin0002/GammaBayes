@@ -8,6 +8,25 @@ from gammapy.irf import load_cta_irfs
 from astropy import units as u
 import dynesty
 import gc
+from astropy.coordinates import SkyCoord
+from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
+
+
+
+from gammapy.astro.darkmatter import (
+    profiles,
+    JFactory
+)
+
+profile = profiles.EinastoProfile()
+
+# Adopt standard values used in HESS
+profiles.DMProfile.DISTANCE_GC = 8.5 * u.kpc
+profiles.DMProfile.LOCAL_DENSITY = 0.39 * u.Unit("GeV / cm3")
+
+profile.scale_to_local_density()
+
+
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
 irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
@@ -50,19 +69,19 @@ lonbound            = 3.5
 
 
 
-latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4))+1)
-latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2))+1)
+latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4)))
+latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
 
-longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))+1) 
-longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))+1) 
+longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))) 
+longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart             = -0.8
-log10eend               = 1.8
+log10eend               = 1.5
 log10erange             = log10eend - log10estart
-log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*800))+1)
+log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
 
 
 # Axes used to plotting the discrete values
@@ -184,7 +203,8 @@ def makedist(logmass, spread=0.3, normeaxis=10**log10eaxis):
 #     return log_prob
 
 def bkgdist(logeval, lon, lat):
-    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value)
+    # np.log(1e6) factor is because the background rate is given in 1/MeV not 1/TeV for some reason
+    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value*1e6/(2*np.pi))
 
 # Does not have any mention of the log of the jacobian to keep it more general.
 def inverse_transform_sampling(logpmf, Nsamples=1):
@@ -210,6 +230,30 @@ def inverse_transform_sampling(logpmf, Nsamples=1):
 
 
 
+from gammapy.astro.darkmatter import (
+    profiles,
+    JFactory
+)
+
+profile = profiles.EinastoProfile()
+
+# Adopt standard values used in HESS
+profiles.DMProfile.DISTANCE_GC = 8.5 * u.kpc
+profiles.DMProfile.LOCAL_DENSITY = 0.39 * u.Unit("GeV / cm3")
+
+profile.scale_to_local_density()
+
+position = SkyCoord(0.0, 0.0, frame="galactic", unit="deg")
+geom = WcsGeom.create(skydir=position, 
+                      binsz=longitudeaxistrue[1]-longitudeaxistrue[0],
+                      width=(longitudeaxistrue[-1]-longitudeaxistrue[0]+longitudeaxistrue[1]-longitudeaxistrue[0], latitudeaxistrue[-1]-latitudeaxistrue[0]+longitudeaxistrue[1]-longitudeaxistrue[0]),
+                      frame="galactic")
+
+
+jfactory = JFactory(
+    geom=geom, profile=profile, distance=profiles.DMProfile.DISTANCE_GC
+)
+jfact = jfactory.compute_differential_jfactor().value
 
 
 def setup_full_fake_signal_dist(logmass, specfunc):
@@ -217,15 +261,15 @@ def setup_full_fake_signal_dist(logmass, specfunc):
     def full_fake_signal_dist(log10eval, lonval, latval):
         log10eval = np.array(log10eval)
         # nicespatialfunc = stats.multivariate_normal(mean=[0,0], cov=[[1.0,0.0],[0.0,1.0]]).logpdf
-        nicespatialfunc = log_squared_einasto_lb
+        # nicespatialfunc = log_squared_einasto_lb
         if log10eval.ndim>1:
             spectralvals = np.squeeze(specfunc(logmass, log10eval[:,0, 0]))
             latmesh, lonmesh = np.meshgrid(latval[0,0,:], lonval[0,:,0])
-            spatialvals = np.squeeze(nicespatialfunc(np.array([lonmesh.flatten(), latmesh.flatten()]).T).reshape(lonmesh.shape))
+            spatialvals = np.log(jfact.T)
             logpdfvalues = spectralvals[:, np.newaxis,np.newaxis]+spatialvals[np.newaxis, :,:]
             return logpdfvalues
         else:
-            logpdfvalues = specfunc(logmass, log10eval)+nicespatialfunc([lonval, latval])
+            logpdfvalues = specfunc(logmass, log10eval)+jfact[np.where(longitudeaxistrue==lonval, latitudeaxistrue==latval)]
             return logpdfvalues
     
     return full_fake_signal_dist
@@ -285,10 +329,10 @@ def calcrirfindices(datatuple):
 
 # Slower version of the marginalisation function as it only takes in
 def marginalisenuisance(irfindices, prior, edispmatrix, psfmatrix):
-    # It is presumed that the prior is normalised
-    signalmarginalisationvalues = special.logsumexp(logjacobtrue+prior+edispmatrix[:,:,:,irfindices[0]].T+psfmatrix[:,:,:,irfindices[1],irfindices[2]].T)
+    prior = prior - special.logsumexp(logjacobtrue+prior.T)
+    marginalisationvalues = special.logsumexp(logjacobtrue+prior.T+edispmatrix[:,:,:,irfindices[0]].T+psfmatrix[:,:,:,irfindices[1],irfindices[2]].T)
     
-    return signalmarginalisationvalues
+    return marginalisationvalues
 
 
 def evaluateformass(logmass, lambdarange, bkgmargvals, irfindexlist, specfunc, edispmatrix, psfmatrix, lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance):
@@ -362,11 +406,8 @@ import functools
 def sigmarg(logmass, specfunc, irfindexlist, edispmatrix, psfmatrix, logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance, logjacobtrue=logjacobtrue):
     priorvals= setup_full_fake_signal_dist(logmass, specfunc=specfunc)(logetrue_mesh_nuisance, lontrue_mesh_nuisance, lattrue_mesh_nuisance)
         
-    priornormalisation = special.logsumexp(priorvals.T+logjacobtrue)
-    
-    priorvals = priorvals.T-priornormalisation
-    
-    
+
+        
     tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
     result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
     

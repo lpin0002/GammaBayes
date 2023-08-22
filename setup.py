@@ -21,6 +21,9 @@ from gammapy.modeling.models import (
 import numpy as np
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 
+def powerlaw(energy, index, phi0=1):
+    return phi0*energy**(index)
+
 ################################################################################################################
 ################################################################################################################
 #### Setting up the IRF matrices
@@ -170,8 +173,11 @@ diffuse_iem = SkyModel(
 
 
 print("Constructing the Fermi-LAT background")
-fermievaluated = np.transpose(diffuse_iem.evaluate_geom(goodgeom), axes=(0,2,1))
-fermievaluated = fermievaluated.to(1/u.TeV/u.s/u.sr/(u.cm)**2)
+fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(goodgeom), axes=(0,2,1)), axis=1)
+fermiaveraged = special.logsumexp(np.log(fermievaluated.value.T)+10**log10eaxistrue+np.log(np.log(10))+log10eaxistrue[1]-log10eaxistrue[0], axis=2).T
+
+fermiaveraged = fermiaveraged-special.logsumexp(fermiaveraged+np.log(longitudeaxistrue[1]-longitudeaxistrue[0])+np.log(latitudeaxistrue[1]-latitudeaxistrue[0]))
+fermifull = np.exp(fermiaveraged[np.newaxis, :, :]+np.log(powerlaw(10**log10eaxistrue, index=-2.41, phi0=1.36*1e-8))[:, np.newaxis, np.newaxis])
 
 
 fermilonaxistemp = np.unique(goodgeom.to_image().get_coord().lon.value)
@@ -179,6 +185,8 @@ firstover180idx = np.where(fermilonaxistemp>180)[0][0]
 fermilonaxistemp[fermilonaxistemp>180] = fermilonaxistemp[fermilonaxistemp>180]-360
 fermilonaxistemp.sort()
 fermilonaxis = fermilonaxistemp
+
+
 
 
 fermilataxis = goodgeom.get_coord().lat.value[0][:,0]
@@ -189,7 +197,9 @@ fermiplotmap = fermievaluated.value
 
 
 print("\n\nCombining the HESS and Fermi-LAT backgrounds")
-combinedplotmap = np.flip(fermiplotmap + fullhessdataset, axis=1)
+combinedplotmap = fermiplotmap #+ np.flip(fullhessdataset, axis=1)
+
+
 
 
 print("\n\nApplying the effective area to the maps")
@@ -205,7 +215,7 @@ aefftable = aefffunc(energymesh, np.sqrt((lonmesh**2)+(latmesh**2)))
 combinedplotmapwithaeff = aefftable*combinedplotmap
 combinedplotmapwithaeff = combinedplotmapwithaeff
 
-topbound=1e200
+topbound=1e500
 combinedplotmapwithaeff[combinedplotmapwithaeff>topbound] = topbound
 normalisation = np.sum(combinedplotmapwithaeff.T*10**log10eaxistrue)
 # combinedplotmapwithaeff=combinedplotmapwithaeff/normalisation
