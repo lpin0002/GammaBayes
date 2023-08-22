@@ -151,7 +151,7 @@ if __name__=="__main__":
 
 
     nsig                = int(round(truelambda*(Nsamples*totalnumberofruns)))
-    logmasswindowwidth      = 8/np.sqrt(nsig)
+    logmasswindowwidth      = 16/np.sqrt(nsig)
 
     logmasslowerbound       = truelogmass-logmasswindowwidth
     logmassupperbound       = truelogmass+logmasswindowwidth
