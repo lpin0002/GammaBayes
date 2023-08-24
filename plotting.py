@@ -6,7 +6,8 @@ from matplotlib import cm
 import matplotlib as mpl
 from scipy.stats import norm
 from tqdm import tqdm
-
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
 
 try:
     identifier = sys.argv[1]
@@ -147,7 +148,8 @@ if True:
 
         # Lower left plot
         # ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(normalisedlogposterior).T, cmap='Blues')
-        ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(log_posterior), shading='gouraud')
+        pcol = ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(log_posterior))
+        pcol.set_edgecolor('face')
         ax[1,0].grid(False)
         ax[1,0].axvline(truelogmass, c='tab:orange')
         ax[1,0].axhline(truelambda, c='tab:orange')
@@ -157,6 +159,7 @@ if True:
         ax[1,0].set_ylim([lambdarange[0], lambdarange[-1]])
 
         ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
+        
         ax[1,0].ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
 
 
@@ -203,7 +206,13 @@ if True:
 
         
         ax[1,1].ticklabel_format(style='sci', axis='both', scilimits=(0,0), useMathText=True)
-
+        
+        # ax11_2 = ax[1,1].secondary_xaxis('top')
+        # ax11_2.set_xlabel(r'$\langle \sigma v \rangle$ [unit]')
+        # ax11_2.set_xticks(ax[1,1].get_xticks(), labels=0.5*np.asarray(ax[1,1].get_xticks()))
+        # import matplotlib.ticker as ticker
+        
+        # ax11_2.xaxis.set_major_formatter(ticker.ScalarFormatter.ticklabel_format(style='sci', useMathText=True))
 
         plt.savefig(time.strftime(f"{stemdirectory}/{totalevents}events_lm{truelogmass}_l{truelambda}_%m%d_%H%M.pdf"))
         plt.show()
