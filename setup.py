@@ -173,7 +173,7 @@ if bkgsetup:
     ### Fermi-LAT Diffuse Background
 
     template_diffuse = TemplateSpatialModel.read(
-        filename="gll_iem_v07.fits", normalize=False
+        filename="gll_iem_v06_gc.fits.gz", normalize=False
     )
 
     print(template_diffuse.map)
