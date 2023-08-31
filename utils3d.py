@@ -59,6 +59,13 @@ psffull = irfs['psf']
 edispfull.normalize()
 bkgfull = irfs['bkg']
 psf3d = psffull.to_psf3d()
+
+
+aefffull = irfs['aeff']
+
+
+
+
 offsetaxis = psf3d.axes['rad'].center.value
 
 bkgfull2d = bkgfull.to_2d()
@@ -106,6 +113,12 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                     migra = np.power(10.,logereconstructed-logetrue), 
                                                     offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
+    
+    
+
+def aefffunc(logetrue, truespatialcoord):
+    return np.log(aefffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                    offset=convertlonlat_to_offset(truespatialcoord)*u.deg).to(u.cm**2).value)
 
 
 # def edisp(logerecon, logetrue, truespatialcoord):
@@ -253,7 +266,7 @@ geom = WcsGeom.create(skydir=position,
 jfactory = JFactory(
     geom=geom, profile=profile, distance=profiles.DMProfile.DISTANCE_GC
 )
-jfact = jfactory.compute_differential_jfactor().value
+jfact = jfactory.compute_differential_jfactor().to(u.TeV**2/u.cm**5/u.sr).value
 
 
 def setup_full_fake_signal_dist(logmass, specfunc):
@@ -328,8 +341,13 @@ def calcrirfindices(datatuple):
 
 
 # Slower version of the marginalisation function as it only takes in
-def marginalisenuisance(irfindices, prior, edispmatrix, psfmatrix):
+def marginalisenuisance(irfindices, prior, edispmatrix, psfmatrix, debug=False):
     prior = prior - special.logsumexp(logjacobtrue+prior.T)
+    
+    if debug:
+        print('prior shape: ', prior.shape)
+        print('psf shape: ', psfmatrix[:,:,:,irfindices[1],irfindices[2]].shape)
+        print('edisp shape: ', edispmatrix[:,:,:,irfindices[0]].shape)
     marginalisationvalues = special.logsumexp(logjacobtrue+prior.T+edispmatrix[:,:,:,irfindices[0]].T+psfmatrix[:,:,:,irfindices[1],irfindices[2]].T)
     
     return marginalisationvalues
@@ -408,7 +426,7 @@ def sigmarg(logmass, specfunc, irfindexlist, edispmatrix, psfmatrix, logetrue_me
         
 
         
-    tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+    tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix, debug=True)
     result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
     
     return result
