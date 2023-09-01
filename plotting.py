@@ -152,7 +152,7 @@ if True:
         import matplotlib.colors as colors
         lambdafraction = 1.0
         logmassfraction = 1.0
-        eventmultiplier = 50
+        eventmultiplier = 1
         
         
         
