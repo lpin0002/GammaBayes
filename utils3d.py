@@ -430,3 +430,49 @@ def sigmarg(logmass, specfunc, irfindexlist, edispmatrix, psfmatrix, logetrue_me
     result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
     
     return result
+
+
+
+def efficient_marg(single_event_measurement, signal_prior_matrices, logbkgpriorvalues, logmassrange, edispmatrix, psfmatrix):
+    
+    single_measured_log10e, single_measured_lon, single_measured_lat = single_event_measurement
+    
+    log10e_idx = np.where(log10eaxis==single_measured_log10e)
+    longitude_idx = np.where(longitudeaxis==single_measured_lon)
+    latitude_idx = np.where(latitudeaxis==single_measured_lat)
+
+    logbkgpriorvalues = logbkgpriorvalues - special.logsumexp(logbkgpriorvalues.T+logjacobtrue)
+
+    
+    sigmargresults = []
+    
+    nuisance_logemesh, nuisance_longitudemesh, nuisance_latitudemesh, measured_logemesh, measured_longitudemesh, measured_latitudemesh  = np.meshgrid(log10eaxistrue, 
+                                                                                    longitudeaxistrue, latitudeaxistrue, 
+                                                                                        single_measured_log10e, single_measured_lon, single_measured_lat, indexing='ij')
+
+    truecoords = np.array([nuisance_longitudemesh.flatten(), nuisance_latitudemesh.flatten()])
+    reconcoords = np.array([measured_longitudemesh.flatten(), measured_latitudemesh.flatten()])
+    
+
+    rad = angularseparation(reconcoords, truecoords).flatten()
+    offset  = convertlonlat_to_offset(truecoords).flatten()
+
+    
+    psfvalues = psfmatrix[:,:,:,longitude_idx, latitude_idx]
+
+    edispvalues = edispmatrix[:,:,:,log10e_idx]
+    
+    bkgmargresult = special.logsumexp(logbkgpriorvalues.T+logjacobtrue+psfvalues.T+edispvalues.T)
+
+    
+    singlemass_sigmargvals = []
+    for logmass_idx, logmass in enumerate(logmassrange):
+        
+        output = special.logsumexp(signal_prior_matrices[logmass_idx]+logjacobtrue+psfvalues.T+edispvalues.T)#-irfnormalisation)
+        singlemass_sigmargvals.append(output)
+
+    sigmargresults.append(singlemass_sigmargvals)
+        
+
+        
+    return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult])

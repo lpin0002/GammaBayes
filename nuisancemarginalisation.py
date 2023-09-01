@@ -109,38 +109,6 @@ if __name__=="__main__":
 
     lontrue_mesh_nuisance, logetrue_mesh_nuisance, lattrue_mesh_nuisance = np.meshgrid(longitudeaxistrue, log10eaxistrue, latitudeaxistrue)
 
-    irfindexlist = []
-
-        
-    with Pool(numcores) as pool: 
-        
-            
-        for result in tqdm(pool.imap(calcrirfindices, zip(measured_log10e, np.array([measured_lon, measured_lat]).T)), total=len(list(measured_log10e)), ncols=100, desc="Calculating irf values..."):
-                irfindexlist.append(result)
-
-        pool.close() 
-        
-    irfindexlist = np.array(irfindexlist)
-
-    
-    bkgpriorarray  = logbkgpriorvalues
-    bkgpriorarray = bkgpriorarray - special.logsumexp(bkgpriorarray.T+logjacobtrue)
-    
-    tempbkgmargfunc = functools.partial(marginalisenuisance, prior=bkgpriorarray, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
-    
-    # bkgmargvals = []
-    with Pool(numcores) as pool: 
-        
-            
-        bkgmargvals = pool.map(tempbkgmargfunc, tqdm(irfindexlist, total=irfindexlist.shape[0], 
-                           ncols=100, 
-                           desc="Marginalising the events with the background prior."))
-
-        pool.close() 
-    bkgmargvals = np.array(bkgmargvals)
-    print(f"Shape of the array containing the background marginalised probabilities: {bkgmargvals.shape}")
-    
-    
     
     
     sigdistsetup = setup_full_fake_signal_dist
@@ -165,21 +133,38 @@ if __name__=="__main__":
 
 
 
-    sigmarg_partial = functools.partial(sigmarg, specfunc=signalspecfunc, irfindexlist=irfindexlist, edispmatrix=edispmatrix, psfmatrix=psfmatrix,
-                                            logetrue_mesh_nuisance=logetrue_mesh_nuisance, lontrue_mesh_nuisance=lontrue_mesh_nuisance, 
-                                            lattrue_mesh_nuisance=lattrue_mesh_nuisance, logjacobtrue=logjacobtrue)
-    print(time.strftime("The time before signal marginalisation is %d of %b, at %H:%M:%S"))
-    sigmargresults = []
+    nuisance_loge_setup_mesh, nuisance_longitude_setup_mesh, nuisance_latitude_setup_mesh = np.meshgrid(log10eaxistrue, longitudeaxistrue, latitudeaxistrue, indexing='ij')
+
+    signal_prior_matrices = []
+    for logmass in logmassrange:
+        priorvals= setup_full_fake_signal_dist(logmass, specfunc=signalspecfunc)(nuisance_loge_setup_mesh, nuisance_longitude_setup_mesh, nuisance_latitude_setup_mesh)
+        
+        priorvals = priorvals - special.logsumexp(logjacobtrue+priorvals.T)
+        signal_prior_matrices.append(priorvals.T)
+    
+    
+    marg_partial = functools.partial(efficient_marg, signal_prior_matrices=signal_prior_matrices, logbkgpriorvalues=logbkgpriorvalues, logmassrange=logmassrange, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
+
+
+    startertimer = time.perf_counter()
+
     with Pool(numcores) as pool:
-        for result in pool.imap(sigmarg_partial, tqdm(logmassrange, ncols=100, total=logmassrange.shape[0])):
-            sigmargresults.append(result)
+            margresults = pool.map(marg_partial, tqdm(zip(measured_log10e, measured_lon, measured_lat), total=len(list(measured_log10e))))
             
-    print(time.strftime("The time after signal marginalisation is %d of %b, at %H:%M:%S"))
-    print("Finished signal marginalisation. \nNow converting to numpy arrays and saving the result...")
+            
+            
+    margresults = np.array(margresults)
+    sigmargresults = np.squeeze(np.vstack(margresults[:,0])).T
+    bkgmargresults = np.squeeze(np.vstack(margresults[:,1]))
+
+    endertimer = time.perf_counter()
+    timediffseconds = endertimer-startertimer
     
-    signal_log_marginalisationvalues = np.array(sigmargresults)
-    
-    print(f"Shape of the array containing the signal marginalised probabilities: {signal_log_marginalisationvalues.shape}")
+    hours = timediffseconds//(60*60)
+    minutes = (timediffseconds-(60*60)*hours)//60
+    seconds = timediffseconds-(60*60)*hours-60*minutes
+
+    print(f"Marginalisation took {hours} hours, {minutes} minutes, {seconds} seconds")
 
 
     
@@ -188,6 +173,5 @@ if __name__=="__main__":
 
         
     np.save(f'{rundirectory}/logmassrange_direct.npy',logmassrange)
-    np.save(f"{rundirectory}/irfindexlist.npy", irfindexlist)
-    np.save(f"{rundirectory}/log_signal_marginalisations.npy", signal_log_marginalisationvalues)
-    np.save(f"{rundirectory}/log_background_marginalisations.npy", bkgmargvals)
+    np.save(f"{rundirectory}/log_signal_marginalisations.npy", sigmargresults)
+    np.save(f"{rundirectory}/log_background_marginalisations.npy", bkgmargresults)
