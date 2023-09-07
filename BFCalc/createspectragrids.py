@@ -7,6 +7,8 @@ from gammapy.astro.darkmatter import (
     PrimaryFlux,
 )
 
+import pandas as pd
+
 from astropy.table import Table
 # import matplotlib.pyplot as plt
 from scipy import special, interpolate
@@ -44,6 +46,24 @@ channel_registry = {
     "V->e": "V->e",
     "V->mu": r"V->\[Mu]",
     "V->tau": r"V->\[Tau]",
+}
+
+
+darkSUSY_to_Gammapy_converter = {
+    "nuenue":"nu_e",
+    "e+e-": "e",
+    "numunumu":"nu_mu",
+    "mu+mu-":"mu",
+    'nutaunutau':"nu_tau",
+    "tau+tau-":"tau",
+    "cc": "c",
+    "bb": "b",
+    "tt": "t",
+    "W+W-": "W",
+    "ZZ": "Z",
+    "gg": "g",
+    "gammagamma": "gamma",
+    "HH": "h",
 }
 
 
@@ -218,4 +238,30 @@ def fullsinputspectralfunc(mass, higgs_coupling, energy):
 #     np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
 # np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
 # np.save(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy", log10xvals)
+#######################################################################################################################################
+#######################################################################################################################################
+#######################################################################################################################################
+#######################################################################################################################################
+
+
+
+# darkSUSY_BFs_cleaned = pd.read_csv('darkSUSY_BFs/darkSUSY_BFs_cleaned.csv')
+
+
+# darkSUSY_massvalues = np.unique(darkSUSY_BFs_cleaned.iloc[:,0])
+# darkSUSY_lambdavalues = np.unique(darkSUSY_BFs_cleaned.iloc[:,1])
+
+# channelfuncdictionary = {}
+
+# for darkSUSYchannel in list(darkSUSY_to_Gammapy_converter.keys()):
+#     try:
+#         gammapychannel = darkSUSY_to_Gammapy_converter[darkSUSYchannel]
+#         tempspectragrid = np.load(modulefolderpath+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
+#         channelfuncdictionary[darkSUSYchannel] = interpolate.interp2d(np.log10(massvalues), log10xvals, np.array(tempspectragrid).T, 
+#                                     kind='linear', bounds_error=False, fill_value=1e-3000)
+#     except:
+#         channelfuncdictionary[darkSUSYchannel] = lambda logmass, log10x: log10x*0
+
+
+# partial_sigmav_interpolator_dictionary = {channel: interpolate.LinearNDInterpolator((darkSUSY_massvalues, darkSUSY_lambdavalues),darkSUSY_BFs_cleaned.iloc[:,idx+2]) for idx, channel in enumerate(list(darkSUSY_to_Gammapy_converter.keys())[2:])}
 
