@@ -43,7 +43,6 @@ def angularseparation(coord1, coord2=None):
     # Currently assuming small angles (|angle|<=4)
     
     try:
-        
         return np.linalg.norm(coord2-coord1, axis=0)
     except:
         try:
@@ -51,6 +50,10 @@ def angularseparation(coord1, coord2=None):
         except:
             return np.linalg.norm(coord2.T-coord1, axis=1)
 
+def angularseparation_quick(coord1, coord2=None):
+    # Currently assuming small angles (|angle|<=4)
+    
+    return np.linalg.norm(coord2-coord1, axis=0)
 
 
 
@@ -59,13 +62,6 @@ psffull = irfs['psf']
 edispfull.normalize()
 bkgfull = irfs['bkg']
 psf3d = psffull.to_psf3d()
-
-
-aefffull = irfs['aeff']
-
-
-
-
 offsetaxis = psf3d.axes['rad'].center.value
 
 bkgfull2d = bkgfull.to_2d()
@@ -113,14 +109,11 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                     migra = np.power(10.,logereconstructed-logetrue), 
                                                     offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
-    
-    
 
-def aefffunc(logetrue, truespatialcoord):
-    return np.log(aefffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                    offset=convertlonlat_to_offset(truespatialcoord)*u.deg).to(u.cm**2).value)
-
-
+def edisp_efficient(logereconstructed, logetrue, offset):
+    return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                    migra = np.power(10.,logereconstructed-logetrue), 
+                                                    offset=offset*u.deg).value)
 # def edisp(logerecon, logetrue, truespatialcoord):
 #     offsettrue  = convertlonlat_to_offset(truespatialcoord)
 #     scale = 7e-1#-1e-1*np.abs(logetrue-0.5*offsettrue)
@@ -129,24 +122,25 @@ def aefffunc(logetrue, truespatialcoord):
 
 ## Testing distribution for the energy dispersion
 
-def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
-    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
-    offset  = convertlonlat_to_offset(truespatialcoord)
-    return np.log(psffull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+def psf(reconstructed_spatialcoord, logetrue, truespatialcoord):
+    
+    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
+    offset  = convertlonlat_to_offset(truespatialcoord).flatten()
+    energyvals = np.power(10.,logetrue.flatten())
+    output = np.log(psffull.evaluate(energy_true=energyvals*u.TeV,
                                                     rad = rad*u.deg, 
                                                     offset=offset*u.deg).value)
+    
+    return output
 
+def psf_efficient(rad, logetrue, offset):
 
-# def psf(reconstructed_spatialcoord, truespatialcoord, logetrue):
-#     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord)
-#     offset  = convertlonlat_to_offset(truespatialcoord)
+    output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
+                                                    rad = rad*u.deg, 
+                                                    offset=offset*u.deg).value)
     
-#     scale = 1#+3e-1*np.abs(offset)+3e-1*np.abs(logetrue+1)
-    
-#     if np.any(scale)<0:
-#         print(scale)
-    
-#     return -0.5*(rad/scale)**2
+    return output
+
 
 
 def log_squared_einasto_lb(spatialcoords):
@@ -266,7 +260,7 @@ geom = WcsGeom.create(skydir=position,
 jfactory = JFactory(
     geom=geom, profile=profile, distance=profiles.DMProfile.DISTANCE_GC
 )
-jfact = jfactory.compute_differential_jfactor().to(u.TeV**2/u.cm**5/u.sr).value
+jfact = jfactory.compute_differential_jfactor().value
 
 
 def setup_full_fake_signal_dist(logmass, specfunc):
@@ -341,13 +335,8 @@ def calcrirfindices(datatuple):
 
 
 # Slower version of the marginalisation function as it only takes in
-def marginalisenuisance(irfindices, prior, edispmatrix, psfmatrix, debug=False):
+def marginalisenuisance(irfindices, prior, edispmatrix, psfmatrix):
     prior = prior - special.logsumexp(logjacobtrue+prior.T)
-    
-    if debug:
-        print('prior shape: ', prior.shape)
-        print('psf shape: ', psfmatrix[:,:,:,irfindices[1],irfindices[2]].shape)
-        print('edisp shape: ', edispmatrix[:,:,:,irfindices[0]].shape)
     marginalisationvalues = special.logsumexp(logjacobtrue+prior.T+edispmatrix[:,:,:,irfindices[0]].T+psfmatrix[:,:,:,irfindices[1],irfindices[2]].T)
     
     return marginalisationvalues
@@ -426,20 +415,15 @@ def sigmarg(logmass, specfunc, irfindexlist, edispmatrix, psfmatrix, logetrue_me
         
 
         
-    tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix, debug=True)
+    tempsigmargfunc = functools.partial(marginalisenuisance, prior=priorvals, edispmatrix=edispmatrix, psfmatrix=psfmatrix)
     result = [tempsigmargfunc(singleeventindices) for singleeventindices in irfindexlist]
     
     return result
 
 
-
-def efficient_marg(single_event_measurement, signal_prior_matrices, logbkgpriorvalues, logmassrange, edispmatrix, psfmatrix):
+def diff_irf_marg(single_event_measurement, signal_prior_matrices, logbkgpriorvalues, logmassrange, edispnormvalues, psfnormvalues):
     
     single_measured_log10e, single_measured_lon, single_measured_lat = single_event_measurement
-    
-    log10e_idx = np.where(log10eaxis==single_measured_log10e)
-    longitude_idx = np.where(longitudeaxis==single_measured_lon)
-    latitude_idx = np.where(latitudeaxis==single_measured_lat)
 
     logbkgpriorvalues = logbkgpriorvalues - special.logsumexp(logbkgpriorvalues.T+logjacobtrue)
 
@@ -458,9 +442,13 @@ def efficient_marg(single_event_measurement, signal_prior_matrices, logbkgpriorv
     offset  = convertlonlat_to_offset(truecoords).flatten()
 
     
-    psfvalues = psfmatrix[:,:,:,longitude_idx, latitude_idx]
+    psfvalues = np.squeeze(psf_efficient(rad,
+            nuisance_logemesh.flatten(),
+            offset).reshape(nuisance_logemesh.shape)) - psfnormvalues
 
-    edispvalues = edispmatrix[:,:,:,log10e_idx]
+    edispvalues = np.squeeze(edisp_efficient(measured_logemesh.flatten(), 
+                nuisance_logemesh.flatten(),
+                offset).reshape(nuisance_logemesh.shape)) - edispnormvalues
     
     bkgmargresult = special.logsumexp(logbkgpriorvalues.T+logjacobtrue+psfvalues.T+edispvalues.T)
 
@@ -476,3 +464,5 @@ def efficient_marg(single_event_measurement, signal_prior_matrices, logbkgpriorv
 
         
     return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult])
+
+

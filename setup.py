@@ -40,13 +40,13 @@ except:
 
 if irfsetup:
     print("\n\n\nSetting up the meshgrid for the psf matrix construction\n")
-    lontrue_mesh_psf, logetrue_mesh_psf, lattrue_mesh_psf, lonrecon_mesh_psf, latrecon_mesh_psf = np.meshgrid(longitudeaxistrue, log10eaxistrue, latitudeaxistrue, longitudeaxis, latitudeaxis)
+    logetrue_mesh_psf, lontrue_mesh_psf, lattrue_mesh_psf, lonrecon_mesh_psf, latrecon_mesh_psf = np.meshgrid(log10eaxistrue, longitudeaxistrue, latitudeaxistrue, longitudeaxis, latitudeaxis, indexing='ij')
 
     print("Constructing the point spread function matrix")
-    psfmatrix = psf(np.array([lonrecon_mesh_psf.flatten(), latrecon_mesh_psf.flatten()]), np.array([lontrue_mesh_psf.flatten(), lattrue_mesh_psf.flatten()]), logetrue_mesh_psf.flatten()).reshape(logetrue_mesh_psf.shape)
+    psfmatrix = psf(np.array([lonrecon_mesh_psf.flatten(), latrecon_mesh_psf.flatten()]), logetrue_mesh_psf.flatten(), np.array([lontrue_mesh_psf.flatten(), lattrue_mesh_psf.flatten()])).reshape(logetrue_mesh_psf.shape)
 
     print("\n\nSetting up the meshgrid for the edisp matrix construction\n")
-    lontrue_mesh_edisp, logetrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(longitudeaxistrue, log10eaxistrue, latitudeaxistrue, log10eaxis)
+    logetrue_mesh_edisp, lontrue_mesh_edisp, lattrue_mesh_edisp, logerecon_mesh_edisp,  = np.meshgrid(log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, indexing='ij')
 
     print("Constructing the energy dispersion matrix")
     edispmatrix = edisp(logerecon_mesh_edisp.flatten(), logetrue_mesh_edisp.flatten(), np.array([lontrue_mesh_edisp.flatten(), lattrue_mesh_edisp.flatten()])).reshape(logetrue_mesh_edisp.shape)
@@ -76,10 +76,11 @@ if irfsetup:
     edispmatrix = edispmatrix-edispnormalisation[:,:,:,np.newaxis]
     psfmatrix = psfmatrix-psfnormalisation[:,:,:,np.newaxis, np.newaxis]
 
-
-    print("\n\nSaving the IRF Matrices\n\n\n")
+    print("\n\nSaving the IRF Matrices")
     np.save("psfmatrix.npy", psfmatrix)
     np.save("edispmatrix.npy", edispmatrix)
+
+    print(f'\n\n psfmatrix shape: {psfmatrix.shape}, edispmatrix shape: {edispmatrix.shape}\n\n')
 
 
 
@@ -239,5 +240,6 @@ if bkgsetup:
 
     print("\n\nSaving the final result")
     np.save("unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+    print(f"\n\nFinal output shape: {combinedplotmapwithaeff.shape}")
     
 print("Script Finished!")

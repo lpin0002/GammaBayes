@@ -36,10 +36,10 @@ if __name__=="__main__":
     stemdirectory = currentdirecyory+f'/data/{identifier}'
     print("\nstem directory: ", stemdirectory, '\n')
     
-    rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
+    rundirs = [x[0] for x in os.walk(f'{stemdirectory}/singlerundata')][1:]
     print("number of run directories: ", len(rundirs), '\n')
     
-    # Extracting the starting 
+    # Extracting the starting values
     signal_log_marginalisationvalues = np.load(rundirs[0]+'/log_signal_marginalisations.npy')
     bkg_log_marginalisationvalues = np.load(rundirs[0]+'/log_background_marginalisations.npy')
     
@@ -80,7 +80,6 @@ if __name__=="__main__":
     lambdarange            = np.linspace(lambdalowerbound, lambdaupperbound, nbinslambda) 
     
     
-    # SGSO southern gamma ray survey observatory
     firstrundirectory = rundirs[0]
 
 

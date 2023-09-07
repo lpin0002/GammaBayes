@@ -155,15 +155,16 @@ for channelname in channelnames:
 
 
 
-bfmlambdaarray = np.load(modulefolderpath+"/220913_145357/bfmlambdaarray.npy")
-lambdarange = np.load(modulefolderpath+"/220913_145357/lambdarange.npy")
-massrange = np.load(modulefolderpath+"/220913_145357/massrange.npy")
+bfmlambdaarray = np.load(modulefolderpath+"/temp/bfmlambdaarray.npy")
+lambdarange = np.load(modulefolderpath+"/temp/lambdarange.npy")
+massrange = np.load(modulefolderpath+"/temp/massrange.npy")
 
 
 dataArr=bfmlambdaarray
   
+  
 Lambda = dataArr[0,:,1]
-log_m_DM = np.log10(dataArr[:,0,0]/1e3)
+log_m_DM = np.log10(dataArr[:,0,0])
 relic = dataArr[:,:,2]
 Bfw = dataArr[:,:,3]
 Bfz = dataArr[:,:,4]
@@ -194,6 +195,19 @@ def energymassinputspectralfunc(logmass, logenergy):
     for channel in bfmainchannelnames:
         branchingfraction = branchingfunctiondictionary[channel](0.1,logmass)
         singlechannelspectra = channelfuncdictionary[channel](logmass, logenergy-logmass)
+        finalresult+=branchingfraction*singlechannelspectra
+    
+    return np.log(finalresult)
+
+def fullsinputspectralfunc(mass, higgs_coupling, energy):
+    log_mass = np.log10(mass)
+    log_higgs_coupling = np.log10(higgs_coupling)
+    log_energy = np.log10(energy)
+    finalresult = 0
+    
+    for channel in bfmainchannelnames:
+        branchingfraction = branchingfunctiondictionary[channel](log_higgs_coupling,log_mass)
+        singlechannelspectra = channelfuncdictionary[channel](log_mass, log_energy-log_mass)
         finalresult+=branchingfraction*singlechannelspectra
     
     return np.log(finalresult)
