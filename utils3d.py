@@ -10,8 +10,9 @@ import dynesty
 import gc
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
+import sys
 
-
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'GammaBayes'))
 
 from gammapy.astro.darkmatter import (
     profiles,
@@ -62,6 +63,8 @@ psffull = irfs['psf']
 edispfull.normalize()
 bkgfull = irfs['bkg']
 psf3d = psffull.to_psf3d()
+aefffull = irfs['aeff']
+
 offsetaxis = psf3d.axes['rad'].center.value
 
 bkgfull2d = bkgfull.to_2d()
@@ -114,13 +117,8 @@ def edisp_efficient(logereconstructed, logetrue, offset):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                     migra = np.power(10.,logereconstructed-logetrue), 
                                                     offset=offset*u.deg).value)
-# def edisp(logerecon, logetrue, truespatialcoord):
-#     offsettrue  = convertlonlat_to_offset(truespatialcoord)
-#     scale = 7e-1#-1e-1*np.abs(logetrue-0.5*offsettrue)
-    
-#     return -0.5*((logerecon-logetrue)/scale)**2
-
-## Testing distribution for the energy dispersion
+def aeff_efficient(logetrue, offset):
+    return aefffull.evaluate(energy_true=10**logetrue*u.TeV, offset=offset*u.deg).to(u.cm**2)
 
 def psf(reconstructed_spatialcoord, logetrue, truespatialcoord):
     
