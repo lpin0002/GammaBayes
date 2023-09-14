@@ -9,23 +9,34 @@ class discrete_logprior(object):
                  inputunit=None, logfunction=None, 
                  axes=None, axes_names='[None]', 
                  hyperparameter_axes=None, hyperparameter_names='[None]',
-                 default_hyperparameter_values=[]):
+                 default_hyperparameter_values=None):
         
         self.name = name
         self.inputunit = inputunit
         self.logfunction = logfunction
         self.axes_names = axes_names
-        self.axes = axes
+        
         self.hyperparameter_axes = hyperparameter_axes
         self.hyperparameter_names = hyperparameter_names
         self.num_axes = len(axes)
         if self.num_axes==1:
             self.axes_mesh = (axes,)
+            self.axes = (axes,)
         else:
-            self.axes_mesh = np.meshgrid(*axes, indexing='ij')
+            self.axes = axes
+            self.axes_mesh = (*np.meshgrid(*axes, indexing='ij'),)
             
-        
-        self.default_hyperparameter_values = default_hyperparameter_values
+        if default_hyperparameter_values is None:
+            self.default_hyperparameter_values = (None,)
+            self.input_values_mesh = np.meshgrid(*self.axes, indexing='ij')
+
+        else:
+            self.default_hyperparameter_values = (*default_hyperparameter_values,)
+            print(self.default_hyperparameter_values)
+            self.input_values_mesh = np.meshgrid(*self.axes, *self.default_hyperparameter_values, indexing='ij')
+
+            
+
             
     
     
@@ -44,10 +55,16 @@ class discrete_logprior(object):
     def __call__(self, inputs, hyperparameters=None):
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values
-            print(hyperparameters)
+
+
+        if type(inputs)!=tuple:
+            inputs = (inputs,)
             
-            
-        return self.logfunction(inputs, hyperparameters)
+        if hyperparameters != (None,):
+            return self.logfunction(*inputs, *hyperparameters)
+        else:
+            return self.logfunction(*inputs)
+
     
     
 
@@ -57,19 +74,24 @@ class discrete_logprior(object):
     
     
     
-    def sample(self, numsamples, hyperparametervalues=None, logpriorvalues=None):
-        if hyperparametervalues is None:
-            hyperparametervalues = self.default_hyperparameter_values
+    def sample(self, numsamples, logpriorvalues=None):
         
         
         if logpriorvalues is None:
-            print(*self.axes_mesh)
-            logpriorvalues = self.logfunction(*self.axes_mesh, hyperparametervalues)
-        
+            try:
+                logpriorvalues = self.logfunction(*self.input_values_mesh)
+            except:
+                logpriorvalues = self.logfunction((*self.axes_mesh,))
+    
         if type(logpriorvalues)!=np.ndarray:
             logpriorvalues = np.array(logpriorvalues)
+            
+        plt.figure()
+        plt.pcolormesh(logpriorvalues[160,:,:])
+        plt.show()
         
         logpriorvalues_flattened = logpriorvalues.flatten()
+        
         
         simulatedindices = inverse_transform_sampling(logpriorvalues_flattened, Nsamples=numsamples)
         
