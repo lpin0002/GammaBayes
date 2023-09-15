@@ -9,7 +9,8 @@ class discrete_logprior(object):
                  inputunit=None, logfunction=None, 
                  axes=None, axes_names='[None]', 
                  hyperparameter_axes=None, hyperparameter_names='[None]',
-                 default_hyperparameter_values=None):
+                 default_hyperparameter_values=None, 
+                 logjacob=0):
         
         self.name = name
         self.inputunit = inputunit
@@ -19,6 +20,7 @@ class discrete_logprior(object):
         self.hyperparameter_axes = hyperparameter_axes
         self.hyperparameter_names = hyperparameter_names
         self.num_axes = len(axes)
+        self.logjacob = logjacob
         if self.num_axes==1:
             self.axes_mesh = (axes,)
             self.axes = (axes,)
@@ -70,7 +72,7 @@ class discrete_logprior(object):
 
     
     def normalisation(self, hyperparametervalues=None):
-        return logsumexp(self.logfunction(self.axes_mesh, hyperparametervalues), axis=tuple(np.arange(self.axes.ndim)))
+        return logsumexp(self.logfunction(self.axes_mesh, hyperparametervalues)+self.logjacob, axis=tuple(np.arange(self.axes.ndim)))
     
     
     
@@ -86,11 +88,10 @@ class discrete_logprior(object):
         if type(logpriorvalues)!=np.ndarray:
             logpriorvalues = np.array(logpriorvalues)
             
-        plt.figure()
-        plt.pcolormesh(logpriorvalues[160,:,:])
-        plt.show()
+        logpriorvalues_withlogjacob = logpriorvalues+self.logjacob
+            
         
-        logpriorvalues_flattened = logpriorvalues.flatten()
+        logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
         
         
         simulatedindices = inverse_transform_sampling(logpriorvalues_flattened, Nsamples=numsamples)

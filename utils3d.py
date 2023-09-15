@@ -112,6 +112,12 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                     migra = np.power(10.,logereconstructed-logetrue), 
                                                     offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
+    
+    
+def edisp_test(logereconstructed, logetrue, lonval, latval):
+    return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                    migra = np.power(10.,logereconstructed-logetrue), 
+                                                    offset=convertlonlat_to_offset(np.array([lonval, latval]))*u.deg).value)
 
 def edisp_efficient(logereconstructed, logetrue, offset):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
