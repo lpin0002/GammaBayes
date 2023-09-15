@@ -1,7 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
 from inverse_transform_sampling import inverse_transform_sampling
-
+from matplotlib import pyplot as plt
 
 
 class discrete_loglikelihood(object):
@@ -14,33 +14,48 @@ class discrete_loglikelihood(object):
         self.logfunction = logfunction
         self.axes_names = axes_names
         self.axes = axes
+        print(f'Number of input dimensions {len(self.axes)}')
         self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
         self.logjacob = logjacob
-        if np.array(axes).ndim==1 or np.array(dependent_axes).ndim==1:
-            if np.array(axes).ndim==1 and np.array(dependent_axes).ndim==1:
+        if len(self.axes)==1 or len(self.dependent_axes)==1:
+            if len(self.axes)==1 and len(self.dependent_axes)==1:
                 print('beep')
                 self.axes_dim = 1
                 self.dependent_axes_dim = 1
+                self.axes_shape = self.axes[0].shape
 
                 self.axes_mesh = np.meshgrid(axes, dependent_axes)
-            elif np.array(axes).ndim==1:
+            elif len(self.axes)==1:
                 print('boop')
-
+                self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
                 self.axes_mesh = np.meshgrid(axes, *dependent_axes)
+                self.dependent_axes_dim = len(self.dependent_axes)
+
             else:
                 print('bopp')
                 print(np.array(axes).ndim)
                 self.axes_dim = len(axes)
+                # If it is not done this way self.axes_shape gives out a generator object location instead :(
+                self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
+                
                 self.dependent_axes_dim = 1
 
                 self.axes_mesh = np.meshgrid(*axes, dependent_axes)
         else:
             print('beeeep')
             self.axes_dim = len(axes)
+            
+            # If it is not done this way self.axes_shape gives out a generator object location instead :(
+            self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
+
+            self.dependent_axes_dim = len(self.dependent_axes)
+
             print(f'Number of data dimensions {self.axes_dim}')
             self.axes_mesh = np.meshgrid(*axes, *dependent_axes)
+            
+        print(f'Axes shape: {self.axes_shape}')
         
         
     def __call__(self, *inputs):
@@ -63,30 +78,27 @@ class discrete_loglikelihood(object):
 
     
     def normalisation(self):
-        return logsumexp(self.__call__(*self.axes_mesh), axis=tuple(np.arange(self.axes.ndim))+logjacob)
+        return logsumexp(self.__call__(*self.axes_mesh), axis=tuple(nlen(self.axes_dim))+logjacob)
     
     
     def sample(self, dependentvalues, numsamples):
-        if self.axes_dim!=1:
-            inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')
-        else:
-            inputmesh = np.meshgrid(self.axes, *dependentvalues, indexing='ij')
+        inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')
+        
 
         
-        loglikevals = np.squeeze(self.__call__(*inputmesh))+self.logjacob
+        loglikevals = np.squeeze(self.__call__(*(input.flatten() for input in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
+
         
-        sampled_indices = inverse_transform_sampling(loglikevals.flatten(), numsamples)
-        
-        if self.axes_dim!=1:
-            reshaped_simulated_indices = np.unravel_index(sampled_indices,tuple(len(arr) for arr in self.axes))
-            simvals = []  
-            for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
-                simvals.append(axis[axis_sim_index])
-        else:
-            reshaped_simulated_indices = np.unravel_index(sampled_indices,self.axes.shape)
-            simvals = self.axes[reshaped_simulated_indices]
+        sampled_indices = np.squeeze(inverse_transform_sampling(loglikevals.flatten(), numsamples))
             
-        return np.array(simvals)
+        reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
+        
+        simvals = []  
+        for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
+            simvals.append(axis[axis_sim_index])
+       
+            
+        return np.array(simvals).T
         
         
         

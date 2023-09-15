@@ -137,6 +137,19 @@ def psf(reconstructed_spatialcoord, logetrue, truespatialcoord):
     
     return output
 
+
+def psf_test(recon_lon, recon_lat, logetrue, true_lon, true_lat):
+    reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
+    truespatialcoord = np.array([true_lon, true_lat])
+    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
+    offset  = convertlonlat_to_offset(truespatialcoord).flatten()
+    energyvals = np.power(10.,logetrue)
+    output = np.log(psffull.evaluate(energy_true=energyvals*u.TeV,
+                                                    rad = rad*u.deg, 
+                                                    offset=offset*u.deg).value)
+    
+    return output
+
 def psf_efficient(rad, logetrue, offset):
 
     output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
