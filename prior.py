@@ -108,3 +108,11 @@ class discrete_logprior(object):
                 simvals.append(axis[axis_sim_index])
             
         return np.array(simvals)
+    
+    def construct_prior_array(self, hyperparameters=None):
+        
+        if hyperparameters is None:
+            hyperparameters = self.default_hyperparameter_values
+            
+        inputmesh = np.meshgrid(*self.axes,  *hyperparameters)        
+        return self.logfunction(*inputmesh)

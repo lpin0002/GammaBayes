@@ -31,7 +31,7 @@ def SS_DM_dist_setup(logspecfunc, longitudeaxis, latitudeaxis):
 
     diffJfactor_function = interpolate.RegularGridInterpolator((longitudeaxis, latitudeaxis), diffjfact, method='linear', bounds_error=False, fill_value=0)
     
-    def DM_signal_dist(log10eval, lonval, latval, logmass):
+    def DM_signal_dist(log10eval, lonval, latval, logmass, coupling=0.1):
         try:
             spectralvals = np.squeeze(logspecfunc(logmass.flatten(), log10eval.flatten()).reshape(log10eval.shape))
         except:
