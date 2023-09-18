@@ -25,12 +25,12 @@ class discrete_loglikelihood(object):
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
 
-                self.axes_mesh = np.meshgrid(axes, dependent_axes)
+                self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
             elif len(self.axes)==1:
                 print('boop')
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
-                self.axes_mesh = np.meshgrid(axes, *dependent_axes)
+                self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
                 self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
@@ -42,7 +42,7 @@ class discrete_loglikelihood(object):
                 
                 self.dependent_axes_dim = 1
 
-                self.axes_mesh = np.meshgrid(*axes, dependent_axes)
+                self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
         else:
             print('beeeep')
             self.axes_dim = len(axes)
@@ -53,7 +53,7 @@ class discrete_loglikelihood(object):
             self.dependent_axes_dim = len(self.dependent_axes)
 
             print(f'Number of data dimensions {self.axes_dim}')
-            self.axes_mesh = np.meshgrid(*axes, *dependent_axes)
+            self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
             
         print(f'Axes shape: {self.axes_shape}')
         
@@ -84,6 +84,8 @@ class discrete_loglikelihood(object):
     def sample(self, dependentvalues, numsamples):
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')
         
+        print(inputmesh)
+        
 
         
         loglikevals = np.squeeze(self.__call__(*(input.flatten() for input in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
@@ -110,7 +112,7 @@ class discrete_loglikelihood(object):
         if loglikelihoodvalues is None:
             if loglikelihoodnormalisation is None:
                 raise UserWarning("Presuming that the loglikelihood function is normalised with respect to given axes")
-            loglikelihoodvalues = self.__call__(np.meshgrid(datapoint, self.dependent_axes))
+            loglikelihoodvalues = self.__call__(np.meshgrid(datapoint, self.dependent_axes, indexing='ij'))
             
         
         

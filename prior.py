@@ -80,15 +80,15 @@ class discrete_logprior(object):
         
         
         if logpriorvalues is None:
-            try:
-                logpriorvalues = self.logfunction(*self.input_values_mesh)
-            except:
-                logpriorvalues = self.logfunction((*self.axes_mesh,))
+            # try:
+            logpriorvalues = self.logfunction(*self.input_values_mesh)
+            # except:
+            #     logpriorvalues = self.logfunction((*self.axes_mesh,))
     
         if type(logpriorvalues)!=np.ndarray:
             logpriorvalues = np.array(logpriorvalues)
             
-        logpriorvalues_withlogjacob = logpriorvalues+self.logjacob
+        logpriorvalues_withlogjacob = np.squeeze(logpriorvalues)+self.logjacob
             
         
         logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
@@ -114,5 +114,5 @@ class discrete_logprior(object):
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values
             
-        inputmesh = np.meshgrid(*self.axes,  *hyperparameters)        
+        inputmesh = np.meshgrid(*self.axes,  *hyperparameters, indexing='ij')        
         return self.logfunction(*inputmesh)
