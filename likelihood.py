@@ -82,16 +82,16 @@ class discrete_loglikelihood(object):
     
     
     def sample(self, dependentvalues, numsamples):
-        inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')
-        
-        print(inputmesh)
-        
+        inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
 
         
-        loglikevals = np.squeeze(self.__call__(*(input.flatten() for input in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
+        loglikevalswithlogjacob = np.squeeze(self.__call__(*(input.flatten() for input in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
+        
+        loglikevalswithlogjacob = loglikevalswithlogjacob - logsumexp(loglikevalswithlogjacob, axis=(*np.arange(self.axes_dim),))
+        loglikevalswithlogjacob = loglikevalswithlogjacob - logsumexp(loglikevalswithlogjacob, axis=(*np.arange(self.axes_dim),))
 
         
-        sampled_indices = np.squeeze(inverse_transform_sampling(loglikevals.flatten(), numsamples))
+        sampled_indices = np.squeeze(inverse_transform_sampling(loglikevalswithlogjacob.flatten(), numsamples))
             
         reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
         
@@ -104,26 +104,4 @@ class discrete_loglikelihood(object):
         
         
         
-    def marginalise(self, logprior, datapoint=None, loglikelihoodvalues=None, loglikelihoodnormalisation=None, logpriorarray=None, logjacobian=0):
-        
-        
-        
-        
-        if loglikelihoodvalues is None:
-            if loglikelihoodnormalisation is None:
-                raise UserWarning("Presuming that the loglikelihood function is normalised with respect to given axes")
-            loglikelihoodvalues = self.__call__(np.meshgrid(datapoint, self.dependent_axes, indexing='ij'))
-            
-        
-        
-        if logpriorarray is not None:
-            if logpriorarray.ndim==self.dependent_axes_dim:
-                
-                return logsumexp(logpriorarray+loglikelihoodvalues+logjacobian, axis=tuple(np.flip(-np.arange(self.dependent_axes_dim)-1)))
-            
-            else:
-                marginalised_values = []
-                for single_logpriorarray in logpriorarray:
-                    marginalised_values.append(logsumexp(single_logpriorarray+loglikelihoodvalues+logjacobian, axis=tuple(np.flip(-np.arange(self.dependent_axes_dim)-1))))
-                    
-                return marginalised_values
+

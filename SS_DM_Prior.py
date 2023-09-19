@@ -37,8 +37,6 @@ def SS_DM_dist_setup(logspecfunc, longitudeaxis, latitudeaxis):
         # except:
         #     spectralvals = np.squeeze(logspecfunc(logmass, log10eval))
         
-        print(spectralvals.shape)
-
         spatialvals = np.log(diffJfactor_function((lonval.flatten(), latval.flatten()))).reshape(log10eval.shape)
                 
         logpdfvalues = spectralvals+spatialvals

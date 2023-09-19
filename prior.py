@@ -80,16 +80,19 @@ class discrete_logprior(object):
         
         
         if logpriorvalues is None:
-            # try:
             logpriorvalues = self.logfunction(*self.input_values_mesh)
-            # except:
-            #     logpriorvalues = self.logfunction((*self.axes_mesh,))
     
         if type(logpriorvalues)!=np.ndarray:
             logpriorvalues = np.array(logpriorvalues)
             
         logpriorvalues_withlogjacob = np.squeeze(logpriorvalues)+self.logjacob
             
+            
+        # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
+            # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
+            # So we will double check the normalisation
+        logpriorvalues_withlogjacob = logpriorvalues_withlogjacob - logsumexp(logpriorvalues_withlogjacob)
+        logpriorvalues_withlogjacob = logpriorvalues_withlogjacob - logsumexp(logpriorvalues_withlogjacob)
         
         logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
         
@@ -109,10 +112,25 @@ class discrete_logprior(object):
             
         return np.array(simvals)
     
-    def construct_prior_array(self, hyperparameters=None):
+    def construct_prior_array(self, hyperparameters=None, normalise=False):
         
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values
+        try:
+            inputmesh = np.meshgrid(*self.axes,  *hyperparameters, indexing='ij') 
+            outputarray = self.logfunction(*inputmesh)
             
-        inputmesh = np.meshgrid(*self.axes,  *hyperparameters, indexing='ij')        
-        return self.logfunction(*inputmesh)
+
+        except:
+            inputmesh = np.meshgrid(*self.axes, indexing='ij')  
+            outputarray = self.logfunction(*inputmesh)
+            
+
+        # This is left as an option to decrease computation time
+        if normalise:
+            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(self.axes)),))
+            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(self.axes)),))
+             
+        return outputarray
+
+        

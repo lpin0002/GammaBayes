@@ -491,46 +491,7 @@ def diff_irf_marg(single_event_measurement, signal_prior_matrices, logbkgpriorva
     return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult])
 
 
-def diff_irf_marg_copy_vers(single_event_measurement, signal_prior_matrices, logbkgpriorvalues, logmassrange, edispnormvalues, psfnormvalues, logjacobtrue):
-    
-    single_measured_log10e, single_measured_lon, single_measured_lat = single_event_measurement
 
-    logbkgpriorvalues = logbkgpriorvalues - special.logsumexp(logbkgpriorvalues+logjacobtrue)
 
-    
-    sigmargresults = []
-    
-    nuisance_logemesh, nuisance_longitudemesh, nuisance_latitudemesh, measured_logemesh, measured_longitudemesh, measured_latitudemesh  = np.meshgrid(log10eaxistrue, 
-                                                                                    longitudeaxistrue, latitudeaxistrue, 
-                                                                                        single_measured_log10e, single_measured_lon, single_measured_lat, indexing='ij')
 
-    truecoords = np.array([nuisance_longitudemesh.flatten(), nuisance_latitudemesh.flatten()])
-    reconcoords = np.array([measured_longitudemesh.flatten(), measured_latitudemesh.flatten()])
-    
 
-    rad = angularseparation(reconcoords, truecoords).flatten()
-    offset  = convertlonlat_to_offset(truecoords).flatten()
-
-    
-    psfvalues = np.squeeze(psf_efficient(rad,
-            nuisance_logemesh.flatten(),
-            offset).reshape(nuisance_logemesh.shape)) - psfnormvalues
-
-    edispvalues = np.squeeze(edisp_efficient(measured_logemesh.flatten(), 
-                nuisance_logemesh.flatten(),
-                offset).reshape(nuisance_logemesh.shape)) - edispnormvalues
-    
-    bkgmargresult = special.logsumexp(logbkgpriorvalues+logjacobtrue+psfvalues+edispvalues)
-
-    
-    singlemass_sigmargvals = []
-    for logmass_idx, logmass in enumerate(logmassrange):
-        
-        output = special.logsumexp(signal_prior_matrices[logmass_idx]+logjacobtrue+psfvalues+edispvalues)#-irfnormalisation)
-        singlemass_sigmargvals.append(output)
-
-    sigmargresults.append(singlemass_sigmargvals)
-        
-
-        
-    return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult])
