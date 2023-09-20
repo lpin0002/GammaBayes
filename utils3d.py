@@ -114,10 +114,10 @@ def edisp(logereconstructed, logetrue, truespatialcoord):
                                                     offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
     
     
-def edisp_test(logereconstructed, logetrue, lonval, latval):
+def edisp_test(reconloge, logetrue, true_lon, true_lat):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                    migra = np.power(10.,logereconstructed-logetrue), 
-                                                    offset=convertlonlat_to_offset(np.array([lonval, latval]))*u.deg).value)
+                                                    migra = np.power(10.,reconloge-logetrue), 
+                                                    offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).value)
 
 def edisp_efficient(logereconstructed, logetrue, offset):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
@@ -143,9 +143,24 @@ def psf_test(recon_lon, recon_lat, logetrue, true_lon, true_lat):
     truespatialcoord = np.array([true_lon, true_lat])
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
     offset  = convertlonlat_to_offset(truespatialcoord).flatten()
-    energyvals = np.power(10.,logetrue)
-    output = np.log(psffull.evaluate(energy_true=energyvals*u.TeV,
+    output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
                                                     rad = rad*u.deg, 
+                                                    offset=offset*u.deg).value)
+    
+    return output
+
+
+def single_likelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, true_lat):
+    reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
+    truespatialcoord = np.array([true_lon, true_lat])
+    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
+    offset  = convertlonlat_to_offset(truespatialcoord).flatten()
+    output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
+                                                    rad = rad*u.deg, 
+                                                    offset=offset*u.deg).value)
+    
+    output+=np.log(edispfull.evaluate(energy_true=10**logetrue*u.TeV,
+                                                    migra = 10**(reconloge-logetrue), 
                                                     offset=offset*u.deg).value)
     
     return output
