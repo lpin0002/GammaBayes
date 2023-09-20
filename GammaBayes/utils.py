@@ -1,6 +1,8 @@
 from scipy import integrate, special, interpolate, stats
 import numpy as np
 import os
+from os import path
+resources_dir = path.join(path.dirname(__file__), 'package_data')
 # import matplotlib.pyplot as plt
 import random, time
 from tqdm import tqdm
@@ -12,7 +14,7 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'GammaBayes'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'gammabayes'))
 
 from gammapy.astro.darkmatter import (
     profiles,
@@ -30,7 +32,7 @@ profile.scale_to_local_density()
 
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
-irfs = load_cta_irfs('Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
+irfs = load_cta_irfs(path.dirname(__file__)+'/package_data/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
 
 

@@ -2,7 +2,7 @@ import numpy as np
 from scipy.special import logsumexp
 import functools
 from tqdm.auto import tqdm
-from utils3d import angularseparation, convertlonlat_to_offset
+from gammabayes.utils import angularseparation, convertlonlat_to_offset
 from multiprocessing.pool import ThreadPool as Pool
 
 
