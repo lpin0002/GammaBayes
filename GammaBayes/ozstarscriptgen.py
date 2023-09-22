@@ -1,7 +1,7 @@
 
 import os, sys, numpy as np, time, math
 
-def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores, 
+def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores, 
                    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
                    numlogmass, numlambda, identifier = None, immediate_run=1, 
                    simmemory = 200, analysememory=1000):
@@ -43,8 +43,8 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores,
         #TODO: Adjust time allocation based on number of cores, accuracy and number of events
         str =f"""#!/bin/bash
 #
-#SBATCH --job-name=SR{logmass}|{ltrue}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
-#SBATCH --output=data/LatestFolder/SR{logmass}_{ltrue}_{runnum}_{int(numberofruns*singlerunevents)}_{identifier}.txt
+#SBATCH --job-name=SR{logmass}|{xi_true}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
+#SBATCH --output=data/LatestFolder/SR{logmass}_{xi_true}_{runnum}_{int(numberofruns*singlerunevents)}_{identifier}.txt
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={numcores}
@@ -53,8 +53,7 @@ def makejobscripts(logmass, ltrue, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 simulation.py {identifier} {runnum} {singlerunevents} {logmass} {ltrue}
-srun python3 nuisancemarginalisation.py {identifier} {runnum} {numberofruns} {numlogmass} {numcores}"""
+srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {runnum}"""
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
         if immediate_run:
@@ -62,8 +61,8 @@ srun python3 nuisancemarginalisation.py {identifier} {runnum} {numberofruns} {nu
 
     str =f"""#!/bin/bash
 #
-#SBATCH --job-name=CR{logmass}|{ltrue}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
-#SBATCH --output=data/LatestFolder/CR{logmass}_{ltrue}_{int(numberofruns*singlerunevents)}_{identifier}.txt
+#SBATCH --job-name=CR{logmass}|{xi_true}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
+#SBATCH --output=data/LatestFolder/CR{logmass}_{xi_true}_{int(numberofruns*singlerunevents)}_{identifier}.txt
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
@@ -72,7 +71,7 @@ srun python3 nuisancemarginalisation.py {identifier} {runnum} {numberofruns} {nu
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 gridsearch.py {identifier} {numlambda} {1}"""
+srun python3 combine_results.py {identifier} {numlambda}"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
         f.write(str)
@@ -80,7 +79,7 @@ srun python3 gridsearch.py {identifier} {numlambda} {1}"""
 
 
 
-#logmass, ltrue, numberofruns, singlerunevents, numcores, 
+#logmass, xi_true, numberofruns, singlerunevents, numcores, 
                 #    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
                 #    numlogmass, numlambda, identifier = None, immediate_run=1, 
                 #    simmemory = 200, analysememory=1000
@@ -88,7 +87,7 @@ srun python3 gridsearch.py {identifier} {numlambda} {1}"""
 
 if __name__=="__main__":
     logmass = float(sys.argv[1])
-    ltrue = float(sys.argv[2])  
+    xi_true = float(sys.argv[2])  
     numberofruns = int(sys.argv[3])
     singlerunevents = int(sys.argv[4])
     numcores = int(sys.argv[5])
@@ -125,7 +124,7 @@ if __name__=="__main__":
         immediate_run = 1
         
 
-    makejobscripts(logmass=logmass, ltrue=ltrue, numberofruns=numberofruns, singlerunevents=singlerunevents, numcores=numcores, 
+    makejobscripts(logmass=logmass, xi_true=xi_true, numberofruns=numberofruns, singlerunevents=singlerunevents, numcores=numcores, 
                    numsimhour=numsimhour, numsimminute=numsimminute, numanalysehour=numanalysehour, numanalyseminute=numanalyseminute, 
                    numlogmass=numlogmass, numlambda=numlambda, 
                    identifier=identifier, 

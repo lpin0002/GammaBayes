@@ -1,0 +1,9 @@
+include gammabayes/package_data/*.gz
+include gammabayes/package_data/*.txt
+include gammabayes/package_data/*.fits
+include gammabayes/BFCalc/griddata/*.npy
+include gammabayes/BFCalc/220913_145357/bfmlambdaarray.npy
+include gammabayes/BFCalc/220913_145357/lambdarange.npy
+include gammabayes/BFCalc/220913_145357/massrange.npy
+include gammabayes/BFCalc/dark_matter_spectra/AtProduction_gammas.dat
+include gammabayes/BFCalc/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv

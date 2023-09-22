@@ -10,4 +10,4 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 setup.py
+srun python3 gammabayes/default_file_setup.py
