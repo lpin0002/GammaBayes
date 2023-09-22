@@ -22,13 +22,13 @@ plt.rc('font', family='serif')
 try:
     setup_irfnormalisations = int(sys.argv[1])
 except:
-    setup_irfnormalisations = 0
+    setup_irfnormalisations = 1
     
     
 try:
     setup_astrobkg = int(sys.argv[2])
 except:
-    setup_astrobkg = 0
+    setup_astrobkg = 1
 
 
 if setup_irfnormalisations:

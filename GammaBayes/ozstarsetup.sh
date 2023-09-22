@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --time=1:00:00
-#SBATCH --mem-per-cpu=300000
+#SBATCH --mem-per-cpu=3000
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
