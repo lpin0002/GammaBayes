@@ -24,7 +24,8 @@ dependencies = [
     "matplotlib==3.7.1",
     "scipy==1.10.1",
     "tqdm==4.65.0",
+    "numpy==1.23.3",
     "gammapy==0.20.1",
-    "numpy==1.23.3"
+
 
 ]

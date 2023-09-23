@@ -15,6 +15,18 @@ import functools
 from multiprocessing import Pool, freeze_support
 import multiprocessing
 
+
+from gammapy.datasets import Datasets, MapDataset
+from gammapy.modeling.models import (
+    FoVBackgroundModel,
+    Models,
+    PowerLawNormSpectralModel,
+    SkyModel,
+    TemplateSpatialModel,
+    create_fermi_isotropic_diffuse_model,
+)
+
+
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
@@ -22,7 +34,7 @@ plt.rc('font', family='serif')
 try:
     setup_irfnormalisations = int(sys.argv[1])
 except:
-    setup_irfnormalisations = 1
+    setup_irfnormalisations = 0
     
     
 try:
