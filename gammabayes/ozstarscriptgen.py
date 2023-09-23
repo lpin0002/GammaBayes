@@ -16,7 +16,11 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
     else:
         numanalyseminute = int(numanalyseminute)
 
-    workingfolder = os.path.realpath(os.path.join(sys.path[0]))
+    # workingfolder = os.path.realpath(os.path.join(sys.path[0]))
+    workingfolder = os.getcwd()
+    print('\n\n\n'+workingfolder,'\n\n\n')
+    
+    print(1/0)
 
     try:
         os.mkdir(workingfolder+"/data")
