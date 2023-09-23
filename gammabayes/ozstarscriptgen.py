@@ -4,7 +4,7 @@ import os, sys, numpy as np, time, math
 def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores, 
                    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
                    numlogmass, numlambda, identifier = None, immediate_run=1, 
-                   simmemory = 200, analysememory=1000, densityprofile='profile'):
+                   simmemory = 200, analysememory=1000, densityprofile='einasto'):
     
     if int(numsimminute)<10:
         numsimminute = "10"
@@ -121,13 +121,13 @@ if __name__=="__main__":
     except:
         analysememory = 1000
     try:
-        densityprofile = sys.argv[14]
+        densityprofile = sys.argv[15]
     except:
         densityprofile = 'einasto'
         
         
     try:
-        immediate_run = int(sys.argv[15])
+        immediate_run = int(sys.argv[16])
     except:
         immediate_run = 1
         
