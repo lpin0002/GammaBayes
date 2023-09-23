@@ -18,7 +18,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 
     # workingfolder = os.path.realpath(os.path.join(sys.path[0]))
     workingfolder = os.getcwd()
-    print('\n\n\n'+workingfolder,'\n\n\n')
+    print('\n\n\nWorking directory: '+workingfolder,'\n\n\n')
     
     print(1/0)
 
