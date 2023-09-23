@@ -15,6 +15,17 @@ import functools
 from multiprocessing import Pool, freeze_support
 import multiprocessing
 
+from gammapy.datasets import Datasets, MapDataset
+from gammapy.modeling.models import (
+    FoVBackgroundModel,
+    Models,
+    PowerLawNormSpectralModel,
+    SkyModel,
+    TemplateSpatialModel,
+    create_fermi_isotropic_diffuse_model,
+)
+
+
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
