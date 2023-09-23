@@ -100,19 +100,19 @@ except:
 try:
     os.mkdir('data')
 except:
-    pass
+    print('data folder exists')
 
 try:
     os.mkdir(f'{stemfoldername}')
 except:
-    pass
+    print('stem folder exists')
 
 stemdatafoldername = f'{stemfoldername}/singlerundata'
 
 try:
     os.mkdir(f'{stemdatafoldername}')
 except:
-    pass
+    print('stem data folder exists')
 
 datafolder = f'{stemdatafoldername}/{runnumber}'
 

@@ -4,7 +4,7 @@ import os, sys, numpy as np, time, math
 def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores, 
                    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
                    numlogmass, numlambda, identifier = None, immediate_run=1, 
-                   simmemory = 200, analysememory=1000):
+                   simmemory = 200, analysememory=1000, densityprofile='profile'):
     
     if int(numsimminute)<10:
         numsimminute = "10"
@@ -56,7 +56,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {runnum}"""
+srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {densityprofile} {runnum}"""
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
         if immediate_run:
@@ -120,6 +120,11 @@ if __name__=="__main__":
         analysememory = int(sys.argv[14])
     except:
         analysememory = 1000
+    try:
+        densityprofile = sys.argv[14]
+    except:
+        densityprofile = 'einasto'
+        
         
     try:
         immediate_run = int(sys.argv[15])
@@ -130,6 +135,6 @@ if __name__=="__main__":
     makejobscripts(logmass=logmass, xi_true=xi_true, numberofruns=numberofruns, singlerunevents=singlerunevents, numcores=numcores, 
                    numsimhour=numsimhour, numsimminute=numsimminute, numanalysehour=numanalysehour, numanalyseminute=numanalyseminute, 
                    numlogmass=numlogmass, numlambda=numlambda, 
-                   identifier=identifier, 
+                   identifier=identifier, densityprofile=densityprofile,
                    simmemory=simmemory, analysememory=analysememory, 
                    immediate_run=immediate_run)
