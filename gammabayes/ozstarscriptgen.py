@@ -20,7 +20,6 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
     workingfolder = os.getcwd()
     print('\n\n\nWorking directory: '+workingfolder,'\n\n\n')
     
-    print(1/0)
 
     try:
         os.mkdir(workingfolder+"/data")
