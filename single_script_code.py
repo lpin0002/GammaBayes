@@ -351,7 +351,7 @@ logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, nbin
 #  
 hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior, bkg_prior,), likelihood=single_likelihood, 
                                                                dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), dependent_logjacob=logjacobtrue,
-                                                               hyperparameter_axes = (logmassrange, (None,)), numcores=8, likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
+                                                               hyperparameter_axes = (logmassrange, (None,)), numcores=numcores, likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
 
 measured_log10e = [float(measured_log10e_val) for measured_log10e_val in measured_log10e]
 margresults = hyperparameter_likelihood_instance.full_obs_marginalisation(axisvals= (measured_log10e, measured_lon, measured_lat))
