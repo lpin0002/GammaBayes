@@ -26,6 +26,10 @@ from gammapy.modeling.models import (
 )
 
 
+def powerlaw(energy, index, phi0=1):
+    return phi0*energy**(index)
+
+
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
