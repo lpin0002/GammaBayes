@@ -43,6 +43,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
         raise Exception("Stem folder already exists")
 
     for runnum in range(1,numberofruns+1):
+        time.sleep(0.1)
         #TODO: Adjust time allocation based on number of cores, accuracy and number of events
         str =f"""#!/bin/bash
 #
