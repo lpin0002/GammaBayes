@@ -56,13 +56,7 @@ print(lonmeshtrue.shape, lonmeshrecon.shape)
 #  
 
 numberoftruevaluesamples = int(sys.argv[1])
-Nevents=numberoftruevaluesamples
 
-true_xi          = float(sys.argv[2])
-nsig                = int(round( true_xi*Nevents))
-nbkg                = int(round((1- true_xi)*Nevents))
-
-true_xi          = nsig/(nbkg+nsig)
 
 truelogmass      = float(sys.argv[3])
 
@@ -93,8 +87,20 @@ try:
     runnumber = int(sys.argv[8])
 except:
     runnumber = 1
-
     
+try:
+    totalevents = int(sys.argv[9])
+except:
+    totalevents = numberoftruevaluesamples
+    
+
+Nevents=numberoftruevaluesamples
+
+true_xi          = float(sys.argv[2])
+nsig                = int(round( true_xi*Nevents))
+nbkg                = int(round((1- true_xi)*Nevents))
+
+true_xi          = nsig/(nbkg+nsig)
 
 
 try:
@@ -334,7 +340,7 @@ except:
 if nsig is None:
     nsig = len(list(measured_log10e))
 
-logmasswindowwidth      = 6/np.sqrt(nsig)
+logmasswindowwidth      = 10/np.sqrt(xi_true*totalevents)
 
 logmasslowerbound       = truelogmass-logmasswindowwidth
 logmassupperbound       = truelogmass+logmasswindowwidth

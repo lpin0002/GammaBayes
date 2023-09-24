@@ -56,7 +56,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
 source activate DMPipe
-srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {densityprofile} {runnum}"""
+srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {densityprofile} {runnum} {int(numberofruns*singlerunevents)}"""
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
         if immediate_run:
