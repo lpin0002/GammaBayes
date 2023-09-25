@@ -19,7 +19,9 @@ resources_dir = path.join(path.dirname(__file__), 'package_data')
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
 irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
-
+astrophysicalbackground = np.load(resources_dir+"/unnormalised_astrophysicalbackground.npy")
+psfnormalisationvalues = np.load(resources_dir+"/psfnormalisation.npy")
+edispnormalisationvalues = np.load(resources_dir+"/edispnormalisation.npy")
 
 
 
