@@ -11,7 +11,8 @@ sys.path.append("gammabayes")
 
 from gammabayes.BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput, energymassinputspectralfunc
 from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, time,psf, edisp, bkgdist, interpolate, special, integrate
-from gammabayes.utils import SkyCoord, WcsGeom, inverse_transform_sampling, tqdm#, setup_full_fake_signal_dist_copy_vers#, setup_full_fake_signal_dist, diff_irf_marg
+from gammabayes.utils import SkyCoord, WcsGeom, inverse_transform_sampling, tqdm
+from gammabayes.load_package_data import edispnormalisationvalues, psfnormalisationvalues, astrophysicalbackground
 from gammabayes.hyperparameter_likelihood import hyperparameter_likelihood
 from gammabayes.prior import discrete_logprior
 from gammabayes.likelihood import discrete_loglikelihood
@@ -36,9 +37,7 @@ import pandas as pd
 
 
 #  
-astrophysicalbackground = np.load("gammabayes/package_data/unnormalised_astrophysicalbackground.npy")
-psfnormalisationvalues = np.load("gammabayes/package_data/psfnormalisation.npy")
-edispnormalisationvalues = np.load("gammabayes/package_data/edispnormalisation.npy")
+
 print(psfnormalisationvalues.shape)
 
 #  
@@ -56,6 +55,8 @@ print(lonmeshtrue.shape, lonmeshrecon.shape)
 #  
 
 numberoftruevaluesamples = int(sys.argv[1])
+
+true_xi          = float(sys.argv[2])
 
 
 truelogmass      = float(sys.argv[3])
@@ -96,7 +97,6 @@ except:
 
 Nevents=numberoftruevaluesamples
 
-true_xi          = float(sys.argv[2])
 nsig                = int(round( true_xi*Nevents))
 nbkg                = int(round((1- true_xi)*Nevents))
 
