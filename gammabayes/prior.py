@@ -1,6 +1,6 @@
 from scipy.special import logsumexp
 import numpy as np
-from inverse_transform_sampling import inverse_transform_sampling
+from gammabayes.inverse_transform_sampling import inverse_transform_sampling
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):

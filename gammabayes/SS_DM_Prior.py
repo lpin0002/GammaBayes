@@ -9,6 +9,9 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
 
+from os import path
+BFCalc_dir = path.join(path.dirname(__file__), 'BFCalc')
+
 class SS_DM_dist(object):
     
     def __init__(self, longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile()):
@@ -36,7 +39,7 @@ class SS_DM_dist(object):
         }
 
 
-        darkSUSY_BFs_cleaned = pd.read_csv('gammabayes/BFCalc/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
+        darkSUSY_BFs_cleaned = pd.read_csv(BFCalc_dir+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
 
         darkSUSY_massvalues = darkSUSY_BFs_cleaned.iloc[:,1]/1e3
 
@@ -44,15 +47,15 @@ class SS_DM_dist(object):
 
         channelfuncdictionary = {}
 
-        modulefolderpath = 'gammabayes/BFCalc'
-        log10xvals = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
-        massvalues = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
+       
+        log10xvals = np.load(BFCalc_dir+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
+        massvalues = np.load(BFCalc_dir+f"/griddata/massvals_massenergy_diffflux_grid.npy")
 
         for darkSUSYchannel in list(darkSUSY_to_PPPC_converter.keys()):
             try:
                 gammapychannel = darkSUSY_to_PPPC_converter[darkSUSYchannel]
                 
-                tempspectragrid = np.load(modulefolderpath+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
+                tempspectragrid = np.load(BFCalc_dir+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
                 
                 channelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator((np.log10(massvalues/1e3), log10xvals), np.array(tempspectragrid), 
                                                                                         method='linear', bounds_error=False, fill_value=1e-3000)

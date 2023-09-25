@@ -5,7 +5,7 @@ import time
 from matplotlib import cm
 import sys
 from scipy.special import logsumexp
-from utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
+from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
 import os
 
 try:

@@ -19,9 +19,7 @@ resources_dir = path.join(path.dirname(__file__), 'package_data')
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
 irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
-astrophysicalbackground = np.load(resources_dir+"/unnormalised_astrophysicalbackground.npy")
-psfnormalisationvalues = np.load(resources_dir+"/psfnormalisation.npy")
-edispnormalisationvalues = np.load(resources_dir+"/edispnormalisation.npy")
+
 
 
 
@@ -65,11 +63,11 @@ lonbound            = 3.5
 
 
 
-latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
-latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.1)))
+latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4)))
+latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
 
-longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
-longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.1))) 
+longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))) 
+longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
