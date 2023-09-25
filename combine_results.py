@@ -38,8 +38,11 @@ truelogmass = params['true_log10_mass']
 logmassrange = np.load(f'{rundirs[0]}/logmassrange.npy', allow_pickle=True)
 
 for rundir in rundirs[1:]:
-    margresultsarray = np.append(margresultsarray, np.load(f'{rundir}/margresultsarray.npy', allow_pickle=True), axis=0)
-    Nevents += np.load(f'{rundir}/params.npy', allow_pickle=True).item()['Nevents']
+    try:
+        margresultsarray = np.append(margresultsarray, np.load(f'{rundir}/margresultsarray.npy', allow_pickle=True), axis=0)
+        Nevents += np.load(f'{rundir}/params.npy', allow_pickle=True).item()['Nevents']
+    except:
+        pass
 
 
 print(margresultsarray.shape)
