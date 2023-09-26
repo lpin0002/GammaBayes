@@ -185,7 +185,6 @@ logDMpriorfunc = SS_DM_dist_instance.func_setup()
 DM_prior = discrete_logprior(logfunction=logDMpriorfunc, name='Scalar Singlet Dark Matter Prior',
                                axes=(log10eaxistrue, longitudeaxistrue, latitudeaxistrue,), axes_names=['energy', 'lon', 'lat'],
                                default_hyperparameter_values=(truelogmass,), hyperparameter_names=['mass'], logjacob=logjacobtrue)
-DM_prior
 
 #   [markdown]
 # ## True Value Simulation
