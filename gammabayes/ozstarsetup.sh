@@ -9,5 +9,5 @@
 #SBATCH --mem-per-cpu=32000
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
-source activate DMPipe
+conda activate DMPipe
 srun python3 gammabayes/default_file_setup.py

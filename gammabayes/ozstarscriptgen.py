@@ -56,7 +56,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mem-per-cpu={simmemory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
-source activate DMPipe
+conda activate DMPipe
 srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {densityprofile} {runnum} {int(numberofruns*singlerunevents)}"""
         with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
             f.write(str)
@@ -74,7 +74,7 @@ srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identi
 #SBATCH --mem-per-cpu={analysememory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
-source activate DMPipe
+conda activate DMPipe
 srun python3 combine_results.py {identifier} {numlambda}"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:

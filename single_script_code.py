@@ -283,7 +283,7 @@ else:
 bkg_lon_measured = []
 bkg_lat_measured = []
 
-if  true_xi!=0:
+if  true_xi!=1.0:
     
     bkg_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in  tqdm(zip(bkglogevals, np.array([bkglonvals, 
                                                                                                                                      bkglatvals]).T), 
@@ -340,10 +340,14 @@ except:
 if nsig is None:
     nsig = len(list(measured_log10e))
 
-logmasswindowwidth      = 100/np.sqrt(true_xi*totalevents)
+if true_xi>1e-3:
+    logmasswindowwidth      = 10/np.sqrt(true_xi*totalevents)
 
-logmasslowerbound       = truelogmass-logmasswindowwidth
-logmassupperbound       = truelogmass+logmasswindowwidth
+    logmasslowerbound       = truelogmass-logmasswindowwidth
+    logmassupperbound       = truelogmass+logmasswindowwidth
+else:
+    logmasslowerbound = log10eaxis[0]
+    logmassupperbound = 2
 
 
 if logmasslowerbound<log10eaxis[0]:

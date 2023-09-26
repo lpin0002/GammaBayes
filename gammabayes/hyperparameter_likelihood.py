@@ -50,7 +50,7 @@ class hyperparameter_likelihood(object):
             
 
             
-        return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult])
+        return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult], dtype=object)
 
 
     def full_obs_marginalisation(self, axisvals):
