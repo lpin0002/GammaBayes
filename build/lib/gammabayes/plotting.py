@@ -3,8 +3,12 @@ import numpy as np
 from scipy.stats import norm
 import time
 from matplotlib import cm
-import sys
+import sys, os
 from scipy.special import logsumexp
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
 import os
 

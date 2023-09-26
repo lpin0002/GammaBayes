@@ -75,7 +75,7 @@ log10estart             = -1.0
 log10eend               = 2.4
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*200))+1)
 
 
 

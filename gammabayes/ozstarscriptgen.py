@@ -75,6 +75,7 @@ srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identi
 #SBATCH --mem-per-cpu={analysememory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
+conda init bash
 conda activate DMPipe
 srun python3 combine_results.py {identifier} {numlambda}"""
 
