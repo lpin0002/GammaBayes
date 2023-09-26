@@ -24,3 +24,6 @@ data/nestedsamplingtest8*
 *.gif
 *.jpg
 *giffolder*
+*build*
+*dist*
+*.DS_Store

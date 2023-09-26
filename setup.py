@@ -10,7 +10,7 @@ setup(name='GammaBayes',
       author='Liam Pinchbeck',
       author_email='Liam.Pinchbeck@monash.edu',
       license="MIT",
-      version='0.0.40',
+      version='0.0.41',
       packages=find_packages(),
       install_requires=[
           "astropy>=5.1",
@@ -26,5 +26,18 @@ setup(name='GammaBayes',
     ],
       classifiers=[
           "License :: OSI Approved :: MIT License",
-          "Operating System :: Unix"]
+          "Operating System :: Unix"],
+      package_data={
+          'gammabayes':['package_data/*.gz', 
+                        'package_data/*.txt',
+                        'package_data/*.fits',
+                        'BFCalc/griddata/*.npy',
+                        'BFCalc/220913_145357/bfmlambdaarray.npy',
+                        'BFCalc/220913_145357/lambdarange.npy',
+                        'BFCalc/220913_145357/massrange.npy',
+                        'BFCalc/dark_matter_spectra/AtProduction_gammas.dat',
+                        'BFCalc/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
+                        'BFCalc/temp/*',
+                        ]
+      }
       )
