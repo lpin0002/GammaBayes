@@ -1,5 +1,5 @@
 # DM Bayesian Inference Pipeline
-__Author(s)__: Liam Pinchbeck (lpin0002@student.monash.edu)
+__Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
 
 __Supervisor(s)__: Csaba Balazs, Eric Thrane
 
@@ -29,6 +29,6 @@ duplicate the arrays instead of reference the same one.
 This coding repository contains a Bayesian Inference pipeline for calculating dark matter related observables from (simulated) observations from the galactic centre. Example files that run the simulation and analysis are contained in `single_script_code.py` and `combine_results.py`, this will provide inference on the log10 mass of a scalar singlet dark matter particle and the fraction of signal events to total events that have been simulated. To convert these results into those on the thermally averaged velocity weighted self-annihilation cross section, a function is contained in the `gammabayes/plotting.py` script.
 
 Detailed documentation for the code is currently being written with the notebook files within the `gammabayes/documentation` folder for all the components that
-make up the analysis. These codes also detail how the code can be modified for your own analysis for the relevant components.
+make up the analysis. These notebooks also detail how the code can be modified for your own analysis for the relevant components.
 
 
