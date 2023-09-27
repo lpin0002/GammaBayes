@@ -157,7 +157,7 @@ def psf_efficient(rad, logetrue, offset):
 
 def bkgdist(logeval, lon, lat):
     # np.log(1e6) factor is because the background rate is given in 1/MeV not 1/TeV for some reason
-    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value*1e6/(2*np.pi))
+    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value*1e6)
 
 # Does not have any mention of the log of the jacobian to keep it more general.
 def inverse_transform_sampling(logpmf, Nsamples=1):
