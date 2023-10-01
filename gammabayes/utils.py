@@ -103,7 +103,9 @@ def edisp_efficient(logereconstructed, logetrue, offset):
                                                     migra = np.power(10.,logereconstructed-logetrue), 
                                                     offset=offset*u.deg).value)
 def aeff_efficient(logetrue, offset):
-    return aefffull.evaluate(energy_true=10**logetrue*u.TeV, offset=offset*u.deg).to(u.cm**2)
+    return np.log(aefffull.evaluate(energy_true=10**logetrue*u.TeV, offset=offset*u.deg).to(u.cm**2).value)
+
+
 
 def psf(reconstructed_spatialcoord, logetrue, truespatialcoord):
     

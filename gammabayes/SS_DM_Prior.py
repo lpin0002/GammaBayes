@@ -12,12 +12,15 @@ import pandas as pd
 from os import path
 BFCalc_dir = path.join(path.dirname(__file__), 'BFCalc')
 
+
+# SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class SS_DM_dist(object):
     
-    def __init__(self, longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile()):
+    def __init__(self, longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile(), ratios=False):
         self.longitudeaxis = longitudeaxis
         self.latitudeaxis = latitudeaxis
         self.density_profile = density_profile
+        self.ratios = ratios
         
     
     
@@ -63,7 +66,12 @@ class SS_DM_dist(object):
                 channelfuncdictionary[darkSUSYchannel] = lambda logmass, log10x: log10x*0
 
         self.channelfuncdictionary = channelfuncdictionary
-        self.partial_sigmav_interpolator_dictionary = {channel: interpolate.LinearNDInterpolator((darkSUSY_massvalues, darkSUSY_lambdavalues),darkSUSY_BFs_cleaned.iloc[:,idx+3]) for idx, channel in enumerate(list(darkSUSY_to_PPPC_converter.keys()))}
+        
+        darkSUSY_BFs_cleaned_vals = darkSUSY_BFs_cleaned.to_numpy()[:,3:]
+        if self.ratios:
+            darkSUSY_BFs_cleaned_vals = darkSUSY_BFs_cleaned_vals/np.sum(darkSUSY_BFs_cleaned_vals, axis=1)[:, np.newaxis]
+            
+        self.partial_sigmav_interpolator_dictionary = {channel: interpolate.LinearNDInterpolator((darkSUSY_massvalues, darkSUSY_lambdavalues),darkSUSY_BFs_cleaned_vals[:,idx]) for idx, channel in enumerate(list(darkSUSY_to_PPPC_converter.keys()))}
         
         self.profile = density_profile
 
@@ -88,7 +96,8 @@ class SS_DM_dist(object):
         self.diffJfactor_function = interpolate.RegularGridInterpolator((self.longitudeaxis, self.latitudeaxis), self.diffjfact_array, method='linear', bounds_error=False, fill_value=0)
 
 
-    def nontrivial_coupling(self, logmass, logenergy, coupling=0.1, partial_sigmav_interpolator_dictionary=None, channelfuncdictionary=None):
+    def nontrivial_coupling(self, logmass, logenergy, coupling=0.1, 
+                            partial_sigmav_interpolator_dictionary=None, channelfuncdictionary=None):
         if partial_sigmav_interpolator_dictionary is None:
             partial_sigmav_interpolator_dictionary = self.partial_sigmav_interpolator_dictionary
             
@@ -96,10 +105,12 @@ class SS_DM_dist(object):
             channelfuncdictionary = self.channelfuncdictionary
         
         logspectra = -np.inf
+
         for channel in channelfuncdictionary.keys():
             logspectra = np.logaddexp(logspectra, np.log(partial_sigmav_interpolator_dictionary[channel](10**logmass, coupling)*channelfuncdictionary[channel]((logmass, logenergy-logmass))))
-            
+        
         return logspectra
+
     
 
     
