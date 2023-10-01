@@ -1,34 +1,25 @@
-# 
-from gammabayes.BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput, energymassinputspectralfunc
 from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, angularseparation, convertlonlat_to_offset
 from gammabayes.utils import psf_efficient, edisp_efficient, tqdm, logjacob, resources_dir
 from gammabayes.utils import irfs
 
 from astropy.coordinates import SkyCoord
-from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
+from gammapy.maps import Map, MapAxis, WcsGeom
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib.colors import LogNorm
 from astropy import units as u
-from scipy import special,stats
+from scipy import special
 from scipy.integrate import simps
-from matplotlib import cm
-from tqdm.autonotebook import tqdm as notebook_tqdm
 import os, sys
-import functools
 from multiprocessing import Pool, freeze_support
-import multiprocessing
 
-from gammapy.datasets import Datasets, MapDataset
 from gammapy.modeling.models import (
-    FoVBackgroundModel,
-    Models,
-    PowerLawNormSpectralModel,
+    PowerLawSpectralModel,
     SkyModel,
     TemplateSpatialModel,
     create_fermi_isotropic_diffuse_model,
 )
+
+from gammapy.catalog import SourceCatalogHGPS
 
 
 aeff = irfs['aeff']
@@ -53,7 +44,8 @@ except:
 
 def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc):
+          logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
+          pointsources=True):
     def powerlaw(energy, index, phi0=1):
         return phi0*energy**(index)
 
@@ -125,151 +117,146 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
         print("Setting up the astrophysical background\n\n")
 
         print("Setting up HESS sources\n")
-        ### HESS Source Background
-
-        from gammapy.catalog import SourceCatalogHGPS
-
-        print("Accessing HESS Catalogue")
+        
         hess_catalog = SourceCatalogHGPS(resources_dir+"/hgps_catalog_v1.fits.gz")
 
         hess_models = hess_catalog.to_models()
 
-        print(f"\nThere are {len(hess_models)} sources within the HGPS.")
-
-        print("Constructing geometry which the models will be applied to")
+        print(f"\nThere are {len(hess_models)} sources in total within the HGPS.")
+        
         trueenergyaxis = 10**log10eaxistrue*u.TeV
-        print(log10eaxistrue.shape)
-
 
         energy_axis_true = MapAxis.from_nodes(trueenergyaxis, interp='log', name="energy_true")
-        print("Background energy axis check shape: \n", energy_axis_true, '\nvs\n', trueenergyaxis.shape)
-        skyresolution = longitudeaxistrue[1]-longitudeaxistrue[0]
-        lonwidth = longitudeaxistrue[-1]-longitudeaxistrue[0]
-        latwidth = latitudeaxistrue[-1]-latitudeaxistrue[0]
-        goodgeom = WcsGeom.create(
+
+        HESSgeom = WcsGeom.create(
             skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
-            binsz=skyresolution,
-            width=(lonwidth+skyresolution, latwidth+skyresolution), # End bound is non-inclusive but for symmetry we require it to be
+            binsz=longitudeaxistrue[1]-longitudeaxistrue[0],
+            width=(longitudeaxistrue[-1]-longitudeaxistrue[0]+longitudeaxistrue[1]-longitudeaxistrue[0], latitudeaxistrue[-1]-latitudeaxistrue[0]+longitudeaxistrue[1]-longitudeaxistrue[0]),
             frame="galactic",
             proj="CAR",
             axes=[energy_axis_true],
         )
 
-        goodmap = Map.from_geom(goodgeom)
+        HESSmap = Map.from_geom(HESSgeom)
+        
+        hessenergyaxis = energy_axis_true.center.value 
+        
+        
+        count=0 # To keep track of the number of sources satisfying the conditions
 
-        hessenergyaxis = energy_axis_true.center.value
+        full_hess_flux = 0 #Extracting the flux values for the sources along the axes previously defined
 
-
-
-
-        # fig, ax = plt.subplots(2,4, figsize=(8,3))
-
-
-        print("Constructing the contribution to the background prior from the HESS Catalogue")
-        m= goodmap
-        count=0
-        fullhessdataset = 0
         for idx, model in enumerate(hess_models):
-            templvalue = model.spatial_model.position.l.value
-            tempbvalue = model.spatial_model.position.b.value
             
-            if templvalue>180:
-                templvalue=templvalue-360
+            # We will store the longitude 'l' and latitude 'b' values of the source
+            temp_l_value = model.spatial_model.position.l.value
+            temp_b_value = model.spatial_model.position.b.value
             
-            if np.abs(templvalue)<5 and np.abs(tempbvalue)<5:
-                print(templvalue, tempbvalue, idx)
+            
+            # The unit convention for the longitude works as 357, 358, 359, 0, 1, 2
+                # we will make it so that it's -3, -2, -1, 0, 1, 2
+            if temp_l_value>180:
+                temp_l_value=temp_l_value-360
+                
+                
+            # If the location of the source satisfies the criteria above then we start to store it's flux values
+            if np.abs(temp_l_value)<5 and np.abs(temp_b_value)<5:
+            
                 try:
-                    m.quantity = model.evaluate_geom(m.geom)
-                    # m.plot(ax=ax[count//4, count%4], add_cbar=True)
-                    startdata = m.data
-                    data = startdata[~np.isnan(startdata)]
-                    if data.size!=0:
-                        data = data.reshape(startdata.shape)
-                        fullhessdataset+=data
+                    # We extract the flux by assigning it to the HESSmap object
+                    HESSmap.quantity = model.evaluate_geom(HESSmap.geom)
                     
+                    # We can then extract the actual values by referencing the data of this object
+                    startdata = HESSmap.data
+                    
+                    # Removing nan values, '~' is a shortcut for 'not'
+                    data = startdata[~np.isnan(startdata)]
+                    
+                    # If statement to catch sources that have no obervable flux within the region
+                    if data.size!=0:
+                        
+                        # Making sure the data shape is consistent
+                        data = data.reshape(startdata.shape)
+                        
+                        # Adding the flux from this model to the total flux
+                        full_hess_flux+=data
+                        
                 except:
                     print("Something weird happened")
                     print(idx, '\n\n')
+                    
                 count+=1
-        # plt.show()
-        fullhessdataset = np.transpose(fullhessdataset, axes=(0,2,1))
+            
+        # Transposing the longitude and latitude values such that the order of indices goes [logenergy_index, longitude_index, latitude_index]
+        full_hess_flux = np.transpose(full_hess_flux, axes=(0,2,1))
+        full_hess_flux*=100**2
+        full_hess_flux = np.flip(full_hess_flux, axis=1)
+        
+        hessgeom = HESSmap.geom
 
-
-        hessgeom = goodmap.geom
+        # Extracting the longitudevalues
         hesslonvals = hessgeom.get_coord().lon.value[0][0]
+
+        # Reversing the order as the order is flipped by convention
         hesslonvals = hesslonvals[::-1]
+
+        # Again converting the longitude axis from 357,358,359,0,1,2,3 to -3,-2,-1,0,1,2,3
         hesslonvals[hesslonvals>180] = hesslonvals[hesslonvals>180]-360
 
-        hesslatvals = hessgeom.get_coord().lat.value[0][:,0]
 
+        
+     
 
-
-
-        print("\n\nSetting up the Fermi-LAT diffuse background\n")
-        ### Fermi-LAT Diffuse Background
-
-        template_diffuse = TemplateSpatialModel.read(
-            filename=resources_dir+"/gll_iem_v06_gc.fits.gz", normalize=False
+        
+        
+        def powerlaw(energy, index, phi0=1):
+            return phi0*energy**(index)
+        
+        
+        template_diffuse_skymap = TemplateSpatialModel.read(
+            filename=resources_dir+"/gll_iem_v06_gc.fits.gz", normalize=True
         )
 
-        print(template_diffuse.map)
 
         diffuse_iem = SkyModel(
-            spectral_model=PowerLawNormSpectralModel(),
-            spatial_model=template_diffuse,
+            spatial_model=template_diffuse_skymap,
+            spectral_model=PowerLawSpectralModel(),
             name="diffuse-iem",
         )
+        
+        fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.m**2))
 
+        fermi_integral_values= special.logsumexp(np.log(fermievaluated.value.T)+np.log(10**log10eaxistrue)+np.log(np.log(10))+np.log(np.diff(log10eaxistrue)[0]), axis=2).T
+        # fermievaluated_normalised = np.log(fermievaluated.value) - fermi_integral_values
 
-        print("Constructing the Fermi-LAT background")
-        fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(goodgeom), axes=(0,2,1)), axis=1)
-        fermiaveraged = special.logsumexp(np.log(fermievaluated.value.T)+10**log10eaxistrue+np.log(np.log(10))+log10eaxistrue[1]-log10eaxistrue[0], axis=2).T
+        fermi_integral_values = fermi_integral_values - special.logsumexp(fermi_integral_values+np.log(np.diff(longitudeaxistrue)[0]*np.diff(latitudeaxistrue)[0]))
 
-        fermiaveraged = fermiaveraged-special.logsumexp(fermiaveraged+np.log(longitudeaxistrue[1]-longitudeaxistrue[0])+np.log(latitudeaxistrue[1]-latitudeaxistrue[0]))
-        fermifull = np.exp(fermiaveraged[np.newaxis, :, :]+np.log(powerlaw(10**log10eaxistrue, index=-2.41, phi0=1.36*1e-8))[:, np.newaxis, np.newaxis])
+        # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
+        fermi_gaggero = np.exp(fermi_integral_values+np.log(powerlaw(10**log10eaxistrue, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
 
+        
+        # By default the point sources are considered, but they can be turned off use the 'pointsources' argument either
+            # from command line/terminal or through the function itself
+        if pointsources:
+            combinedplotmap = np.logaddexp(np.log(fermi_gaggero), np.log(full_hess_flux))
+        else:
+            combinedplotmap = np.log(fermi_gaggero)
+        
+                
+        aeff = irfs['aeff']
+        aefffunc = lambda energy, offset: aeff.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.m**2).value
 
-        fermilonaxistemp = np.unique(goodgeom.to_image().get_coord().lon.value)
-        firstover180idx = np.where(fermilonaxistemp>180)[0][0]
-        fermilonaxistemp[fermilonaxistemp>180] = fermilonaxistemp[fermilonaxistemp>180]-360
-        fermilonaxistemp.sort()
-        fermilonaxis = fermilonaxistemp
-
-
-
-
-        fermilataxis = goodgeom.get_coord().lat.value[0][:,0]
-        fermiunit = fermievaluated.unit
-        fermienergyvals = energy_axis_true.center.value
-        fermiplotmap = fermievaluated.value
-
-
-
-        print("\n\nCombining the HESS and Fermi-LAT backgrounds")
-        combinedplotmap = fermifull #+ np.flip(fullhessdataset, axis=1)
-
-
-
-
-        print("\n\nApplying the effective area to the maps")
+        energymesh, lonmesh, latmesh = np.meshgrid(10**log10eaxistrue, longitudeaxistrue, latitudeaxistrue, indexing='ij')
+        
+        aefftable = aefffunc(energymesh, np.sqrt((lonmesh**2)+(latmesh**2)))
+        
+        combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
         
 
-        lonmesh, energymesh, latmesh  = np.meshgrid(fermilonaxis, fermienergyvals, fermilataxis)
-
-        aefftable = aeff(energymesh, np.sqrt((lonmesh**2)+(latmesh**2)))
-
-        combinedplotmapwithaeff = aefftable*combinedplotmap
-        combinedplotmapwithaeff = combinedplotmapwithaeff
-
-        topbound=1e500
-        combinedplotmapwithaeff[combinedplotmapwithaeff>topbound] = topbound
-        # combinedplotmapwithaeff=combinedplotmapwithaeff/normalisation
-        # modtopbound = topbound/normalisation
-        spatialplotcombined = np.sum((combinedplotmapwithaeff.T*10**log10eaxistrue).T, axis=0)
-
-
-        print("\n\nSaving the final result")
         np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+        
+        print('''Done setup, results saved to package_data. Accessible through `load_package_data`(.py) 
+    or through `resource_dir` variable in utils.''')
             
 
 
