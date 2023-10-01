@@ -90,6 +90,11 @@ try:
     sensitivity_plot = int(sys.argv[3])
 except:
     sensitivity_plot = False
+    
+try:
+    projectednumber = int(sys.argv[4])
+except:
+    projectednumber = int(float(1e8))
 
 
 log_posterior   = np.load(f'{stemfolder}/log_posterior.npy', allow_pickle=True)
@@ -116,7 +121,7 @@ SS_DM_Class_instance = SS_DM_dist(longitudeaxistrue, latitudeaxistrue, density_p
 
 sigmav_samples = convert_to_sigmav(xi_val=xi_values, log10massDM=logmass_values, totalnumevents=totalevents, 
                                    fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
-                                   )/np.sqrt(1e8/totalevents)
+                                   )/np.sqrt(projectednumber/totalevents)
 
 
 print('\n\n')
@@ -130,13 +135,14 @@ print('\n\n')
 plt.figure()
 upperbound = np.quantile(sigmav_samples, 0.90)
 
-lowerbound = np.quantile(sigmav_samples, 0.1)
+lowerbound = np.quantile(sigmav_samples, 0.10)
+
 if lowerbound==0:
     lowerbound = np.min(sigmav_samples[sigmav_samples>0])
 
-
+print(f"Upper: {upperbound}\nLower: {lowerbound}")
 hist, bins, patches = plt.hist(sigmav_samples, bins=np.linspace(lowerbound, upperbound, 101))
-plt.xlim(np.quantile(sigmav_samples, 0.09), np.quantile(sigmav_samples, 0.91))
+# plt.xlim(np.quantile(sigmav_samples, 0.04), np.quantile(sigmav_samples, 0.96))
 plt.show()
 
 
@@ -182,7 +188,7 @@ if sensitivity_plot:
 
     sigmavvals = convert_to_sigmav(xi_val=twosigma_xi_vals, log10massDM=twosigma_logmassvals, totalnumevents=totalevents, 
                                    fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
-                                   )/np.sqrt(1e8/totalevents)
+                                   )/np.sqrt(projectednumber/totalevents)
     window_size = 10
     cubicfit = np.polyfit(twosigma_logmassvals, np.log(sigmavvals), 3)
 
