@@ -11,4 +11,4 @@
 #SBATCH --mail-user=progressemail1999@gmail.com
 conda init bash
 conda activate DMPipe
-srun python3 gammabayes/default_file_setup.py
+srun python3 gammabayes/default_file_setup.py 1 1 1
