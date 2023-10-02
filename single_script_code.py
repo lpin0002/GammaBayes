@@ -340,7 +340,7 @@ if nsig is None:
     nsig = len(list(measured_log10e))
 
 if true_xi>1e-3:
-    logmasswindowwidth      = 20/np.sqrt(true_xi*totalevents)
+    logmasswindowwidth      = 50/np.sqrt(true_xi*totalevents)
 
     logmasslowerbound       = truelogmass-logmasswindowwidth
     logmassupperbound       = truelogmass+logmasswindowwidth
