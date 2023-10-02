@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from scipy import integrate, special
-from .utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, aeff_efficient, convertlonlat_to_offset
+from utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, aeff_efficient, convertlonlat_to_offset
 from gammapy.astro.darkmatter import (
     profiles,
     JFactory
@@ -11,8 +11,8 @@ from gammapy.astro.darkmatter import (
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from tqdm import tqdm
 import os, sys
-from gammabayes.inverse_transform_sampling import inverse_transform_sampling
-from gammabayes.SS_DM_Prior import SS_DM_dist
+from inverse_transform_sampling import inverse_transform_sampling
+from SS_DM_Prior import SS_DM_dist
 from os import path
 
 
@@ -109,7 +109,10 @@ logmass_values              = logmassrange[reshaped_sampled_indices[1]]
 xi_values                   = xi_range[reshaped_sampled_indices[0]]
 
 
-# params          = np.load(f'{stemfolder}/singlerundata/1/params.npy', allow_pickle=True).item()
+params          = np.load(f'{stemfolder}/singlerundata/1/params.npy', allow_pickle=True)
+print(params)
+true_xi = float(params[1,0])
+truelogmass = float(params[1,2])
 # true_xi         = params['true_xi']
 # truelogmass     = params['true_log10_mass']
 
@@ -123,7 +126,9 @@ sigmav_samples = convert_to_sigmav(xi_val=xi_values, log10massDM=logmass_values,
                                    fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
                                    )/np.sqrt(projectednumber/totalevents)
 
-
+truesigmav = convert_to_sigmav(xi_val=true_xi, log10massDM=truelogmass, totalnumevents=totalevents, 
+                                   fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
+                                   )/np.sqrt(projectednumber/totalevents)
 print('\n\n')
 print(sigmav_samples)
 print('\n\n')
@@ -132,7 +137,7 @@ print('\n\n')
 # For example, you can use a histogram to estimate the PDF.
 
 # Create a histogram to estimate the PDF of sigmav
-plt.figure()
+plt.figure(dpi=300, figsize=(5,4))
 upperbound = np.quantile(sigmav_samples, 0.90)
 
 lowerbound = np.quantile(sigmav_samples, 0.10)
@@ -141,8 +146,19 @@ if lowerbound==0:
     lowerbound = np.min(sigmav_samples[sigmav_samples>0])
 
 print(f"Upper: {upperbound}\nLower: {lowerbound}")
-hist, bins, patches = plt.hist(sigmav_samples, bins=np.linspace(lowerbound, upperbound, 101))
+hist, bins, patches = plt.hist(sigmav_samples, bins=np.logspace(-27, np.log10(5e-26), 61), density=True)
+plt.axvline(truesigmav, c="tab:orange", ls='--')
+
+# plt.axvline(np.quantile(sigmav_samples, 0.90), c='tab:orange')
+# plt.axvline(np.quantile(sigmav_samples, 0.10), c='tab:orange')
+
+
+plt.xlabel(r'$\langle \sigma v \rangle$', size=14)
+plt.ylim([0,None])
+plt.xscale('log')
 # plt.xlim(np.quantile(sigmav_samples, 0.04), np.quantile(sigmav_samples, 0.96))
+plt.tight_layout()
+plt.savefig("gammabayes/Figures/realistic_sigmav_plot.pdf")
 plt.show()
 
 
