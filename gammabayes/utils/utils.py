@@ -12,7 +12,7 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 import sys
 
 from os import path
-resources_dir = path.join(path.dirname(__file__), 'package_data')
+resources_dir = path.join(path.dirname(__file__), '../package_data')
 
 
 

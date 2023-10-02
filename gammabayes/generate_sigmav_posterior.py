@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from scipy import integrate, special
-from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, aeff_efficient, convertlonlat_to_offset
+from .utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, aeff_efficient, convertlonlat_to_offset
 from gammapy.astro.darkmatter import (
     profiles,
     JFactory

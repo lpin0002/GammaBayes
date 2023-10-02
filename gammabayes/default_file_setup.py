@@ -1,6 +1,6 @@
-from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, angularseparation, convertlonlat_to_offset
-from gammabayes.utils import psf_efficient, edisp_efficient, tqdm, logjacob, resources_dir
-from gammabayes.utils import irfs
+from .utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, angularseparation, convertlonlat_to_offset
+from .utils.utils import psf_efficient, edisp_efficient, tqdm, logjacob, resources_dir
+from .utils.utils import irfs
 
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, WcsGeom

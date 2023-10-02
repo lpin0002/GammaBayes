@@ -10,14 +10,14 @@ sys.path.append("gammabayes/BFCalc/")
 sys.path.append("gammabayes")
 
 from gammabayes.BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput, energymassinputspectralfunc
-from gammabayes.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, time,psf, edisp, bkgdist, interpolate, special, integrate
-from gammabayes.utils import SkyCoord, WcsGeom, inverse_transform_sampling, tqdm
+from gammabayes.utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, time,psf, edisp, bkgdist, interpolate, special, integrate
+from gammabayes.utils.utils import SkyCoord, WcsGeom, inverse_transform_sampling, tqdm
 from gammabayes.load_package_data import edispnormalisationvalues, psfnormalisationvalues, astrophysicalbackground
 from gammabayes.hyperparameter_likelihood import hyperparameter_likelihood
 from gammabayes.prior import discrete_logprior
 from gammabayes.likelihood import discrete_loglikelihood
-from gammabayes.utils import edisp_test, psf_test, log10eaxis, longitudeaxis, latitudeaxis
-from gammabayes.utils import psf_efficient, edisp_efficient, edisp_test, psf_test, single_likelihood
+from gammabayes.utils.utils import edisp_test, psf_test, log10eaxis, longitudeaxis, latitudeaxis
+from gammabayes.utils.utils import psf_efficient, edisp_efficient, edisp_test, psf_test, single_likelihood
 from gammabayes.SS_DM_Prior import SS_DM_dist
 
 
