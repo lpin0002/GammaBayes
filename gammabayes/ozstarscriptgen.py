@@ -41,9 +41,14 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
         os.mkdir(f"{workingfolder}/{stemdirname}")
     except:
         raise Exception("Stem folder already exists")
+    
+    os.makedirs(f"{workingfolder}/{stemdirname}/singlerundata", exists_ok=True)
 
     for runnum in range(1,numberofruns+1):
         single_run_data_folder = f"{workingfolder}/{stemdirname}/singlerundata/{runnum}"
+        
+        os.makedirs(single_run_data_folder)
+        
         time.sleep(0.1)
         config_dict = {
             'identifier'        : identifier,
