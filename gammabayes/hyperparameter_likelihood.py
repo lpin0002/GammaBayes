@@ -48,9 +48,9 @@ class hyperparameter_likelihood(object):
 
 
     
-    def observation_marg(self, axisvals, signal_prior_matrices, logbkgpriorvalues):
+    def observation_marg(self, axisvals, prior_matrix_list):
         # psfnormvalues, edispnormvalues = self.likelihoodnormalisation
-        sigmargresults = []
+        signal_prior_matrices, logbkgpriorvalues = prior_matrix_list
         
         meshvalues  = np.meshgrid(*axisvals, *self.dependent_axes, indexing='ij')
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
@@ -60,19 +60,35 @@ class hyperparameter_likelihood(object):
         
         likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
         
-        bkgmargresult = logsumexp(logbkgpriorvalues+self.dependent_logjacob+likelihoodvalues)
-
         
-        singlemass_sigmargvals = []
-        for logmass_idx, signal_prior_matrix in enumerate(signal_prior_matrices):
+        margresultlist = []
+        for idx in range(len(prior_matrix_list)):
+            single_prior_matrices = prior_matrix_list[idx]
             
-            output = logsumexp(signal_prior_matrix+self.dependent_logjacob+likelihoodvalues)
-            singlemass_sigmargvals.append(output)
+            print('matrix size: ', len(single_prior_matrices))
+            
+            for hyper_idx, single_prior_matrix in enumerate(single_prior_matrices):
+            
+                output = logsumexp(single_prior_matrix+self.dependent_logjacob+likelihoodvalues)
+                single_prior_matrices.append(output)
+                
+            margresultlist.append(single_prior_matrices)
+            
+        
+        # bkgmargresult = logsumexp(logbkgpriorvalues+self.dependent_logjacob+likelihoodvalues)
 
-        sigmargresults.append(singlemass_sigmargvals)
+        # sigmargresults = []
+
+        # singlemass_sigmargvals = []
+        # for logmass_idx, signal_prior_matrix in enumerate(signal_prior_matrices):
+            
+        #     output = logsumexp(signal_prior_matrix+self.dependent_logjacob+likelihoodvalues)
+        #     singlemass_sigmargvals.append(output)
+
+        # sigmargresults.append(singlemass_sigmargvals)
             
             
-        return np.array([np.squeeze(np.array(sigmargresults)), bkgmargresult], dtype=object)
+        return margresultlist
 
 
     def full_obs_marginalisation(self, axisvals):
@@ -94,14 +110,16 @@ class hyperparameter_likelihood(object):
                 prior_matrices.append(priorvals)
             prior_matrix_list.append(prior_matrices)
             
+        print('bkg matrix size: ', len(prior_matrix_list[1]))
+            
 
-        marg_partial = functools.partial(self.observation_marg, signal_prior_matrices=prior_matrix_list[0], logbkgpriorvalues=prior_matrix_list[1])
+        marg_partial = functools.partial(self.observation_marg, prior_matrix_list=prior_matrix_list, )
 
         with Pool(self.numcores) as pool:
-                    margresults = pool.map(marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
+            margresults = pool.map(marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
 
         
-        
+        self.marg_results = margresults
         
         return margresults
     
