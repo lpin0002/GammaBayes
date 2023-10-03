@@ -27,7 +27,7 @@ class hyperparameter_likelihood(object):
         self.likelihoodnormalisation    = likelihoodnormalisation
         self.marg_results               = marg_results
         if mixture_axes is None:
-            self.mixture_axes               = np.array([np.linspace(0,1,101)]*len(priors))
+            self.mixture_axes               = np.array([np.linspace(0,1,101)]*(len(priors)-1))
         elif len(mixture_axes) != len(priors):
             self.mixture_axes               = np.array([mixture_axes]*len(priors))
         else:
