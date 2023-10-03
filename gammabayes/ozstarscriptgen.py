@@ -42,7 +42,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
     except:
         raise Exception("Stem folder already exists")
     
-    os.makedirs(f"{workingfolder}/{stemdirname}/singlerundata", exists_ok=True)
+    os.makedirs(f"{workingfolder}/{stemdirname}/singlerundata", exist_ok=True)
 
     for runnum in range(1,numberofruns+1):
         single_run_data_folder = f"{workingfolder}/{stemdirname}/singlerundata/{runnum}"
