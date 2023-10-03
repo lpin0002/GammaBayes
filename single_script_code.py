@@ -18,8 +18,10 @@ from gammabayes.prior import discrete_logprior
 from gammabayes.likelihood import discrete_loglikelihood
 from gammabayes.utils.utils import edisp_test, psf_test, log10eaxis, longitudeaxis, latitudeaxis
 from gammabayes.utils.utils import psf_efficient, edisp_efficient, edisp_test, psf_test, single_likelihood
-from gammabayes.SS_DM_Prior import SS_DM_dist
+from gammabayes.utils.utils import read_config_file, check_necessary_config_inputs
 
+from gammabayes.SS_DM_Prior import SS_DM_dist
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,6 +36,7 @@ import functools
 from multiprocessing import Pool, freeze_support
 import multiprocessing
 import pandas as pd
+import yaml
 
 
 #  
@@ -49,56 +52,19 @@ logjacobtrue = np.meshgrid(np.log(10**log10eaxistrue), longitudeaxistrue, latitu
 
 print(lonmeshtrue.shape, lonmeshrecon.shape)
 
-#   [markdown]
 # ## Script Parameter Setup
 
 #  
 
-numberoftruevaluesamples = int(sys.argv[1])
 
-true_xi          = float(sys.argv[2])
+inputs = read_config_file(sys.argv[1])
 
+check_necessary_config_inputs(inputs)
 
-truelogmass      = float(sys.argv[3])
+print(inputs)
 
-
-try:
-    stemfoldername = f'data/{sys.argv[4]}'
-except:
-    stemfoldername = time.strftime(f'data/%m%d_%H%M_logm={truelogmass}_xi={true_xi}')
-    
-try:
-    nbinslogmass = int(sys.argv[5])
-except:
-    print("Default number of mass values, 51, chosen for testing.")
-    nbinslogmass = 51
-    
-    
-try:
-    numcores            = int(sys.argv[6])
-except:
-    numcores        = 8
-    
-try:
-    dmdensity_profile = sys.argv[7]
-except:
-    dmdensity_profile = 'einasto'
-    
-try:
-    runnumber = int(sys.argv[8])
-except:
-    runnumber = 1
-    
-try:
-    totalevents = int(sys.argv[9])
-except:
-    totalevents = numberoftruevaluesamples
-    
-
-Nevents=numberoftruevaluesamples
-
-nsig                = int(round( true_xi*Nevents))
-nbkg                = int(round((1- true_xi)*Nevents))
+nsig                = int(round( inputs['xi'] *inputs['Nevents']))
+nbkg                = int(round((1- inputs['xi'])*inputs['Nevents']))
 
 true_xi          = nsig/(nbkg+nsig)
 
@@ -109,37 +75,41 @@ except:
     print('data folder exists')
 
 try:
-    os.mkdir(f'{stemfoldername}')
+    os.mkdir(f"data/{inputs['identifier']}")
 except:
     print('stem folder exists')
 
-stemdatafoldername = f'{stemfoldername}/singlerundata'
+stemdatafoldername = f"data/{inputs['identifier']}/singlerundata"
 
 try:
     os.mkdir(f'{stemdatafoldername}')
 except:
     print('stem data folder exists')
 
-datafolder = f'{stemdatafoldername}/{runnumber}'
+datafolder = f"{stemdatafoldername}/{inputs['runnumber']}"
 
 try:
     os.mkdir(datafolder)
 except:
-    raise Exception("Data folder for this run already exists, terminating script.")
+    print('Single run data folder exists')
 
+if os.path.exists(f"{datafolder}/margresultsarray.npy"):
+    raise Exception(f"margresultsarray.npy (final result) already exists. Exiting to not overwrite data.")
+    
 
-np.save(datafolder+'/params.npy', {'Nevents':Nevents, 'true_xi':true_xi, 'true_log10_mass':truelogmass})
+# To make the config file accessible from the stem data folder
+with open(stemdatafoldername+'/inputconfig.yaml', 'w') as file:
+    yaml.dump(inputs, file, default_flow_style=False)
+    
+
 
 startertimer = time.perf_counter()
 print(startertimer)
 
-#   [markdown]
-# # <h1><b>Simulation
-
-#   [markdown]
+# # # # # # # # # # #
 # ## Setup
+# # # # # # # # # # #
 
-#   [markdown]
 # ### Background setup
 
 #  
@@ -154,10 +124,10 @@ logbkgpriorvalues.shape
 nuisancemesh = np.meshgrid(log10eaxistrue, longitudeaxistrue, latitudeaxistrue, indexing='ij')
 
 unnormed_logbkgpriorvalues = np.logaddexp(np.squeeze(bkgdist(*nuisancemesh)),np.log(astrophysicalbackground))
-# unnormed_logbkgpriorvalues = np.squeeze(bkgdist(*nuisancemesh))
 
 
-logbkgfunc_annoying = interpolate.RegularGridInterpolator((log10eaxistrue, longitudeaxistrue, latitudeaxistrue), np.exp(unnormed_logbkgpriorvalues))
+logbkgfunc_annoying = interpolate.RegularGridInterpolator((log10eaxistrue, longitudeaxistrue, latitudeaxistrue), 
+                                                          np.exp(unnormed_logbkgpriorvalues))
 logbkgfunc = lambda logenergy, longitude, latitude: np.log(logbkgfunc_annoying((logenergy, longitude, latitude)))
 
 
@@ -165,7 +135,6 @@ bkg_prior = discrete_logprior(logfunction=logbkgfunc, name='Background Prior',
                                axes=(log10eaxistrue, longitudeaxistrue, latitudeaxistrue,), 
                                axes_names=['energy', 'lon', 'lat'], logjacob=logjacobtrue)
 
-#   [markdown]
 # ### Signal Setup
 
 #  
@@ -178,19 +147,24 @@ density_profile_list = {'einasto':profiles.EinastoProfile(),
 
 
 
-SS_DM_dist_instance= SS_DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile_list[dmdensity_profile.lower()])
+SS_DM_dist_instance= SS_DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile_list[inputs['dmdensity_profile'].lower()])
 logDMpriorfunc = SS_DM_dist_instance.func_setup()
 
 #  
 DM_prior = discrete_logprior(logfunction=logDMpriorfunc, name='Scalar Singlet Dark Matter Prior',
                                axes=(log10eaxistrue, longitudeaxistrue, latitudeaxistrue,), axes_names=['energy', 'lon', 'lat'],
-                               default_hyperparameter_values=(truelogmass,), hyperparameter_names=['mass'], logjacob=logjacobtrue)
+                               default_hyperparameter_values=(inputs['logmass'],), hyperparameter_names=['mass'], logjacob=logjacobtrue)
 
-#   [markdown]
+
+# # # # # # # # # # # # # # 
+# # Simulation 
+# # # # # # # # # # # # # # 
+
+
 # ## True Value Simulation
 
 #  
-if  true_xi!=0.0:
+if  inputs['xi']!=0.0:
     siglogevals,siglonvals,siglatvals  = DM_prior.sample(nsig)
 else:
     siglogevals = np.asarray([])
@@ -201,7 +175,7 @@ else:
 
 #  
 
-if  true_xi!=1.0:
+if  inputs['xi']!=1.0:
     bkglogevals,bkglonvals,bkglatvals  = bkg_prior.sample(nbkg)
 else:
     bkglogevals = np.asarray([])
@@ -214,7 +188,6 @@ np.save(f'{datafolder}/true_sig_samples.npy', np.array([siglogevals, siglonvals,
 
 
 
-#   [markdown]
 # ## Reconstructed Value Simulation
 #  
 logjacob = np.meshgrid(np.log(10**log10eaxis), longitudeaxis, latitudeaxis, indexing='ij')[0]
@@ -235,12 +208,11 @@ psf_like = discrete_loglikelihood(logfunction=psf_test,
                                     dependent_axes_names = ['log10E true', 'lon', 'lat'])
 psf_like
 
-#   [markdown]
 # ### Signal
 
 #  
 
-if  true_xi!=0.0:
+if  inputs['xi']!=0.0:
     # sig_log10e_edisp_samples = [edisp_like.sample(signal_event_tuple, 1).tolist() for signal_event_tuple in tqdm(sig_samples.T)]
     signal_log10e_measured = [np.squeeze(edisp_like.sample((logeval,*coord,), numsamples=1)) for logeval,coord  in  tqdm(zip(siglogevals, np.array([siglonvals, 
                                                                                                                                                     siglatvals]).T), 
@@ -254,7 +226,7 @@ else:
 signal_lon_measured = []
 signal_lat_measured = []
 
-if  true_xi!=0:
+if  inputs['xi']!=0:
     
     sig_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in  tqdm(zip(siglogevals, np.array([siglonvals, 
                                                                                                                                      siglatvals]).T), 
@@ -265,11 +237,10 @@ if  true_xi!=0:
         signal_lon_measured.append(sig_lonlat_psf_sample[0])
         signal_lat_measured.append(sig_lonlat_psf_sample[1])
 
-#   [markdown]
 # ### Background
 
 #  
-if  true_xi!=1.0:
+if  inputs['xi']!=1.0:
     # sig_log10e_edisp_samples = [edisp_like.sample(signal_event_tuple, 1).tolist() for signal_event_tuple in tqdm(sig_samples.T)]
     bkg_log10e_measured = [np.squeeze(edisp_like.sample((logeval,*coord,), numsamples=1)) for logeval,coord  in  tqdm(zip(bkglogevals, np.array([bkglonvals, 
                                                                                                                                                  bkglatvals]).T), 
@@ -282,7 +253,7 @@ else:
 bkg_lon_measured = []
 bkg_lat_measured = []
 
-if  true_xi!=1.0:
+if  inputs['xi']!=1.0:
     
     bkg_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in  tqdm(zip(bkglogevals, np.array([bkglonvals, 
                                                                                                                                      bkglatvals]).T), 
@@ -298,7 +269,6 @@ np.save(f'{datafolder}/recon_bkg_samples.npy', np.array([bkg_log10e_measured, bk
 np.save(f'{datafolder}/recon_sig_samples.npy', np.array([signal_log10e_measured, signal_lon_measured, signal_lat_measured]))
 
 
-#   [markdown]
 # ## Final simulation output
 
 #  
@@ -327,11 +297,9 @@ except:
         measured_lat.append(signal_lat_measured)
     else:
         print('what')
-
-#   [markdown]
-# # <h1><b>Analysis
-
-#   [markdown]
+# # # # # # # # # # # # # # # # # #
+# # # # # # # # Analysis
+# # # # # # # # # # # # # # # # # #
 # ## Marginalisation
 
 #  
@@ -339,11 +307,11 @@ except:
 if nsig is None:
     nsig = len(list(measured_log10e))
 
-if true_xi>1e-3:
-    logmasswindowwidth      = 50/np.sqrt(true_xi*totalevents)
+if inputs['xi']>1e-2:
+    logmasswindowwidth      = 10/np.sqrt(inputs['xi']*inputs['totalevents'])
 
-    logmasslowerbound       = truelogmass-logmasswindowwidth
-    logmassupperbound       = truelogmass+logmasswindowwidth
+    logmasslowerbound       = inputs['logmass']-logmasswindowwidth
+    logmassupperbound       = inputs['logmass']+logmasswindowwidth
 else:
     logmasslowerbound = log10eaxis[0]
     logmassupperbound = 2
@@ -355,12 +323,15 @@ if logmassupperbound>2:
     logmassupperbound = 2
 
 
-logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, nbinslogmass) 
+logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, inputs['nbins_logmass']) 
 
 #  
 hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior, bkg_prior,), likelihood=single_likelihood, 
-                                                               dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), dependent_logjacob=logjacobtrue,
-                                                               hyperparameter_axes = (logmassrange, (None,)), numcores=numcores, likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
+                                                               dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), 
+                                                               dependent_logjacob=logjacobtrue,
+                                                               hyperparameter_axes = (logmassrange, (None,)), 
+                                                               numcores=inputs['numcores'], 
+                                                               likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
 
 measured_log10e = [float(measured_log10e_val) for measured_log10e_val in measured_log10e]
 margresults = hyperparameter_likelihood_instance.full_obs_marginalisation(axisvals= (measured_log10e, measured_lon, measured_lat))
@@ -371,14 +342,6 @@ margresultsarray = np.array(margresults)
 np.save(f'{datafolder}/logmassrange.npy', logmassrange)
 np.save(f'{datafolder}/margresultsarray.npy', margresultsarray)
 
-#  
-# fig, ax = plt.subplots(figsize=(20,3))
-# plt.pcolormesh(*np.meshgrid(list(range(Nevents)), logmassrange, indexing='ij'), 
-#                sigmargresults.T-special.logsumexp(sigmargresults, axis=1), 
-#                cmap='viridis', vmin=-8)
-# plt.ylabel(r'$log_{10}m_\chi$ [TeV]')
-# plt.axhline(truelogmass, c='tab:orange')
-# plt.colorbar()
-# plt.show()
+
 endertimer = time.perf_counter()
 print(endertimer-startertimer)

@@ -1,0 +1,11 @@
+
+identifier        : 'original_run_script_data'
+Nevents           : 1000
+logmass           : 1.0
+xi                : 0.5
+nbins_logmass     : 81
+nbins_xi          : 161
+dmdensity_profile : "einasto"
+numcores          : 8
+runnumber         : 1
+totalevents       : 1000

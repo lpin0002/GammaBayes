@@ -2,25 +2,20 @@
 import numpy as np
 from scipy.special import logsumexp
 from tqdm import tqdm
-import sys, os
-
-try:
-    stemfolder = f'data/{sys.argv[1]}'
-except:
-    raise Exception('The identifier you have input is causing an error.')
-
-try:
-    num_xi = int(sys.argv[2])
-except:
-    print("Default number of signal fraction values, 101, is chosen.")
-    num_xi = 101
+import sys, os, yaml
+from gammabayes.utils.utils import read_config_file
 
 
 
 
 
-currentdirecyory = os.getcwd()
-stemdirectory = f'{currentdirecyory}/{stemfolder}/singlerundata'
+
+
+inputs = read_config_file(sys.argv[1])
+
+
+currentdirectory = os.getcwd()
+stemdirectory = f"{currentdirectory}/data/{inputs['identifier']}/singlerundata"
 print("\nstem directory: ", stemdirectory, '\n')
 
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
@@ -28,11 +23,7 @@ rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 
     
 margresultsarray = np.load(f'{rundirs[0]}/margresultsarray.npy', allow_pickle=True)
-params = np.load(f'{rundirs[0]}/params.npy', allow_pickle=True).item()
-print(params['Nevents'])
-Nevents = params['Nevents']
-true_xi = params['true_xi']
-truelogmass = params['true_log10_mass']
+
 
 
 logmassrange = np.load(f'{rundirs[0]}/logmassrange.npy', allow_pickle=True)
@@ -40,7 +31,6 @@ logmassrange = np.load(f'{rundirs[0]}/logmassrange.npy', allow_pickle=True)
 for rundir in rundirs[1:]:
     try:
         margresultsarray = np.append(margresultsarray, np.load(f'{rundir}/margresultsarray.npy', allow_pickle=True), axis=0)
-        Nevents += np.load(f'{rundir}/params.npy', allow_pickle=True).item()['Nevents']
     except:
         pass
 
@@ -56,11 +46,11 @@ sigmargresults.shape
 
 #  
 
-xi_windowwidth      = 8/np.sqrt(Nevents)
+xi_windowwidth      = 8/np.sqrt(inputs['totalevents'])
 
 
-xi_lowerbound       = true_xi-xi_windowwidth
-xi_upperbound       = true_xi+xi_windowwidth
+xi_lowerbound       = inputs['xi']-xi_windowwidth
+xi_upperbound       = inputs['xi']+xi_windowwidth
 
 
 
@@ -70,7 +60,7 @@ if xi_upperbound>1:
     xi_upperbound = 1
 
 
-xi_range            = np.linspace(xi_lowerbound, xi_upperbound, num_xi) 
+xi_range            = np.linspace(xi_lowerbound, xi_upperbound, inputs['nbins_xi']) 
 
 log_posterior = []
 
@@ -79,6 +69,6 @@ for xi_val in tqdm(xi_range, total=xi_range.shape[0], desc='combining results an
 
 log_posterior = np.array(log_posterior)
 
-np.save(f'{stemfolder}/log_posterior', log_posterior)
-np.save(f'{stemfolder}/xi_range', xi_range)
-np.save(f'{stemfolder}/logmassrange', logmassrange)
+np.save(f"data/{inputs['identifier']}/log_posterior", log_posterior)
+np.save(f"data/{inputs['identifier']}/xi_range", xi_range)
+np.save(f"data/{inputs['identifier']}/logmassrange", logmassrange)

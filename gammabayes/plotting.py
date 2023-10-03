@@ -10,19 +10,12 @@ from scipy.special import logsumexp
 # SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
+from utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, read_config_file
 
 import os
 
-try:
-    stemfolder = f'data/{sys.argv[1]}'
-except:
-    raise Exception('The identifier you have input is causing an error.')
+inputs = read_config_file(sys.argv[1])
 
-try:
-    profile = f'data/{sys.argv[1]}'
-except:
-    raise Exception('The identifier you have input is causing an error.')
 
 
 
@@ -32,24 +25,16 @@ except:
     
 
 
-log_posterior   = np.load(f'{stemfolder}/log_posterior.npy', allow_pickle=True)
-xi_range        = np.load(f'{stemfolder}/xi_range.npy', allow_pickle=True)
-logmassrange    = np.load(f'{stemfolder}/logmassrange.npy', allow_pickle=True)
-params         = np.load(f'{stemfolder}/singlerundata/1/params.npy', allow_pickle=True).item()
+log_posterior   = np.load(f"data/{inputs['identifier']}/log_posterior.npy", allow_pickle=True)
+xi_range        = np.load(f"data/{inputs['identifier']}/xi_range.npy", allow_pickle=True)
+logmassrange    = np.load(f"data/{inputs['identifier']}/logmassrange.npy", allow_pickle=True)
 
 
 currentdirecyory = os.getcwd()
-stemdirectory = f'{currentdirecyory}/{stemfolder}/singlerundata'
+stemdirectory = f"{currentdirecyory}/data/{inputs['identifier']}/singlerundata"
 print("\nstem directory: ", stemdirectory, '\n')
 
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
-
-
-
-Nevents = params['Nevents']*len(rundirs)
-true_xi = params['true_xi']
-truelogmass = params['true_log10_mass']
-
 
 
 log_posterior = log_posterior-logsumexp(log_posterior)
@@ -57,7 +42,7 @@ log_posterior = log_posterior-logsumexp(log_posterior)
 colormap = cm.get_cmap('Blues_r', 4)
 
 fig, ax = plt.subplots(2,2, dpi=100, figsize=(10,8))
-plt.suptitle(f"Nevents= {Nevents}", size=24)
+plt.suptitle(f"Nevents= {inputs['totalevents']}", size=24)
 
 # Upper left plot
 logmass_logposterior = logsumexp(log_posterior, axis=0)
@@ -81,7 +66,7 @@ for o, percentile in enumerate(logmasspercentiles):
             color = colormap(np.abs(zscores[o])/4-0.01)
 
             ax[0,0].axvline(percentile, c=color, ls=':')
-ax[0,0].axvline(truelogmass, ls='--', color="tab:orange")
+ax[0,0].axvline(inputs['logmass'], ls='--', color="tab:orange")
 
 
 if min(mean - logmasspercentiles)>log10eaxistrue[1]-log10eaxistrue[0]:
@@ -97,8 +82,8 @@ ax[0,1].axis('off')
 # Lower left plot
 # ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(normalisedlogposterior).T, cmap='Blues')
 ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(log_posterior), vmin=0)
-ax[1,0].axvline(truelogmass, c='tab:orange')
-ax[1,0].axhline(true_xi, c='tab:orange')
+ax[1,0].axvline(inputs['logmass'], c='tab:orange')
+ax[1,0].axhline(inputs['xi'], c='tab:orange')
 ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
 ax[1,0].set_ylabel(r'$\xi$')
 
@@ -146,12 +131,12 @@ for o, percentile in enumerate(xi_percentiles):
             color = colormap(np.abs(zscores[o])/4-0.01)
 
             ax[1,1].axvline(percentile, c=color, ls=':')
-ax[1,1].axvline(true_xi, ls='--', color="tab:orange")
+ax[1,1].axvline(inputs['xi'], ls='--', color="tab:orange")
 ax[1,1].set_xlabel(r'$\xi$')
 ax[1,1].set_ylim([0, None])
 
 
-plt.savefig(time.strftime(f"{stemfolder}/posteriorplot_%m%d_%H.pdf"))
+plt.savefig(time.strftime(f"data/{inputs['identifier']}/posteriorplot_%m%d_%H.pdf"))
 plt.show()
 
 

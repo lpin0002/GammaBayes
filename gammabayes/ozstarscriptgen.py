@@ -1,10 +1,10 @@
 
-import os, sys, numpy as np, time, math
+import os, sys, numpy as np, time, math, yaml
 
 def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores, 
                    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
-                   numlogmass, numlambda, identifier = None, immediate_run=1, 
-                   simmemory = 200, analysememory=1000, densityprofile='einasto'):
+                   nbins_logmass, nbins_xi, identifier = None, immediate_run=1, 
+                   simmemory = 200, analysememory=1000, dmdensity_profile='einasto'):
     
     if int(numsimminute)<10:
         numsimminute = "10"
@@ -43,8 +43,24 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
         raise Exception("Stem folder already exists")
 
     for runnum in range(1,numberofruns+1):
+        single_run_data_folder = f"{workingfolder}/{stemdirname}/singlerundata/{runnum}"
         time.sleep(0.1)
-        #TODO: Adjust time allocation based on number of cores, accuracy and number of events
+        config_dict = {
+            'identifier'        : identifier,
+            'Nevents'           : singlerunevents,
+            'logmass'           : logmass,
+            'xi'                : xi_true,
+            'nbins_logmass'     : nbins_logmass,
+            'nbins_xi'          : nbins_xi,
+            'dmdensity_profile' : dmdensity_profile,
+            'numcores'          : numcores,
+            'runnumber'         : runnum,
+            'totalevents'       : singlerunevents*numberofruns,
+                    }
+        
+        with open(f"{single_run_data_folder}/inputconfig.yaml", 'w') as file:
+            yaml.dump(config_dict, file, default_flow_style=False)
+        
         str =f"""#!/bin/bash
 #
 #SBATCH --job-name=SR{logmass}|{xi_true}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
@@ -58,11 +74,11 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-user=progressemail1999@gmail.com
 conda init bash
 conda activate DMPipe
-srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identifier} {numlogmass} {numcores} {densityprofile} {runnum} {int(numberofruns*singlerunevents)}"""
-        with open(f"{workingfolder}/{stemdirname}/jobscript{runnum}.sh", 'w') as f:
+srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
+        with open(f"{single_run_data_folder}/jobscript.sh", 'w') as f:
             f.write(str)
         if immediate_run:
-            os.system(f"sbatch {workingfolder}/{stemdirname}/jobscript{runnum}.sh")
+            os.system(f"sbatch {single_run_data_folder}/jobscript.sh")
 
     str =f"""#!/bin/bash
 #
@@ -77,7 +93,7 @@ srun python3 single_script_code.py {singlerunevents} {xi_true} {logmass} {identi
 #SBATCH --mail-user=progressemail1999@gmail.com
 conda init bash
 conda activate DMPipe
-srun python3 combine_results.py {identifier} {numlambda}"""
+srun python3 combine_results.py {workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
         f.write(str)
@@ -103,14 +119,14 @@ if __name__=="__main__":
     numanalyseminute = int(sys.argv[9])
     identifier = sys.argv[10]
     try:
-        numlogmass = int(sys.argv[11])
+        nbins_logmass = int(sys.argv[11])
     except:
-        numlogmass = 101
+        nbins_logmass = 101
         
     try:
-        numlambda = int(sys.argv[12])
+        nbins_xi = int(sys.argv[12])
     except:
-        numlambda = 161
+        nbins_xi = 161
         
     
     try:
@@ -124,9 +140,9 @@ if __name__=="__main__":
     except:
         analysememory = 1000
     try:
-        densityprofile = sys.argv[15]
+        dmdensity_profile = sys.argv[15]
     except:
-        densityprofile = 'einasto'
+        dmdensity_profile = 'einasto'
         
         
     try:
@@ -137,7 +153,7 @@ if __name__=="__main__":
 
     makejobscripts(logmass=logmass, xi_true=xi_true, numberofruns=numberofruns, singlerunevents=singlerunevents, numcores=numcores, 
                    numsimhour=numsimhour, numsimminute=numsimminute, numanalysehour=numanalysehour, numanalyseminute=numanalyseminute, 
-                   numlogmass=numlogmass, numlambda=numlambda, 
-                   identifier=identifier, densityprofile=densityprofile,
+                   nbins_logmass=nbins_logmass, nbins_xi=nbins_xi, 
+                   identifier=identifier, dmdensity_profile=dmdensity_profile,
                    simmemory=simmemory, analysememory=analysememory, 
                    immediate_run=immediate_run)

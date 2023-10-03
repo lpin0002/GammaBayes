@@ -112,24 +112,26 @@ class discrete_logprior(object):
             
         return np.array(simvals)
     
-    def construct_prior_array(self, hyperparameters=None, normalise=False):
+    def construct_prior_array(self, hyperparameters=None, normalise=False, axes=None):
+        if axes is None:
+            axes=self.axes
         
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values
         try:
-            inputmesh = np.meshgrid(*self.axes,  *hyperparameters, indexing='ij') 
+            inputmesh = np.meshgrid(*axes,  *hyperparameters, indexing='ij') 
             outputarray = self.logfunction(*inputmesh)
             
 
         except:
-            inputmesh = np.meshgrid(*self.axes, indexing='ij')  
+            inputmesh = np.meshgrid(*axes, indexing='ij')  
             outputarray = self.logfunction(*inputmesh)
             
 
         # This is left as an option to decrease computation time
         if normalise:
-            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(self.axes)),))
-            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(self.axes)),))
+            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(axes)),))
+            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(axes)),))
              
         return outputarray
 
