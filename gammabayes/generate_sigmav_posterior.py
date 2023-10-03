@@ -109,12 +109,11 @@ logmass_values              = logmassrange[reshaped_sampled_indices[1]]
 xi_values                   = xi_range[reshaped_sampled_indices[0]]
 
 
-params          = np.load(f'{stemfolder}/singlerundata/1/params.npy', allow_pickle=True)
-print(params)
-true_xi = float(params[1,0])
-truelogmass = float(params[1,2])
-# true_xi         = params['true_xi']
-# truelogmass     = params['true_log10_mass']
+params          = np.load(f'{stemfolder}/singlerundata/1/params.npy', allow_pickle=True).item()
+
+
+true_xi         = params['true_xi']
+truelogmass     = params['true_log10_mass']
 
 
 

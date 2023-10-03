@@ -1,0 +1,10 @@
+identifier        : 'einasto_re_ex_f'
+Nevents           : 40000
+logmass           : 1.0
+xi                : 0.0005
+nbins_logmass     : 101
+nbins_xi          : 161
+dmdensity_profile : "einasto"
+numcores          : 16
+runnumber         : 1
+totalevents       : 10000000
