@@ -51,7 +51,7 @@ for rundir in rundirs[1:]:
 
 
 
-xi_windowwidth      = 8/np.sqrt(inputs['totalevents'])
+xi_windowwidth      = 24/np.sqrt(inputs['totalevents'])
 
 
 xi_lowerbound       = inputs['xi']-xi_windowwidth
