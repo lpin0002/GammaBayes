@@ -327,20 +327,16 @@ logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, inpu
 
 #  
 hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior, bkg_prior,), likelihood=single_likelihood, 
-                                                               dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), 
-                                                               dependent_logjacob=logjacobtrue,
-                                                               hyperparameter_axes = (logmassrange, (None,)), 
-                                                               numcores=inputs['numcores'], 
-                                                               likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
+                                                               dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), dependent_logjacob=logjacobtrue,
+                                                               hyperparameter_axes_tuple = ((logmassrange,), (None,)), 
+                                                               numcores=8, likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
 
 measured_log10e = [float(measured_log10e_val) for measured_log10e_val in measured_log10e]
 margresults = hyperparameter_likelihood_instance.full_obs_marginalisation(axisvals= (measured_log10e, measured_lon, measured_lat))
-margresultsarray = np.array(margresults)
 
 #  
 
-np.save(f'{datafolder}/logmassrange.npy', logmassrange)
-np.save(f'{datafolder}/margresultsarray.npy', margresultsarray)
+hyperparameter_likelihood_instance.save_data(directory_path=datafolder)
 
 
 endertimer = time.perf_counter()

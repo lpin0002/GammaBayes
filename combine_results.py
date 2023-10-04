@@ -4,8 +4,8 @@ from scipy.special import logsumexp
 from tqdm import tqdm
 import sys, os, yaml
 from gammabayes.utils.utils import read_config_file
-
-
+from gammabayes.hyperparameter_likelihood import hyperparameter_likelihood
+import pickle
 
 
 
@@ -20,31 +20,36 @@ print("\nstem directory: ", stemdirectory, '\n')
 
 rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
 
-
-    
-margresultsarray = np.load(f'{rundirs[0]}/margresultsarray.npy', allow_pickle=True)
+hyperparameter_likelihood_instance = hyperparameter_likelihood()
 
 
+try:
+    with open('hyper_parameter_data.pkl', 'rb') as pickle_file:
+            hyper_parameter_data = pickle.load(pickle_file)
 
-logmassrange = np.load(f'{rundirs[0]}/logmassrange.npy', allow_pickle=True)
+    # Now, loaded_data contains the object with NumPy arrays
+    print("Loaded data:", hyper_parameter_data.keys())
+
+except Exception as e:
+    print("Error:", str(e))
+
+hyperparameter_likelihood_instance.initiate_from_dict(hyper_parameter_data)
+
+
+logmassrange = hyperparameter_likelihood_instance.hyperparameter_axes_tuple[0][0]
 
 for rundir in rundirs[1:]:
     try:
-        margresultsarray = np.append(margresultsarray, np.load(f'{rundir}/margresultsarray.npy', allow_pickle=True), axis=0)
-    except:
-        pass
+        # Open and read the JSON file
+        with open('hyper_parameter_data.pkl', 'rb') as pickle_file:
+            loaded_data = pickle.load(pickle_file)
+
+        hyperparameter_likelihood_instance.add_results(loaded_data["log_margresults"])
+
+    except Exception as e:
+        print("Error:", str(e))
 
 
-print(margresultsarray.shape)
-
-sigmargresults = np.squeeze(np.vstack(margresultsarray[:,0])).T
-bkgmargresults = np.squeeze(np.vstack(margresultsarray[:,1]))
-sigmargresults.shape
-
-#   [markdown]
-# ## Calculating posterior
-
-#  
 
 xi_windowwidth      = 8/np.sqrt(inputs['totalevents'])
 
@@ -62,12 +67,12 @@ if xi_upperbound>1:
 
 xi_range            = np.linspace(xi_lowerbound, xi_upperbound, inputs['nbins_xi']) 
 
-log_posterior = []
+hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes=(xi_range, 1-xi_range))
 
-for xi_val in tqdm(xi_range, total=xi_range.shape[0], desc='combining results and generating posterior'):
-    log_posterior.append([np.sum(np.logaddexp(np.log(xi_val)+sigmargresults[logmassindex,:], np.log(1-xi_val)+bkgmargresults)) for logmassindex in range(len(list(logmassrange)))])
+hyperparameter_likelihood_instance.save_data(directory_path=f"{currentdirectory}/data/{inputs['identifier']}")
 
-log_posterior = np.array(log_posterior)
+
+log_posterior = np.squeeze(hyperparameter_likelihood_instance.unnormed_log_posterior)
 
 np.save(f"data/{inputs['identifier']}/log_posterior", log_posterior)
 np.save(f"data/{inputs['identifier']}/xi_range", xi_range)

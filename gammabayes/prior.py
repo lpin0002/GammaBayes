@@ -10,7 +10,9 @@ class discrete_logprior(object):
                  axes=None, axes_names='[None]', 
                  hyperparameter_axes=None, hyperparameter_names='[None]',
                  default_hyperparameter_values=None, 
-                 logjacob=0):
+                 logjacob=0,
+                 parallel_sampling=False,
+                 numcores=1):
         
         self.name = name
         self.inputunit = inputunit
@@ -36,6 +38,8 @@ class discrete_logprior(object):
             self.default_hyperparameter_values = (*default_hyperparameter_values,)
             print(self.default_hyperparameter_values)
             self.input_values_mesh = np.meshgrid(*self.axes, *self.default_hyperparameter_values, indexing='ij')
+        self.parallel_sampling = parallel_sampling
+        self.numcores = numcores
 
             
 
@@ -76,7 +80,7 @@ class discrete_logprior(object):
     
     
     
-    def sample(self, numsamples, logpriorvalues=None):
+    def sample(self, numsamples, logpriorvalues=None, parallel_sampling=False):
         
         
         if logpriorvalues is None:
