@@ -2,7 +2,7 @@ from scipy.special import logsumexp
 import numpy as np
 from .inverse_transform_sampling import inverse_transform_sampling
 from matplotlib import pyplot as plt
-
+import time
 
 class discrete_loglikelihood(object):
     
@@ -20,22 +20,18 @@ class discrete_loglikelihood(object):
         self.logjacob = logjacob
         if len(self.axes)==1 or len(self.dependent_axes)==1:
             if len(self.axes)==1 and len(self.dependent_axes)==1:
-                print('beep')
                 self.axes_dim = 1
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
 
                 self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
             elif len(self.axes)==1:
-                print('boop')
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
                 self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
                 self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
-                print('bopp')
-                print(np.array(axes).ndim)
                 self.axes_dim = len(axes)
                 # If it is not done this way self.axes_shape gives out a generator object location instead :(
                 self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
@@ -44,7 +40,6 @@ class discrete_loglikelihood(object):
 
                 self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
         else:
-            print('beeeep')
             self.axes_dim = len(axes)
             
             # If it is not done this way self.axes_shape gives out a generator object location instead :(
@@ -75,32 +70,26 @@ class discrete_loglikelihood(object):
         return string_text
     
     
+    
+    def sample(self, dependentvalues, numsamples=1, profile=False, **kwargs):
 
-    
-    def normalisation(self):
-        return logsumexp(self.__call__(*self.axes_mesh), axis=tuple(nlen(self.axes_dim))+logjacob)
-    
-    
-    def sample(self, dependentvalues, numsamples):
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
-
         
+        # Bottleneck
         loglikevalswithlogjacob = np.squeeze(self.__call__(*(input.flatten() for input in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
-        
+
         loglikevalswithlogjacob = loglikevalswithlogjacob - logsumexp(loglikevalswithlogjacob, axis=(*np.arange(self.axes_dim),))
         loglikevalswithlogjacob = loglikevalswithlogjacob - logsumexp(loglikevalswithlogjacob, axis=(*np.arange(self.axes_dim),))
 
-        
-        sampled_indices = np.squeeze(inverse_transform_sampling(loglikevalswithlogjacob.flatten(), numsamples))
+        sampled_indices = np.squeeze(inverse_transform_sampling(loglikevalswithlogjacob.flatten(), numsamples, **kwargs))
             
         reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
-        
+
         simvals = []  
         for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
             simvals.append(axis[axis_sim_index])
-       
-            
-        return np.array(simvals).T
+
+        return simvals
         
         
         

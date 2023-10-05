@@ -3,19 +3,22 @@ from scipy.special import logsumexp
 import functools
 from tqdm.auto import tqdm
 from .utils.utils import angularseparation, convertlonlat_to_offset
+from .plotting import plot_posterior
 from multiprocessing.pool import ThreadPool as Pool
 import json, os, warnings
-import pickle
+import pickle, time
 
 class hyperparameter_likelihood(object):
     def __init__(self, priors=None, likelihood=None, axes=None,
                  dependent_axes=None, dependent_logjacob=0, 
                  hyperparameter_axes_tuple=(), numcores=8, 
-                 likelihoodnormalisation= (), log_margresults=None, mixture_axes = None, unnormed_log_posterior=None):
+                 likelihoodnormalisation= (), log_margresults=None, mixture_axes = None, unnormed_log_posterior=None,
+                 name=''):
         
         self.priors                     = priors
         self.likelihood                 = likelihood
         self.axes                       = axes
+        self.name                       = name
 
             
         if dependent_axes is None:
@@ -88,10 +91,12 @@ class hyperparameter_likelihood(object):
 
     
     def observation_marg(self, axisvals, prior_matrix_list):
-        # psfnormvalues, edispnormvalues = self.likelihoodnormalisation
-        signal_prior_matrices, logbkgpriorvalues = prior_matrix_list
+
+
         
         meshvalues  = np.meshgrid(*axisvals, *self.dependent_axes, indexing='ij')
+
+
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
         
@@ -111,12 +116,12 @@ class hyperparameter_likelihood(object):
                 single_prior_matrix_results.append(output)
                 
             margresultlist.append(single_prior_matrix_results)
-            
+
 
         return margresultlist
 
 
-    def full_obs_marginalisation(self, axisvals):
+    def full_obs_marginalisation(self, axisvals, parallelize=True):
 
         
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other warnings stemming from this.
@@ -127,14 +132,16 @@ class hyperparameter_likelihood(object):
         
         if self.likelihood is None:
             raise Exception("No likelihood given.")
-
+        
         prior_matrix_list = []
         for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), 
                                desc='Setting up prior matrices', ncols=80):
             prior_matrices = []
+            
 
             if not(self.hyperparameter_axes_tuple[idx][0] is None):
-                for hyperparameter_axisval in tqdm(zip(*self.hyperparameter_axes_tuple[idx]), desc=f"Setting up matrices for the {idx}st prior", leave=False):
+                for hyperparameter_axisval in tqdm(zip(*self.hyperparameter_axes_tuple[idx]), desc=f"Setting up matrices for the {idx+1}th prior", 
+                                                   total=self.hyperparameter_axes_tuple[idx][0].shape[0],leave=False, ncols=90):
                     priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=(hyperparameter_axisval,), normalise=True))
                     prior_matrices.append(priorvals)
                 prior_matrix_list.append(prior_matrices)
@@ -142,14 +149,18 @@ class hyperparameter_likelihood(object):
                 priorvals= np.squeeze(prior.construct_prior_array(normalise=True))
                 prior_matrices.append(priorvals)
                 prior_matrix_list.append(prior_matrices)
-                        
 
         log_marg_partial = functools.partial(self.observation_marg, prior_matrix_list=prior_matrix_list, )
+        print("Starting nuisance parameter marginalisation")
+        if parallelize:
+            print("Sorry no progress bar for this step yet.")
+            with Pool(self.numcores) as pool:
+                log_margresults = pool.map(log_marg_partial, zip(*axisvals))
+        else:
 
-        with Pool(self.numcores) as pool:
-            log_margresults = pool.map(log_marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
+            log_margresults = [log_marg_partial(axisval) for axisval in tqdm(zip(*axisvals), total=len(list(axisvals[0])), ncols=80)]
+        print("Nuisance parameter marginalisation finished")
 
-        log_margresults = log_margresults
         self.log_margresults = log_margresults
         
         return log_margresults
@@ -192,8 +203,9 @@ class hyperparameter_likelihood(object):
 
         # Now to get around the fact that every component of the mixture can be a different shape
 
-        # This should be the final output of the shape bar the first two dimensions
-        final_output_shape = [mixture_array.shape[0], len(self.log_margresults)]
+        # This should be the final output except for the dimension over which there are different observations (shown here as len(self.log_margresults))
+        final_output_shape = [*[mixture_array.shape for mixture_array in mixture_axes], len(self.log_margresults)]
+        final_output_shape.pop(0)
 
         # Axes for each of the priors to __not__ expand in
         prioraxes = []
@@ -201,7 +213,7 @@ class hyperparameter_likelihood(object):
         # Counter for how many hyperparameter axes we have used
         hyper_idx = 0
         for idx, hyperparameteraxes in enumerate(self.hyperparameter_axes_tuple):
-            prior_axis_instance = [0,1]
+            prior_axis_instance = list(np.arange(len(mixture_axes)))
             for hyperparameteraxis in hyperparameteraxes:
                 try:
                     final_output_shape.append(hyperparameteraxis.shape[0])
@@ -287,4 +299,15 @@ class hyperparameter_likelihood(object):
                 print("Data saved to working directory")
             except:
                 raise Exception("Attempts to save result failed.")
+            
+    def plot_posterior(self, identifier=None, **kwargs):
+        if identifier is None:
+            if not(self.name==''):
+                identifier=self.name
+            
+
+        plot_posterior(log_posterior= np.squeeze(self.unnormed_log_posterior - logsumexp(self.unnormed_log_posterior)),
+                       xi_range=self.mixture_axes[0], logmassrange=self.hyperparameter_axes_tuple[0][0],
+                       identifier=identifier, **kwargs)
+
         

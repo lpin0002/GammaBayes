@@ -36,7 +36,6 @@ class discrete_logprior(object):
 
         else:
             self.default_hyperparameter_values = (*default_hyperparameter_values,)
-            print(self.default_hyperparameter_values)
             self.input_values_mesh = np.meshgrid(*self.axes, *self.default_hyperparameter_values, indexing='ij')
         self.parallel_sampling = parallel_sampling
         self.numcores = numcores

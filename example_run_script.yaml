@@ -1,11 +1,11 @@
 
-identifier        : 'hyper_object_test_2'
-Nevents           : 10000
+identifier        : 'timing_log_simple_final'
+Nevents           : 1000
 logmass           : 1.0
-xi                : 0.5
-nbins_logmass     : 81
+xi                : 0.8
+nbins_logmass     : 161
 nbins_xi          : 161
 dmdensity_profile : "einasto"
 numcores          : 8
-runnumber         : 1
-totalevents       : 10000
+runnumber         : 2
+totalevents       : 1000

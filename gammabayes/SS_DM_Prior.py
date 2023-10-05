@@ -40,6 +40,7 @@ class SS_DM_dist(object):
             "gammagamma": "gamma",
             "HH": "h",
         }
+        self.darkSUSY_to_PPPC_converter = darkSUSY_to_PPPC_converter
 
 
         darkSUSY_BFs_cleaned = pd.read_csv(BFCalc_dir+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')

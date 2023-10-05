@@ -51,7 +51,7 @@ for rundir in rundirs[1:]:
 
 
 
-xi_windowwidth      = 24/np.sqrt(inputs['totalevents'])
+xi_windowwidth      = 50/np.sqrt(inputs['totalevents'])
 
 
 xi_lowerbound       = inputs['xi']-xi_windowwidth
@@ -71,6 +71,10 @@ hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes=(xi
 
 hyperparameter_likelihood_instance.save_data(directory_path=f"{currentdirectory}/data/{inputs['identifier']}")
 
+
+print(f"inputs['identifier']: {inputs['identifier']}")
+hyperparameter_likelihood_instance.plot_posterior(identifier=inputs['identifier'], Nevents=inputs['totalevents'], 
+                                                  truevals=(inputs['xi'], inputs['logmass']))
 
 log_posterior = np.squeeze(hyperparameter_likelihood_instance.unnormed_log_posterior)
 

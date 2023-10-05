@@ -99,6 +99,11 @@ def edisp_test(reconloge, logetrue, true_lon, true_lat):
                                                     migra = np.power(10.,reconloge-logetrue), 
                                                     offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).value)
 
+def edisp_migra(migra, logetrue, offset):
+    return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
+                                                    migra = migra, 
+                                                    offset=offset*u.deg).value)
+
 def edisp_efficient(logereconstructed, logetrue, offset):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                     migra = np.power(10.,logereconstructed-logetrue), 
@@ -146,6 +151,9 @@ def single_likelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, true_
                                                     offset=offset*u.deg).value)
     
     return output
+
+
+
 
 def psf_efficient(rad, logetrue, offset):
 
