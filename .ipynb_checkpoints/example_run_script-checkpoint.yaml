@@ -1,0 +1,11 @@
+
+identifier        : 'what'
+Nevents           : 1000
+logmass           : 1.0
+xi                : 0.8
+nbins_logmass     : 41
+nbins_xi          : 101
+dmdensity_profile : "einasto"
+numcores          : 8
+runnumber         : 1
+totalevents       : 1000

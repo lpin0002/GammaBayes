@@ -40,5 +40,8 @@ setup(name='GammaBayes',
                         'BFCalc/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
                         'BFCalc/temp/*',
                         ]
+      },
+      extras_require={
+          'GPU_support': ['cupy']
       }
       )

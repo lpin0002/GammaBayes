@@ -14,8 +14,8 @@ import os
 
 
 
-def plot_posterior(log_posterior, xi_range, logmassrange, truevals, identifier=None, Nevents=None, 
-                   saveplot=True, save_directory=None):
+def plot_posterior(log_posterior, xi_range, logmassrange, truevals=None, identifier=None, Nevents=None, 
+                   saveplot=True, save_directory=None, credible_levels=None):
     if save_directory is None:
         if identifier is None:
             save_directory = time.strftime(f"posteriorplot_%m%d_%H.pdf")
@@ -33,23 +33,41 @@ def plot_posterior(log_posterior, xi_range, logmassrange, truevals, identifier=N
     normalisedlogmassposterior = np.exp(logmass_logposterior-logsumexp(logmass_logposterior))
 
     cdflogmassposterior = np.cumsum(normalisedlogmassposterior)
+
     mean = logmassrange[np.abs(norm.cdf(0)-cdflogmassposterior).argmin()]
-    zscores = [-3, -2,-1,1,2, 3]
-    logmasspercentiles = []
-    for zscore in zscores:
-        logmasspercentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdflogmassposterior).argmin()])
+
+    if credible_levels  is None:
+        zscores = [-3, -2,-1,1,2, 3]
+        logmasspercentiles = []
+        for zscore in zscores:
+            logmasspercentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdflogmassposterior).argmin()])
+        
+        for o, percentile in enumerate(logmasspercentiles):
+            color = colormap(np.abs(zscores[o])/4-0.01)
+            
+            ax[0,0].axvline(percentile, c=color, ls=':')
+
+        ax[0,0].axvline(mean, c='tab:green', ls=':')
+    else:
+        logmasspercentiles = []
+        for credible_value in credible_levels:
+            logmasspercentiles.append(logmassrange[np.abs(credible_value-cdflogmassposterior).argmin()])
+
+        for o, percentile in enumerate(logmasspercentiles):
+            color = colormap(o/len(logmasspercentiles))
+            
+            ax[0,0].axvline(percentile, c=color, ls=':')
+
+
 
 
     ax[0,0].plot(logmassrange,normalisedlogmassposterior, c='tab:green')
 
-    ax[0,0].axvline(mean, c='tab:green', ls=':')
 
 
-    for o, percentile in enumerate(logmasspercentiles):
-                color = colormap(np.abs(zscores[o])/4-0.01)
+    if truevals!=None:
+        ax[0,0].axvline(truevals[1], ls='--', color="tab:orange")
 
-                ax[0,0].axvline(percentile, c=color, ls=':')
-    ax[0,0].axvline(truevals[1], ls='--', color="tab:orange")
     ax[0,0].set_ylim([0, None])
     ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
 
@@ -60,8 +78,9 @@ def plot_posterior(log_posterior, xi_range, logmassrange, truevals, identifier=N
     # Lower left plot
     # ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(normalisedlogposterior).T, cmap='Blues')
     ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(log_posterior), vmin=0)
-    ax[1,0].axvline(truevals[1], c='tab:orange')
-    ax[1,0].axhline(truevals[0], c='tab:orange')
+    if truevals!=None:
+        ax[1,0].axvline(truevals[1], c='tab:orange')
+        ax[1,0].axhline(truevals[0], c='tab:orange')
     ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
     ax[1,0].set_ylabel(r'$\xi$')
 
@@ -78,7 +97,11 @@ def plot_posterior(log_posterior, xi_range, logmassrange, truevals, identifier=N
 
     from scipy import interpolate
     f = interpolate.interp1d(integral, t)
-    t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]))
+    if credible_levels is None:
+        t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]))
+    else:
+         t_contours = f(np.asarray(credible_levels))
+    
     ax[1,0].contour(normed_posterior, t_contours, extent=[logmassrange[0],logmassrange[-1], xi_range[0],xi_range[-1]], colors='white', linewidths=0.5)
     ########################################################################################################################
     ########################################################################################################################
@@ -109,7 +132,8 @@ def plot_posterior(log_posterior, xi_range, logmassrange, truevals, identifier=N
                 color = colormap(np.abs(zscores[o])/4-0.01)
 
                 ax[1,1].axvline(percentile, c=color, ls=':')
-    ax[1,1].axvline(truevals[0], ls='--', color="tab:orange")
+    if truevals!=None:
+        ax[1,1].axvline(truevals[0], ls='--', color="tab:orange")
     ax[1,1].set_xlabel(r'$\xi$')
     ax[1,1].set_ylim([0, None])
 

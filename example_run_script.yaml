@@ -1,11 +1,11 @@
 
-identifier        : 'timing_log_simple_final'
+identifier        : 'what_3'
 Nevents           : 1000
-logmass           : 1.0
-xi                : 0.8
-nbins_logmass     : 161
-nbins_xi          : 161
+logmass           : -0.5
+xi                : 0.9
+nbins_logmass     : 41
+nbins_xi          : 101
 dmdensity_profile : "einasto"
 numcores          : 8
-runnumber         : 2
-totalevents       : 1000
+runnumber         : 1
+totalevents       : 5000

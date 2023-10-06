@@ -359,3 +359,27 @@ if __name__=="__main__":
     print(f"time to do nuisance marginalisation: {after_nuisance_marg-before_nuisance_marg}")
 
 
+    nbinslambda            = 81
+    xi_windowwidth      = 9/np.sqrt(inputs['totalevents'])
+
+
+    xilowerbound       = inputs['xi']-xi_windowwidth
+    xiupperbound       = inputs['xi']+xi_windowwidth
+
+
+
+    if xilowerbound<0:
+        xilowerbound = 0
+    if xiupperbound>1:
+        xiupperbound = 1
+
+
+    xi_range            = np.linspace(xilowerbound, xiupperbound, inputs['nbins_xi']) 
+
+
+    hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes = (xi_range, 1-xi_range,))
+    log_posterior = hyperparameter_likelihood_instance.unnormed_log_posterior
+    log_posterior = np.squeeze(log_posterior - special.logsumexp(log_posterior))
+    plt.figure()
+    plt.pcolormesh(log_posterior)
+    plt.show()
