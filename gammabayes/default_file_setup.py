@@ -26,23 +26,7 @@ aeff = irfs['aeff']
 
 aefffunc = lambda energy, offset: aeff.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-
-try:
-    run_function = int(sys.argv[1])
-except:
-    run_function = 0
-    
-try:
-    setup_irfnormalisations = int(sys.argv[2])
-except:
-    setup_irfnormalisations = 1
-    
-try:
-    setup_astrobkg = int(sys.argv[3])
-except:
-    setup_astrobkg = 1
-
-def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
+def file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
           logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
           pointsources=True):
@@ -258,6 +242,22 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
             
 
 
+if __name__=="__main__":
+    try:
+        run_function = int(sys.argv[1])
+    except:
+        run_function = 0
+        
+    try:
+        setup_irfnormalisations = int(sys.argv[2])
+    except:
+        setup_irfnormalisations = 1
+        
+    try:
+        setup_astrobkg = int(sys.argv[3])
+    except:
+        setup_astrobkg = 1
 
-if run_function:
-    setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations)
+
+    if run_function:
+        file_setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations)

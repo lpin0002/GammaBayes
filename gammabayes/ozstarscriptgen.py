@@ -79,7 +79,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-user=progressemail1999@gmail.com
 conda init bash
 conda activate DMPipe
-srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
+srun python3 new_single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
         with open(f"{single_run_data_folder}/jobscript.sh", 'w') as f:
             f.write(str)
         if immediate_run:
@@ -98,7 +98,7 @@ srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
 #SBATCH --mail-user=progressemail1999@gmail.com
 conda init bash
 conda activate DMPipe
-srun python3 combine_results.py {workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml"""
+srun python3 new_combine_results.py {workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
         f.write(str)

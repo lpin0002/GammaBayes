@@ -17,6 +17,9 @@ class discrete_loglikelihood(object):
         print(f'Number of input dimensions {len(self.axes)}')
         self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
+        if self.dependent_axes is not None:
+            print(f'Number of dependent dimensions {len(self.axes)}')
+        
         self.logjacob = logjacob
         if len(self.axes)==1 or len(self.dependent_axes)==1:
             if len(self.axes)==1 and len(self.dependent_axes)==1:
@@ -47,7 +50,6 @@ class discrete_loglikelihood(object):
 
             self.dependent_axes_dim = len(self.dependent_axes)
 
-            print(f'Number of data dimensions {self.axes_dim}')
             self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
             
         print(f'Axes shape: {self.axes_shape}')

@@ -1,11 +1,53 @@
 
-identifier        : 'what_3'
-Nevents           : 1000
-logmass           : -0.5
-xi                : 0.9
-nbins_logmass     : 41
-nbins_xi          : 101
-dmdensity_profile : "einasto"
-numcores          : 8
-runnumber         : 1
-totalevents       : 5000
+identifier        : 'example_large_res_run_1'
+
+# Analysis and simulation run parameters
+Nevents                   : 1000
+logmass                   : -0.5
+xi                        : 0.9
+nbins_logmass             : 101
+nbins_xi                  : 161
+dmdensity_profile         : "einasto"
+numcores                  : 8
+runnumber                 : 1
+totalevents               : 5000 # Used to set the window size for parameter estimation if used
+
+# Whether to: 0 =not include HESS localalised sources, 1=include HESS localalised sources, 2=mask emission of localised sources
+localised_sources         : 1
+
+#############################################
+### Binning configuration
+#############################################
+
+### True value binning configuration
+log10e_min                : -1.0
+log10e_max                : +2.0
+num_log10e_per_dec        : 300
+
+glon_min                  : -3.5
+gal_lon_max               : +3.5
+gal_lon_res               : 0.1
+
+gal_lat_min               : -3.0
+gal_lat_max               : +3.0
+gal_lat_res               : 0.1
+
+
+### Observation value binning configuration
+recon_log10e_min          : -1.0
+recon_log10e_max          : +2.0
+num_recon_log10e_per_dec  : 50
+
+recon_glon_min            : -3.5
+recon_gal_lon_max         : +3.5
+recon_gal_lon_res         : 0.2
+
+recon_gal_lat_min         : -3.0
+recon_gal_lat_max         : +3.0
+recon_gal_lat_res         : 0.2
+
+
+
+
+
+
