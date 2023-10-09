@@ -36,7 +36,7 @@ hyperparameter_likelihood_instance.initiate_from_dict(hyper_parameter_data)
 
 logmassrange = hyperparameter_likelihood_instance.hyperparameter_axes_tuple[0][0]
 
-for rundir in tqdm(rundirs[1:], total=len(rundirs[1:])):
+for idx, rundir in tqdm(enumerate(rundirs[1:]), total=len(rundirs[1:])):
     try:
         # Open and read the JSON file
         with open(rundir+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
@@ -45,6 +45,8 @@ for rundir in tqdm(rundirs[1:], total=len(rundirs[1:])):
         hyperparameter_likelihood_instance.add_results(loaded_data["log_margresults"])
 
         del loaded_data
+        if idx>=99:
+            print(idx)
 
     except Exception as e:
         print("Error:", str(e))
