@@ -171,8 +171,8 @@ class hyperparameter_likelihood(object):
     
     
     
-    def add_results(self, new_marg_results):
-            self.marg_results = xp.append(self.marg_results, new_marg_results, axis=0)
+    def add_results(self, new_log_marg_results):
+            self.log_margresults = xp.append(self.log_margresults, new_log_marg_results, axis=0)
 
 
     # Todo: Create separate mixture model class
