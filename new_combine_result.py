@@ -69,7 +69,7 @@ hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes = (
 
 hyperparameter_likelihood_instance.save_data(directory_path=stemfolder)
 
-hyperparameter_likelihood_instance.plot_posterior(truevals=(inputs['xi'], inputs['logmass']))
+# hyperparameter_likelihood_instance.plot_posterior(truevals=(inputs['xi'], inputs['logmass']))
 
 log_posterior = np.squeeze(hyperparameter_likelihood_instance.unnormed_log_posterior)
 
