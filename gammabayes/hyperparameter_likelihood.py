@@ -267,7 +267,7 @@ class hyperparameter_likelihood(object):
 
             
             
-    def save_data(self, directory_path='', reduce_data_consumption=True):
+    def save_data(self, directory_path='', reduce_data_consumption=True, save_log_margresults=True):
         
         data_to_save = {}
         
@@ -275,11 +275,13 @@ class hyperparameter_likelihood(object):
         if not(reduce_data_consumption):
             data_to_save['priors']                  = self.priors
             data_to_save['likelihood']              = self.likelihood
+        if save_log_margresults:
+            data_to_save['log_margresults']             = self.log_margresults
+
             
         data_to_save['dependent_logjacob']          = self.dependent_logjacob
         data_to_save['axes']                        = self.axes
         data_to_save['dependent_axes']              = self.dependent_axes
-        data_to_save['log_margresults']             = self.log_margresults
         data_to_save['mixture_axes']                = self.mixture_axes
         data_to_save['unnormed_log_posterior']      = self.unnormed_log_posterior
         

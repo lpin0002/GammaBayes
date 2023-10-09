@@ -67,7 +67,7 @@ xi_range            = np.linspace(xi_lowerbound, xi_upperbound, inputs['nbins_xi
 
 hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes = (xi_range, 1-xi_range,))
 
-hyperparameter_likelihood_instance.save_data(directory_path=stemfolder)
+hyperparameter_likelihood_instance.save_data(directory_path=stemfolder, save_log_margresults=False)
 
 # hyperparameter_likelihood_instance.plot_posterior(truevals=(inputs['xi'], inputs['logmass']))
 
