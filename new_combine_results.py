@@ -44,6 +44,8 @@ for rundir in rundirs[1:]:
 
         hyperparameter_likelihood_instance.add_results(loaded_data["log_margresults"])
 
+        del loaded_data
+
     except Exception as e:
         print("Error:", str(e))
 
