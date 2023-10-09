@@ -36,7 +36,7 @@ hyperparameter_likelihood_instance.initiate_from_dict(hyper_parameter_data)
 
 logmassrange = hyperparameter_likelihood_instance.hyperparameter_axes_tuple[0][0]
 
-for rundir in rundirs[1:]:
+for rundir in tqdm(rundirs[1:], total=len(rundirs[1:])):
     try:
         # Open and read the JSON file
         with open(rundir+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
