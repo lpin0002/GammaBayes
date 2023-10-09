@@ -49,6 +49,7 @@ for rundir in tqdm(rundirs[1:], total=len(rundirs[1:])):
     except Exception as e:
         print("Error:", str(e))
 
+print("Is it working?")
 
 
 xi_windowwidth      = 10/np.sqrt(inputs['totalevents'])
@@ -66,7 +67,7 @@ if xi_upperbound>1:
 
 
 xi_range            = np.linspace(xi_lowerbound, xi_upperbound, inputs['nbins_xi']) 
-
+print('z')
 hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes = (xi_range, 1-xi_range,))
 
 hyperparameter_likelihood_instance.save_data(directory_path=stemfolder, save_log_margresults=False)
