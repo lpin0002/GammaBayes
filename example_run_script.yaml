@@ -2,15 +2,15 @@
 identifier        : 'example_large_res_run_1'
 
 # Analysis and simulation run parameters
-Nevents                   : 1000
+Nevents                   : 100
 logmass                   : -0.5
-xi                        : 0.9
+xi                        : 0.6
 nbins_logmass             : 101
 nbins_xi                  : 161
 dmdensity_profile         : "einasto"
 numcores                  : 8
-runnumber                 : 1
-totalevents               : 5000 # Used to set the window size for parameter estimation if used
+runnumber                 : 2
+totalevents               : 200 # Used to set the window size for parameter estimation if used
 
 # Whether to: 0 =not include HESS localalised sources, 1=include HESS localalised sources, 2=mask emission of localised sources
 localised_sources         : 1

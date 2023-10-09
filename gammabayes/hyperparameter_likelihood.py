@@ -269,7 +269,7 @@ Input dictionary does not contain whether prior values have been applied to the 
         return unnormed_log_posterior
     
     def combine_results(self, unnormed_log_posterior):
-        self.unnormed_log_posterior = unnormed_log_posterior + self.unnormed_log_posterior
+        self.unnormed_log_posterior += unnormed_log_posterior
 
 
     def apply_hyperparameter_prior_values(self, hyperparameter_prob_mesh):
