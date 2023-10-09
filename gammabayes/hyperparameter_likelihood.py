@@ -193,14 +193,15 @@ class hyperparameter_likelihood(object):
     Number of mixture axes is {len(mixture_axes)}
     and number of prior components is {len(self.priors)}.""")
 
-
+        print('a')
         # Relative weights stay the same but now they will be 
         mixture_axes = mixture_axes/xp.sum(mixture_axes, axis=0)
+        print('b')
 
         # reshape log_margresults into shape of (num_components, ...)
         reshaped_log_margresults = xp.asarray(self.log_margresults).T
 
-
+        print('c')
         # Creating components of mixture for each prior
         mixture_array_list = []
         for idx, mixture_array in enumerate(mixture_axes):
@@ -210,14 +211,14 @@ class hyperparameter_likelihood(object):
 
 
         # Now to get around the fact that every component of the mixture can be a different shape
-
+        print('d')
         # This should be the final output except for the dimension over which there are different observations (shown here as len(self.log_margresults))
         final_output_shape = [*[mixture_array.shape for mixture_array in mixture_axes], len(self.log_margresults)]
         final_output_shape.pop(0)
 
         # Axes for each of the priors to __not__ expand in
         prioraxes = []
-
+        print('e')
         # Counter for how many hyperparameter axes we have used
         hyper_idx = 0
         for idx, hyperparameteraxes in enumerate(self.hyperparameter_axes_tuple):
