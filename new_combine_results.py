@@ -42,11 +42,12 @@ for idx, rundir in tqdm(enumerate(rundirs[1:]), total=len(rundirs[1:])):
         with open(rundir+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
             loaded_data = pickle.load(pickle_file)
 
-        hyperparameter_likelihood_instance.add_results(loaded_data["log_margresults"])
+        temp_logmargresults = loaded_data["log_margresults"]
+
+        hyperparameter_likelihood_instance.add_results(temp_logmargresults)
 
         del loaded_data
-        if idx>=99:
-            print(idx)
+ 
 
     except Exception as e:
         print("Error:", str(e))
