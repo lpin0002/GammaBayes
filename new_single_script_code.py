@@ -71,11 +71,13 @@ os.makedirs('data', exist_ok=True)
 os.makedirs(f"data/{inputs['identifier']}", exist_ok=True)
 os.makedirs(stemdatafolder, exist_ok=True)
 
-try:
-    os.makedirs(datafolder, exist_ok=False)
-except:
-    raise Exception("Data already exists for this run number, please change the run number. Execution stopped to prevent overwriting data.")
-
+if not(inputs['batchjob']):
+    try:
+        os.makedirs(datafolder, exist_ok=False)
+    except:
+        raise Exception("Data already exists for this run number, please change the run number. Execution stopped to prevent overwriting data.")
+else:
+    os.makedirs(datafolder, exist_ok=True)
 
 
 nsig = int(round(inputs['Nevents']*inputs['xi']))

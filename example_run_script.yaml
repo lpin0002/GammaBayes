@@ -46,6 +46,9 @@ recon_gal_lat_min         : -3.0
 recon_gal_lat_max         : +3.0
 recon_gal_lat_res         : 0.2
 
+# To do with Slurm computing clusters
+batchjob                  : False
+
 
 
 
