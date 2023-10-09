@@ -268,7 +268,7 @@ except:
 # $$
 
 
-logmasswindowwidth      = 7/np.sqrt(nsig)
+logmasswindowwidth      = 4/np.sqrt(nsig)
 
 logmasslowerbound       = inputs['logmass']-logmasswindowwidth
 logmassupperbound       = inputs['logmass']+logmasswindowwidth
