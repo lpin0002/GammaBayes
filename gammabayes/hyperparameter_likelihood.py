@@ -180,7 +180,7 @@ class hyperparameter_likelihood(object):
 
 
     # Todo: Create separate mixture model class
-    def create_mixture_log_posterior(self, mixture_axes):
+    def create_mixture_log_posterior(self, mixture_axes=None, log_margresults=None):
         if mixture_axes is None:
             mixture_axes = self.mixture_axes
             if mixture_axes is None:
@@ -192,6 +192,8 @@ class hyperparameter_likelihood(object):
                 raise Exception(f""""Number of mixture axes does not match number of components. Please check your inputs.
     Number of mixture axes is {len(mixture_axes)}
     and number of prior components is {len(self.priors)}.""")
+        if log_margresults is None:
+            log_margresults = self.log_margresults
 
         print('a')
         # Relative weights stay the same but now they will be 
@@ -267,6 +269,11 @@ class hyperparameter_likelihood(object):
 
         # Quick check
         print(f"final check: {unnormed_log_posterior.shape}")
+
+        return unnormed_log_posterior
+    
+    def combine_results(self, unnormed_log_posterior):
+        self.unnormed_log_posterior = unnormed_log_posterior + self.unnormed_log_posterior
 
 
 

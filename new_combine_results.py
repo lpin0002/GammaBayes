@@ -31,46 +31,6 @@ with open(rundirs[0]+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
 print("Loaded data:", hyper_parameter_data.keys())
 
 
-hyperparameter_likelihood_instance.initiate_from_dict(hyper_parameter_data)
-
-
-logmassrange = hyperparameter_likelihood_instance.hyperparameter_axes_tuple[0][0]
-
-for idx, rundir in tqdm(enumerate(rundirs[1:50]), total=len(rundirs[1:50])):
-    try:
-        # Open and read the JSON file
-        with open(rundir+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
-            loaded_data = pickle.load(pickle_file)
-
-        temp_logmargresults = loaded_data["log_margresults"]
-
-        hyperparameter_likelihood_instance.add_results(temp_logmargresults)
-
-        del loaded_data
- 
-
-    except Exception as e:
-        print("Error:", str(e))
-
-
-for idx, rundir in tqdm(enumerate(rundirs[50:100]), total=len(rundirs[50:100])):
-    try:
-        # Open and read the JSON file
-        with open(rundir+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
-            loaded_data = pickle.load(pickle_file)
-
-        temp_logmargresults = loaded_data["log_margresults"]
-
-        hyperparameter_likelihood_instance.add_results(temp_logmargresults)
-
-        del loaded_data
- 
-
-    except Exception as e:
-        print("Error:", str(e))
-
-
-print("Is it working?")
 
 
 xi_windowwidth      = 10/np.sqrt(inputs['totalevents'])
@@ -87,9 +47,38 @@ if xi_upperbound>1:
     xi_upperbound = 1
 
 
-xi_range            = np.linspace(xi_lowerbound, xi_upperbound, inputs['nbins_xi']) 
-print('z')
-hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes = (xi_range, 1-xi_range,))
+xi_range            = np.linspace(xi_lowerbound, xi_upperbound, inputs['nbins_xi'])
+
+
+
+hyperparameter_likelihood_instance.initiate_from_dict(hyper_parameter_data)
+
+
+logmassrange = hyperparameter_likelihood_instance.hyperparameter_axes_tuple[0][0]
+
+for idx, rundir in tqdm(enumerate(rundirs[1:]), total=len(rundirs[1:])):
+    try:
+        # Open and read the JSON file
+        with open(rundir+'/hyper_parameter_data.pkl', 'rb') as pickle_file:
+            loaded_data = pickle.load(pickle_file)
+
+        temp_logmargresults = loaded_data["log_margresults"]
+
+        del loaded_data
+
+        partial_mix_posterior = hyperparameter_likelihood_instance.create_mixture_log_posterior(
+            log_margresults=temp_logmargresults, mixture_axes=(xi_range, 1-xi_range)
+            )
+        
+        hyperparameter_likelihood_instance.combine_results(unnormed_log_posterior=partial_mix_posterior)
+ 
+
+    except Exception as e:
+        print("Error:", str(e))
+
+
+ 
+# hyperparameter_likelihood_instance.create_mixture_log_posterior(mixture_axes = (xi_range, 1-xi_range,))
 
 hyperparameter_likelihood_instance.save_data(directory_path=stemfolder, save_log_margresults=False)
 
