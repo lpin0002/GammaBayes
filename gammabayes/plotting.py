@@ -84,8 +84,8 @@ def plot_posterior(log_posterior, xi_range, logmassrange, truevals=None, identif
     ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
     ax[1,0].set_ylabel(r'$\xi$')
 
-    ax[1,0].set_ylim([xi_range[0], xi_range[-1]])
-    ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
+    # ax[1,0].set_ylim([xi_range[0], xi_range[-1]])
+    # ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
 
     ########################################################################################################################
     ########################################################################################################################

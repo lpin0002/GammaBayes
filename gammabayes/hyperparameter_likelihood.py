@@ -64,12 +64,16 @@ class hyperparameter_likelihood(object):
             self.likelihood     = dict['likelihood'] 
         except:
             warnings.warn("Input dictionary does not contain likelihoods")
+        try:
+            self.log_margresults           = dict['log_margresults']
+        except:
+            warnings.warn("Input dictionary does not contain log marginalisation results.")
 
         self.hyperparameter_axes_tuple    = dict['hyperparameter_axes_tuple'] 
         self.dependent_logjacob     = dict['dependent_logjacob']
         self.axes                   = dict['axes']
         self.dependent_axes         = dict['dependent_axes']
-        self.log_margresults           = dict['log_margresults']
+        
         self.unnormed_log_posterior              = dict['unnormed_log_posterior']
 
 
