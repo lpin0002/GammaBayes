@@ -45,9 +45,9 @@ class SS_DM_dist(object):
 
         darkSUSY_BFs_cleaned = pd.read_csv(BFCalc_dir+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
 
-        darkSUSY_massvalues = darkSUSY_BFs_cleaned.iloc[:,1]/1e3
+        darkSUSY_massvalues = darkSUSY_BFs_cleaned.iloc[:,0]/1e3  #Converting to TeV
 
-        darkSUSY_lambdavalues = darkSUSY_BFs_cleaned.iloc[:,2]
+        darkSUSY_lambdavalues = darkSUSY_BFs_cleaned.iloc[:,1]
 
         channelfuncdictionary = {}
 
@@ -68,7 +68,7 @@ class SS_DM_dist(object):
 
         self.channelfuncdictionary = channelfuncdictionary
         
-        darkSUSY_BFs_cleaned_vals = darkSUSY_BFs_cleaned.to_numpy()[:,3:]
+        darkSUSY_BFs_cleaned_vals = darkSUSY_BFs_cleaned.to_numpy()[:,2:]
         if self.ratios:
             darkSUSY_BFs_cleaned_vals = darkSUSY_BFs_cleaned_vals/np.sum(darkSUSY_BFs_cleaned_vals, axis=1)[:, np.newaxis]
             
