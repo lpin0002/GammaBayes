@@ -16,8 +16,8 @@ class hyperparameter_likelihood(object):
     def __init__(self, priors=None, likelihood=None, axes=None,
                  dependent_axes=None, dependent_logjacob=0, 
                  hyperparameter_axes_tuple=(), numcores=8, 
-                 likelihoodnormalisation= (), log_margresults=None, mixture_axes = None, unnormed_log_posterior=None,
-                 name=''):
+                 likelihoodnormalisation= (), log_margresults=None, mixture_axes = None, unnormed_log_posterior=0,
+                 name='', priors_applied=None):
         
         self.priors                     = priors
         self.likelihood                 = likelihood
@@ -52,6 +52,10 @@ class hyperparameter_likelihood(object):
             self.mixture_axes = xp.array([*mixture_axes])
 
         self.unnormed_log_posterior = unnormed_log_posterior
+        if priors_applied is None:
+            self.priors_applied = 0
+        else:
+            self.priors_applied = priors_applied
     
     def initiate_from_dict(self, dict):        
         
@@ -68,6 +72,14 @@ class hyperparameter_likelihood(object):
             self.log_margresults           = dict['log_margresults']
         except:
             warnings.warn("Input dictionary does not contain log marginalisation results.")
+
+        try: 
+            self.priors_applied = dict['priors_applied']
+        except:
+            warnings.warn("""
+Input dictionary does not contain whether prior values have been applied to the posterior.
+    Assuming that it has not been applied.""")
+            self.priors_applied = 0
 
         self.hyperparameter_axes_tuple    = dict['hyperparameter_axes_tuple'] 
         self.dependent_logjacob     = dict['dependent_logjacob']
@@ -195,15 +207,12 @@ class hyperparameter_likelihood(object):
         if log_margresults is None:
             log_margresults = self.log_margresults
 
-        print('a')
         # Relative weights stay the same but now they will be 
         mixture_axes = mixture_axes/xp.sum(mixture_axes, axis=0)
-        print('b')
 
         # reshape log_margresults into shape of (num_components, ...)
         reshaped_log_margresults = xp.asarray(self.log_margresults).T
 
-        print('c')
         # Creating components of mixture for each prior
         mixture_array_list = []
         for idx, mixture_array in enumerate(mixture_axes):
@@ -213,14 +222,12 @@ class hyperparameter_likelihood(object):
 
 
         # Now to get around the fact that every component of the mixture can be a different shape
-        print('d')
         # This should be the final output except for the dimension over which there are different observations (shown here as len(self.log_margresults))
         final_output_shape = [*[mixture_array.shape for mixture_array in mixture_axes], len(self.log_margresults)]
         final_output_shape.pop(0)
 
         # Axes for each of the priors to __not__ expand in
         prioraxes = []
-        print('e')
         # Counter for how many hyperparameter axes we have used
         hyper_idx = 0
         for idx, hyperparameteraxes in enumerate(self.hyperparameter_axes_tuple):
@@ -235,25 +242,18 @@ class hyperparameter_likelihood(object):
                 hyper_idx+=1
             prioraxes.append(prior_axis_instance)
 
-        print("prioraxes: ", prioraxes)
-        print("hyper_idx: ", hyper_idx)
-        print("final_output_shape: ", final_output_shape)
 
         # Making all the mixture components the same shape that is compatible for adding together (in logspace)
         for prior_idx, mixture_array in enumerate(mixture_array_list):
-            print("prior_idx: ", prior_idx)
             axis = []
             for i in range(len(final_output_shape)):
                 if not(i in prioraxes[prior_idx]):
                     axis.append(i)
             axis = tuple(axis)
 
-            print(f"axis: {axis}")
             mixture_array =xp.expand_dims(mixture_array, axis=axis)
 
-            print(f"mixture_array shape: {mixture_array.shape}")
             mixture_array_list[prior_idx] = mixture_array
-            print('\n')
 
 
         # Now to combine the results for all the data and to 
@@ -261,19 +261,26 @@ class hyperparameter_likelihood(object):
         for mixture_component in mixture_array_list:
             combined_mixture = xp.logaddexp(combined_mixture, mixture_component)
 
-        print(f"combined_mixture shape: {combined_mixture.shape}")
         unnormed_log_posterior = xp.sum(combined_mixture, axis=1)
 
-        # Saving the result to the object
-        self.unnormed_log_posterior = unnormed_log_posterior
-
-        # Quick check
-        print(f"final check: {unnormed_log_posterior.shape}")
+        # # Saving the result to the object
+        # self.unnormed_log_posterior = unnormed_log_posterior
 
         return unnormed_log_posterior
     
     def combine_results(self, unnormed_log_posterior):
         self.unnormed_log_posterior = unnormed_log_posterior + self.unnormed_log_posterior
+
+
+    def apply_hyperparameter_prior_values(self, hyperparameter_prob_mesh):
+        if self.priors_applied:
+            self.unnormed_log_posterior = self.unnormed_log_posterior+hyperparameter_prob_mesh
+            self.priors_applied = 1
+        else:
+            warnings.warn('Hyperparameter priors have already been applied')
+
+
+
 
 
 
@@ -296,6 +303,7 @@ class hyperparameter_likelihood(object):
         data_to_save['dependent_axes']              = self.dependent_axes
         data_to_save['mixture_axes']                = self.mixture_axes
         data_to_save['unnormed_log_posterior']      = self.unnormed_log_posterior
+        data_to_save['priors_applied']              = self.priors_applied
         
         
         
