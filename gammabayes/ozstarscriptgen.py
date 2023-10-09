@@ -66,6 +66,9 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
         
         with open(f"{single_run_data_folder}/inputconfig.yaml", 'w') as file:
             yaml.dump(config_dict, file, default_flow_style=False)
+
+        with open(f"{workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml", 'w') as file:
+            yaml.dump(config_dict, file, default_flow_style=False)
         
         str =f"""#!/bin/bash
 #
