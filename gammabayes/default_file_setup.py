@@ -45,7 +45,7 @@ except:
 def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
           logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
-          pointsources=False):
+          pointsources=True):
     def powerlaw(energy, index, phi0=1):
         return phi0*energy**(index)
 
@@ -72,7 +72,7 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
                 rad = angularseparation(recon_coords, truecoords)
                 offset = convertlonlat_to_offset(truecoords)
 
-                psfvals = psf_efficient(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
+                psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
                 
                 psfnormvals = special.logsumexp(psfvals, axis=(-2,-1))
                 
@@ -97,7 +97,7 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
             
             offset = convertlonlat_to_offset(truecoords)
 
-            edispvals = np.squeeze(edisp_efficient(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
+            edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
                 
             edispnormvals = np.squeeze(special.logsumexp(edispvals+logjacob, axis=-1))
             

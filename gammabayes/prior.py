@@ -122,7 +122,6 @@ class discrete_logprior(object):
             inputmesh = np.meshgrid(*axes,  *hyperparameters, indexing='ij') 
             outputarray = self.logfunction(*inputmesh)
             
-
         except:
             inputmesh = np.meshgrid(*axes, indexing='ij')  
             outputarray = self.logfunction(*inputmesh)
