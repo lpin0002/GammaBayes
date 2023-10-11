@@ -72,7 +72,7 @@ class discrete_logprior(object):
 
     
     def normalisation(self, hyperparametervalues=None):
-        return logsumexp(self.logfunction(self.axes_mesh, hyperparametervalues)+self.logjacob, axis=tuple(np.arange(self.axes.ndim)))
+        return logsumexp(self.logfunction(*self.axes_mesh, *hyperparametervalues)+self.logjacob, axis=tuple(np.arange(self.axes.ndim)))
     
     
     

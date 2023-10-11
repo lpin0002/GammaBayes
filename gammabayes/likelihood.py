@@ -25,12 +25,10 @@ class discrete_loglikelihood(object):
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
 
-                self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
             elif len(self.axes)==1:
                 print('boop')
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
-                self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
                 self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
@@ -41,8 +39,6 @@ class discrete_loglikelihood(object):
                 self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
                 
                 self.dependent_axes_dim = 1
-
-                self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
         else:
             print('beeeep')
             self.axes_dim = len(axes)
@@ -53,7 +49,6 @@ class discrete_loglikelihood(object):
             self.dependent_axes_dim = len(self.dependent_axes)
 
             print(f'Number of data dimensions {self.axes_dim}')
-            self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
             
         print(f'Axes shape: {self.axes_shape}')
         
@@ -73,12 +68,6 @@ class discrete_loglikelihood(object):
         string_text = string_text+f'with dependent axes {self.dependent_axes_names}\n'
         
         return string_text
-    
-    
-
-    
-    def normalisation(self):
-        return logsumexp(self.__call__(*self.axes_mesh), axis=tuple(nlen(self.axes_dim))+logjacob)
     
     
     def sample(self, dependentvalues, numsamples):
