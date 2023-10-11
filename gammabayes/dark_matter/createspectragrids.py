@@ -13,8 +13,10 @@ from astropy.table import Table
 # import matplotlib.pyplot as plt
 from scipy import special, interpolate
 import sys
+from os import path
 
 sys.path.append("..")
+DM_dir = path.join(path.dirname(__file__), '')
 np.seterr(divide = 'ignore')
 
 channel_registry = {
@@ -71,7 +73,7 @@ darkSUSY_to_Gammapy_converter = {
 modulefolderpath = os.path.join(os.path.dirname(__file__))
 
 immediatespectratable = Table.read(
-    modulefolderpath+'/dark_matter_spectra/AtProduction_gammas.dat',
+    f"{DM_dir}/dark_matter_data/dark_matter_spectra/AtProduction_gammas.dat",
                                    format="ascii.fast_basic",
                 guess=False,
                 delimiter=" ",)
@@ -109,9 +111,9 @@ def singlechannelgrid(channel):
         
     return difffluxgrid
 
-gridtointerpolate   = np.load(modulefolderpath+f"/griddata/channel=tau_massenergy_diffflux_grid.npy")
-massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")
-log10xvals        = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
+gridtointerpolate   = np.load(f"{DM_dir}/dark_matter_data/griddata/channel=tau_massenergy_diffflux_grid.npy")
+massvalues          = np.load(f"{DM_dir}/dark_matter_data/griddata/massvals_massenergy_diffflux_grid.npy")
+log10xvals        = np.load(f"{DM_dir}/dark_matter_data/griddata/log10xvals_massenergy_diffflux_grid.npy")
 
 twodinterpolationfunc =  interpolate.interp2d(np.log10(massvalues/1e3), log10xvals, np.array(gridtointerpolate).T, 
                                 kind='linear', bounds_error=False, fill_value=1e-3000)
@@ -127,36 +129,6 @@ def darkmatterdoubleinput(logmDM, logenergy):
     return np.log(twodinterpolationfunc(logmDM, logenergy-logmDM))
 
 
-channel_registry = {
-    "eL": "eL",
-    "eR": "eR",
-    "e": "e",
-    "muL": r"\[Mu]L",
-    "muR": r"\[Mu]R",
-    "mu": r"\[Mu]",
-    "tauL": r"\[Tau]L",
-    "tauR": r"\[Tau]R",
-    "tau": r"\[Tau]",
-    "q": "q",
-    "c": "c",
-    "b": "b",
-    "t": "t",
-    "WL": "WL",
-    "WT": "WT",
-    "W": "W",
-    "ZL": "ZL",
-    "ZT": "ZT",
-    "Z": "Z",
-    "g": "g",
-    "gamma": r"\[Gamma]",
-    "h": "h",
-    "nu_e": r"\[Nu]e",
-    "nu_mu": r"\[Nu]\[Mu]",
-    "nu_tau": r"\[Nu]\[Tau]",
-    "V->e": "V->e",
-    "V->mu": r"V->\[Mu]",
-    "V->tau": r"V->\[Tau]",
-}
 
 channelnames = list(channel_registry.keys())
 
@@ -164,20 +136,20 @@ channelnames = list(channel_registry.keys())
 
 channeldictionary = {}
 channelfuncdictionary = {}
-massvalues          = np.load(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy")/1e3
-log10xvals        = np.load(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
+massvalues          = np.load(f"{DM_dir}/dark_matter_data/griddata/massvals_massenergy_diffflux_grid.npy")/1e3
+log10xvals        = np.load(f"{DM_dir}/dark_matter_data/griddata/log10xvals_massenergy_diffflux_grid.npy")
 
 for channelname in channelnames:
-    tempspectragrid = np.load(modulefolderpath+f"/griddata/channel={channelname}_massenergy_diffflux_grid.npy")
+    tempspectragrid = np.load(f"{DM_dir}/dark_matter_data/griddata/channel={channelname}_massenergy_diffflux_grid.npy")
     channeldictionary[channelname] = tempspectragrid
     channelfuncdictionary[channelname] = interpolate.interp2d(np.log10(massvalues), log10xvals, np.array(tempspectragrid).T, 
                                 kind='linear', bounds_error=False, fill_value=1e-3000)
 
 
 
-bfmlambdaarray = np.load(modulefolderpath+"/temp/bfmlambdaarray.npy")
-lambdarange = np.load(modulefolderpath+"/temp/lambdarange.npy")
-massrange = np.load(modulefolderpath+"/temp/massrange.npy")
+bfmlambdaarray = np.load(f"{DM_dir}/dark_matter_data/temp/bfmlambdaarray.npy")
+lambdarange = np.load(f"{DM_dir}/dark_matter_data/temp/lambdarange.npy")
+massrange = np.load(f"{DM_dir}/dark_matter_data/temp/massrange.npy")
 
 
 dataArr=bfmlambdaarray
@@ -234,34 +206,4 @@ def fullsinputspectralfunc(mass, higgs_coupling, energy):
 
 
 
-# for channel, channelstored in channel_registry.items():
-#     np.save(modulefolderpath+f"/griddata/channel={channel}_massenergy_diffflux_grid.npy", singlechannelgrid(channelstored))
-# np.save(modulefolderpath+f"/griddata/massvals_massenergy_diffflux_grid.npy", massvalues)
-# np.save(modulefolderpath+f"/griddata/log10xvals_massenergy_diffflux_grid.npy", log10xvals)
-#######################################################################################################################################
-#######################################################################################################################################
-#######################################################################################################################################
-#######################################################################################################################################
-
-
-
-# darkSUSY_BFs_cleaned = pd.read_csv('darkSUSY_BFs/darkSUSY_BFs_cleaned.csv')
-
-
-# darkSUSY_massvalues = np.unique(darkSUSY_BFs_cleaned.iloc[:,0])
-# darkSUSY_lambdavalues = np.unique(darkSUSY_BFs_cleaned.iloc[:,1])
-
-# channelfuncdictionary = {}
-
-# for darkSUSYchannel in list(darkSUSY_to_Gammapy_converter.keys()):
-#     try:
-#         gammapychannel = darkSUSY_to_Gammapy_converter[darkSUSYchannel]
-#         tempspectragrid = np.load(modulefolderpath+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
-#         channelfuncdictionary[darkSUSYchannel] = interpolate.interp2d(np.log10(massvalues), log10xvals, np.array(tempspectragrid).T, 
-#                                     kind='linear', bounds_error=False, fill_value=1e-3000)
-#     except:
-#         channelfuncdictionary[darkSUSYchannel] = lambda logmass, log10x: log10x*0
-
-
-# partial_sigmav_interpolator_dictionary = {channel: interpolate.LinearNDInterpolator((darkSUSY_massvalues, darkSUSY_lambdavalues),darkSUSY_BFs_cleaned.iloc[:,idx+2]) for idx, channel in enumerate(list(darkSUSY_to_Gammapy_converter.keys())[2:])}
 

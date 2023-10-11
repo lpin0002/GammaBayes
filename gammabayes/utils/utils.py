@@ -221,7 +221,7 @@ def confidence_ellipse(x, y, probabilities, ax, n_std=3.0, edgecolor='white',fac
 
 
 def read_config_file(file_path):
-    print(f"file path: {file_path}")
+    print(f"config file path: {file_path}")
     try:
         with open(file_path, 'r') as file:
             inputs = yaml.safe_load(file)

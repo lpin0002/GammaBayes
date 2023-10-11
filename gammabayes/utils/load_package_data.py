@@ -1,6 +1,6 @@
 import numpy as np
 from os import path
-resources_dir = path.join(path.dirname(__file__), 'package_data')
+resources_dir = path.join(path.dirname(__file__), '../package_data')
 
 
 astrophysicalbackground = np.load(resources_dir+"/unnormalised_astrophysicalbackground.npy")
