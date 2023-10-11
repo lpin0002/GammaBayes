@@ -1,6 +1,6 @@
-from utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, angularseparation, convertlonlat_to_offset
-from utils.utils import psf_efficient, edisp_efficient, tqdm, logjacob, resources_dir
-from utils.utils import irfs
+from .utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, angularseparation, convertlonlat_to_offset
+from .utils.utils import psf_efficient, edisp_efficient, tqdm, logjacob, resources_dir
+from .utils.utils import irfs
 
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, WcsGeom
@@ -45,7 +45,7 @@ except:
 def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
           logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
-          pointsources=True):
+          pointsources=True, save_results=True, outputresults=False):
     def powerlaw(energy, index, phi0=1):
         return phi0*energy**(index)
 
@@ -109,9 +109,9 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
         edispnorm[np.isneginf(edispnorm)] = 0
         psfnorm[np.isneginf(psfnorm)] = 0
 
-
-        np.save(save_directory+"/psfnormalisation.npy", psfnorm)
-        np.save(save_directory+"/edispnormalisation.npy", edispnorm)
+        if save_results:
+            np.save(save_directory+"/psfnormalisation.npy", psfnorm)
+            np.save(save_directory+"/edispnormalisation.npy", edispnorm)
 
     if setup_astrobkg:
         print("Setting up the astrophysical background\n\n")
@@ -250,11 +250,20 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
         
         combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
         
-
-        np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+        if save_results:
+            np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
         
-        print('''Done setup, results saved to package_data. Accessible through `load_package_data`(.py) 
-    or through `resource_dir` variable in utils.''')
+            print('''Done setup, results saved to package_data. Accessible through `load_package_data`(.py) 
+        or through `resource_dir` variable in utils.''')
+    if outputresults:
+        if setup_astrobkg and setup_irfnormalisations:
+            return psfnorm, edispnorm, combinedplotmapwithaeff
+        elif setup_irfnormalisations:
+            return psfnorm, edispnorm
+        elif setup_astrobkg:
+            return combinedplotmapwithaeff
+        else:
+            raise Exception("No outputs selected?")
             
 
 

@@ -1,8 +1,8 @@
 
-identifier        : 'original_run_script_data'
+identifier        : 'example_config_file_run'
 Nevents           : 1000
-logmass           : 1.0
-xi                : 0.5
+logmass           : -0.1
+xi                : 0.8
 nbins_logmass     : 81
 nbins_xi          : 161
 dmdensity_profile : "einasto"
