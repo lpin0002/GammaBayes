@@ -269,7 +269,7 @@ except:
 if nsig is None:
     nsig = len(list(measured_log10e))
 
-logmasswindowwidth      = 10/np.sqrt(config_inputs['xi']*config_inputs['totalevents'])
+logmasswindowwidth      = 8/np.sqrt(config_inputs['xi']*config_inputs['totalevents'])
 
 logmasslowerbound       = config_inputs['logmass']-logmasswindowwidth
 logmassupperbound       = config_inputs['logmass']+logmasswindowwidth
