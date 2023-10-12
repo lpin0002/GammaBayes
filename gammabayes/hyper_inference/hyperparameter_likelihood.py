@@ -11,34 +11,48 @@ class hyperparameter_likelihood(object):
     def __init__(self, priors=None, likelihood=None, axes=None,
                  dependent_axes=None, dependent_logjacob=0, 
                  hyperparameter_axes=(), numcores=8, 
-                 likelihoodnormalisation= (), log_marg_results=None, mixture_axes = None,
+                 likelihoodnormalisation= 0, log_marg_results=None, mixture_axes = None,
                  log_hyperparameter_likelihoods=0, log_posterior=0):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
-            priors (_type_, optional): _description_. Defaults to None.
+            priors (tuple, optional): Tuple containing instances of the 
+                discrete_logprior object. Defaults to None.
 
-            likelihood (_type_, optional): _description_. Defaults to None.
+            likelihood (function, optional): A function that takes in axes and 
+                dependent axes and output the relevant log-likelihood values. 
+                Defaults to None.
 
-            axes (_type_, optional): _description_. Defaults to None.
+            axes (tuple, optional): Tuple of np.ndarrays representing the 
+                possible values that measurements can take. e.g. axis of 
+                possible energy values, longitude values, and latitude values. 
+                Defaults to None.
 
-            dependent_axes (_type_, optional): _description_. Defaults to None.
+            dependent_axes (tuple, optional): Tuple of np.ndarrays 
+                representing the possible values that true values of gamma-ray
+                events can take. e.g. axis of possible true energy values, true
+                longitude values, and true latitude values. 
+                Defaults to None.
 
-            dependent_logjacob (int, optional): _description_. Defaults to 0.
+            dependent_logjacob (np.ndarray or float, optional): A matrix of
+                log jacobian values used during marginalisation, must be either 
+                a single float value or if the depepdent axes are shapes 
+                (m1,), (m2,),..., (mn,) then the dependent_logjacob must be of
+                the shape (m1, m2,..., mn). Defaults to 0.
 
             hyperparameter_axes (tuple, optional): _description_. Defaults to ().
 
             numcores (int, optional): _description_. Defaults to 8.
 
-            likelihoodnormalisation (tuple, optional): _description_. Defaults to ().
+            likelihoodnormalisation (np.ndarray or float, optional): _description_. Defaults to ().
 
-            log_marg_results (_type_, optional): _description_. Defaults to None.
+            log_marg_results (np.ndarray, optional): _description_. Defaults to None.
 
-            mixture_axes (_type_, optional): _description_. Defaults to None.
+            mixture_axes (tuple, optional): _description_. Defaults to None.
 
-            log_hyperparameter_likelihoods (int, optional): _description_. Defaults to 0.
-            
-            log_posterior (int, optional): _description_. Defaults to 0.
+            log_hyperparameter_likelihoods (np.ndarray, optional): _description_. Defaults to 0.
+
+            log_posterior (np.ndarray, optional): _description_. Defaults to 0.
         """
         
         self.priors                         = priors
