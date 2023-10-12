@@ -12,7 +12,7 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from tqdm import tqdm
 import os, sys
 from GammaBayes.gammabayes.utils.inverse_transform_sampling import inverse_transform_sampling
-from GammaBayes.gammabayes.dark_matter.SS_DM_Prior import SS_DM_dist
+from GammaBayes.gammabayes.dark_matter.SS_DM_Construct import SS_DM_dist
 from os import path
 
 

@@ -1,11 +1,11 @@
 
-identifier        : 'example_config_file_run'
-Nevents           : 1000
-logmass           : -0.1
-xi                : 0.8
+identifier        : 'example_config_file_run_4'
+Nevents           : 500
+logmass           : 1.0
+xi                : 0.5
 nbins_logmass     : 81
 nbins_xi          : 161
 dmdensity_profile : "einasto"
 numcores          : 8
-runnumber         : 1
-totalevents       : 1000
+runnumber         : 3
+totalevents       : 1500

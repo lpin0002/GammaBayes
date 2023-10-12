@@ -9,6 +9,26 @@ class discrete_loglikelihood(object):
     def __init__(self, name='[None]', inputunit=None, logfunction=None, axes=None, 
                  dependent_axes=None, axes_names='[None]', dependent_axes_names='[None]',
                  logjacob = 0):
+        """_summary_
+
+        Args:
+            name (str, optional): _description_. Defaults to '[None]'.
+
+            inputunit (_type_, optional): _description_. Defaults to None.
+
+            logfunction (_type_, optional): _description_. Defaults to None.
+
+            axes (_type_, optional): _description_. Defaults to None.
+
+            dependent_axes (_type_, optional): _description_. Defaults to None.
+
+            axes_names (str, optional): _description_. Defaults to '[None]'.
+
+            dependent_axes_names (str, optional): _description_. Defaults to '[None]'.
+            
+            logjacob (int, optional): _description_. Defaults to 0.
+        """
+
         self.name = name
         self.inputunit = inputunit
         self.logfunction = logfunction
@@ -20,19 +40,16 @@ class discrete_loglikelihood(object):
         self.logjacob = logjacob
         if len(self.axes)==1 or len(self.dependent_axes)==1:
             if len(self.axes)==1 and len(self.dependent_axes)==1:
-                print('beep')
                 self.axes_dim = 1
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
 
             elif len(self.axes)==1:
-                print('boop')
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
                 self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
-                print('bopp')
                 print(np.array(axes).ndim)
                 self.axes_dim = len(axes)
                 # If it is not done this way self.axes_shape gives out a generator object location instead :(
@@ -40,25 +57,30 @@ class discrete_loglikelihood(object):
                 
                 self.dependent_axes_dim = 1
         else:
-            print('beeeep')
             self.axes_dim = len(axes)
             
             # If it is not done this way self.axes_shape gives out a generator object location instead :(
             self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
 
             self.dependent_axes_dim = len(self.dependent_axes)
-
-            print(f'Number of data dimensions {self.axes_dim}')
-            
-        print(f'Axes shape: {self.axes_shape}')
-        
+                    
         
     def __call__(self, *inputs):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         return self.logfunction(*inputs)
     
     
     
     def __repr__(self):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
         string_text = 'discrete log likelihood class\n'
         string_text = string_text+'-'*(len(string_text)+3)+'\n'
         string_text = string_text+f'name = {self.name}\n'
@@ -71,6 +93,15 @@ class discrete_loglikelihood(object):
     
     
     def sample(self, dependentvalues, numsamples):
+        """_summary_
+
+        Args:
+            dependentvalues (_type_): _description_
+            numsamples (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
 
         

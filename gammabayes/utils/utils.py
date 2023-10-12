@@ -1,16 +1,12 @@
 from scipy import integrate, special, interpolate, stats
 import numpy as np
-import os
-import random, time
 from tqdm import tqdm
 from gammapy.irf import load_cta_irfs
 from astropy import units as u
-import dynesty
-import gc
+
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
-import sys
-import yaml
+import sys, yaml, pickle, os, random, time, warnings
 
 from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
@@ -230,8 +226,20 @@ def read_config_file(file_path):
         print(f"Error: Input file '{file_path}' not found.")
         sys.exit(1)
     except yaml.YAMLError:
-        print(f"Error: Unable to parse YAML in '{file_path}'. Please ensure it is valid JSON.")
+        print(f"Error: Unable to parse YAML in '{file_path}'. Please ensure it is valid yaml file.")
         sys.exit(1)
+
+def load_hyperparameter_pickle(file_path):
+    with open(file_path, 'rb') as file:
+        loaded_data = pickle.load(file)
+    return loaded_data
+
+
+def save_config_file(config_dict, file_path):
+    with open(file_path, 'w') as file:
+        yaml.dump(config_dict, file, default_flow_style=False)
+    print("Configuration saved to config_dict")
+
         
         
 def check_necessary_config_inputs(input_dict):

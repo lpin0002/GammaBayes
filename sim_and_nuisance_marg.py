@@ -18,7 +18,7 @@ from GammaBayes.gammabayes.likelihoods.likelihood import discrete_loglikelihood
 from gammabayes.utils.utils import edisp_test, psf_test, log10eaxis, longitudeaxis, latitudeaxis
 from gammabayes.utils.utils import psf_efficient, edisp_efficient, edisp_test, psf_test, single_likelihood
 from gammabayes.utils.load_package_data import astrophysicalbackground, psfnormalisationvalues, edispnormalisationvalues
-from GammaBayes.gammabayes.dark_matter.SS_DM_Prior import SS_DM_dist
+from GammaBayes.gammabayes.dark_matter.SS_DM_Construct import SS_DM_dist
 
 
 import numpy as np
@@ -34,9 +34,9 @@ from tqdm.autonotebook import tqdm as notebook_tqdm
 import functools, multiprocessing, yaml
 from multiprocessing import Pool, freeze_support
 import pandas as pd
+import warnings
 
-
-from gammabayes.utils.utils import read_config_file
+from gammabayes.utils.utils import read_config_file, save_config_file
 
 
 
@@ -59,9 +59,25 @@ print(startertimer)
 
 config_inputs = read_config_file(sys.argv[1])
 
+stemfolder = f"data/{config_inputs['identifier']}"
+stemdatafolder = stemfolder+"/singlerundata"
+datafolder = stemdatafolder+f"/{config_inputs['runnumber']}"
+
+os.makedirs('data', exist_ok=True)
+os.makedirs(f"data/{config_inputs['identifier']}", exist_ok=True)
+os.makedirs(stemdatafolder, exist_ok=True)
+
+os.makedirs(datafolder, exist_ok=False)
+
+
+
+
 nsig                = int(round(config_inputs['xi']*config_inputs['Nevents']))
 nbkg                = int(round((1-config_inputs['xi'])*config_inputs['Nevents']))
 
+config_inputs['xi'] = nsig/(nsig+nbkg)
+
+save_config_file(config_inputs, datafolder+'/inputconfig.yaml')
 
 
 # $$ [markdown]
@@ -129,6 +145,10 @@ else:
     bkglonvals = np.asarray([])
     bkglatvals = np.asarray([])
 
+
+np.save(f'{datafolder}/true_bkg_samples.npy', np.array([bkglogevals, bkglonvals, bkglatvals]))
+np.save(f'{datafolder}/true_sig_samples.npy', np.array([siglogevals, siglonvals, siglatvals]))
+
 # $$ [markdown]
 # ## Reconstructed Value Simulation
 
@@ -158,7 +178,8 @@ psf_like
 
 if config_inputs['xi']!=0.0:
     # sig_log10e_edisp_samples = [edisp_like.sample(signal_event_tuple, 1).tolist() for signal_event_tuple in tqdm(sig_samples.T)]
-    signal_log10e_measured = [np.squeeze(edisp_like.sample((logeval,*coord,), numsamples=1)) for logeval,coord  in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)]
+    signal_log10e_measured = [np.squeeze(edisp_like.sample((logeval,*coord,), numsamples=1)) for logeval,coord  in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), 
+                                                                                                                                 total=nsig, ncols=80)]
 else:
     signal_log10e_measured = np.asarray([])
 
@@ -169,7 +190,8 @@ signal_lat_measured = []
 
 if config_inputs['xi']!=0:
     
-    sig_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), total=nsig)]
+    sig_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in notebook_tqdm(zip(siglogevals, np.array([siglonvals, siglatvals]).T), 
+                                                                                                                  total=nsig, ncols=80)]
     
     for sig_lonlat_psf_sample in sig_lonlat_psf_samples:
         signal_lon_measured.append(sig_lonlat_psf_sample[0])
@@ -181,7 +203,8 @@ if config_inputs['xi']!=0:
 # $$
 if config_inputs['xi']!=1.0:
     # sig_log10e_edisp_samples = [edisp_like.sample(signal_event_tuple, 1).tolist() for signal_event_tuple in tqdm(sig_samples.T)]
-    bkg_log10e_measured = [np.squeeze(edisp_like.sample((logeval,*coord,), numsamples=1)) for logeval,coord  in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)]
+    bkg_log10e_measured = [np.squeeze(edisp_like.sample((logeval,*coord,), numsamples=1)) for logeval,coord  in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), 
+                                                                                                                              total=nbkg, ncols=80)]
 else:
     bkg_log10e_measured = np.asarray([])
 
@@ -191,11 +214,15 @@ bkg_lat_measured = []
 
 if config_inputs['xi']!=1.0:
     
-    bkg_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), total=nbkg)]
+    bkg_lonlat_psf_samples =  [psf_like.sample((logeval,*coord,), 1).tolist() for logeval,coord  in notebook_tqdm(zip(bkglogevals, np.array([bkglonvals, bkglatvals]).T), 
+                                                                                                                  total=nbkg, ncols=80)]
     
     for bkg_lonlat_psf_sample in bkg_lonlat_psf_samples:
         bkg_lon_measured.append(bkg_lonlat_psf_sample[0])
         bkg_lat_measured.append(bkg_lonlat_psf_sample[1])
+
+np.save(f'{datafolder}/recon_bkg_samples.npy', np.array([bkg_log10e_measured, bkg_lon_measured, bkg_lat_measured]))
+np.save(f'{datafolder}/recon_sig_samples.npy', np.array([signal_log10e_measured, signal_lon_measured, signal_lat_measured]))
 
 
 # $$ [markdown]
@@ -260,179 +287,23 @@ hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior,
                                                                hyperparameter_axes = ((logmassrange,), (None,)), numcores=config_inputs['numcores'], likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
 
 measured_log10e = [float(measured_log10e_val) for measured_log10e_val in measured_log10e]
-margresults = hyperparameter_likelihood_instance.full_obs_marginalisation(axisvals= (measured_log10e, measured_lon, measured_lat))
+print(f"datafolder, {datafolder}")
+hyperparameter_likelihood_instance.save_data(directory_path=datafolder)
 
-# $$
-margresultsarray = np.array(margresults)
-sigmargresults = np.squeeze(np.vstack(margresultsarray[:,0])).T
-bkgmargresults = np.squeeze(np.vstack(margresultsarray[:,1]))
-sigmargresults.shape
+margresults = hyperparameter_likelihood_instance.nuisance_log_marginalisation(axisvals= (measured_log10e, measured_lon, measured_lat))
+hyperparameter_likelihood_instance.save_data(directory_path=datafolder)
 
-# $$
-fig, ax = plt.subplots(figsize=(20,3))
-plt.pcolormesh(*np.meshgrid(list(range(config_inputs['Nevents'])), logmassrange, indexing='ij'), 
-               sigmargresults.T-special.logsumexp(sigmargresults, axis=1), 
-               cmap='viridis')
-plt.ylabel(r'$log_{10}m_\chi$ [TeV]')
-plt.axhline(config_inputs['logmass'], c='tab:orange')
-plt.colorbar()
-plt.show()
-
-# $$ [markdown]
-# ## Calculating posterior
-
-# $$
-nbins_xi = 161
-lambdawindowwidth      = 9/np.sqrt(config_inputs['Nevents'])
-
-
-lambdalowerbound       = config_inputs['xi']-lambdawindowwidth
-lambdaupperbound       = config_inputs['xi']+lambdawindowwidth
-
-
-
-
-if lambdalowerbound<0:
-    lambdalowerbound = 0
-if lambdaupperbound>1:
-    lambdaupperbound = 1
-
-
-lambdarange            = np.linspace(lambdalowerbound, lambdaupperbound, nbins_xi) 
-
-original_log_posterior = []
-
-for lambdaval in notebook_tqdm(lambdarange, total=lambdarange.shape[0]):
-    original_log_posterior.append([np.sum(np.logaddexp(np.log(lambdaval)+sigmargresults[logmassindex,:], np.log(1-lambdaval)+bkgmargresults)) for logmassindex in range(len(list(logmassrange)))])
-
-original_log_posterior = np.array(original_log_posterior)-special.logsumexp(original_log_posterior)
-new_log_posterior = hyperparameter_likelihood_instance.create_mixture_log_posterior(
-    mixture_axes=(lambdarange, 1-lambdarange), log_margresults=margresultsarray)
-
-new_log_posterior = new_log_posterior - special.logsumexp(new_log_posterior)
-
-endertimer = time.perf_counter()
-print(endertimer-startertimer)
-
-# $$
-log_posterior=np.squeeze(new_log_posterior)
-# log_posterior = original_log_posterior
-
-# $$ [markdown]
-# # <h1><b>Plotting
-
-# $$
-from gammabayes.utils.utils import confidence_ellipse
-from scipy.stats import norm
-
-import time
-
-colormap = cm.get_cmap('Blues_r', 4)
-
-fig, ax = plt.subplots(2,2, dpi=100, figsize=(10,8))
-plt.suptitle(f"Nevents= {config_inputs['Nevents']}, general/new", size=24)
-
-# Upper left plot
-logmass_logposterior = special.logsumexp(log_posterior, axis=0)
-
-normalisedlogmassposterior = np.exp(logmass_logposterior-special.logsumexp(logmass_logposterior))
-
-cdflogmassposterior = np.cumsum(normalisedlogmassposterior)
-mean = logmassrange[np.abs(norm.cdf(0)-cdflogmassposterior).argmin()]
-zscores = [-3, -2,-1,1,2, 3]
-logmasspercentiles = []
-for zscore in zscores:
-    logmasspercentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdflogmassposterior).argmin()])
-
-
-ax[0,0].plot(logmassrange,normalisedlogmassposterior, c='tab:green')
-
-ax[0,0].axvline(mean, c='tab:green', ls=':')
-
-
-for o, percentile in enumerate(logmasspercentiles):
-            color = colormap(np.abs(zscores[o])/4-0.01)
-
-            ax[0,0].axvline(percentile, c=color, ls=':')
-ax[0,0].axvline(config_inputs['logmass'], ls='--', color="tab:orange")
-
-
-if min(mean - logmasspercentiles)>log10eaxistrue[1]-log10eaxistrue[0]:
-    for logetrueval in log10eaxistrue:
-        ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
-ax[0,0].set_ylim([0, None])
-ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
-
-# Upper right plot
-ax[0,1].axis('off')
-
-
-# Lower left plot
-# ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(normalisedlogposterior).T, cmap='Blues')
-ax[1,0].pcolormesh(logmassrange, lambdarange, np.exp(log_posterior), vmin=0)
-ax[1,0].axvline(config_inputs['logmass'], c='tab:orange')
-ax[1,0].axhline(config_inputs['xi'], c='tab:orange')
-ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
-ax[1,0].set_ylabel(r'$\xi$')
-
-ax[1,0].set_ylim([lambdarange[0], lambdarange[-1]])
-ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
-
-########################################################################################################################
-########################################################################################################################
-# I have no clue how this works but I've checked it against some standard distributions and it seems correct
-normed_posterior = np.exp(log_posterior)/np.exp(log_posterior).sum()
-n = 100000
-t = np.linspace(0, normed_posterior.max(), n)
-integral = ((normed_posterior >= t[:, None, None]) * normed_posterior).sum(axis=(1,2))
-
-from scipy import interpolate
-f = interpolate.interp1d(integral, t)
-t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]))
-ax[1,0].contour(normed_posterior, t_contours, extent=[logmassrange[0],logmassrange[-1], lambdarange[0],lambdarange[-1]], colors='white', linewidths=0.5)
-########################################################################################################################
-########################################################################################################################
-
-
-lambda_logposterior = special.logsumexp(log_posterior, axis=1)
-
-normalisedlambdaposterior = np.exp(lambda_logposterior-special.logsumexp(lambda_logposterior))
-
-cdflambdaposterior = np.cumsum(normalisedlambdaposterior)
-meanlambda = lambdarange[np.abs(norm.cdf(0)-cdflambdaposterior).argmin()]
-lambdapercentiles = []
-for zscore in zscores:
-    lambdapercentile = lambdarange[np.abs(norm.cdf(zscore)-cdflambdaposterior).argmin()]
-    lambdapercentiles.append(lambdapercentile)
-    print(np.sqrt(1e5/1e8)*np.abs(lambdapercentile - meanlambda))
 
 
 
 
 
-ax[1,1].plot(lambdarange,normalisedlambdaposterior, c='tab:green')
-
-ax[1,1].axvline(meanlambda, c='tab:green', ls=':')
-
-
-for o, percentile in enumerate(lambdapercentiles):
-            color = colormap(np.abs(zscores[o])/4-0.01)
-
-            ax[1,1].axvline(percentile, c=color, ls=':')
-ax[1,1].axvline(config_inputs['xi'], ls='--', color="tab:orange")
-ax[1,1].set_xlabel(r'$\xi$')
-ax[1,1].set_ylim([0, None])
+endertimer = time.perf_counter()
+runtime_seconds = endertimer-startertimer
+time_diff_hours = runtime_seconds//(60*60)
+time_diff_minutes = (runtime_seconds- 60*60*time_diff_hours)//60
+timediff_seconds = int(round(runtime_seconds- 60*60*time_diff_hours-60*time_diff_minutes))
 
 
-# plt.savefig(time.strftime(f"Figures/TestFigures/{Nsamples}events_lm{config_inputs['logmass']}_l{config_inputs['xi']}_%m%d_%H%M.pdf"))
-plt.show()
-
-# $$
-10/15
-
-# $$
-os.system('say Your code is finished.')
-
-
-
+print(f"Time to run script:{time_diff_hours} hours, {time_diff_minutes} minutes and {timediff_seconds} seconds")
 
