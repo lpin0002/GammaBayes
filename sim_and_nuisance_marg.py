@@ -266,11 +266,10 @@ except:
 # ## Marginalisation
 
 # $$
-nbins_logmass = 81
 if nsig is None:
     nsig = len(list(measured_log10e))
 
-logmasswindowwidth      = 7/np.sqrt(nsig)
+logmasswindowwidth      = 10/np.sqrt(config_inputs['xi']*config_inputs['totalevents'])
 
 logmasslowerbound       = config_inputs['logmass']-logmasswindowwidth
 logmassupperbound       = config_inputs['logmass']+logmasswindowwidth
@@ -283,7 +282,7 @@ if logmassupperbound>2:
     logmassupperbound = 2
 
 
-logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, nbins_logmass) 
+logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, config_inputs['nbins_logmass']) 
 
 # $$
 hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior, bkg_prior,), likelihood=single_likelihood, 

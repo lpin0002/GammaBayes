@@ -44,6 +44,27 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
     
     os.makedirs(f"{workingfolder}/{stemdirname}/singlerundata", exist_ok=True)
 
+
+
+    stem_config_dict = {
+            'identifier'        : identifier,
+            'Nevents'           : singlerunevents,
+            'logmass'           : logmass,
+            'xi'                : xi_true,
+            'nbins_logmass'     : nbins_logmass,
+            'nbins_xi'          : nbins_xi,
+            'dmdensity_profile' : dmdensity_profile,
+            'numcores'          : numcores,
+            'totalevents'       : singlerunevents*numberofruns,
+            'batch_job'         : True,
+                    }
+
+    with open(f"{workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml", 'w') as file:
+            yaml.dump(stem_config_dict, file, default_flow_style=False)
+
+
+
+
     for runnum in range(1,numberofruns+1):
         single_run_data_folder = f"{workingfolder}/{stemdirname}/singlerundata/{runnum}"
         
