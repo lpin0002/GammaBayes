@@ -1,9 +1,9 @@
 
-import os, sys, numpy as np, time, math, yaml
+import os, sys, time, math, yaml
 
-def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores, 
-                   numsimhour, numsimminute, numanalysehour, numanalyseminute, 
-                   nbins_logmass, nbins_xi, identifier = None, immediate_run=1, 
+def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
+                   numsimhour, numsimminute, numanalysehour, numanalyseminute,
+                   nbins_logmass, nbins_xi, identifier = None, immediate_run=1,
                    simmemory = 200, analysememory=1000, dmdensity_profile='einasto'):
     
     if int(numsimminute)<10:
@@ -103,13 +103,6 @@ srun python3 combine_results.py {workingfolder}/{stemdirname}/singlerundata/inpu
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
         f.write(str)
 
-
-
-
-#logmass, xi_true, numberofruns, singlerunevents, numcores, 
-                #    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
-                #    numlogmass, numlambda, identifier = None, immediate_run=1, 
-                #    simmemory = 200, analysememory=1000
 
 
 if __name__=="__main__":

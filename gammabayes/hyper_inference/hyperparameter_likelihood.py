@@ -40,19 +40,33 @@ class hyperparameter_likelihood(object):
                 (m1,), (m2,),..., (mn,) then the dependent_logjacob must be of
                 the shape (m1, m2,..., mn). Defaults to 0.
 
-            hyperparameter_axes (tuple, optional): _description_. Defaults to ().
+            hyperparameter_axes (tuple, optional): Tuple containing the default 
+                values at which the priors will be evaluated. For example, if 
+                there are two priors there will be two tuples each containing
+                the range of hyperparameters at which each prior will be 
+                evaluated at. Defaults to ().
 
-            numcores (int, optional): _description_. Defaults to 8.
+            numcores (int, optional): If wanting to multi-core parallelize, 
+                this represents the number of cores that will be used. 
+                Defaults to 8.
 
-            likelihoodnormalisation (np.ndarray or float, optional): _description_. Defaults to ().
+            likelihoodnormalisation (np.ndarray or float, optional): An array
+                containing the log of the normalisation values of the 
+                likelihoods if interpolation method within function does not
+                preserve normalisation (likely). Defaults to ().
 
-            log_marg_results (np.ndarray, optional): _description_. Defaults to None.
+            log_marg_results (np.ndarray, optional): Log of nuisance 
+                marginalisation results. Defaults to None.
 
-            mixture_axes (tuple, optional): _description_. Defaults to None.
+            mixture_axes (tuple, optional): A tuple containing the weights for
+                each prior within a mixture model. Defaults to None.
 
-            log_hyperparameter_likelihoods (np.ndarray, optional): _description_. Defaults to 0.
+            log_hyperparameter_likelihoods (np.ndarray, optional): A numpy array
+                containing the log of hyperparameter marginalisation results. 
+                Defaults to 0.
 
-            log_posterior (np.ndarray, optional): _description_. Defaults to 0.
+            log_posterior (np.ndarray, optional): A numpy array containing the
+                log of hyperparameter posterior results. Defaults to 0.
         """
         
         self.priors                         = priors
@@ -300,7 +314,7 @@ class hyperparameter_likelihood(object):
         
             
     def create_mixture_log_hyperparameter_likelihood(self, mixture_axes=None, log_marg_results=None, hyperparameter_axes=None):
-        
+        #!TODO
         
         if mixture_axes is None:
             mixture_axes                = self.mixture_axes
@@ -419,11 +433,15 @@ class hyperparameter_likelihood(object):
         data_to_save['dependent_logjacob']              = self.dependent_logjacob
         data_to_save['axes']                            = self.axes
         data_to_save['dependent_axes']                  = self.dependent_axes
-        data_to_save['log_marg_results']                = self.log_marg_results
         data_to_save['mixture_axes']                    = self.mixture_axes
+
+
+        data_to_save['log_marg_results']                = self.log_marg_results
+
         data_to_save['log_hyperparameter_likelihoods']  = self.log_hyperparameter_likelihoods
 
         data_to_save['log_posterior']                   = self.log_posterior
+        
                 
         save_file_path = directory_path+"/hyper_parameter_data.pkl"
         print(save_file_path)
