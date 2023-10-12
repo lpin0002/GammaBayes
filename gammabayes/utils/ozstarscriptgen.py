@@ -61,6 +61,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
             'numcores'          : numcores,
             'runnumber'         : runnum,
             'totalevents'       : singlerunevents*numberofruns,
+            'batch_job'         : True,
                     }
         
         with open(f"{single_run_data_folder}/inputconfig.yaml", 'w') as file:

@@ -67,7 +67,11 @@ os.makedirs('data', exist_ok=True)
 os.makedirs(f"data/{config_inputs['identifier']}", exist_ok=True)
 os.makedirs(stemdatafolder, exist_ok=True)
 
-os.makedirs(datafolder, exist_ok=False)
+
+if config_inputs['batch_job']:
+    os.makedirs(datafolder, exist_ok=True)
+else:
+    os.makedirs(datafolder, exist_ok=False)
 
 
 
