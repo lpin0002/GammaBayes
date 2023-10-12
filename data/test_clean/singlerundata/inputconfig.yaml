@@ -1,0 +1,11 @@
+Nevents: 1000
+batch_job: true
+dmdensity_profile: einasto
+identifier: test_clean
+logmass: 0.0
+nbins_logmass: 101
+nbins_xi: 161
+numcores: 16
+runnumber: 1
+totalevents: 2000
+xi: 0.2
