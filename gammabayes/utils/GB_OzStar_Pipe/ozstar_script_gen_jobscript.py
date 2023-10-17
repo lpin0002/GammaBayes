@@ -65,7 +65,7 @@ if __name__=="__main__":
         immediate_run = 1
 
         
-    f"""
+    strboi = f"""
     #!/bin/bash
     #
     #SBATCH --job-name=RunSetup
@@ -83,7 +83,7 @@ if __name__=="__main__":
 
 
     with open(f"data/start_jobscript.sh", 'w') as f:
-                f.write(str)
+                f.write(strboi)
 
     time.sleep(0.1)
     os.system(f"sbatch data/jobscript.sh")

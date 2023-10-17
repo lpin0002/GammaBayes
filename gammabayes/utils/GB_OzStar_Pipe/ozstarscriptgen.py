@@ -186,7 +186,7 @@ srun python3 sim_and_nuisance_marg.py {single_run_data_folder}/inputconfig.yaml"
         if immediate_run:
             os.system(f"sbatch {single_run_data_folder}/jobscript.sh")
 
-    str =f"""#!/bin/bash
+    strboi =f"""#!/bin/bash
 #
 #SBATCH --job-name=CR{logmass}|{xi_true}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
 #SBATCH --output=data/LatestFolder/CR{logmass}_{xi_true}_{int(numberofruns*singlerunevents)}_{identifier}.txt
@@ -202,7 +202,7 @@ conda activate DMPipe
 srun python3 combine_results.py {workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
-        f.write(str)
+        f.write(strboi)
 
 
 # Following is so the module can be run as a primary script
