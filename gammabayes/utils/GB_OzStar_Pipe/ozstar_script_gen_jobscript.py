@@ -86,7 +86,7 @@ if __name__=="__main__":
                 f.write(strboi)
 
     time.sleep(0.1)
-    os.system(f"sbatch data/jobscript.sh")
+    os.system(f"sbatch data/start_jobscript.sh")
     
 
 #python gammabayes/utils/GB_OzStar_Pipe/ozstar_script_gen_jobscript.py 1.2 0.5 10 10000 16 1 30 0 30 new_file_sys_test 101 161 2000 32000 einasto 300 75 0.2 0.4
