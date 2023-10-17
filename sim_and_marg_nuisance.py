@@ -30,14 +30,17 @@ import functools, multiprocessing, yaml
 from multiprocessing import Pool, freeze_support
 import pandas as pd
 
-config_inputs = read_config_file('example_config_file.yaml')
+
+config_file_path = sys.argv[1]
+
+config_inputs = read_config_file(config_file_path)
+
 log10_eaxis_true, longitude_axis_true, latitude_axis_true = create_true_axes_from_config(config_inputs)
 log10_mass = config_inputs['logmass']
 
 print(log10_eaxis_true.shape, longitude_axis_true.shape, latitude_axis_true.shape)
 
 log10_eaxis, longitude_axis, latitude_axis = create_recon_axes_from_config(config_inputs)
-
 
 stemfolder = f"data/{config_inputs['identifier']}"
 stemdatafolder = stemfolder+"/singlerundata"
@@ -46,6 +49,9 @@ datafolder = stemdatafolder+f"/{config_inputs['runnumber']}"
 os.makedirs('data', exist_ok=True)
 os.makedirs(f"data/{config_inputs['identifier']}", exist_ok=True)
 os.makedirs(stemdatafolder, exist_ok=True)
+
+
+
 
 
 if config_inputs['batch_job']:
