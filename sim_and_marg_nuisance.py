@@ -136,10 +136,8 @@ psf_like = discrete_loglikelihood(logfunction=psf_test,
                                     dependent_axes_names = ['log10E true', 'lon', 'lat'])
 
 
-signal_fraction = config_inputs['xi']
-total_events = config_inputs['totalevents']
-nsig = int(round(signal_fraction*total_events))
-nbkg = int(round((1-signal_fraction)*total_events))
+nsig = int(round(config_inputs['xi']*config_inputs['Nevents']))
+nbkg = int(round((1-config_inputs['xi'])*config_inputs['Nevents']))
 
 siglogevals,siglonvals,siglatvals  = DM_prior.sample(nsig)
 
