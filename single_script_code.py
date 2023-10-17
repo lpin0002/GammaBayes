@@ -330,7 +330,7 @@ hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior,
                                                                dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), 
                                                                dependent_logjacob=logjacobtrue,
                                                                hyperparameter_axes = ((logmassrange,), (None,)), 
-                                                               numcores=8, 
+                                                               numcores=inputs['numcores'], 
                                                                likelihoodnormalisation = psfnormalisationvalues+edispnormalisationvalues)
 
 measured_log10e = [float(measured_log10e_val) for measured_log10e_val in measured_log10e]
