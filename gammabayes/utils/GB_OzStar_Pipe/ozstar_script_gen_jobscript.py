@@ -79,7 +79,7 @@ if __name__=="__main__":
     #SBATCH --mail-user=progressemail1999@gmail.com
     conda init bash
     conda activate DMPipe
-    python gammabayes/utils/GB_OzStar_Pipe/ozstarscriptgen.py {logmass} {xi_true} {numberofruns} {singlerunevents} {numcores} {num_marg_hours} {num_marg_minutes} {num_combine_hours} {num_combine_minutes} {nbins_logmass} {nbins_xi} {identifier} {dmdensity_profile} {marginalisation_mem} {combination_mem} {immediate_run} {num_true_energy_bins_per_decade} {num_recon_energy_bins_per_decade} {true_spatial_res} {recon_spatial_res}"""
+    python gammabayes/utils/GB_OzStar_Pipe/ozstarscriptgen.py {logmass} {xi_true} {numberofruns} {singlerunevents} {numcores} {num_marg_hours} {num_marg_minutes} {num_combine_hours} {num_combine_minutes} {identifier} {nbins_logmass} {nbins_xi} {marginalisation_mem} {combination_mem} {dmdensity_profile} {num_true_energy_bins_per_decade} {num_recon_energy_bins_per_decade} {true_spatial_res} {recon_spatial_res} {immediate_run}"""
 
 
     with open(f"gammabayes/data/start_jobscript.sh", 'w') as f:
@@ -87,3 +87,4 @@ if __name__=="__main__":
     os.system(f"sbatch gammabayes/data/jobscript.sh")
     
 
+# s]$ python gammabayes/utils/GB_OzStar_Pipe/ozstar_script_gen_jobscript.py 1.2 0.5 10 10000 16 1 30 0 30 new_file_sys_test 101 161 2000 32000 einasto 300 75 0.2 0.4
