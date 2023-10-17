@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, time
 
 
 # Following is so the module can be run as a primary script
@@ -82,9 +82,11 @@ if __name__=="__main__":
     python gammabayes/utils/GB_OzStar_Pipe/ozstarscriptgen.py {logmass} {xi_true} {numberofruns} {singlerunevents} {numcores} {num_marg_hours} {num_marg_minutes} {num_combine_hours} {num_combine_minutes} {identifier} {nbins_logmass} {nbins_xi} {marginalisation_mem} {combination_mem} {dmdensity_profile} {num_true_energy_bins_per_decade} {num_recon_energy_bins_per_decade} {true_spatial_res} {recon_spatial_res} {immediate_run}"""
 
 
-    with open(f"gammabayes/data/start_jobscript.sh", 'w') as f:
+    with open(f"data/start_jobscript.sh", 'w') as f:
                 f.write(str)
-    os.system(f"sbatch gammabayes/data/jobscript.sh")
+
+    time.sleep(0.1)
+    os.system(f"sbatch data/jobscript.sh")
     
 
-# s]$ python gammabayes/utils/GB_OzStar_Pipe/ozstar_script_gen_jobscript.py 1.2 0.5 10 10000 16 1 30 0 30 new_file_sys_test 101 161 2000 32000 einasto 300 75 0.2 0.4
+#python gammabayes/utils/GB_OzStar_Pipe/ozstar_script_gen_jobscript.py 1.2 0.5 10 10000 16 1 30 0 30 new_file_sys_test 101 161 2000 32000 einasto 300 75 0.2 0.4
