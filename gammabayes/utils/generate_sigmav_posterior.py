@@ -96,6 +96,11 @@ try:
 except:
     projectednumber = int(float(1e8))
 
+try:
+    smooth_points = int(sys.argv[5])
+except:
+    smooth_points = 1
+
 
 log_posterior   = np.load(f'{stemfolder}/log_posterior.npy', allow_pickle=True)
 xi_range        = np.load(f'{stemfolder}/xi_range.npy', allow_pickle=True)
@@ -204,19 +209,25 @@ if sensitivity_plot:
     sigmavvals = convert_to_sigmav(xi_val=twosigma_xi_vals, log10massDM=twosigma_logmassvals, totalnumevents=totalevents, 
                                    fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
                                    )/np.sqrt(projectednumber/totalevents)
-    window_size = 10
-    cubicfit = np.polyfit(twosigma_logmassvals, np.log(sigmavvals), 3)
-
     
-    def cubic_func(x, polyfitoutput):
-        p0, p1, p2, p3 = polyfitoutput[3], polyfitoutput[2], polyfitoutput[1], polyfitoutput[0]
-        return p0 + x*p1 + x**2*p2 + x**3*p3
+    if smooth_points:
+        window_size = 10
+        cubicfit = np.polyfit(twosigma_logmassvals, np.log(sigmavvals), 3)
+
+        
+        def cubic_func(x, polyfitoutput):
+            p0, p1, p2, p3 = polyfitoutput[3], polyfitoutput[2], polyfitoutput[1], polyfitoutput[0]
+            return p0 + x*p1 + x**2*p2 + x**3*p3
+        
+        plot_points = 10**twosigma_logmassvals[window_size:], np.exp(cubic_func(twosigma_logmassvals[window_size:], cubicfit))
+    else:
+        plot_points = 10**twosigma_logmassvals, sigmavvals
             
     # sorted_indices = np.argsort(twosigma_logmassvals)
     import csv
     
     aacharya = []
-    with open(f"{aux_data_dir}/sensitivitypaper_points.csv", 'r', encoding='UTF8') as file:
+    with open(f"{aux_data_dir}/CTA_Consortium_2021_DM_GC_sensitivity_points.csv", 'r', encoding='UTF8') as file:
         csv_reader = csv.reader(file, delimiter=',')
         for row in csv_reader:
             aacharya.append([float(row[0]),float(row[1])])
@@ -227,7 +238,7 @@ if sensitivity_plot:
     plt.figure(figsize=(4,3), dpi=200)
     # plt.plot(10**twosigma_logmassvals, sigmavvals/np.sqrt(10))
     # plt.plot(10**twosigma_logmassvals[window_size:-window_size], np.exp(sigma_smoothed)[window_size:-window_size])
-    plt.plot(10**twosigma_logmassvals[window_size:], np.exp(cubic_func(twosigma_logmassvals[window_size:], cubicfit)), label='this work')
+    plt.plot(*plot_points, label='this work')
     plt.plot(aacharya[:,0]/1e3, aacharya[:,1], label='CTA consortium 2021')
     # plt.axhline(2e-26, ls='--', c='grey', alpha=0.5, label=r'DarkSUSY thermal $\langle \sigma v \rangle$')
     plt.ylim([1e-27, 1e-24])

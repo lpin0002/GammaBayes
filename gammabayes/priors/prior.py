@@ -1,6 +1,6 @@
 from scipy.special import logsumexp
 import numpy as np
-from GammaBayes.gammabayes.utils.inverse_transform_sampling import inverse_transform_sampling
+from gammabayes.utils.inverse_transform_sampling import inverse_transform_sampling
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):
@@ -106,11 +106,22 @@ class discrete_logprior(object):
         """A dunder method to allow a class instance to be used as a function.
 
         Args:
-            inputs (_type_): _description_
-            hyperparameters (_type_, optional): _description_. Defaults to None.
+            inputs (tuple):  Tuple of the usual input format for the logfunction. 
+                e.g. If usual format is 
+                logfunc(axis_1, axis_2, (hyperparameter1,)) 
+                then the input for the class would be 
+                class_instance(inputs=(axis_1, axis_2))
+            hyperparameters (tuple, optional): Similar to the previous argument
+            but for the hyperparameters for the prior. e.g. If usual format is 
+                logfunc(axis_1, axis_2, (hyperparameter1,)) 
+                then the 'hyperparameters' for the class would be 
+                class_instance(hyperparameters=( (hyperparameter1,) ))
+                as the input is unpackaged by default. 
+                Defaults to None.
 
         Returns:
-            _type_: _description_
+            float or np.ndarray: A float or matrix of values representing the
+            log prior values for the given set of inputs and hyperparameters.
         """
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values

@@ -1,7 +1,12 @@
+from os import path
+import sys, os
+sys.path.append(path.dirname(path.dirname(path.dirname(os.path.abspath(__file__)))))
 
-from utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, angularseparation, convertlonlat_to_offset
-from utils import psf_efficient, edisp_efficient, tqdm, logjacob, resources_dir
-from utils import irfs
+
+from gammabayes.utils.load_package_defaults import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
+from gammabayes.utils.utils import angularseparation, convertlonlat_to_offset
+from gammabayes.utils.utils import tqdm, resources_dir, edisp_test, psf_test #, psf_efficient, edisp_efficient, 
+from gammabayes.utils.utils import irfs
 
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, WcsGeom
@@ -43,11 +48,69 @@ try:
 except:
     setup_astrobkg = 1
 
-def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
+def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
+          logjacob=logjacob, save_directory = resources_dir, logpsf=psf_test, logedisp=edisp_test, aeff=aefffunc,
           pointsources=True, save_results=True, outputresults=False):
+    """Produces default IRF normalisation matrices and default astrophysical flux matrix
+
+    Args:
+        setup_irfnormalisations (bool, optional): Bool to where a True value 
+            would setup the normalisations for the input CTA irfs for the given
+            measured and true value axes. 
+            Defaults to 1.
+
+        setup_astrobkg (bool, optional): Bool to where a True value 
+            would setup the astrophysical flux value for the CTA for the given
+            measured and true value axes. Defaults to 1.
+
+        log10eaxistrue (np.ndarray, optional): Dicrete true log10 energy values
+            of CTA event data. Defaults to log10eaxistrue.
+
+        log10eaxis (np.ndarray, optional): Dicrete measured log10 energy values
+            of CTA event data. Defaults to log10eaxis.
+
+        longitudeaxistrue (np.ndarray, optional): Dicrete true fov longitude values
+            of CTA event data. Defaults to longitudeaxistrue.
+
+        longitudeaxis (np.ndarray, optional): Dicrete measured fov longitude values
+            of CTA event data. Defaults to longitudeaxis.
+
+        latitudeaxistrue (np.ndarray, optional): Dicrete true fov latitude values
+            of CTA event data. Defaults to latitudeaxistrue.
+
+        latitudeaxis (np.ndarray, optional): Dicrete measured fov latitude values
+            of CTA event data. Defaults to latitudeaxis.
+
+        logjacob (np.ndarray, optional): _description_. Defaults to logjacob.
+
+        save_directory (str, optional): Path to save results. Defaults to resources_dir.
+
+        logpsf (func, optional): Function representing the log point spread 
+        function for the CTA. Defaults to psf_test.
+
+        logedisp (func, optional): Function representing the log energy dispersion
+          for the CTA. Defaults to edisp_test.
+
+        aeff (func, optional): _description_. Defaults to aefffunc.
+
+        pointsources (bool, optional): _description_. Defaults to True.
+
+        save_results (bool, optional): _description_. Defaults to True.
+
+        outputresults (bool, optional): _description_. Defaults to False.
+    """
     def powerlaw(energy, index, phi0=1):
+        """_summary_
+
+        Args:
+            energy (_type_): _description_
+            index (_type_): _description_
+            phi0 (int, optional): _description_. Defaults to 1.
+
+        Returns:
+            _type_: _description_
+        """
         return phi0*energy**(index)
 
 
@@ -56,9 +119,9 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
 
 
     if setup_irfnormalisations:
-        psfnorm = []
+        logpsfnorm = []
         for logeval in tqdm(log10eaxistrue, desc='Setting up psf normalisation', ncols=80):
-            psflogerow = []
+            log_psflogerow = []
             for lonval in longitudeaxistrue:
                 log10eaxistrue_mesh, longitudeaxistrue_mesh, latitudeaxistrue_mesh, longitudeaxis_mesh, latitudeaxis_mesh  = np.meshgrid(logeval,
                                                                                                                                         lonval, 
@@ -66,27 +129,32 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
                                                                                                                                         longitudeaxis, 
                                                                                                                                         latitudeaxis, indexing='ij')
 
-                truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
+                # truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
 
-                recon_coords = np.array([longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten()])
+                # recon_coords = np.array([longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten()])
 
-                rad = angularseparation(recon_coords, truecoords)
-                offset = convertlonlat_to_offset(truecoords)
+                # rad = angularseparation(recon_coords, truecoords)
+                # offset = convertlonlat_to_offset(truecoords)
 
-                psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
+                # psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
+                logpsfvals = logpsf(longitudeaxis_mesh.flatten(), 
+                              latitudeaxis_mesh.flatten(), 
+                              log10eaxistrue_mesh.flatten(), 
+                              longitudeaxistrue_mesh.flatten(), 
+                              latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape)
                 
-                psfnormvals = special.logsumexp(psfvals, axis=(-2,-1))
+                logpsfnormvals = special.logsumexp(logpsfvals, axis=(-2,-1))
                 
-                psflogerow.append(psfnormvals)
-            psfnorm.append(psflogerow)
+                log_psflogerow.append(logpsfnormvals)
+            logpsfnorm.append(log_psflogerow)
                 
 
     # 
-        psfnorm = np.squeeze(np.array(psfnorm))
+        logpsfnorm = np.squeeze(np.array(logpsfnorm))
 
 
 
-        edispnorm = []
+        logedispnorm = []
         for logeval in tqdm(log10eaxistrue, desc='Setting up edisp normalisation', ncols=80):
             log10eaxistrue_mesh, longitudeaxistrue_mesh, latitudeaxistrue_mesh, log10eaxis_mesh  = np.meshgrid(logeval,
                                                                                                                 longitudeaxistrue, 
@@ -94,25 +162,29 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
                                                                                                                 log10eaxis,
                                                                                                                 indexing='ij')
 
-            truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
+            # truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
             
-            offset = convertlonlat_to_offset(truecoords)
+            # offset = convertlonlat_to_offset(truecoords)
 
-            edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
+            # edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
+            logedispvals = logedisp(log10eaxis_mesh.flatten(), 
+                              log10eaxistrue_mesh.flatten(), 
+                              longitudeaxistrue_mesh.flatten(), 
+                              latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape)
                 
-            edispnormvals = np.squeeze(special.logsumexp(edispvals+logjacob, axis=-1))
+            logedispnormvals = np.squeeze(special.logsumexp(logedispvals+logjacob, axis=-1))
             
-            edispnorm.append(edispnormvals)
+            logedispnorm.append(logedispnormvals)
 
 
-        edispnorm = np.array(edispnorm)
+        logedispnorm = np.array(logedispnorm)
 
-        edispnorm[np.isneginf(edispnorm)] = 0
-        psfnorm[np.isneginf(psfnorm)] = 0
+        logedispnorm[np.isneginf(logedispnorm)] = 0
+        logpsfnorm[np.isneginf(logpsfnorm)] = 0
 
         if save_results:
-            np.save(save_directory+"/psfnormalisation.npy", psfnorm)
-            np.save(save_directory+"/edispnormalisation.npy", edispnorm)
+            np.save(save_directory+"/psfnormalisation.npy", logpsfnorm)
+            np.save(save_directory+"/edispnormalisation.npy", logedispnorm)
 
     if setup_astrobkg:
         print("Setting up the astrophysical background\n\n")
@@ -254,13 +326,13 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
         if save_results:
             np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
         
-            print('''Done setup, results saved to package_data. Accessible through `load_package_data`(.py) 
+            print('''Done setup, results saved to package_data. Accessible through `load_package_defaults`(.py) 
         or through `resource_dir` variable in utils.''')
     if outputresults:
         if setup_astrobkg and setup_irfnormalisations:
-            return psfnorm, edispnorm, combinedplotmapwithaeff
+            return logpsfnorm, logedispnorm, combinedplotmapwithaeff
         elif setup_irfnormalisations:
-            return psfnorm, edispnorm
+            return logpsfnorm, logedispnorm
         elif setup_astrobkg:
             return combinedplotmapwithaeff
         else:
@@ -270,4 +342,4 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
 
 
 if run_function:
-    setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations)
+    default_file_setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations)

@@ -311,8 +311,9 @@ class hyperparameter_likelihood(object):
             self.log_marg_results       = np.append(self.log_marg_results, 
                                                     new_log_marg_results, axis=0)
 
-        
-            
+
+
+
     def create_mixture_log_hyperparameter_likelihood(self, mixture_axes=None, log_marg_results=None, hyperparameter_axes=None):
         #!TODO
         
@@ -336,7 +337,6 @@ class hyperparameter_likelihood(object):
             hyperparameter_axes         = self.hyperparameter_axes
 
 
-        # Relative weights stay the same but now they will be 
         mixture_axes = mixture_axes/np.sum(mixture_axes, axis=0)
 
         # reshape log_marg_results into shape of (num_components, ...)
@@ -357,6 +357,7 @@ class hyperparameter_likelihood(object):
 
         # Axes for each of the priors to __not__ expand in
         prioraxes = []
+        
         # Counter for how many hyperparameter axes we have used
         hyper_idx = 0
         for idx, hyperparameteraxes in enumerate(self.hyperparameter_axes):

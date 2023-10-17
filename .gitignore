@@ -27,3 +27,4 @@ data/nestedsamplingtest8*
 *build*
 *dist*
 *.DS_Store
+*tutorial_data*

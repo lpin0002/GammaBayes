@@ -3,7 +3,7 @@ import numpy as np
 from scipy.special import logsumexp
 from tqdm import tqdm
 import sys, os, yaml
-from gammabayes.utils.utils import read_config_file, load_hyperparameter_pickle
+from gammabayes.utils.config_utils import read_config_file, load_hyperparameter_pickle
 from gammabayes.hyper_inference.hyperparameter_likelihood import hyperparameter_likelihood
 
 
