@@ -65,8 +65,7 @@ if __name__=="__main__":
         immediate_run = 1
 
         
-    strboi = f"""
-    #!/bin/bash
+    strboi = f"""#!/bin/bash
     #
     #SBATCH --job-name=RunSetup
     #SBATCH --output=data/LatestFolder/RunSetup{identifier}.txt
