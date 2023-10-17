@@ -8,7 +8,7 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
-
+from utils.utils import aefffunc
 from os import path
 BFCalc_dir = path.join(path.dirname(__file__), 'BFCalc')
 
@@ -127,8 +127,11 @@ class SS_DM_dist(object):
             #     spectralvals = np.squeeze(logspecfunc(logmass, log10eval))
             
             spatialvals = np.log(self.diffJfactor_function((lonval.flatten(), latval.flatten()))).reshape(log10eval.shape)
+            log_aeffvals = np.log( 
+                aefffunc(10**log10eval.flatten(), np.sqrt((lonval.flatten()**2)+(latval.flatten()**2)))
+                ).reshape(log10eval.shape)
                     
-            logpdfvalues = spectralvals+spatialvals
+            logpdfvalues = spectralvals+spatialvals+log_aeffvals
             
             return logpdfvalues
         

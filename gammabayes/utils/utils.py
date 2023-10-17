@@ -54,6 +54,8 @@ bkgfull = irfs['bkg']
 psf3d = psffull.to_psf3d()
 aefffull = irfs['aeff']
 
+aefffunc = lambda energy, offset: aefffull.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
+
 offsetaxis = psf3d.axes['rad'].center.value
 
 bkgfull2d = bkgfull.to_2d()
@@ -72,8 +74,8 @@ longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10estart             = -1.0
-log10eend               = 2.0
+log10estart             = -0.8
+log10eend               = 1.8
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
 log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*250))+1)
