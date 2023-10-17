@@ -180,7 +180,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mail-user=progressemail1999@gmail.com
 conda init bash
 conda activate DMPipe
-srun python3 sim_and_nuisance_marg.py {single_run_data_folder}/inputconfig.yaml"""
+srun python3 sim_and_marg_nuisance.py {single_run_data_folder}/inputconfig.yaml"""
         with open(f"{single_run_data_folder}/jobscript.sh", 'w') as f:
             f.write(str)
         if immediate_run:
