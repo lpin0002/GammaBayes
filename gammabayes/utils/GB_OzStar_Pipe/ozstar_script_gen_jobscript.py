@@ -66,19 +66,19 @@ if __name__=="__main__":
 
         
     strboi = f"""#!/bin/bash
-    #
-    #SBATCH --job-name=RunSetup
-    #SBATCH --output=data/LatestFolder/RunSetup{identifier}.txt
-    #
-    #SBATCH --ntasks=1
-    #SBATCH --cpus-per-task=1
-    #SBATCH --time=1:00:00
-    #SBATCH --mem-per-cpu=32000
-    #SBATCH --mail-type=ALL
-    #SBATCH --mail-user=progressemail1999@gmail.com
-    conda init bash
-    conda activate DMPipe
-    python gammabayes/utils/GB_OzStar_Pipe/ozstarscriptgen.py {logmass} {xi_true} {numberofruns} {singlerunevents} {numcores} {num_marg_hours} {num_marg_minutes} {num_combine_hours} {num_combine_minutes} {identifier} {nbins_logmass} {nbins_xi} {marginalisation_mem} {combination_mem} {dmdensity_profile} {num_true_energy_bins_per_decade} {num_recon_energy_bins_per_decade} {true_spatial_res} {recon_spatial_res} {immediate_run}"""
+#
+#SBATCH --job-name=RunSetup
+#SBATCH --output=data/LatestFolder/RunSetup{identifier}.txt
+#
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --time=1:00:00
+#SBATCH --mem-per-cpu=32000
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=progressemail1999@gmail.com
+conda init bash
+conda activate DMPipe
+python gammabayes/utils/GB_OzStar_Pipe/ozstarscriptgen.py {logmass} {xi_true} {numberofruns} {singlerunevents} {numcores} {num_marg_hours} {num_marg_minutes} {num_combine_hours} {num_combine_minutes} {identifier} {nbins_logmass} {nbins_xi} {marginalisation_mem} {combination_mem} {dmdensity_profile} {num_true_energy_bins_per_decade} {num_recon_energy_bins_per_decade} {true_spatial_res} {recon_spatial_res} {immediate_run}"""
 
 
     with open(f"data/start_jobscript.sh", 'w') as f:
