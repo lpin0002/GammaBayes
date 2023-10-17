@@ -450,7 +450,7 @@ class hyperparameter_likelihood(object):
         with open(save_file_path, "wb") as file:
             pickle.dump(data_to_save, file)
 
-    def plot_posterior(self, log_posterior=None, hyperparameter_axes=None, mixture_axes=None, config_file=None):
+    def plot_posterior(self, log_posterior=None, hyperparameter_axes=None, mixture_axes=None, config_file=None, **kwargs):
         """A wrapper for the mixture_posterior_plot function.
 
         Args:
@@ -487,6 +487,6 @@ class hyperparameter_likelihood(object):
         print(f"{hyperparameter_axes.shape}")
         print(f"{mixture_axes.shape}")
 
-        mixture_posterior_plot(log_posterior=np.squeeze(log_posterior), xi_range=mixture_axes, logmassrange=hyperparameter_axes, config_file=config_file)
+        mixture_posterior_plot(log_posterior=np.squeeze(log_posterior), xi_range=mixture_axes, logmassrange=hyperparameter_axes, config_file=config_file, **kwargs)
 
         
