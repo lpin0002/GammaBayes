@@ -15,7 +15,7 @@ Welcome to GammaBayes's documentation!
    tutorials/Dark_matter_models
    tutorials/prior_class
    tutorials/likelihood_class
-   tutorials/Simulations
+   tutorials/simulations
    tutorials/hyperparameter_inference
 
 
