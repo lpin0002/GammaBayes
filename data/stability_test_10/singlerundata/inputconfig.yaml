@@ -1,0 +1,10 @@
+Nevents: 40000
+dmdensity_profile: einasto
+identifier: stability_test_10
+logmass: 1.0
+nbins_logmass: 151
+nbins_xi: 161
+numcores: 16
+runnumber: 250
+totalevents: 10000000
+xi: 0.001
