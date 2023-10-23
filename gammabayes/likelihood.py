@@ -20,22 +20,18 @@ class discrete_loglikelihood(object):
         self.logjacob = logjacob
         if len(self.axes)==1 or len(self.dependent_axes)==1:
             if len(self.axes)==1 and len(self.dependent_axes)==1:
-                print('beep')
                 self.axes_dim = 1
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
 
                 self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
             elif len(self.axes)==1:
-                print('boop')
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
                 self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
                 self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
-                print('bopp')
-                print(np.array(axes).ndim)
                 self.axes_dim = len(axes)
                 # If it is not done this way self.axes_shape gives out a generator object location instead :(
                 self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
@@ -44,7 +40,6 @@ class discrete_loglikelihood(object):
 
                 self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
         else:
-            print('beeeep')
             self.axes_dim = len(axes)
             
             # If it is not done this way self.axes_shape gives out a generator object location instead :(
@@ -52,11 +47,8 @@ class discrete_loglikelihood(object):
 
             self.dependent_axes_dim = len(self.dependent_axes)
 
-            print(f'Number of data dimensions {self.axes_dim}')
             self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
-            
-        print(f'Axes shape: {self.axes_shape}')
-        
+                    
         
     def __call__(self, *inputs):
         return self.logfunction(*inputs)

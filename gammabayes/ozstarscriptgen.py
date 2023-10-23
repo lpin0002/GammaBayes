@@ -77,8 +77,8 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mem-per-cpu={simmemory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
-conda init bash
-conda activate DMPipe
+source ~/.modules
+source activate DMPipe
 srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
         with open(f"{single_run_data_folder}/jobscript.sh", 'w') as f:
             f.write(str)

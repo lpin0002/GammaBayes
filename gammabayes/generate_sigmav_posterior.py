@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from scipy import integrate, special
-from utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, aeff_efficient, convertlonlat_to_offset
+from utils.utils import aeff_efficient, convertlonlat_to_offset
+from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
 from gammapy.astro.darkmatter import (
     profiles,
     JFactory
@@ -14,6 +15,7 @@ import os, sys
 from inverse_transform_sampling import inverse_transform_sampling
 from SS_DM_Prior import SS_DM_dist
 from os import path
+from utils.config_utils import read_config_file
 
 
 aux_data_dir = path.join(path.dirname(__file__), 'aux_data')
@@ -109,11 +111,12 @@ logmass_values              = logmassrange[reshaped_sampled_indices[1]]
 xi_values                   = xi_range[reshaped_sampled_indices[0]]
 
 
-params          = np.load(f'{stemfolder}/singlerundata/1/params.npy', allow_pickle=True).item()
+
+params = read_config_file(f"data/{sys.argv[1]}/singlerundata/inputconfig.yaml")
 
 
-true_xi         = params['true_xi']
-truelogmass     = params['true_log10_mass']
+true_xi         = params['xi']
+truelogmass     = params['logmass']
 
 
 
@@ -137,15 +140,16 @@ print('\n\n')
 
 # Create a histogram to estimate the PDF of sigmav
 plt.figure(dpi=300, figsize=(5,4))
-upperbound = np.quantile(sigmav_samples, 0.90)
+upperbound = np.quantile(sigmav_samples, 0.9999)
 
-lowerbound = np.quantile(sigmav_samples, 0.10)
+lowerbound = np.quantile(sigmav_samples, 0.0001)
 
 if lowerbound==0:
     lowerbound = np.min(sigmav_samples[sigmav_samples>0])
 
 print(f"Upper: {upperbound}\nLower: {lowerbound}")
-hist, bins, patches = plt.hist(sigmav_samples, bins=np.logspace(-27, np.log10(5e-26), 61), density=True)
+# hist, bins, patches = plt.hist(sigmav_samples, density=True, bins=np.logspace(np.log10(lowerbound), np.log10(upperbound), 61))
+hist, bins, patches = plt.hist(sigmav_samples, density=True, bins=np.linspace(lowerbound, upperbound, 61))
 plt.axvline(truesigmav, c="tab:orange", ls='--')
 
 # plt.axvline(np.quantile(sigmav_samples, 0.90), c='tab:orange')
@@ -154,10 +158,11 @@ plt.axvline(truesigmav, c="tab:orange", ls='--')
 
 plt.xlabel(r'$\langle \sigma v \rangle$', size=14)
 plt.ylim([0,None])
-plt.xscale('log')
+# plt.xscale('log')
 # plt.xlim(np.quantile(sigmav_samples, 0.04), np.quantile(sigmav_samples, 0.96))
 plt.tight_layout()
-plt.savefig("gammabayes/Figures/realistic_sigmav_plot.pdf")
+# plt.savefig(f"data/{sys.argv[1]}/sigmav_hist.pdf")
+plt.savefig(f"data/{sys.argv[1]}/sigmav_hist_linear_binning.pdf")
 plt.show()
 
 
@@ -227,7 +232,8 @@ if sensitivity_plot:
     plt.figure(figsize=(4,3), dpi=200)
     # plt.plot(10**twosigma_logmassvals, sigmavvals/np.sqrt(10))
     # plt.plot(10**twosigma_logmassvals[window_size:-window_size], np.exp(sigma_smoothed)[window_size:-window_size])
-    plt.plot(10**twosigma_logmassvals[window_size:], np.exp(cubic_func(twosigma_logmassvals[window_size:], cubicfit)), label='this work')
+    # plt.plot(10**twosigma_logmassvals[window_size:], np.exp(cubic_func(twosigma_logmassvals[window_size:], cubicfit)), label='this work')
+    plt.plot(10**twosigma_logmassvals, sigmavvals, label='this work')
     plt.plot(aacharya[:,0]/1e3, aacharya[:,1], label='CTA consortium 2021')
     # plt.axhline(2e-26, ls='--', c='grey', alpha=0.5, label=r'DarkSUSY thermal $\langle \sigma v \rangle$')
     plt.ylim([1e-27, 1e-24])

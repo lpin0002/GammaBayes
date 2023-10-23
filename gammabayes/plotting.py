@@ -10,7 +10,8 @@ from scipy.special import logsumexp
 # SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, read_config_file
+from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
+from utils.config_utils import read_config_file
 
 import os
 

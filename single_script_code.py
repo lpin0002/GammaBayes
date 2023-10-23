@@ -5,23 +5,8 @@
 # ## Imports and general setup
 
 #  
-import os, sys
-sys.path.append("gammabayes/BFCalc/")
-sys.path.append("gammabayes")
+import warnings, time, os, sys
 
-from gammabayes.BFCalc.createspectragrids import singlechannel_diffflux, getspectrafunc, darkmatterdoubleinput, energymassinputspectralfunc
-from gammabayes.utils.utils import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, time,psf, edisp, bkgdist, interpolate, special, integrate
-from gammabayes.utils.utils import SkyCoord, WcsGeom, inverse_transform_sampling, tqdm
-from gammabayes.load_package_data import edispnormalisationvalues, psfnormalisationvalues, astrophysicalbackground
-from gammabayes.hyperparameter_likelihood import hyperparameter_likelihood
-from gammabayes.prior import discrete_logprior
-from gammabayes.likelihood import discrete_loglikelihood
-from gammabayes.utils.utils import edisp_test, psf_test, log10eaxis, longitudeaxis, latitudeaxis
-from gammabayes.utils.utils import psf_efficient, edisp_efficient, edisp_test, psf_test, single_likelihood
-from gammabayes.utils.utils import read_config_file, check_necessary_config_inputs
-
-from gammabayes.SS_DM_Prior import SS_DM_dist
-import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,6 +22,26 @@ from multiprocessing import Pool, freeze_support
 import multiprocessing
 import pandas as pd
 import yaml
+
+
+
+sys.path.append("gammabayes/BFCalc/")
+sys.path.append("gammabayes")
+
+
+from gammabayes.utils.utils import log_bkg_CCR_dist, interpolate, special, integrate
+from gammabayes.utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis
+from gammabayes.load_package_data import edispnormalisationvalues, psfnormalisationvalues, astrophysicalbackground
+from gammabayes.hyperparameter_likelihood import hyperparameter_likelihood
+from gammabayes.prior import discrete_logprior
+from gammabayes.likelihood import discrete_loglikelihood
+from gammabayes.utils.utils import log_edisp, log_psf, single_loglikelihood
+from gammabayes.utils.config_utils import read_config_file, check_necessary_config_inputs
+
+from gammabayes.SS_DM_Prior import SS_DM_dist
+
+
+
 
 
 #  
@@ -113,7 +118,7 @@ print(startertimer)
 # ### Background setup
 
 #  
-unnormed_logbkgpriorvalues = np.logaddexp(np.squeeze(bkgdist(log10emeshtrue, lonmeshtrue,latmeshtrue)),np.log(astrophysicalbackground))
+unnormed_logbkgpriorvalues = np.logaddexp(np.squeeze(log_bkg_CCR_dist(log10emeshtrue, lonmeshtrue,latmeshtrue)),np.log(astrophysicalbackground))
 
 
 logbkgpriorvalues = unnormed_logbkgpriorvalues - special.logsumexp(unnormed_logbkgpriorvalues+logjacobtrue)
@@ -123,7 +128,7 @@ logbkgpriorvalues.shape
 
 nuisancemesh = np.meshgrid(log10eaxistrue, longitudeaxistrue, latitudeaxistrue, indexing='ij')
 
-unnormed_logbkgpriorvalues = np.logaddexp(np.squeeze(bkgdist(*nuisancemesh)),np.log(astrophysicalbackground))
+unnormed_logbkgpriorvalues = np.logaddexp(np.squeeze(log_bkg_CCR_dist(*nuisancemesh)),np.log(astrophysicalbackground))
 
 
 logbkgfunc_annoying = interpolate.RegularGridInterpolator((log10eaxistrue, longitudeaxistrue, latitudeaxistrue), 
@@ -194,14 +199,14 @@ logjacob = np.meshgrid(np.log(10**log10eaxis), longitudeaxis, latitudeaxis, inde
 
 #  
 logjacob = np.log(10**log10eaxis)
-edisp_like = discrete_loglikelihood(logfunction=edisp_test, 
+edisp_like = discrete_loglikelihood(logfunction=log_edisp, 
                                     axes=(log10eaxis,), axes_names='log10E recon',
                                     name='energy dispersion',
                                     dependent_axes=(log10eaxistrue, longitudeaxistrue, latitudeaxistrue,), logjacob=logjacob,
                                     dependent_axes_names = ['log10E true', 'lon', 'lat'])
 
 #  
-psf_like = discrete_loglikelihood(logfunction=psf_test, 
+psf_like = discrete_loglikelihood(logfunction=log_psf, 
                                     axes=(longitudeaxis, latitudeaxis), axes_names=['longitude recon', 'latitude recon'],
                                     name='point spread function ',
                                     dependent_axes=(log10eaxistrue, longitudeaxistrue, latitudeaxistrue,),
@@ -326,7 +331,7 @@ if logmassupperbound>2:
 logmassrange            = np.linspace(logmasslowerbound, logmassupperbound, inputs['nbins_logmass']) 
 
 #  
-hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior, bkg_prior,), likelihood=single_likelihood, 
+hyperparameter_likelihood_instance = hyperparameter_likelihood(priors=(DM_prior, bkg_prior,), likelihood=single_loglikelihood, 
                                                                dependent_axes=(log10eaxistrue,  longitudeaxistrue, latitudeaxistrue), 
                                                                dependent_logjacob=logjacobtrue,
                                                                hyperparameter_axes = ((logmassrange,), (None,)), 
