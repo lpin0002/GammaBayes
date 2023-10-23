@@ -77,8 +77,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
 #SBATCH --mem-per-cpu={simmemory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
-source ~/.modules
-source activate DMPipe
+source ~/.bashrc
 srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
         with open(f"{single_run_data_folder}/jobscript.sh", 'w') as f:
             f.write(str)
@@ -96,8 +95,7 @@ srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
 #SBATCH --mem-per-cpu={analysememory}
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=progressemail1999@gmail.com
-conda init bash
-conda activate DMPipe
+source ~/.bashrc
 srun python3 combine_results.py {workingfolder}/{stemdirname}/singlerundata/inputconfig.yaml"""
 
     with open(f"{workingfolder}/{stemdirname}/CR.sh", 'w') as f:
