@@ -18,8 +18,8 @@ longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/
 
 
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10estart             = -1
-log10eend               = 2
+log10estart             = np.log10(0.02)
+log10eend               = np.log10(300)
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
 log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*300))+1)

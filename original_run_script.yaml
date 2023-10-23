@@ -1,6 +1,6 @@
 
 identifier        : 'original_run_script_data'
-Nevents           : 10000
+Nevents           : 1000
 logmass           : 0.0
 xi                : 0.2
 nbins_logmass     : 101

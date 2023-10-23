@@ -318,12 +318,12 @@ if inputs['xi']>1e-2:
     logmasslowerbound       = inputs['logmass']-logmasswindowwidth
     logmassupperbound       = inputs['logmass']+logmasswindowwidth
 else:
-    logmasslowerbound = log10eaxis[0]
+    logmasslowerbound = log10eaxistrue[0]+np.diff(log10eaxistrue)[0]
     logmassupperbound = 2
 
 
-if logmasslowerbound<log10eaxis[0]:
-    logmasslowerbound = log10eaxis[0]
+if logmasslowerbound<log10eaxistrue[0]:
+    logmasslowerbound = log10eaxistrue[0]+np.diff(log10eaxistrue)[0]
 if logmassupperbound>2:
     logmassupperbound = 2
 

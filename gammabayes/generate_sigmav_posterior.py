@@ -140,9 +140,9 @@ print('\n\n')
 
 # Create a histogram to estimate the PDF of sigmav
 plt.figure(dpi=300, figsize=(5,4))
-upperbound = np.quantile(sigmav_samples, 0.9999)
+upperbound = np.quantile(sigmav_samples, 0.997)
 
-lowerbound = np.quantile(sigmav_samples, 0.0001)
+lowerbound = np.quantile(sigmav_samples, 0.003)
 
 if lowerbound==0:
     lowerbound = np.min(sigmav_samples[sigmav_samples>0])
@@ -173,13 +173,13 @@ if sensitivity_plot:
     
     ax.pcolormesh(logmassrange, xi_range, normed_posterior)
 
-    n = 100000
+    n = 10000
     t = np.linspace(0, normed_posterior.max(), n)
     integral = ((normed_posterior >= t[:, None, None]) * normed_posterior).sum(axis=(1,2))
 
     from scipy import interpolate
     f = interpolate.interp1d(integral, t)
-    t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]))
+    t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5), 0.05]))
     contours = ax.contour(normed_posterior, t_contours, extent=[logmassrange[0],logmassrange[-1], xi_range[0],xi_range[-1]], colors='white', linewidths=0.5)
     plt.show()
     
@@ -209,13 +209,7 @@ if sensitivity_plot:
     sigmavvals = convert_to_sigmav(xi_val=twosigma_xi_vals, log10massDM=twosigma_logmassvals, totalnumevents=totalevents, 
                                    fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
                                    )/np.sqrt(projectednumber/totalevents)
-    window_size = 10
-    cubicfit = np.polyfit(twosigma_logmassvals, np.log(sigmavvals), 3)
 
-    
-    def cubic_func(x, polyfitoutput):
-        p0, p1, p2, p3 = polyfitoutput[3], polyfitoutput[2], polyfitoutput[1], polyfitoutput[0]
-        return p0 + x*p1 + x**2*p2 + x**3*p3
             
     # sorted_indices = np.argsort(twosigma_logmassvals)
     import csv
@@ -236,7 +230,7 @@ if sensitivity_plot:
     plt.plot(10**twosigma_logmassvals, sigmavvals, label='this work')
     plt.plot(aacharya[:,0]/1e3, aacharya[:,1], label='CTA consortium 2021')
     # plt.axhline(2e-26, ls='--', c='grey', alpha=0.5, label=r'DarkSUSY thermal $\langle \sigma v \rangle$')
-    plt.ylim([1e-27, 1e-24])
+    plt.ylim([1e-27, 1e-23])
     plt.xlim([1e-1,1e2])
     plt.grid(color='grey', alpha=0.2)
     plt.loglog()
@@ -245,7 +239,7 @@ if sensitivity_plot:
     plt.text(1.1e-1, 1.1e-27, 'signal: Einasto \nbackground: CR + IEM', fontsize=6)
     plt.legend(fontsize=6)
     plt.tight_layout()
-    # plt.savefig('Figures/sensitivity_plot_12_09_23.png')
+    plt.savefig(f"data/{sys.argv[1]}/sensitivity_plot.pdf")
     plt.show()
             
             
