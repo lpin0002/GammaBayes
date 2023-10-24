@@ -1,6 +1,6 @@
 from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
 from utils.utils import angularseparation, convertlonlat_to_offset
-from utils.utils import psf_efficient, edisp_efficient, tqdm, resources_dir, log_edisp, log_psf
+from utils.utils import tqdm, resources_dir, log_edisp, log_psf#, psf_efficient, edisp_efficient
 from utils.utils import irfs
 
 from astropy.coordinates import SkyCoord
@@ -45,7 +45,7 @@ except:
 
 def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
+          logjacob=logjacob, save_directory = resources_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
           pointsources=False):
     def powerlaw(energy, index, phi0=1):
         return phi0*energy**(index)
@@ -66,14 +66,16 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
                                                                                                                                         longitudeaxis, 
                                                                                                                                         latitudeaxis, indexing='ij')
 
-                truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
+                # truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
 
-                recon_coords = np.array([longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten()])
+                # recon_coords = np.array([longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten()])
 
-                rad = angularseparation(recon_coords, truecoords)
-                offset = convertlonlat_to_offset(truecoords)
+                # rad = angularseparation(recon_coords, truecoords)
+                # offset = convertlonlat_to_offset(truecoords)
+                psfvals = log_psf(longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten(), 
+                                  log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape)
 
-                psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
+                # psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
                 
                 psfnormvals = special.logsumexp(psfvals, axis=(-2,-1))
                 
@@ -94,11 +96,13 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
                                                                                                                 log10eaxis,
                                                                                                                 indexing='ij')
 
-            truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
+            # truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
             
-            offset = convertlonlat_to_offset(truecoords)
+            # offset = convertlonlat_to_offset(truecoords)
 
-            edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
+            # edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
+            edispvals = np.squeeze(log_edisp(log10eaxis_mesh.flatten(), 
+                                         log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape))
                 
             edispnormvals = np.squeeze(special.logsumexp(edispvals+logjacob, axis=-1))
             
