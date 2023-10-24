@@ -1,6 +1,6 @@
 from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
 from utils.utils import angularseparation, convertlonlat_to_offset
-from utils.utils import psf_efficient, edisp_efficient, tqdm, resources_dir
+from utils.utils import psf_efficient, edisp_efficient, tqdm, resources_dir, log_edisp, log_psf
 from utils.utils import irfs
 
 from astropy.coordinates import SkyCoord

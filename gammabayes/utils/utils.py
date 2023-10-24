@@ -49,16 +49,8 @@ aefffull = irfs['aeff']
 
 aefffunc = lambda energy, offset: aefffull.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-# offsetaxis = psf3d.axes['rad'].center.value
 
 
-
-
-# def edisp(logereconstructed, logetrue, truespatialcoord):
-#     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-#                                                     migra = np.power(10.,logereconstructed-logetrue), 
-#                                                     offset=convertlonlat_to_offset(truespatialcoord)*u.deg).value)
-    
     
 def log_edisp(reconloge, logetrue, true_lon, true_lat):
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
@@ -72,18 +64,6 @@ def edisp_efficient(logereconstructed, logetrue, offset):
 def aeff_efficient(logetrue, offset):
     return np.log(aefffull.evaluate(energy_true=10**logetrue*u.TeV, offset=offset*u.deg).to(u.cm**2).value)
 
-
-
-# def psf(reconstructed_spatialcoord, logetrue, truespatialcoord):
-    
-#     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
-#     offset  = convertlonlat_to_offset(truespatialcoord).flatten()
-#     energyvals = np.power(10.,logetrue.flatten())
-#     output = np.log(psffull.evaluate(energy_true=energyvals*u.TeV,
-#                                                     rad = rad*u.deg, 
-#                                                     offset=offset*u.deg).value)
-    
-#     return output
 
 
 def log_psf(recon_lon, recon_lat, logetrue, true_lon, true_lat):
@@ -120,8 +100,6 @@ def psf_efficient(rad, logetrue, offset):
                                                     offset=offset*u.deg).value)
     
     return output
-
-
 
 
 def log_bkg_CCR_dist(logeval, lon, lat):
