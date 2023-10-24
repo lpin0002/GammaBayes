@@ -1,4 +1,4 @@
-# DM Bayesian Inference Pipeline
+# GammaBayes
 __Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
 
 __Supervisor(s)__: Csaba Balazs, Eric Thrane
