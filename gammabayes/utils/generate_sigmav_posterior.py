@@ -12,8 +12,8 @@ from gammapy.astro.darkmatter import (
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from tqdm import tqdm
 import os, sys
-from inverse_transform_sampling import inverse_transform_sampling
-from SS_DM_Prior import SS_DM_dist
+from GammaBayes.gammabayes.utils.inverse_transform_sampling import inverse_transform_sampling
+from GammaBayes.gammabayes.dark_matter.SS_DM_Constructor import SS_DM_dist
 from os import path
 from utils.config_utils import read_config_file
 

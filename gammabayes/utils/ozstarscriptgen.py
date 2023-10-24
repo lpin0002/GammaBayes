@@ -69,7 +69,7 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
         str =f"""#!/bin/bash
 #
 #SBATCH --job-name=SR{logmass}|{xi_true}|{runnum}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
-#SBATCH --output=data/LatestFolder/SR{logmass}_{xi_true}_{runnum}_{int(numberofruns*singlerunevents)}_{identifier}.txt
+#SBATCH --output=data/LatestFolder/SR{logmass}_{xi_true}_{runnum}_{int(numberofruns*singlerunevents)}_{identifier}.log
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={numcores}
@@ -87,7 +87,7 @@ srun python3 single_script_code.py {single_run_data_folder}/inputconfig.yaml"""
     str =f"""#!/bin/bash
 #
 #SBATCH --job-name=CR{logmass}|{xi_true}|{int(math.log10(numberofruns*singlerunevents))}|{identifier}
-#SBATCH --output=data/LatestFolder/CR{logmass}_{xi_true}_{int(numberofruns*singlerunevents)}_{identifier}.txt
+#SBATCH --output=data/LatestFolder/CR{logmass}_{xi_true}_{int(numberofruns*singlerunevents)}_{identifier}.log
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1

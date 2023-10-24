@@ -8,9 +8,9 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
-from utils.utils import aefffunc
+from ..likelihoods.instrument_response_funcs import aefffunc
 from os import path
-BFCalc_dir = path.join(path.dirname(__file__), 'BFCalc')
+darkmatter_dir = path.dirname(__file__)
 
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
@@ -42,7 +42,7 @@ class SS_DM_dist(object):
         }
 
 
-        darkSUSY_BFs_cleaned = pd.read_csv(BFCalc_dir+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
+        darkSUSY_BFs_cleaned = pd.read_csv(darkmatter_dir+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
 
         darkSUSY_massvalues = darkSUSY_BFs_cleaned.iloc[:,1]/1e3
 
@@ -51,14 +51,14 @@ class SS_DM_dist(object):
         channelfuncdictionary = {}
 
        
-        log10xvals = np.load(BFCalc_dir+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
-        massvalues = np.load(BFCalc_dir+f"/griddata/massvals_massenergy_diffflux_grid.npy")
+        log10xvals = np.load(darkmatter_dir+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
+        massvalues = np.load(darkmatter_dir+f"/griddata/massvals_massenergy_diffflux_grid.npy")
 
         for darkSUSYchannel in list(darkSUSY_to_PPPC_converter.keys()):
             try:
                 gammapychannel = darkSUSY_to_PPPC_converter[darkSUSYchannel]
                 
-                tempspectragrid = np.load(BFCalc_dir+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
+                tempspectragrid = np.load(darkmatter_dir+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
                 
                 channelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator((np.log10(massvalues/1e3), log10xvals), np.array(tempspectragrid), 
                                                                                         method='linear', bounds_error=False, fill_value=1e-3000)

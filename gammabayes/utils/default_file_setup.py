@@ -1,7 +1,10 @@
-from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
-from utils.utils import angularseparation, convertlonlat_to_offset
-from utils.utils import tqdm, resources_dir, log_edisp, log_psf#, psf_efficient, edisp_efficient
-from utils.utils import irfs
+# If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
+    # If you're running from a script there shouldn't be any issues as setup is just a func
+from ..utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
+from ..utils.utils import angularseparation, convertlonlat_to_offset, resource_dir
+from tqdm import tqdm
+
+from ..likelihoods.instrument_response_funcs import irfs, log_edisp, log_psf
 
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, WcsGeom
@@ -45,7 +48,7 @@ except:
 
 def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          logjacob=logjacob, save_directory = resources_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
+          logjacob=logjacob, save_directory = resource_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
           pointsources=False):
     def powerlaw(energy, index, phi0=1):
         return phi0*energy**(index)
@@ -123,7 +126,7 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
 
         print("Setting up HESS sources\n")
         
-        hess_catalog = SourceCatalogHGPS(resources_dir+"/hgps_catalog_v1.fits.gz")
+        hess_catalog = SourceCatalogHGPS(resource_dir+"/hgps_catalog_v1.fits.gz")
 
         hess_models = hess_catalog.to_models()
 
@@ -217,7 +220,7 @@ def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxis
         
         
         template_diffuse_skymap = TemplateSpatialModel.read(
-            filename=resources_dir+"/gll_iem_v06_gc.fits.gz", normalize=True
+            filename=resource_dir+"/gll_iem_v06_gc.fits.gz", normalize=True
         )
 
 

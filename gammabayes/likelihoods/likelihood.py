@@ -1,6 +1,6 @@
 from scipy.special import logsumexp
 import numpy as np
-from .inverse_transform_sampling import inverse_transform_sampling
+from ..utils.inverse_transform_sampling import inverse_transform_sampling
 from matplotlib import pyplot as plt
 
 

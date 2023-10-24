@@ -1,5 +1,5 @@
 
-from utils.utils import bkgfull
+from ..likelihoods.instrument_response_funcs import bkgfull
 import numpy as np
 
 bkgfull2d = bkgfull.to_2d()
