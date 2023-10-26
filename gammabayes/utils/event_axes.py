@@ -22,7 +22,7 @@ log10estart             = -1
 log10eend               = 2
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*200))+1)
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
 
 
 
@@ -32,3 +32,31 @@ def makelogjacob(log10eaxis=log10eaxis):
 
 logjacob = makelogjacob(log10eaxis)
 logjacobtrue = makelogjacob(log10eaxistrue)
+
+
+
+def create_axis(lower_bound, upper_bound, number_of_bins_per_unit=100, resolution=None):
+    if resolution is None:
+        return np.linspace(lower_bound, 
+                           upper_bound, 
+                           int(round(number_of_bins_per_unit*(upper_bound-lower_bound))+1))
+    else:
+        return np.linspace(lower_bound, 
+                         upper_bound, 
+                         int(round((upper_bound-lower_bound)/resolution)+1))
+    
+def create_axes(log10_energy_min, log10_energy_max, 
+                     log10_energy_bins_per_decade, spatial_res, 
+                     longitude_min, longitude_max,
+                     latitude_min, latitude_max):
+    
+    print(log10_energy_min, log10_energy_max, 
+                     log10_energy_bins_per_decade, spatial_res, 
+                     longitude_min, longitude_max,
+                     latitude_min, latitude_max)
+    
+    log10_eaxis = create_axis(log10_energy_min, log10_energy_max, number_of_bins_per_unit=log10_energy_bins_per_decade)
+    longitude_axis = create_axis(longitude_min, longitude_max, resolution=spatial_res)
+    latitude_axis = create_axis(latitude_min, latitude_max, resolution=spatial_res)
+
+    return log10_eaxis, longitude_axis, latitude_axis

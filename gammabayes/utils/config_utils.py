@@ -1,4 +1,5 @@
-import warnings, yaml, sys, time
+import warnings, yaml, sys, time, pickle
+from ..utils.event_axes import create_axes
 
 
 def read_config_file(file_path):
@@ -75,3 +76,31 @@ def check_necessary_config_inputs(input_dict):
         input_dict['totalevents'] = input_dict['Nevents']
         
     print('\n\n')
+
+
+def load_hyperparameter_pickle(file_path):
+    with open(file_path, 'rb') as file:
+        loaded_data = pickle.load(file)
+    return loaded_data
+
+
+def save_config_file(config_dict, file_path):
+    with open(file_path, 'w') as file:
+        yaml.dump(config_dict, file, default_flow_style=False)
+    print("Configuration saved to config_dict")
+
+
+
+def create_true_axes_from_config(config_dict):
+
+    return create_axes(config_dict['log10_true_energy_min'], config_dict['log10_true_energy_max'], 
+                     config_dict['log10_true_energy_bins_per_decade'], config_dict['true_spatial_res'], 
+                     config_dict['true_longitude_min'], config_dict['true_longitude_max'],
+                     config_dict['true_latitude_min'], config_dict['true_latitude_max'])
+
+
+def create_recon_axes_from_config(config_dict):
+    return create_axes(config_dict['log10_recon_energy_min'], config_dict['log10_recon_energy_max'], 
+                     config_dict['log10_recon_energy_bins_per_decade'], config_dict['recon_spatial_res'], 
+                     config_dict['recon_longitude_min'], config_dict['recon_longitude_max'],
+                     config_dict['recon_latitude_min'], config_dict['recon_latitude_max'])

@@ -32,13 +32,13 @@ sys.path.append("gammabayes")
 from gammabayes.utils.utils import log_bkg_CCR_dist, interpolate, special, integrate
 from gammabayes.utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis
 from gammabayes.load_package_data import edispnormalisationvalues, psfnormalisationvalues, astrophysicalbackground
-from gammabayes.hyperparameter_likelihood import hyperparameter_likelihood
-from gammabayes.prior import discrete_logprior
-from gammabayes.likelihood import discrete_loglikelihood
+from GammaBayes.gammabayes.hyper_inference.hyperparameter_likelihood import hyperparameter_likelihood
+from GammaBayes.gammabayes.priors.prior import discrete_logprior
+from GammaBayes.gammabayes.likelihoods.likelihood import discrete_loglikelihood
 from gammabayes.utils.utils import log_edisp, log_psf, single_loglikelihood
 from gammabayes.utils.config_utils import read_config_file, check_necessary_config_inputs
 
-from gammabayes.SS_DM_Prior import SS_DM_dist
+from GammaBayes.gammabayes.dark_matter.SS_DM_Constructor import SS_DM_dist
 
 
 

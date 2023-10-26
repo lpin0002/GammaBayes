@@ -77,7 +77,7 @@ class discrete_loglikelihood(object):
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
 
         
-        loglikevalswithlogjacob = np.squeeze(self.__call__(*(input.flatten() for input in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
+        loglikevalswithlogjacob = np.squeeze(self.__call__(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))+self.logjacob
         
         loglikevalswithlogjacob = loglikevalswithlogjacob - logsumexp(loglikevalswithlogjacob, axis=(*np.arange(self.axes_dim),))
         loglikevalswithlogjacob = loglikevalswithlogjacob - logsumexp(loglikevalswithlogjacob, axis=(*np.arange(self.axes_dim),))
