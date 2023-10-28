@@ -5,7 +5,52 @@ def makejobscripts(logmass, xi_true, numberofruns, singlerunevents, numcores,
                    numsimhour, numsimminute, numanalysehour, numanalyseminute, 
                    nbins_logmass, nbins_xi, identifier = None, immediate_run=1, 
                    simmemory = 200, analysememory=1000, dmdensity_profile='einasto'):
-    
+    """An auxillary helper function for doing embarassingly parallel jobs on a 
+    slurm job batch system.
+    Args:
+        logmass (float): Log_10 mass of the dark matter particle.
+
+        xi_true (float): Fraction of events that originate from dark matter.
+
+        numberofruns (int): Number of jobs to queue.
+
+        singlerunevents (int): Number of events to simulate for a single job.
+
+        numcores (int): Number of cores to use for a job.
+
+        num_marg_hours: Number of hours to run the script that does the 
+            nuisance marginalisation.
+
+        num_marg_minutes: Number of minutes on top of the number of hours to
+            run the script that does the nuisance marginalisation.
+
+        num_combine_hours: Number of hours to run the script that combines the
+            results of the nuisance marginalisation scripts.
+
+        num_combine_minutes: Number of minutes on top of the number of hours to
+            run the script that combines the results of the nuisance 
+            marginalisation scripts.
+
+        nbins_logmass: Number of log mass bins to evaluate.
+
+        nbins_xi: Number of signal fraction bins to evaluate.
+
+        identifier: String identifier for a run of jobs.
+
+        immediate_run: Bool to immediately run the job scripts on creation.
+            Default is True.
+
+        marginalisation_mem: Amount of memory (in MB) to give each cores in a 
+            single job doing the nuisance marginalisation.
+            Default is 200.
+
+        combination_mem: Amount of memory (in MB) to give each cores in a 
+            single job combining the nuisance marginalisation results to get
+            the posterior. Default is 1000.
+
+        dmdensity_profile: string identifier for the dark matter mass density 
+            distribution to use. Default is 'einasto'.
+        """
     if int(numsimminute)<10:
         numsimminute = "10"
     else:

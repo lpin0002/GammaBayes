@@ -21,6 +21,26 @@ class SS_DM_dist(object):
         self.latitudeaxis = latitudeaxis
         self.density_profile = density_profile
         self.ratios = ratios
+        """Initialise an SS_DM_dist class instance.
+
+        Args:
+            longitudeaxis (np.ndarray): Array of the galactic longitude values 
+                to sample for the calculation of the different J-factor
+
+            latitudeaxis (np.ndarray): Array of the galactic latitude values 
+                to sample for the calculation of the different J-factor
+
+            density_profile (_type_, optional): The density profile to be used 
+                for the calculation of the differential J-factor. Must be of
+                the same type as the profile contained in the 
+                gamma.astro.darkmatter.profiles module as we use Gammapy to
+                calculate our differential J-factors.
+
+                Defaults to profiles.EinastoProfile().
+
+            ratios (bool, optional): A bool representing whether one wants to use the input differential cross-sections
+                or the annihilation __ratios__. Defaults to False.
+        """
         
     
     
@@ -98,6 +118,36 @@ class SS_DM_dist(object):
 
     def nontrivial_coupling(self, logmass, logenergy, coupling=0.1, 
                             partial_sigmav_interpolator_dictionary=None, channelfuncdictionary=None):
+        """Calculates Z_2 scalar singlet dark matter annihilation gamma-ray 
+            spectra for a set of mass and coupling values.
+
+        Args:
+            logmass (float): Float value of log_10 of the dark matter mass in 
+                TeV.
+
+            logenergy (np.ndarray or float): Float values for log_10 gamma ray 
+                energy values in TeV.
+
+            coupling (float, optional): Value for the Higgs coupling. Defaults 
+                to 0.1.
+
+            partial_sigmav_interpolator_dictionary (dict, optional): A dictionary
+                where the keys are the names of the dark matter annihilation final
+                states as in DarkSUSY and the values being interpolation functions
+                to calculate the partial annihilation cross-sections for the
+                respective final states for a log_10 mass (TeV) and coupling 
+                values. Defaults to None.
+
+            channelfuncdictionary (dict, optional): A dictionary
+                where the keys are the names of the dark matter annihilation final
+                states as in DarkSUSY and the values being interpolation functions
+                to calculate the spectral flux of gamma-rays for the respective final
+                state. Defaults to None.
+
+        Returns:
+            np.ndarray: The total gamma-ray flux for the Z_2 Scalar Singlet 
+                dark matter model
+        """
         if partial_sigmav_interpolator_dictionary is None:
             partial_sigmav_interpolator_dictionary = self.partial_sigmav_interpolator_dictionary
             
@@ -119,7 +169,11 @@ class SS_DM_dist(object):
     
     
     def func_setup(self):
-    
+        """A method that pumps out a function representing the natural log of 
+            the flux of dark matter annihilation gamma rays for a given log 
+            energy, sky position, log mass and higgs coupling value.
+        """
+        
         def DM_signal_dist(log10eval, lonval, latval, logmass, coupling=0.1):
             # try:
             spectralvals = self.nontrivial_coupling(logmass.flatten(), log10eval.flatten()).reshape(log10eval.shape)

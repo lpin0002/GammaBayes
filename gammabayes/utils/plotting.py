@@ -82,7 +82,7 @@ ax[0,1].axis('off')
 
 # Lower left plot
 # ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(normalisedlogposterior).T, cmap='Blues')
-ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(log_posterior), vmin=0)
+ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(log_posterior), vmin=0, edgecolor='face')
 ax[1,0].axvline(inputs['logmass'], c='tab:orange')
 ax[1,0].axhline(inputs['xi'], c='tab:orange')
 ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')

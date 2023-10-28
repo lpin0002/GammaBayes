@@ -46,13 +46,77 @@ try:
 except:
     setup_astrobkg = 1
 
+try:
+    single_astro_background = int(sys.argv[4])
+except:
+    single_astro_background = 1
+
 def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
           logjacob=logjacob, save_directory = resource_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
           pointsources=True, 
-          save_results=True, outputresults=False):
+          save_results=True, outputresults=False, single_astro_background=1):
+    """Produces default IRF normalisation matrices and default astrophysical flux matrix
+
+    Args:
+        setup_irfnormalisations (bool, optional): Bool to where a True value 
+            would setup the normalisations for the input CTA irfs for the given
+            measured and true value axes. 
+            Defaults to 1.
+
+        setup_astrobkg (bool, optional): Bool to where a True value 
+            would setup the astrophysical flux value for the CTA for the given
+            measured and true value axes. Defaults to 1.
+
+        log10eaxistrue (np.ndarray, optional): Dicrete true log10 energy values
+            of CTA event data. Defaults to log10eaxistrue.
+
+        log10eaxis (np.ndarray, optional): Dicrete measured log10 energy values
+            of CTA event data. Defaults to log10eaxis.
+
+        longitudeaxistrue (np.ndarray, optional): Dicrete true fov longitude values
+            of CTA event data. Defaults to longitudeaxistrue.
+
+        longitudeaxis (np.ndarray, optional): Dicrete measured fov longitude values
+            of CTA event data. Defaults to longitudeaxis.
+
+        latitudeaxistrue (np.ndarray, optional): Dicrete true fov latitude values
+            of CTA event data. Defaults to latitudeaxistrue.
+
+        latitudeaxis (np.ndarray, optional): Dicrete measured fov latitude values
+            of CTA event data. Defaults to latitudeaxis.
+
+        logjacob (np.ndarray, optional): _description_. Defaults to logjacob.
+
+        save_directory (str, optional): Path to save results. Defaults to resources_dir.
+
+        logpsf (func, optional): Function representing the log point spread 
+        function for the CTA. Defaults to psf_test.
+
+        logedisp (func, optional): Function representing the log energy dispersion
+          for the CTA. Defaults to edisp_test.
+
+        aeff (func, optional): _description_. Defaults to aefffunc.
+
+        pointsources (bool, optional): _description_. Defaults to True.
+
+        save_results (bool, optional): _description_. Defaults to True.
+
+        outputresults (bool, optional): _description_. Defaults to False.
+    """
     def powerlaw(energy, index, phi0=1):
+        """_summary_
+
+        Args:
+            energy (_type_): _description_
+            index (_type_): _description_
+            phi0 (int, optional): _description_. Defaults to 1.
+
+        Returns:
+            _type_: _description_
+        """
         return phi0*energy**(index)
+    
 
 
     plt.rc('text', usetex=True)
@@ -80,7 +144,6 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
                                   log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape)
 
                 # psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
-                
                 psfnormvals = special.logsumexp(psfvals, axis=(-2,-1))
                 
                 psflogerow.append(psfnormvals)
@@ -107,8 +170,7 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
             # edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
             edispvals = np.squeeze(log_edisp(log10eaxis_mesh.flatten(), 
                                          log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape))
-                
-            edispnormvals = np.squeeze(special.logsumexp(edispvals+logjacob, axis=-1))
+            edispnormvals = special.logsumexp(edispvals+logjacob, axis=-1)
             
             edispnorm.append(edispnormvals)
 
@@ -214,11 +276,6 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
 
 
         
-    
-        
-        def powerlaw(energy, index, phi0=1):
-            return phi0*energy**(index)
-        
         
         template_diffuse_skymap = TemplateSpatialModel.read(
             filename=resource_dir+"/gll_iem_v06_gc.fits.gz", normalize=True
@@ -242,15 +299,7 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
         fermi_gaggero = np.exp(fermi_integral_values+np.log(powerlaw(10**log10eaxistrue, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
 
         
-        # By default the point sources are considered, but they can be turned off use the 'pointsources' argument either
-            # from command line/terminal or through the function itself
-        if pointsources:
-            print("Including point sources.")
-            combinedplotmap = np.logaddexp(np.log(fermi_gaggero), np.log(full_hess_flux))
-        else:
-            print("Not including point sources.")
-
-            combinedplotmap = np.log(fermi_gaggero)
+       
         
                 
         aeff = irfs['aeff']
@@ -259,20 +308,48 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
         energymesh, lonmesh, latmesh = np.meshgrid(10**log10eaxistrue, longitudeaxistrue, latitudeaxistrue, indexing='ij')
         
         aefftable = aefffunc(energymesh, np.sqrt((lonmesh**2)+(latmesh**2)))
-        
-        combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
-        
-        if save_results:
-            np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+
+         # By default the point sources are considered, but they can be turned off use the 'pointsources' argument either
+            # from command line/terminal or through the function itself
+        if pointsources:
+            print("Including point sources.")
+            if single_astro_background:
+                combinedplotmap = np.logaddexp(np.log(fermi_gaggero), np.log(full_hess_flux))
+                combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
+                if save_results:
+                    np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+
+            else:
+                log_diffuse_background_source_flux = np.log(fermi_gaggero)
+                log_point_hess_background_source_flux = np.log(full_hess_flux)
+
+                diffuse_background_event_rate = np.exp(log_diffuse_background_source_flux+np.log(aefftable))
+                point_hess_background_event_rate = np.exp(log_point_hess_background_source_flux+np.log(aefftable))
+                if save_results:
+                    np.save(save_directory+"/unnormalised_astrophysical_diffuse_background.npy", diffuse_background_event_rate)
+                    np.save(save_directory+"/unnormalised_astrophysical_point_background.npy", point_hess_background_event_rate)
+
+
+        else:
+            print("Not including point sources.")
+
+            combinedplotmap = np.log(fermi_gaggero)
+            combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
+            if save_results:
+                np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
         
         print('''Done setup, results saved to package_data. Accessible through `load_package_data`(.py) 
     or through `resource_dir` variable in utils.''')
     if outputresults:
-        if setup_astrobkg and setup_irfnormalisations:
+        if setup_astrobkg and setup_irfnormalisations and single_astro_background:
             return psfnorm, edispnorm, combinedplotmapwithaeff
-        elif setup_astrobkg:
+        elif setup_astrobkg and not(single_astro_background) and setup_irfnormalisations:
+            return psfnorm, edispnorm, diffuse_background_event_rate, point_hess_background_event_rate
+        elif setup_astrobkg and single_astro_background and not(setup_irfnormalisations):
             return combinedplotmapwithaeff
-        elif setup_irfnormalisations:
+        elif setup_astrobkg and not(single_astro_background) and not(setup_irfnormalisations):
+            return diffuse_background_event_rate, point_hess_background_event_rate
+        elif setup_irfnormalisations and not(setup_astrobkg):
             return psfnorm, edispnorm
         else:
             raise Exception("You have specified to return results but also to not create any. Please fix.")
@@ -281,4 +358,4 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
 
 
 if run_function:
-    default_file_setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations)
+    default_file_setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations, single_astro_background=single_astro_background)

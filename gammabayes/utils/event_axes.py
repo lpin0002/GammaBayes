@@ -10,10 +10,10 @@ lonbound            = 3.5
 
 
 
-latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4)))
+latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
 latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
 
-longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))) 
+longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
 longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
 
 
@@ -21,12 +21,21 @@ longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/
 log10estart             = -1
 log10eend               = 2
 log10erange             = log10eend - log10estart
-log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
+log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
 log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*100))+1)
 
 
 
 def makelogjacob(log10eaxis=log10eaxis):
+    """_summary_
+
+    Args:
+        log10eaxis (np.ndarray, optional): Axis of discrete values of log10 energy values. 
+        Defaults to log10eaxis.
+
+    Returns:
+        np.ndarray: Log jacobian for using log10 energy to get integral over energy
+    """
     outputlogjacob = np.log(10**log10eaxis)#+np.log(np.log(10))+np.log(log10eaxis[1]-log10eaxis[0])
     return outputlogjacob
 

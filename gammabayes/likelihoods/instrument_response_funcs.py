@@ -24,16 +24,60 @@ aefffull = irfs['aeff']
 aefffunc = lambda energy, offset: aefffull.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
 def log_aeff(logetrue, true_lon, true_lat):
+    """Wrapper for the Gammapy interpretation of the log of 
+        the CTA effective area function.
+
+    Args:
+        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_lon (float): True FOV longitude of a gamma-ray event 
+            detected by the CTA
+        true_lat (float): True FOV latitude of a gamma-ray event 
+            detected by the CTA
+
+    Returns:
+        float: The natural log of the effective area of the CTA in m^2
+    """
     return np.log(aefffull.evaluate(energy_true = 10**logetrue*u.TeV, 
                              offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).to(u.m**2).value)
     
 def log_edisp(reconloge, logetrue, true_lon, true_lat):
+    """Wrapper for the Gammapy interpretation of the CTA point spread function.
+
+    Args:
+        reconloge (float): Measured energy value by the CTA
+        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_lon (float): True FOV longitude of a gamma-ray event 
+            detected by the CTA
+        true_lat (_type_): True FOV latitude of a gamma-ray event 
+            detected by the CTA
+
+    Returns:
+        float: natural log of the CTA energy dispersion likelihood for the given 
+            gamma-ray event data
+    """
     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
                                                     migra = np.power(10.,reconloge-logetrue), 
                                                     offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).value)
 
 
 def log_psf(recon_lon, recon_lat, logetrue, true_lon, true_lat):
+    """Wrapper for the Gammapy interpretation of the CTA point spread function.
+
+    Args:
+        recon_lon (float): Measured FOV longitude of a gamma-ray event
+            detected by the CTA
+        recon_lat (float): Measured FOV latitude of a gamma-ray event
+            detected by the CTA
+        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_lon (float): True FOV longitude of a gamma-ray event 
+            detected by the CTA
+        true_lat (float): True FOV latitude of a gamma-ray event 
+            detected by the CTA
+
+    Returns:
+        float: natural log of the CTA point spread function likelihood for the given 
+            gamma-ray event data
+    """
     reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
     truespatialcoord = np.array([true_lon, true_lat])
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
@@ -46,6 +90,25 @@ def log_psf(recon_lon, recon_lat, logetrue, true_lon, true_lat):
 
 
 def single_loglikelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, true_lat):
+    """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
+        likelihood values for the given gamma-ray event data
+
+    Args:
+        reconloge (float): Measured energy value by the CTA
+        recon_lon (float): Measured FOV longitude of a gamma-ray event
+            detected by the CTA
+        recon_lat (float): Measured FOV latitude of a gamma-ray event
+            detected by the CTA
+        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_lon (float): True FOV longitude of a gamma-ray event 
+            detected by the CTA
+        true_lat (float): True FOV latitude of a gamma-ray event 
+            detected by the CTA
+
+    Returns:
+        float: natural log of the full CTA likelihood for the given gamma-ray 
+            event data
+    """
     reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
     truespatialcoord = np.array([true_lon, true_lat])
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
@@ -64,7 +127,19 @@ def single_loglikelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, tr
 
 
 def log_bkg_CCR_dist(logeval, lon, lat):
-    # np.log(1e6) factor is because the background rate is given in 1/MeV not 1/TeV for some reason
+    """Wrapper for the Gammapy interpretation of the log of 
+        the CTA's background charged cosmic-ray mis-identification rate.
+
+    Args:
+        logeval (float): True energy of a gamma-ray event detected by the CTA
+        lon (float): True FOV longitude of a gamma-ray event 
+            detected by the CTA
+        lat (float): True FOV latitude of a gamma-ray event 
+            detected by the CTA
+
+    Returns:
+        float: Natural log of the charged cosmic ray mis-idenfitication rate for the CTA
+    """
     return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value*1e6)
 
 
