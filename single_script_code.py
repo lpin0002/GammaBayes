@@ -38,10 +38,10 @@ from gammabayes.likelihood import discrete_loglikelihood
 from gammabayes.utils.utils import log_edisp, log_psf, single_loglikelihood
 from gammabayes.utils.config_utils import read_config_file, check_necessary_config_inputs
 
-from gammabayes.SS_DM_Prior import SS_DM_dist
+from gammabayes.SingleChannel_DM_Prior import DM_dist
+import random
 
-
-
+random.seed(0)
 
 
 #  
@@ -152,11 +152,11 @@ density_profile_list = {'einasto':profiles.EinastoProfile(),
 
 
 
-SS_DM_dist_instance= SS_DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile_list[inputs['dmdensity_profile'].lower()])
+SS_DM_dist_instance= DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile_list[inputs['dmdensity_profile'].lower()])
 logDMpriorfunc = SS_DM_dist_instance.func_setup()
 
 #  
-DM_prior = discrete_logprior(logfunction=logDMpriorfunc, name='Scalar Singlet Dark Matter Prior',
+DM_prior = discrete_logprior(logfunction=logDMpriorfunc, name='Dark Matter Prior',
                                axes=(log10eaxistrue, longitudeaxistrue, latitudeaxistrue,), axes_names=['energy', 'lon', 'lat'],
                                default_hyperparameter_values=(inputs['logmass'],), hyperparameter_names=['mass'], logjacob=logjacobtrue)
 
@@ -313,7 +313,7 @@ if nsig is None:
     nsig = len(list(measured_log10e))
 
 if inputs['xi']>1e-2:
-    logmasswindowwidth      = 10/np.sqrt(inputs['xi']*inputs['totalevents'])
+    logmasswindowwidth      = 4/np.sqrt(inputs['xi']*inputs['totalevents'])
 
     logmasslowerbound       = inputs['logmass']-logmasswindowwidth
     logmassupperbound       = inputs['logmass']+logmasswindowwidth

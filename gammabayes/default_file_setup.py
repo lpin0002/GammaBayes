@@ -46,7 +46,7 @@ except:
 def setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
           logjacob=logjacob, save_directory = resources_dir, psf=psf_efficient, edisp=edisp_efficient, aeff=aefffunc,
-          pointsources=False):
+          pointsources=True):
     def powerlaw(energy, index, phi0=1):
         return phi0*energy**(index)
 

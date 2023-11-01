@@ -242,4 +242,5 @@ if sensitivity_plot:
     plt.savefig(f"data/{sys.argv[1]}/sensitivity_plot.pdf")
     plt.show()
             
+    np.save(f'data/{sys.argv[1]}/sensitivity_plot_vals.npy', [10**twosigma_logmassvals, sigmavvals])
             
