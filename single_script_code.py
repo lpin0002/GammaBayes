@@ -76,10 +76,6 @@ true_xi          = nsig/(nbkg+nsig)
 
 
 
-
-
-inputs['seed'] = random.getstate()[0]
-
 try:
     os.mkdir('data')
 except:
@@ -108,6 +104,9 @@ if os.path.exists(f"{datafolder}/margresultsarray.npy"):
     raise Exception(f"margresultsarray.npy (final result) already exists. Exiting to not overwrite data.")
     
 
+inputs['seed'] = random.getstate()
+inputs['randint'] = random.randint(1,100000)
+
 # To make the config file accessible from the stem data folder
 with open(stemdatafoldername+'/inputconfig.yaml', 'w') as file:
     yaml.dump(inputs, file, default_flow_style=False)
@@ -126,6 +125,8 @@ print(startertimer)
 # ### Background setup
 
 #  
+
+
 unnormed_logbkgpriorvalues = np.logaddexp(np.squeeze(log_bkg_CCR_dist(log10emeshtrue, lonmeshtrue,latmeshtrue)),np.log(astrophysicalbackground))
 
 
