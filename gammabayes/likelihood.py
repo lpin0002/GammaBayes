@@ -24,12 +24,12 @@ class discrete_loglikelihood(object):
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
 
-                self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
+                # self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
             elif len(self.axes)==1:
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
-                self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
-                self.dependent_axes_dim = len(self.dependent_axes)
+                # self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
+                # self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
                 self.axes_dim = len(axes)
@@ -38,7 +38,7 @@ class discrete_loglikelihood(object):
                 
                 self.dependent_axes_dim = 1
 
-                self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
+                # self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
         else:
             self.axes_dim = len(axes)
             
@@ -47,7 +47,7 @@ class discrete_loglikelihood(object):
 
             self.dependent_axes_dim = len(self.dependent_axes)
 
-            self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
+            # self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
                     
         
     def __call__(self, *inputs):

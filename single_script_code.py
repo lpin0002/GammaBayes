@@ -41,7 +41,6 @@ from gammabayes.utils.config_utils import read_config_file, check_necessary_conf
 from gammabayes.SingleChannel_DM_Prior import DM_dist
 import random
 
-random.seed(0)
 
 
 #  
@@ -64,6 +63,8 @@ print(lonmeshtrue.shape, lonmeshrecon.shape)
 
 inputs = read_config_file(sys.argv[1])
 
+
+
 check_necessary_config_inputs(inputs)
 
 print(inputs)
@@ -73,6 +74,11 @@ nbkg                = int(round((1- inputs['xi'])*inputs['Nevents']))
 
 true_xi          = nsig/(nbkg+nsig)
 
+
+
+
+
+inputs['seed'] = random.getstate()[0]
 
 try:
     os.mkdir('data')
@@ -106,6 +112,8 @@ if os.path.exists(f"{datafolder}/margresultsarray.npy"):
 with open(stemdatafoldername+'/inputconfig.yaml', 'w') as file:
     yaml.dump(inputs, file, default_flow_style=False)
     
+with open(datafolder+'/inputconfig.yaml', 'w') as file:
+    yaml.dump(inputs, file, default_flow_style=False)
 
 
 startertimer = time.perf_counter()

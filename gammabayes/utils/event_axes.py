@@ -10,10 +10,10 @@ lonbound            = 3.5
 
 
 
-latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
+latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4)))
 latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
 
-longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
+longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))) 
 longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
 
 
@@ -22,7 +22,7 @@ log10estart             = -1
 log10eend               = 2
 log10erange             = log10eend - log10estart
 log10eaxis              = np.linspace(log10estart,log10eend,int(np.round(log10erange*50))+1)
-log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*300))+1)
+log10eaxistrue          = np.linspace(log10estart,log10eend,int(np.round(log10erange*250))+1)
 
 
 
