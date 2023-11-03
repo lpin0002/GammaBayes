@@ -36,8 +36,8 @@ setup(name='GammaBayes',
                         'dark_matter/220913_145357/lambdarange.npy',
                         'dark_matter/220913_145357/massrange.npy',
                         'dark_matter/dark_matter_spectra/AtProduction_gammas.dat',
-                        'dark_matter/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
-                        'dark_matter/temp/*',
+                        'dark_matter/Z2_ScalarSinglet/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
+                        'dark_matter/Z2_ScalarSinglet/temp/*',
                         ]
       }
       )

@@ -2,7 +2,7 @@ from scipy import integrate, special, interpolate, stats
 import numpy as np
 import random, time
 from tqdm import tqdm
-
+from scipy.stats import norm as norm1d
 import yaml, warnings, sys, os
 
 
@@ -45,3 +45,39 @@ def angularseparation(coord1, coord2=None):
 
 def bin_centres_to_edges(axis):
     return np.append(axis-np.diff(axis)[0]/2, axis[-1]+np.diff(axis)[0]/2)
+
+
+def simple_credible_interval_1d(y, sigma, x=None):
+    cdf = integrate.cumtrapz(y=y, x=x)
+
+    lower_bound = norm1d.cdf(-sigma)
+    upper_bound = norm1d.cdf(sigma)
+
+    lower_idx = np.argmax(cdf >= lower_bound)
+    upper_idx = np.argmax(cdf >= upper_bound)
+
+    return x[lower_idx], x[upper_idx]
+
+def hdp_credible_interval_1d(y, sigma, x):
+    y = y/integrate.simps(y=y, x=x)
+    levels = np.linspace(0, y.max(),1000)
+
+    areas = integrate.simps(y= (y>=levels[:, None])*y, x=x, axis=1)
+
+    interpolator = interpolate.interp1d(y=levels, x=areas)
+    if sigma!=0:
+        prob_val = norm1d.cdf(sigma)-norm1d.cdf(-sigma)
+
+        level = interpolator(prob_val)
+
+        prob_array_indices = np.where(y>=level)
+
+        return x[prob_array_indices[0][0]],x[prob_array_indices[0][-1]]
+    else:
+        cdf = integrate.cumtrapz(y=y, x=x)
+
+        probval = norm1d.cdf(sigma)
+
+        probidx = np.argmax(cdf >= probval)
+
+        return [x[probidx]]

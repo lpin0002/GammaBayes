@@ -1,143 +1,130 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import norm
+from scipy.interpolate import interp1d
+from scipy.integrate import simps
 import time
 from matplotlib import cm
 import sys, os
 from scipy.special import logsumexp
+from .utils import hdp_credible_interval_1d, bin_centres_to_edges
+from .event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis
+from matplotlib.colors import LogNorm
+
+def logdensity_matrix_plot(axes, logprobmatrix, truevals=None, sigmalines_1d=True, sigmas=range(0,6), 
+                           cmap=cm.get_cmap('Blues_r'), 
+                           levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
+                           axis_names=None, suptitle='', suptitlesize=12,
+                           **kwargs):
+    numaxes = len(axes)
+    n = 1000
+
+    fig, ax = plt.subplots(numaxes, numaxes, **kwargs)
+    plt.suptitle(suptitle, size=suptitlesize)
+    for rowidx in range(numaxes):
+        for colidx in range(numaxes):
+            if rowidx==colidx:
+                marginal_prob = np.exp(logsumexp(logprobmatrix, axis=(*np.delete(np.arange(numaxes), [rowidx]),)))
+                marginal_prob = marginal_prob/simps(y=marginal_prob, x=axes[rowidx])
+                ax[rowidx,rowidx].plot(axes[rowidx], marginal_prob)
+                if truevals!=None:
+                    ax[rowidx, rowidx].axvline(truevals[rowidx], ls='--', lw=1, c='tab:orange')
+                ax[rowidx,rowidx].set_ylim([0,None])
+                ax[rowidx, rowidx].set_xlim([axes[colidx].min(), axes[colidx].max()])
 
 
-# SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-# sys.path.append(os.path.dirname(SCRIPT_DIR))
 
-from ..utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
-from ..utils.config_utils import read_config_file
-
-import os
-
-inputs = read_config_file(sys.argv[1])
-
-
+                if sigmalines_1d:
+                    for sigma in sigmas:
+                        if sigma!=0:
+                            color = cmap((np.abs(sigma)+0.1)/(2*len(sigmas)))
+                        else:
+                            color = 'tab:green'
+                        for val in hdp_credible_interval_1d(y=marginal_prob, x=axes[rowidx], sigma=sigma):
+                            ax[rowidx, rowidx].axvline(val, ls='--',c=color, alpha=0.8)
 
 
+                if axis_names is not None:
+                    ax[rowidx, rowidx].set_xlabel(axis_names[rowidx])
+            elif colidx<rowidx:
+                integrationaxes = np.delete(np.arange(numaxes), [rowidx,colidx])
+                marginal_prob = np.exp(logsumexp(logprobmatrix, axis=(*integrationaxes,))).T
 
-        
+                ax[rowidx, colidx].pcolormesh(axes[colidx], axes[rowidx], marginal_prob)
+                if truevals!=None:
+                    ax[rowidx,colidx].axvline(truevals[colidx], ls='--', lw=1, c='tab:orange')
+                    ax[rowidx,colidx].axhline(truevals[rowidx], ls='--', lw=1, c='tab:orange')
+
+                ax[rowidx,colidx].set_xlim([axes[colidx].min(), axes[colidx].max()])
+                ax[rowidx,colidx].set_ylim([axes[rowidx].min(), axes[rowidx].max()])
+
+                normed_marginal_prob = (marginal_prob/marginal_prob.sum())
+                t = np.linspace(0, normed_marginal_prob.max(), n)
+                integral = ((normed_marginal_prob >= t[:, None, None]) * normed_marginal_prob).sum(axis=(1,2))
+
+                f = interp1d(integral, t)
+                t_contours = f(levels)
+                ax[rowidx,colidx].contour(normed_marginal_prob, t_contours, 
+                                extent=[axes[colidx].min(), axes[colidx].max(), axes[rowidx].min(), axes[rowidx].max(),], colors='white', linewidths=0.5)
+                if axis_names is not None:
+                    ax[rowidx, colidx].set_xlabel(axis_names[colidx])
+                    ax[rowidx, colidx].set_ylabel(axis_names[rowidx])
+            else:
+                ax[rowidx,colidx].set_axis_off()
+                
+    plt.tight_layout()
+
+
+def plot_loge_lon_lat_prior_samples(samples, 
+    twodhist_xlabel='Galactic Longitude [deg]', twodhist_ylabel='Galactic Latitude [deg]', 
+    onedhist_xlabel = r'Log$_{10}$ Energy [TeV]',
+    onedhist_bins = bin_centres_to_edges(log10eaxistrue),
+    twodhist_bins = (bin_centres_to_edges(longitudeaxistrue), bin_centres_to_edges(latitudeaxistrue)),
+    dist_names = None, 
+    log10eaxistrue=log10eaxistrue, longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue, 
+    **kwargs,):
+
+    num_priors = len(samples)
+
+    fig, ax = plt.subplots(num_priors,2, **kwargs)
+    for idx, prior_samples in enumerate(samples):
+        if dist_names!=None:
+            ax[idx,0].set_title(dist_names[idx])
+        ax[idx,0].set_xlabel(twodhist_xlabel)
+        ax[idx,0].set_ylabel(twodhist_ylabel)
+        hist2dplot = ax[idx,0].hist2d(prior_samples[1],prior_samples[2], 
+            bins=twodhist_bins, norm=LogNorm())
+        plt.colorbar(mappable=hist2dplot[3])
+
+        ax[idx,1].hist(prior_samples[0], bins=onedhist_bins)
+        ax[idx,1].set_xlabel(onedhist_xlabel)
+
+    plt.tight_layout()
+
+
+def plot_loge_lon_lat_recon_samples(samples, 
+    twodhist_xlabel='Galactic Longitude [deg]', twodhist_ylabel='Galactic Latitude [deg]', 
+    onedhist_xlabel = r'Log$_{10}$ Energy [TeV]',
+    onedhist_bins = bin_centres_to_edges(log10eaxis),
+    twodhist_bins = (bin_centres_to_edges(longitudeaxis), bin_centres_to_edges(latitudeaxis)),
+    dist_names = None, 
+    log10eaxis=log10eaxis, longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, 
+    **kwargs,):
+
+    num_priors = len(samples)
+
+    fig, ax = plt.subplots(num_priors,2, **kwargs)
+    for idx, recon_samples in enumerate(samples):
+        if dist_names!=None:
+            ax[idx,0].set_title(dist_names[idx])
+        ax[idx,0].set_xlabel(twodhist_xlabel)
+        ax[idx,0].set_ylabel(twodhist_ylabel)
+        hist2dplot = ax[idx,0].hist2d(recon_samples[1],recon_samples[2], 
+            bins=twodhist_bins, norm=LogNorm())
+        plt.colorbar(mappable=hist2dplot[3])
+
+        ax[idx,1].hist(recon_samples[0], bins=onedhist_bins)
+        ax[idx,1].set_xlabel(onedhist_xlabel)
+
+    plt.tight_layout()
+
     
-    
-
-
-log_posterior   = np.load(f"data/{inputs['identifier']}/log_posterior.npy", allow_pickle=True)
-xi_range        = np.load(f"data/{inputs['identifier']}/xi_range.npy", allow_pickle=True)
-logmassrange    = np.load(f"data/{inputs['identifier']}/logmassrange.npy", allow_pickle=True)
-
-
-currentdirecyory = os.getcwd()
-stemdirectory = f"{currentdirecyory}/data/{inputs['identifier']}/singlerundata"
-print("\nstem directory: ", stemdirectory, '\n')
-
-rundirs = [x[0] for x in os.walk(stemdirectory)][1:]
-
-
-log_posterior = log_posterior-logsumexp(log_posterior)
-
-colormap = cm.get_cmap('Blues_r', 4)
-
-fig, ax = plt.subplots(2,2, dpi=100, figsize=(10,8))
-plt.suptitle(f"Nevents= {inputs['totalevents']}", size=24)
-
-# Upper left plot
-logmass_logposterior = logsumexp(log_posterior, axis=0)
-
-normalisedlogmassposterior = np.exp(logmass_logposterior-logsumexp(logmass_logposterior))
-
-cdflogmassposterior = np.cumsum(normalisedlogmassposterior)
-mean = logmassrange[np.abs(norm.cdf(0)-cdflogmassposterior).argmin()]
-zscores = [-3, -2,-1,1,2, 3]
-logmasspercentiles = []
-for zscore in zscores:
-    logmasspercentiles.append(logmassrange[np.abs(norm.cdf(zscore)-cdflogmassposterior).argmin()])
-
-
-ax[0,0].plot(logmassrange,normalisedlogmassposterior, c='tab:green')
-
-ax[0,0].axvline(mean, c='tab:green', ls=':')
-
-
-for o, percentile in enumerate(logmasspercentiles):
-            color = colormap(np.abs(zscores[o])/4-0.01)
-
-            ax[0,0].axvline(percentile, c=color, ls=':')
-ax[0,0].axvline(inputs['logmass'], ls='--', color="tab:orange")
-
-
-if min(mean - logmasspercentiles)>log10eaxistrue[1]-log10eaxistrue[0]:
-    for logetrueval in log10eaxistrue:
-        ax[0,0].axvline(logetrueval, c='forestgreen', alpha=0.3)
-ax[0,0].set_ylim([0, None])
-ax[0,0].set_xlim([logmassrange[0], logmassrange[-1]])
-
-# Upper right plot
-ax[0,1].axis('off')
-
-
-# Lower left plot
-# ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(normalisedlogposterior).T, cmap='Blues')
-ax[1,0].pcolormesh(logmassrange, xi_range, np.exp(log_posterior), vmin=0, edgecolor='face')
-ax[1,0].axvline(inputs['logmass'], c='tab:orange')
-ax[1,0].axhline(inputs['xi'], c='tab:orange')
-ax[1,0].set_xlabel(r'$log_{10}$ mass [TeV]')
-ax[1,0].set_ylabel(r'$\xi$')
-
-ax[1,0].set_ylim([xi_range[0], xi_range[-1]])
-ax[1,0].set_xlim([logmassrange[0], logmassrange[-1]])
-
-########################################################################################################################
-########################################################################################################################
-# I have no clue how this works but I've checked it against some standard distributions and it seems correct
-normed_posterior = np.exp(log_posterior)/np.exp(log_posterior).sum()
-n = 100000
-t = np.linspace(0, normed_posterior.max(), n)
-integral = ((normed_posterior >= t[:, None, None]) * normed_posterior).sum(axis=(1,2))
-
-from scipy import interpolate
-f = interpolate.interp1d(integral, t)
-t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]))
-ax[1,0].contour(normed_posterior, t_contours, extent=[logmassrange[0],logmassrange[-1], xi_range[0],xi_range[-1]], colors='white', linewidths=0.5)
-########################################################################################################################
-########################################################################################################################
-
-
-xi_logposterior = logsumexp(log_posterior, axis=1)
-
-normalised_xi_posterior = np.exp(xi_logposterior-logsumexp(xi_logposterior))
-
-cdf_xi_posterior = np.cumsum(normalised_xi_posterior)
-mean_xi = xi_range[np.abs(norm.cdf(0)-cdf_xi_posterior).argmin()]
-xi_percentiles = []
-for zscore in zscores:
-    xi_percentile = xi_range[np.abs(norm.cdf(zscore)-cdf_xi_posterior).argmin()]
-    xi_percentiles.append(xi_percentile)
-    print(np.sqrt(1e5/1e8)*np.abs(xi_percentile - mean_xi))
-
-
-
-
-
-ax[1,1].plot(xi_range,normalised_xi_posterior, c='tab:green')
-
-ax[1,1].axvline(mean_xi, c='tab:green', ls=':')
-
-
-for o, percentile in enumerate(xi_percentiles):
-            color = colormap(np.abs(zscores[o])/4-0.01)
-
-            ax[1,1].axvline(percentile, c=color, ls=':')
-ax[1,1].axvline(inputs['xi'], ls='--', color="tab:orange")
-ax[1,1].set_xlabel(r'$\xi$')
-ax[1,1].set_ylim([0, None])
-
-
-plt.savefig(time.strftime(f"data/{inputs['identifier']}/posteriorplot_%m%d_%H.pdf"))
-plt.show()
-
-

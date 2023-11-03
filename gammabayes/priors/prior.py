@@ -177,39 +177,41 @@ class discrete_logprior(object):
                 the axes argument. If 3 axes given the np.ndarray will have 
                 shape (3,numsamples,).
         """
+        if numsamples>0:
+            if logpriorvalues is None:
+                logpriorvalues = self.logfunction(*self.input_values_mesh)
         
-        if logpriorvalues is None:
-            logpriorvalues = self.logfunction(*self.input_values_mesh)
-    
-        if type(logpriorvalues)!=np.ndarray:
-            logpriorvalues = np.array(logpriorvalues)
+            if type(logpriorvalues)!=np.ndarray:
+                logpriorvalues = np.array(logpriorvalues)
+                
+                
+                
+            # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
+                # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
+                # So we will double check the normalisation
+            logpriorvalues = np.squeeze(logpriorvalues) - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
+            logpriorvalues = np.squeeze(logpriorvalues) - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
+            logpriorvalues_withlogjacob = np.squeeze(logpriorvalues)+self.logjacob - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
+            
+            logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
             
             
+            simulatedindices = inverse_transform_sampling(logpriorvalues_flattened, Nsamples=numsamples)
             
-        # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
-            # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
-            # So we will double check the normalisation
-        logpriorvalues = np.squeeze(logpriorvalues) - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
-        logpriorvalues = np.squeeze(logpriorvalues) - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
-        logpriorvalues_withlogjacob = np.squeeze(logpriorvalues)+self.logjacob - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
-        
-        logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
-        
-        
-        simulatedindices = inverse_transform_sampling(logpriorvalues_flattened, Nsamples=numsamples)
-        
-        
-        reshaped_simulated_indices = np.unravel_index(simulatedindices,logpriorvalues.shape)
-        
-        
-        if self.num_axes==1:
-            simvals = self.axes[reshaped_simulated_indices]
+            
+            reshaped_simulated_indices = np.unravel_index(simulatedindices,logpriorvalues.shape)
+            
+            
+            if self.num_axes==1:
+                simvals = self.axes[reshaped_simulated_indices]
+            else:
+                simvals = []  
+                for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
+                    simvals.append(axis[axis_sim_index])
+                
+            return np.array(simvals)
         else:
-            simvals = []  
-            for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
-                simvals.append(axis[axis_sim_index])
-            
-        return np.array(simvals)
+            return  np.array([np.array([]) for idx in range(self.num_axes)])
     
     def construct_prior_array(self, hyperparameters=None, normalise=False, axes=None):
         """Construct a matrix of log prior values for input hyperparameters.

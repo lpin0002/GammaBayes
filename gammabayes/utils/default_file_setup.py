@@ -31,31 +31,12 @@ aeff = irfs['aeff']
 aefffunc = lambda energy, offset: aeff.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
 
-try:
-    run_function = int(sys.argv[1])
-except:
-    run_function = 0
-    
-try:
-    setup_irfnormalisations = int(sys.argv[2])
-except:
-    setup_irfnormalisations = 1
-    
-try:
-    setup_astrobkg = int(sys.argv[3])
-except:
-    setup_astrobkg = 1
-
-try:
-    single_astro_background = int(sys.argv[4])
-except:
-    single_astro_background = 1
 
 def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
           logjacob=logjacob, save_directory = resource_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
           pointsources=True, 
-          save_results=True, outputresults=False, single_astro_background=1):
+          save_results=True, outputresults=False, out_individual_astro_backgrounds=0):
     """Produces default IRF normalisation matrices and default astrophysical flux matrix
 
     Args:
@@ -117,7 +98,7 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
         """
         return phi0*energy**(index)
     
-
+    print(f"Save directory is {save_directory}")
 
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
@@ -313,13 +294,9 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
             # from command line/terminal or through the function itself
         if pointsources:
             print("Including point sources.")
-            if single_astro_background:
-                combinedplotmap = np.logaddexp(np.log(fermi_gaggero), np.log(full_hess_flux))
-                combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
-                if save_results:
-                    np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+            if out_individual_astro_backgrounds:
+                print("Outputting individual astro sources")
 
-            else:
                 log_diffuse_background_source_flux = np.log(fermi_gaggero)
                 log_point_hess_background_source_flux = np.log(full_hess_flux)
 
@@ -329,9 +306,21 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
                     np.save(save_directory+"/unnormalised_astrophysical_diffuse_background.npy", diffuse_background_event_rate)
                     np.save(save_directory+"/unnormalised_astrophysical_point_background.npy", point_hess_background_event_rate)
 
+                
+            combinedplotmap = np.logaddexp(np.log(fermi_gaggero), np.log(full_hess_flux))
+            combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
+            if save_results:
+                np.save(save_directory+"/unnormalised_astrophysicalbackground.npy", combinedplotmapwithaeff)
+                
 
         else:
             print("Not including point sources.")
+            if out_individual_astro_backgrounds:
+                log_diffuse_background_source_flux = np.log(fermi_gaggero)
+
+                diffuse_background_event_rate = np.exp(log_diffuse_background_source_flux+np.log(aefftable))
+                if save_results:
+                    np.save(save_directory+"/unnormalised_astrophysical_diffuse_background.npy", diffuse_background_event_rate)
 
             combinedplotmap = np.log(fermi_gaggero)
             combinedplotmapwithaeff = np.exp(combinedplotmap+np.log(aefftable))
@@ -341,14 +330,14 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
         print('''Done setup, results saved to package_data. Accessible through `load_package_data`(.py) 
     or through `resource_dir` variable in utils.''')
     if outputresults:
-        if setup_astrobkg and setup_irfnormalisations and single_astro_background:
+        if setup_astrobkg and setup_irfnormalisations and not(out_individual_astro_backgrounds):
             return psfnorm, edispnorm, combinedplotmapwithaeff
-        elif setup_astrobkg and not(single_astro_background) and setup_irfnormalisations:
-            return psfnorm, edispnorm, diffuse_background_event_rate, point_hess_background_event_rate
-        elif setup_astrobkg and single_astro_background and not(setup_irfnormalisations):
+        elif setup_astrobkg and out_individual_astro_backgrounds and setup_irfnormalisations:
+            return psfnorm, edispnorm, combinedplotmapwithaeff, diffuse_background_event_rate, point_hess_background_event_rate
+        elif setup_astrobkg and not(out_individual_astro_backgrounds) and not(setup_irfnormalisations):
             return combinedplotmapwithaeff
-        elif setup_astrobkg and not(single_astro_background) and not(setup_irfnormalisations):
-            return diffuse_background_event_rate, point_hess_background_event_rate
+        elif setup_astrobkg and out_individual_astro_backgrounds and not(setup_irfnormalisations):
+            return combinedplotmapwithaeff, diffuse_background_event_rate, point_hess_background_event_rate
         elif setup_irfnormalisations and not(setup_astrobkg):
             return psfnorm, edispnorm
         else:
@@ -357,5 +346,37 @@ def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistr
 
 
 
-if run_function:
-    default_file_setup(setup_astrobkg=setup_astrobkg, setup_irfnormalisations=setup_irfnormalisations, single_astro_background=single_astro_background)
+if __name__=="__main__":
+        
+    try:
+        setup_irfnormalisations = int(sys.argv[1])
+    except:
+        setup_irfnormalisations = 1
+        
+    try:
+        setup_astrobkg = int(sys.argv[2])
+    except:
+        setup_astrobkg = 1
+
+    try:
+        out_individual_astro_backgrounds = int(sys.argv[3])
+    except:
+        out_individual_astro_backgrounds = 0
+
+    try:
+        save_directory = sys.argv[4]
+    except:
+        save_directory = 0
+
+    if save_directory!=0:
+        print(f"Chosen save directory is: {save_directory}")
+        default_file_setup(setup_astrobkg=setup_astrobkg, 
+        setup_irfnormalisations=setup_irfnormalisations, 
+        out_individual_astro_backgrounds=out_individual_astro_backgrounds,
+        save_directory=save_directory)
+    else:
+        print("No save directory specified.")
+
+        default_file_setup(setup_astrobkg=setup_astrobkg, 
+        setup_irfnormalisations=setup_irfnormalisations, 
+        out_individual_astro_backgrounds=out_individual_astro_backgrounds)
