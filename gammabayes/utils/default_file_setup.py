@@ -1,7 +1,7 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
 from ..utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
-from ..utils.utils import angularseparation, convertlonlat_to_offset, resource_dir
+from ..utils.utils import angularseparation, convertlonlat_to_offset, resources_dir
 from tqdm import tqdm
 
 from ..likelihoods.instrument_response_funcs import irfs, log_edisp, log_psf
@@ -34,7 +34,7 @@ aefffunc = lambda energy, offset: aeff.evaluate(energy_true = energy*u.TeV, offs
 
 def default_file_setup(setup_irfnormalisations=1, setup_astrobkg=1, log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          logjacob=logjacob, save_directory = resource_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
+          logjacob=logjacob, save_directory = resources_dir, psf=log_psf, edisp=log_edisp, aeff=aefffunc,
           pointsources=True, 
           save_results=True, outputresults=False, out_individual_astro_backgrounds=0):
     """Produces default IRF normalisation matrices and default astrophysical flux matrix

@@ -167,8 +167,8 @@ class discrete_hyperparameter_likelihood(object):
         prior_matrix_list = []
         for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
             prior_matrices = []
-            for hyperparametervalue in zip(*np.meshgrid(*self.hyperparameter_axes[idx])):
-                priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=(hyperparametervalue,), normalise=True))
+            for hyperparametervalue_tuple in zip(*[meshgrid.flatten() for meshgrid in np.meshgrid(*(np.linspace(0,1,11),), indexing='ij')]):
+                priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=(*hyperparametervalue_tuple,), normalise=True))
                 prior_matrices.append(priorvals)
             prior_matrix_list.append(prior_matrices)
             
@@ -204,7 +204,7 @@ class discrete_hyperparameter_likelihood(object):
         """
         self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
-    def create_mixture_log_hyper_likelihood(self, mixture_axes=None, log_margresults=None):
+    def create_discrete_mixture_log_hyper_likelihood(self, mixture_axes=None, log_margresults=None):
         if mixture_axes is None:
             mixture_axes = self.mixture_axes
             if mixture_axes is None:
@@ -278,6 +278,11 @@ class discrete_hyperparameter_likelihood(object):
         # self.unnormed_log_posterior = unnormed_log_posterior
 
         return unnormed_log_posterior
+
+
+    def create_discrete_mixture_log_hyper_likelihood(self, mixture_=None, log_margresults=None):
+
+
 
     def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihoods):
         """To combine log hyperparameter likelihoods from multiple runs by 
