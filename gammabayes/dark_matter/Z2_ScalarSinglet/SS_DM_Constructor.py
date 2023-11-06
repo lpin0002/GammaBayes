@@ -8,7 +8,7 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
-from gammabayes.likelihoods.instrument_response_funcs import aefffunc
+from gammabayes.likelihoods.irfs.gammapy_wrappers import aefffunc
 from os import path
 darkmatter_dir = path.dirname(path.dirname(__file__))
 import time

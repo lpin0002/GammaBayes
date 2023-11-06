@@ -1,5 +1,5 @@
 
-from ..likelihoods.IRFs import bkgfull
+from ..likelihoods.irfs.irfs import log_bkg_CCR_dist, bkgfull
 import numpy as np
 
 bkgfull2d = bkgfull.to_2d()

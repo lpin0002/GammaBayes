@@ -1,4 +1,4 @@
-from gammabayes.utils.utils import convertlonlat_to_offset, angularseparation, resource_dir
+from gammabayes.utils.utils import convertlonlat_to_offset, angularseparation, resources_dir
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_cta_irfs
@@ -11,7 +11,7 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
-irfs = load_cta_irfs(resource_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
+irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
 
 edispfull = irfs['edisp']
