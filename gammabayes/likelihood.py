@@ -67,10 +67,6 @@ class discrete_loglikelihood(object):
         return string_text
     
     
-
-    
-    def normalisation(self):
-        return logsumexp(self.__call__(*self.axes_mesh), axis=tuple(nlen(self.axes_dim))+logjacob)
     
     
     def sample(self, dependentvalues, numsamples):
