@@ -32,13 +32,16 @@ class DM_dist(object):
             "mu+mu-":"mu",
             'nutaunutau':"nu_tau",
             "tau+tau-":"tau",
+            "uu":"u",
+            "dd":"d",
             "cc": "c",
-            "bb": "b",
+            "ss":"s",
             "tt": "t",
+            "bb": "b",
+            "gammagamma": "gamma",
             "W+W-": "W",
             "ZZ": "Z",
             "gg": "g",
-            "gammagamma": "gamma",
             "HH": "h",
         }
 
@@ -61,11 +64,11 @@ class DM_dist(object):
                                                                                         method='linear', bounds_error=False, fill_value=1e-3000)
                 
                 if PPPC_Channel==self.channel:
-                    partial_sigmav_interpolator_dictionary[darkSUSYchannel] = lambda mass, lambdaval: 1
+                    partial_sigmav_interpolator_dictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0+1
                 else:
-                    partial_sigmav_interpolator_dictionary[darkSUSYchannel] = lambda mass, lambdaval: 0
+                    partial_sigmav_interpolator_dictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0
             except:
-                channelfuncdictionary[darkSUSYchannel] = lambda logmass, log10x: log10x*0
+                channelfuncdictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0
 
         self.channelfuncdictionary = channelfuncdictionary
         self.partial_sigmav_interpolator_dictionary = partial_sigmav_interpolator_dictionary
@@ -91,7 +94,9 @@ class DM_dist(object):
         )
         self.diffjfact_array = (jfactory.compute_differential_jfactor().value).T
 
-        self.diffJfactor_function = interpolate.RegularGridInterpolator((self.longitudeaxis, self.latitudeaxis), self.diffjfact_array, method='linear', bounds_error=False, fill_value=0)
+        self.diffJfactor_function = interpolate.RegularGridInterpolator((self.longitudeaxis, self.latitudeaxis), 
+                                                                        self.diffjfact_array, method='linear', 
+                                                                        bounds_error=False, fill_value=0)
 
 
     def nontrivial_coupling(self, logmass, logenergy, coupling=0.1, 
@@ -105,7 +110,9 @@ class DM_dist(object):
         logspectra = -np.inf
 
         for channel in channelfuncdictionary.keys():
-            logspectra = np.logaddexp(logspectra, np.log(partial_sigmav_interpolator_dictionary[channel](10**logmass, coupling)*channelfuncdictionary[channel]((logmass, logenergy-logmass))))
+            logspectra = np.logaddexp(logspectra, 
+                                      np.log(partial_sigmav_interpolator_dictionary[channel](10**logmass, 
+                                                                                             coupling)*channelfuncdictionary[channel]((logmass, logenergy-logmass))))
         
         return logspectra
 

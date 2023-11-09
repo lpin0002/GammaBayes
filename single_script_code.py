@@ -38,7 +38,7 @@ from gammabayes.likelihood import discrete_loglikelihood
 from gammabayes.utils.utils import log_edisp, log_psf, single_loglikelihood
 from gammabayes.utils.config_utils import read_config_file, check_necessary_config_inputs
 
-from gammabayes.SingleChannel_DM_Prior import DM_dist
+from gammabayes.SS_DM_Prior import SS_DM_dist
 import random
 
 
@@ -161,7 +161,7 @@ density_profile_list = {'einasto':profiles.EinastoProfile(),
 
 
 
-SS_DM_dist_instance= DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile_list[inputs['dmdensity_profile'].lower()])
+SS_DM_dist_instance= SS_DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile_list[inputs['dmdensity_profile'].lower()])
 logDMpriorfunc = SS_DM_dist_instance.func_setup()
 
 #  

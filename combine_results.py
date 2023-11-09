@@ -46,7 +46,7 @@ sigmargresults.shape
 
 #  
 
-xi_windowwidth      = 8/np.sqrt(inputs['totalevents'])
+xi_windowwidth      = 12/np.sqrt(inputs['totalevents'])
 
 
 xi_lowerbound       = inputs['xi']-xi_windowwidth

@@ -1,11 +1,11 @@
 
-identifier        : 'random_state_test_3'
-Nevents           : 1000
+identifier        : 'new_spec_test'
+Nevents           : 10000
 logmass           : 0.0
 xi                : 0.2
 nbins_logmass     : 101
 nbins_xi          : 161
 dmdensity_profile : "einasto"
 numcores          : 6
-runnumber         : 2
-totalevents       : 1000
+runnumber         : 1
+totalevents       : 10000
