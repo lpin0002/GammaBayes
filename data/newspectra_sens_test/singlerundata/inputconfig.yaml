@@ -1,0 +1,11 @@
+Nevents: 10000
+runnumber: 10
+logmass: 0.0
+dm_density_profile: einasto
+identifier: newspectra_sens_test
+nbins_logmass: 101
+nbins_xi: 161
+numcores: 16
+randint: 73443
+totalevents: 100000
+xi: 0.05
