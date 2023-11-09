@@ -2,21 +2,15 @@
     # If you're running from a script there shouldn't be any issues as setup is just a func
 from gammabayes.utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
 from gammabayes.utils.utils import angularseparation, convertlonlat_to_offset, resources_dir
+from gammabayes.likelihoods.irfs.gammapy_wrappers import log_edisp, log_psf
+
+
 from tqdm import tqdm
-
-from gammabayes.likelihoods.irfs.gammapy_wrappers import irfs, log_edisp, log_psf
-
 import numpy as np
 from astropy import units as u
 from scipy import special
 from scipy.integrate import simps
 import os, sys
-
-
-aeff = irfs['aeff']
-
-aefffunc = lambda energy, offset: aeff.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
-
 
 
 def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
@@ -87,10 +81,6 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
             
             psflogerow.append(psfnormvals)
         psfnorm.append(psflogerow)
-            
-
-# 
-    psfnorm = np.squeeze(np.array(psfnorm))
 
 
 
@@ -101,12 +91,6 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
                                                                                                             latitudeaxistrue, 
                                                                                                             log10eaxis,
                                                                                                             indexing='ij')
-
-        # truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
-        
-        # offset = convertlonlat_to_offset(truecoords)
-
-        # edispvals = np.squeeze(edisp(log10eaxis_mesh.flatten(), log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape))
         edispvals = np.squeeze(log_edisp(log10eaxis_mesh.flatten(), 
                                         log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape))
         edispnormvals = special.logsumexp(edispvals+logjacob, axis=-1)
@@ -114,6 +98,7 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
         edispnorm.append(edispnormvals)
 
 
+    psfnorm = np.squeeze(np.array(psfnorm))
     edispnorm = np.array(edispnorm)
 
     edispnorm[np.isneginf(edispnorm)] = 0
@@ -123,10 +108,8 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
         np.save(save_directory+"/psfnormalisation.npy", psfnorm)
         np.save(save_directory+"/edispnormalisation.npy", edispnorm)
 
-        
     if outputresults:
         return psfnorm, edispnorm
-
 
 
 if __name__=="__main__":

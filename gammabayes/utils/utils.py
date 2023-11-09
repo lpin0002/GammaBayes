@@ -47,17 +47,6 @@ def bin_centres_to_edges(axis):
     return np.append(axis-np.diff(axis)[0]/2, axis[-1]+np.diff(axis)[0]/2)
 
 
-def simple_credible_interval_1d(y, sigma, x=None):
-    cdf = integrate.cumtrapz(y=y, x=x)
-
-    lower_bound = norm1d.cdf(-sigma)
-    upper_bound = norm1d.cdf(sigma)
-
-    lower_idx = np.argmax(cdf >= lower_bound)
-    upper_idx = np.argmax(cdf >= upper_bound)
-
-    return x[lower_idx], x[upper_idx]
-
 def hdp_credible_interval_1d(y, sigma, x):
     y = y/integrate.simps(y=y, x=x)
     levels = np.linspace(0, y.max(),1000)

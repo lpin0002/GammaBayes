@@ -1,6 +1,6 @@
 from scipy.special import logsumexp
 import numpy as np
-from ..utils.inverse_transform_sampling import inverse_transform_sampling
+from gammabayes.samplers import inverse_transform_sampler
 from matplotlib import pyplot as plt
 
 
@@ -146,7 +146,7 @@ class discrete_loglikelihood(object):
         loglikevalswithlogjacob = loglikevals+self.logjacob - logsumexp(loglikevals+self.logjacob, axis=(*np.arange(self.axes_dim),))
 
         
-        sampled_indices = np.squeeze(inverse_transform_sampling(loglikevalswithlogjacob.flatten(), numsamples))
+        sampled_indices = np.squeeze(inverse_transform_sampler(loglikevalswithlogjacob.flatten(), numsamples))
             
         reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
         

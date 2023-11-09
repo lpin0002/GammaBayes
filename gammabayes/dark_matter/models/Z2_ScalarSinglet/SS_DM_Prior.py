@@ -13,34 +13,21 @@ from os import path
 darkmatter_dir = path.dirname(path.dirname(__file__))
 import time
 
-# SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
-class SS_DM_dist(object):
+
+from gammabayes.priors import discrete_logprior
+from gammabayes.dark_matter.channel_spectra import single_channel_spectral_data_path
+
+class SS_DM_Prior(discrete_logprior):
     
     def __init__(self, longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile(), ratios=False):
         self.longitudeaxis = longitudeaxis
         self.latitudeaxis = latitudeaxis
         self.density_profile = density_profile
         self.ratios = ratios
-        """Initialise an SS_DM_dist class instance.
+        logfunction = self.generate_log_function(axes, hyperparameter_axes, default_hyperparameter_values)
+        super().__init__(name, inputunit, logfunction, axes, axes_names, hyperparameter_axes, hyperparameter_names, default_hyperparameter_values, logjacob)
 
-        Args:
-            longitudeaxis (np.ndarray): Array of the galactic longitude values 
-                to sample for the calculation of the different J-factor
 
-            latitudeaxis (np.ndarray): Array of the galactic latitude values 
-                to sample for the calculation of the different J-factor
-
-            density_profile (_type_, optional): The density profile to be used 
-                for the calculation of the differential J-factor. Must be of
-                the same type as the profile contained in the 
-                gamma.astro.darkmatter.profiles module as we use Gammapy to
-                calculate our differential J-factors.
-
-                Defaults to profiles.EinastoProfile().
-
-            ratios (bool, optional): A bool representing whether one wants to use the input differential cross-sections
-                or the annihilation __ratios__. Defaults to False.
-        """
         
     
     
@@ -71,14 +58,14 @@ class SS_DM_dist(object):
         sqrtchannelfuncdictionary = {}
 
        
-        log10xvals = np.load(darkmatter_dir+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
-        massvalues = np.load(darkmatter_dir+f"/griddata/massvals_massenergy_diffflux_grid.npy")
+        log10xvals = np.load(single_channel_spectral_data_path+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
+        massvalues = np.load(single_channel_spectral_data_path+f"/griddata/massvals_massenergy_diffflux_grid.npy")
 
         for darkSUSYchannel in list(darkSUSY_to_PPPC_converter.keys()):
             try:
                 gammapychannel = darkSUSY_to_PPPC_converter[darkSUSYchannel]
                 
-                tempspectragrid = np.load(darkmatter_dir+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
+                tempspectragrid = np.load(single_channel_spectral_data_path+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
                 
                 # Square root is to preserve positivity during interpolation
                 sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator((np.log10(massvalues/1e3), log10xvals), np.sqrt(np.array(tempspectragrid)), 
@@ -169,7 +156,7 @@ class SS_DM_dist(object):
     
     
     
-    def func_setup(self):
+    def generate_log_spectra(self):
         """A method that pumps out a function representing the natural log of 
             the flux of dark matter annihilation gamma rays for a given log 
             energy, sky position, log mass and higgs coupling value.

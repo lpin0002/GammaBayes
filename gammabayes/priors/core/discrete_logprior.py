@@ -1,6 +1,6 @@
 from scipy.special import logsumexp
 import numpy as np
-from ..utils.inverse_transform_sampling import inverse_transform_sampling
+from gammabayes.samplers import  inverse_transform_sampler
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):
@@ -196,7 +196,7 @@ class discrete_logprior(object):
             logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
             
             
-            simulatedindices = inverse_transform_sampling(logpriorvalues_flattened, Nsamples=numsamples)
+            simulatedindices = inverse_transform_sampler(logpriorvalues_flattened, Nsamples=numsamples)
             
             
             reshaped_simulated_indices = np.unravel_index(simulatedindices,logpriorvalues.shape)

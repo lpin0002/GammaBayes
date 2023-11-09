@@ -1,4 +1,4 @@
-from gammabayes.utils.utils import convertlonlat_to_offset, angularseparation, resources_dir
+from gammabayes.utils import convertlonlat_to_offset, angularseparation, resources_dir
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_cta_irfs
@@ -17,7 +17,6 @@ irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.18
 edispfull = irfs['edisp']
 psffull = irfs['psf']
 edispfull.normalize()
-bkgfull = irfs['bkg']
 psf3d = psffull.to_psf3d()
 aefffull = irfs['aeff']
 
@@ -38,7 +37,7 @@ def log_aeff(logetrue, true_lon, true_lat):
         float: The natural log of the effective area of the CTA in m^2
     """
     return np.log(aefffull.evaluate(energy_true = 10**logetrue*u.TeV, 
-                             offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).to(u.m**2).value)
+                             offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).to(u.cm**2).value)
     
 def log_edisp(reconloge, logetrue, true_lon, true_lat):
     """Wrapper for the Gammapy interpretation of the CTA point spread function.
@@ -122,44 +121,3 @@ def single_loglikelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, tr
                                                     offset=offset*u.deg).value)
     
     return output
-
-
-
-
-def log_bkg_CCR_dist(logeval, lon, lat):
-    """Wrapper for the Gammapy interpretation of the log of 
-        the CTA's background charged cosmic-ray mis-identification rate.
-
-    Args:
-        logeval (float): True energy of a gamma-ray event detected by the CTA
-        lon (float): True FOV longitude of a gamma-ray event 
-            detected by the CTA
-        lat (float): True FOV latitude of a gamma-ray event 
-            detected by the CTA
-
-    Returns:
-        float: Natural log of the charged cosmic ray mis-idenfitication rate for the CTA
-    """
-    return np.log(bkgfull.evaluate(energy=10**logeval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value*1e6)
-
-
-# Older testing functions
-
-# def aeff_efficient(logetrue, offset):
-#     return np.log(aefffull.evaluate(energy_true=10**logetrue*u.TeV, offset=offset*u.deg).to(u.cm**2).value)
-
-
-
-# def psf_efficient(rad, logetrue, offset):
-
-#     output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
-#                                                     rad = rad*u.deg, 
-#                                                     offset=offset*u.deg).value)
-    
-#     return output
-
-
-# def edisp_efficient(logereconstructed, logetrue, offset):
-#     return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-#                                                     migra = np.power(10.,logereconstructed-logetrue), 
-#                                                     offset=offset*u.deg).value)
