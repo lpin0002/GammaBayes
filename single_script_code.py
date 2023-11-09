@@ -104,7 +104,6 @@ if os.path.exists(f"{datafolder}/margresultsarray.npy"):
     raise Exception(f"margresultsarray.npy (final result) already exists. Exiting to not overwrite data.")
     
 
-inputs['seed'] = random.getstate()
 inputs['randint'] = random.randint(1,100000)
 
 # To make the config file accessible from the stem data folder
