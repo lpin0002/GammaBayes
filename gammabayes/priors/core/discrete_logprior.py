@@ -101,38 +101,15 @@ class discrete_logprior(object):
         return string_text
     
     
-    def __call__(self, inputs, hyperparameters=None):
-        """A dunder method to allow a class instance to be used as a function.
-
-        Args:
-            inputs (tuple):  Tuple of the usual input format for the logfunction. 
-                e.g. If usual format is 
-                logfunc(axis_1, axis_2, (hyperparameter1,)) 
-                then the input for the class would be 
-                class_instance(inputs=(axis_1, axis_2))
-            hyperparameters (tuple, optional): Similar to the previous argument
-            but for the hyperparameters for the prior. e.g. If usual format is 
-                logfunc(axis_1, axis_2, (hyperparameter1,)) 
-                then the 'hyperparameters' for the class would be 
-                class_instance(hyperparameters=( (hyperparameter1,) ))
-                as the input is unpackaged by default. 
-                Defaults to None.
+    def __call__(self, *args, **kwargs):
+        """_summary_
 
         Returns:
-            float or np.ndarray: A float or matrix of values representing the
-            log prior values for the given set of inputs and hyperparameters.
+            _type_: _description_
         """
-        if hyperparameters is None:
-            hyperparameters = self.default_hyperparameter_values
-
-
-        if type(inputs)!=tuple:
-            inputs = (inputs,)
             
-        if hyperparameters != (None,):
-            return self.logfunction(*inputs, *hyperparameters)
-        else:
-            return self.logfunction(*inputs)
+        return self.logfunction(*args, **kwargs)
+
 
     
     

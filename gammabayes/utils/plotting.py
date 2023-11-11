@@ -10,6 +10,22 @@ from .utils import hdp_credible_interval_1d, bin_centres_to_edges
 from .event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis
 from matplotlib.colors import LogNorm
 
+
+
+defaults_kwargs = dict(
+    smooth=1.0, 
+    label_kwargs=dict(fontsize=16),
+    title_kwargs=dict(fontsize=16), color='#0072C1',
+    truth_color='tab:orange', 
+    levels=(1 - np.exp(-0.5), 1 - np.exp(-2), 1 - np.exp(-9 / 2.), 1 - np.exp(-8), 1 - np.exp(-25/2)),
+    plot_density=True, 
+    plot_datapoints=True, 
+    fill_contours=True,
+    max_n_ticks=4, 
+    )
+
+
+
 def logdensity_matrix_plot(axes, logprobmatrix, truevals=None, sigmalines_1d=True, sigmas=range(0,6), 
                            cmap=cm.get_cmap('Blues_r'), 
                            levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
