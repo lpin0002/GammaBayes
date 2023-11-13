@@ -1,6 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
-from gammabayes.samplers import  inverse_transform_sampler
+from gammabayes.samplers import  integral_inverse_transform_sampler
+from gammabayes.utils import logspace_simpson
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):
@@ -31,7 +32,7 @@ class discrete_logprior(object):
                         ...). 
 
             axes (tuple): A tuple of the axes that the discrete prior is 
-                defined/normalised along.
+                defined/normalised along. Presumed to be energy and sky position axes.
 
             axes_names (list, optional): A list of strings for the names of 
                 the axes. Defaults to '[None]'.
@@ -70,12 +71,11 @@ class discrete_logprior(object):
             self.axes_mesh = (*np.meshgrid(*axes, indexing='ij'),)
             
         if default_hyperparameter_values is None:
-            self.default_hyperparameter_values = (None,)
+            self.default_hyperparameter_values = None
             self.input_values_mesh = np.meshgrid(*self.axes, indexing='ij')
 
         else:
             self.default_hyperparameter_values = (*default_hyperparameter_values,)
-            print(self.default_hyperparameter_values)
             self.input_values_mesh = np.meshgrid(*self.axes, *self.default_hyperparameter_values, indexing='ij')
 
             
@@ -115,7 +115,7 @@ class discrete_logprior(object):
     
 
     
-    def normalisation(self, hyperparametervalues=None):
+    def normalisation(self, log_prior_values=None, hyperparametervalues=None, logjacob=None):
         """Return the integrated value of the prior for a given hyperparameter 
         over the default axes
 
@@ -127,7 +127,19 @@ class discrete_logprior(object):
             float: the integrated value of the prior for a given hyperparameter 
         over the default axes
         """
-        return logsumexp(self.logfunction(self.axes_mesh, hyperparametervalues)+self.logjacob, axis=tuple(np.arange(self.axes.ndim)))
+        if logjacob==None:
+            logjacob = self.logjacob
+
+        if (log_prior_values is None) and (hyperparametervalues is None):
+            log_prior_values = self.logfunction(self.axes_mesh, **self.default_hyperparameter_values)+self.logjacob
+        elif (log_prior_values is None) and not(hyperparametervalues is None):
+            log_prior_values = self.logfunction(self.axes_mesh, **hyperparametervalues)+self.logjacob
+
+        log_prior_norms = log_prior_values
+        for axis in self.axes:
+            log_prior_norms = logspace_simpson(logy=log_prior_norms, x=axis, axis=0)
+
+        return log_prior_norms
     
     
     
@@ -166,31 +178,31 @@ class discrete_logprior(object):
             # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
                 # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
                 # So we will double check the normalisation
-            logpriorvalues = np.squeeze(logpriorvalues) - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
-            logpriorvalues = np.squeeze(logpriorvalues) - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
-            logpriorvalues_withlogjacob = np.squeeze(logpriorvalues)+self.logjacob - logsumexp(np.squeeze(logpriorvalues)+self.logjacob)
+            logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
+            logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
+            logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
+                        
+            simvals = integral_inverse_transform_sampler(logpriorvalues, axes=self.axes, 
+                                                Nsamples=numsamples, logjacob=self.logjacob)
             
-            logpriorvalues_flattened = logpriorvalues_withlogjacob.flatten()
-            
-            
-            simulatedindices = inverse_transform_sampler(logpriorvalues_flattened, Nsamples=numsamples)
-            
-            
-            reshaped_simulated_indices = np.unravel_index(simulatedindices,logpriorvalues.shape)
+            # simulatedindices = inverse_transform_sampler(logpriorvalues_flattened, Nsamples=numsamples)
             
             
-            if self.num_axes==1:
-                simvals = self.axes[reshaped_simulated_indices]
-            else:
-                simvals = []  
-                for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
-                    simvals.append(axis[axis_sim_index])
+            # reshaped_simulated_indices = np.unravel_index(simulatedindices,logpriorvalues.shape)
+            
+            
+            # if self.num_axes==1:
+            #     simvals = self.axes[reshaped_simulated_indices]
+            # else:
+            #     simvals = []  
+            #     for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
+            #         simvals.append(axis[axis_sim_index])
                 
             return np.array(simvals)
         else:
             return  np.array([np.array([]) for idx in range(self.num_axes)])
     
-    def construct_prior_array(self, hyperparameters=None, normalise=False, axes=None):
+    def construct_prior_array(self, hyperparameters=None, normalise=False):
         """Construct a matrix of log prior values for input hyperparameters.
 
         For the input hyperparameters, if none given then the defaults are used, 
@@ -206,33 +218,28 @@ class discrete_logprior(object):
             normalise (bool, optional): A bool value that if True normalises 
                 the output prior with respect to the axes. Defaults to False. 
 
-            axes (tuple, optional): A tuple containing numpy arrays representing 
-                the discrete values at which the prior can be evaluated. 
-                Defaults to None.
-
         Returns:
             log_prior_matrix (np.ndarray): A matrix containg the log prior 
                 values for the input hyperparameters over the given axes
         """
-        if axes is None:
-            axes=self.axes
         
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values
+
         try:
-            inputmesh = np.meshgrid(*axes,  *hyperparameters, indexing='ij') 
-            outputarray = self.logfunction(*inputmesh)
-            
+            inputmesh = np.meshgrid(*self.axes,*hyperparameters, indexing='ij') 
+            outputarray = self.logfunction(*inputmesh)            
+
         except:
-            inputmesh = np.meshgrid(*axes, indexing='ij')  
-            outputarray = self.logfunction(*inputmesh)
-            
+            inputmesh = np.meshgrid(*self.axes, indexing='ij') 
+            outputarray = self.logfunction(*inputmesh)            
+
 
         # This is left as an option to decrease computation time
         if normalise:
-            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(axes)),))
-            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(axes)),))
-            outputarray = outputarray - logsumexp(outputarray.reshape(self.logjacob.shape)+self.logjacob, axis=(*np.arange(len(axes)),))
+            outputarray = outputarray - self.normalisation(outputarray)
+            outputarray = outputarray - self.normalisation(outputarray)
+            outputarray = outputarray - self.normalisation(outputarray)
              
         return outputarray
 

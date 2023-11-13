@@ -29,4 +29,5 @@ data/nestedsamplingtest8*
 *dist*
 *.DS_Store
 *plotter.ipynb
-*samplers*
+*log_edisp_normalisations*
+*log_psf_normalisations*

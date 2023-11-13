@@ -1,7 +1,7 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
-from gammabayes.utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis, logjacob
-from gammabayes.utils.utils import angularseparation, convertlonlat_to_offset, resources_dir
+from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis, logjacob
+from gammabayes.utils import angularseparation, convertlonlat_to_offset, resources_dir, iterate_logspace_simps, logspace_simpson
 from gammabayes.likelihoods.irfs.gammapy_wrappers import log_edisp, log_psf
 
 
@@ -13,17 +13,17 @@ from scipy.integrate import simps
 import os, sys
 
 
-def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis, 
+def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_recon_axis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          logjacob=logjacob, save_directory = resources_dir, psf=log_psf, edisp=log_edisp,
+          edisplogjacob=0, psflogjacob=0, save_directory = resources_dir, psf=log_psf, edisp=log_edisp,
           save_results=True, outputresults=False):
     """Produces default IRF normalisation matrices
 
     Args:
-        log10eaxistrue (np.ndarray, optional): Dicrete true log10 energy values
+        energy_true_axis (np.ndarray, optional): Dicrete true energy values
             of CTA event data. Defaults to log10eaxistrue.
 
-        log10eaxis (np.ndarray, optional): Dicrete measured log10 energy values
+        energy_recon_axis (np.ndarray, optional): Dicrete measured energy values
             of CTA event data. Defaults to log10eaxis.
 
         longitudeaxistrue (np.ndarray, optional): Dicrete true fov longitude values
@@ -38,7 +38,9 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
         latitudeaxis (np.ndarray, optional): Dicrete measured fov latitude values
             of CTA event data. Defaults to latitudeaxis.
 
-        logjacob (np.ndarray, optional): _description_. Defaults to logjacob.
+        edisplogjacob (np.ndarray, optional): _description_. Defaults to 0.
+
+        psflogjacob (np.ndarray, optional): _description_. Defaults to 0.
 
         save_directory (str, optional): Path to save results. Defaults to resources_dir.
 
@@ -58,42 +60,33 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
 
 
     psfnorm = []
-    for logeval in tqdm(log10eaxistrue, desc='Setting up psf normalisation', ncols=80):
+    for energy_val in tqdm(energy_true_axis, desc='Setting up psf normalisation', ncols=80):
         psflogerow = []
         for lonval in longitudeaxistrue:
-            log10eaxistrue_mesh, longitudeaxistrue_mesh, latitudeaxistrue_mesh, longitudeaxis_mesh, latitudeaxis_mesh  = np.meshgrid(logeval,
+            energy_true_axis_mesh, longitude_axis_true_mesh, latitude_axis_true_mesh, longitude_axis_mesh, latitude_axis_mesh  = np.meshgrid(energy_val,
                                                                                                                                     lonval, 
                                                                                                                                     latitudeaxistrue, 
                                                                                                                                     longitudeaxis, 
                                                                                                                                     latitudeaxis, indexing='ij')
 
-            # truecoords = np.array([longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()])
+            psfvals = log_psf(longitude_axis_mesh.flatten(), latitude_axis_mesh.flatten(), 
+                                energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape)
 
-            # recon_coords = np.array([longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten()])
-
-            # rad = angularseparation(recon_coords, truecoords)
-            # offset = convertlonlat_to_offset(truecoords)
-            psfvals = log_psf(longitudeaxis_mesh.flatten(), latitudeaxis_mesh.flatten(), 
-                                log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape)
-
-            # psfvals = psf(rad, log10eaxistrue_mesh.flatten(), offset).reshape(log10eaxistrue_mesh.shape)
-            psfnormvals = special.logsumexp(psfvals, axis=(-2,-1))
+            psfnormvals = iterate_logspace_simps(psfvals+psflogjacob, axes=[longitudeaxis, latitudeaxis], axisindices=[-2,-1])
             
             psflogerow.append(psfnormvals)
         psfnorm.append(psflogerow)
 
-
-
     edispnorm = []
-    for logeval in tqdm(log10eaxistrue, desc='Setting up edisp normalisation', ncols=80):
-        log10eaxistrue_mesh, longitudeaxistrue_mesh, latitudeaxistrue_mesh, log10eaxis_mesh  = np.meshgrid(logeval,
+    for energy_val in tqdm(energy_true_axis, desc='Setting up edisp normalisation', ncols=80):
+        energy_true_axis_mesh, longitude_axis_true_mesh, latitude_axis_true_mesh, energy_recon_axis_mesh  = np.meshgrid(energy_val,
                                                                                                             longitudeaxistrue, 
                                                                                                             latitudeaxistrue, 
-                                                                                                            log10eaxis,
+                                                                                                            energy_recon_axis,
                                                                                                             indexing='ij')
-        edispvals = np.squeeze(log_edisp(log10eaxis_mesh.flatten(), 
-                                        log10eaxistrue_mesh.flatten(), longitudeaxistrue_mesh.flatten(), latitudeaxistrue_mesh.flatten()).reshape(log10eaxistrue_mesh.shape))
-        edispnormvals = special.logsumexp(edispvals+logjacob, axis=-1)
+        edispvals = np.squeeze(log_edisp(energy_recon_axis_mesh.flatten(), 
+                                        energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape))
+        edispnormvals = iterate_logspace_simps(edispvals+edisplogjacob, axes=[energy_recon_axis], axisindices=[-1])
         
         edispnorm.append(edispnormvals)
 
@@ -103,10 +96,9 @@ def irf_norm_setup(log10eaxistrue=log10eaxistrue, log10eaxis=log10eaxis,
 
     edispnorm[np.isneginf(edispnorm)] = 0
     psfnorm[np.isneginf(psfnorm)] = 0
-
     if save_results:
-        np.save(save_directory+"/psfnormalisation.npy", psfnorm)
-        np.save(save_directory+"/edispnormalisation.npy", edispnorm)
+        np.save(save_directory+"/log_psf_normalisations.npy", psfnorm)
+        np.save(save_directory+"/log_edisp_normalisations.npy", edispnorm)
 
     if outputresults:
         return psfnorm, edispnorm

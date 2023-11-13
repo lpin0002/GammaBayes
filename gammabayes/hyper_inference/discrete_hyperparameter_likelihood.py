@@ -2,10 +2,11 @@ import numpy as np
 from scipy.special import logsumexp
 import functools
 from tqdm.auto import tqdm
-from gammabayes.utils.utils import angularseparation, convertlonlat_to_offset
+from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_simps, logspace_simpson
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
 import json, os, warnings
+import matplotlib.pyplot as plt
 
 class discrete_hyperparameter_likelihood(object):
     def __init__(self, priors, likelihood, axes=None,
@@ -143,11 +144,14 @@ class discrete_hyperparameter_likelihood(object):
         
 
         all_log_marg_results = []
-        for prior_matrices in prior_matrix_list:
+        for idx, prior_matrices in enumerate(prior_matrix_list):
             single_parameter_log_margvals = []
-            for single_prior_matrix in prior_matrices:
-                
-                output = logsumexp(single_prior_matrix+self.dependent_logjacob+likelihoodvalues)
+            for idx2, single_prior_matrix in enumerate(prior_matrices):
+                logintegrandvalues = single_prior_matrix+self.dependent_logjacob+likelihoodvalues
+
+                output = iterate_logspace_simps(np.squeeze(logintegrandvalues), 
+                    axes=self.dependent_axes)
+
                 single_parameter_log_margvals.append(output)
 
             all_log_marg_results.append(np.squeeze(np.asarray(single_parameter_log_margvals)))
@@ -167,8 +171,22 @@ class discrete_hyperparameter_likelihood(object):
         prior_matrix_list = []
         for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
             prior_matrices = []
-            for hyperparametervalue_tuple in zip(*[meshgrid.flatten() for meshgrid in np.meshgrid(*(np.linspace(0,1,11),), indexing='ij')]):
-                priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=(*hyperparametervalue_tuple,), normalise=True))
+            for hyperparametervalue in tqdm(zip(*np.meshgrid(*self.hyperparameter_axes[idx])), leave=False):
+                priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
+
+                # plt.figure()
+                # plt.title(hyperparametervalue)
+                # plt.plot(self.dependent_axes[0], iterate_logspace_simpson(priorvals, 
+                #                                                         axes=[self.dependent_axes[1],
+                #                                                             self.dependent_axes[2]], 
+                #                                                         axisindices=[1,1]))
+                # try:
+                #     plt.axvline(hyperparametervalue[0], c='tab:orange', ls='--', lw=1.0)
+                # except:
+                #     pass
+                # plt.xscale('log')
+                # plt.show()
+
                 prior_matrices.append(priorvals)
             prior_matrix_list.append(prior_matrices)
             
@@ -176,10 +194,7 @@ class discrete_hyperparameter_likelihood(object):
         marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=prior_matrix_list)
 
         with Pool(self.numcores) as pool:
-                    margresults = pool.map(marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
-
-        
-        
+            margresults = pool.map(marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
         
         return margresults
     
@@ -214,8 +229,8 @@ class discrete_hyperparameter_likelihood(object):
         if not(self.priors is None):
             if len(mixture_axes)!=len(self.priors)-1:
                 raise Exception(f""""Number of mixture axes does not match number of components (minus 1). Please check your inputs.
-    Number of mixture axes is {len(mixture_axes)}
-    and number of prior components is {len(self.priors)}.""")
+Number of mixture axes is {len(mixture_axes)}
+and number of prior components is {len(self.priors)}.""")
         if log_margresults is None:
             log_margresults = self.log_margresults
 
@@ -230,8 +245,15 @@ class discrete_hyperparameter_likelihood(object):
         mixture_array_list = []
         for idx in range(log_margresults.shape[1]):
             log_margresults_for_idx = np.vstack(reshaped_log_margresults[:,idx])
-            mixcomp = np.expand_dims(np.log(self.apply_direchlet_stick_breaking_direct(xi_axes=mix_axes, depth=idx)), axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes)), np.arange(len(mix_axes))+1),))\
-                +np.expand_dims(log_margresults_for_idx, axis=(*(np.arange(len(mix_axes))+1),))
+            mixcomp = np.expand_dims(np.log(
+                self.apply_direchlet_stick_breaking_direct(xi_axes=mix_axes, depth=idx)), 
+                axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes)), 
+                                    np.arange(len(mix_axes))+1),)) 
+
+            mixcomp=mixcomp+np.expand_dims(log_margresults_for_idx, 
+                                        axis=(*(np.arange(len(mix_axes))+1),)
+                                    )
+            # print(idx, np.sum(np.where(np.isnan(mixcomp))))
             mixture_array_list.append(mixcomp)
 
 
@@ -262,8 +284,7 @@ class discrete_hyperparameter_likelihood(object):
                 if not(i in prioraxes[prior_idx]):
                     axis.append(i)
             axis = tuple(axis)
-            mixture_array =np.expand_dims(mixture_array, axis=axis)
-
+            mixture_array   =   np.expand_dims(mixture_array, axis=axis)
             mixture_array_list[prior_idx] = mixture_array
 
 
@@ -278,11 +299,7 @@ class discrete_hyperparameter_likelihood(object):
         # self.unnormed_log_posterior = unnormed_log_posterior
 
         return unnormed_log_posterior
-
-
-    def create_discrete_mixture_log_hyper_likelihood(self, mixture_=None, log_margresults=None):
-
-
+        
 
     def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihoods):
         """To combine log hyperparameter likelihoods from multiple runs by 

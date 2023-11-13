@@ -1,5 +1,6 @@
-from gammabayes.utils.utils import power_law, resources_dir, convertlonlat_to_offset, power_law
-from gammabayes.utils.event_axes import makelogjacob, longitudeaxistrue, latitudeaxistrue, log10eaxistrue
+from gammabayes.utils import power_law, resources_dir, convertlonlat_to_offset, power_law
+from gammabayes.utils import iterate_logspace_simps, logspace_simpson
+from gammabayes.utils.event_axes import longitudeaxistrue, latitudeaxistrue, energy_true_axis
 from gammabayes.likelihoods.irfs.gammapy_wrappers import log_aeff
 import numpy as np
 from gammapy.modeling.models import (
@@ -19,9 +20,7 @@ from astropy import units as u
 
 def construct_fermi_gaggero_matrix(log_aeff=log_aeff):
 
-    trueenergyaxis = 10**log10eaxistrue*u.TeV
-
-    energy_axis_true = MapAxis.from_nodes(trueenergyaxis, interp='log', name="energy_true")
+    energy_axis_true = MapAxis.from_nodes(energy_true_axis*u.TeV, interp='log', name="energy_true")
 
     HESSgeom = WcsGeom.create(
         skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
@@ -46,13 +45,13 @@ def construct_fermi_gaggero_matrix(log_aeff=log_aeff):
     fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.m**2))
 
     # Normalising so I can apply the normalisation of that in Gaggero et al.
-    fermi_integral_values= logsumexp(np.log(fermievaluated.value.T)+makelogjacob(log10eaxistrue), axis=2).T
-    fermi_integral_values = fermi_integral_values - logsumexp(fermi_integral_values+np.log(np.diff(longitudeaxistrue)[0]*np.diff(latitudeaxistrue)[0]))
+    fermi_integral_values= logspace_simpson(logy=np.log(fermievaluated.value), x=energy_true_axis, axis=0)
+    fermi_integral_values = fermi_integral_values - logspace_simpson(logy=logspace_simpson(logy=fermi_integral_values, x=longitudeaxistrue, axis=0), x=latitudeaxistrue)
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
-    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(10**log10eaxistrue, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
+    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_true_axis, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
 
-    energymesh, lonmesh, latmesh = np.meshgrid(10**log10eaxistrue, longitudeaxistrue, latitudeaxistrue, indexing='ij')
+    energymesh, lonmesh, latmesh = np.meshgrid(energy_true_axis, longitudeaxistrue, latitudeaxistrue, indexing='ij')
     
     log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
 
@@ -63,20 +62,26 @@ def construct_fermi_gaggero_matrix(log_aeff=log_aeff):
 
     return diffuse_background_observed_event_rate
 
-def log_fermi_gaggero_bkg(log_aeff=log_aeff, normalise=True, log10eaxis=log10eaxistrue):
+def construct_log_fermi_gaggero_bkg(energy_true_axis=energy_true_axis, 
+                            longitudeaxistrue=longitudeaxistrue, 
+                            latitudeaxistrue=latitudeaxistrue, 
+                            log_aeff=log_aeff, normalise=True):
+    axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue]
     log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(log_aeff=log_aeff))
 
     if normalise:
-        log_fermi_diffuse = log_fermi_diffuse - logsumexp(log_fermi_diffuse+makelogjacob(log10eaxis)[:, None, None])
+        log_fermi_diffuse = log_fermi_diffuse - iterate_logspace_simps(log_fermi_diffuse, axes=axes)
 
-    log_fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
-        (log10eaxistrue, longitudeaxistrue, latitudeaxistrue), 
-        np.exp(log_fermi_diffuse)
+    # Have to interpolate actual probabilities as otherwise these maps include -inf
+    fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
+        (*axes,), 
+        np.exp(log_fermi_diffuse) 
         )
 
-    log_fermi_diffuse_func = lambda logenergy, longitude, latitude: np.log(
-        log_fermi_diffuse_interpolator(
-            (logenergy, longitude, latitude)
+    # Then we make a wrapper to put the result of the function in log space
+    log_fermi_diffuse_func = lambda energy, longitude, latitude: np.log(
+        fermi_diffuse_interpolator(
+            (energy, longitude, latitude)
             ))
 
     return log_fermi_diffuse_func

@@ -1,1 +1,1 @@
-from .hyperparameter_likelihood import hyperparameter_likelihood
+from .discrete_hyperparameter_likelihood import discrete_hyperparameter_likelihood

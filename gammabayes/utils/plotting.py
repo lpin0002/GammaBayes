@@ -6,8 +6,8 @@ import time
 from matplotlib import cm
 import sys, os
 from scipy.special import logsumexp
-from .utils import hdp_credible_interval_1d, bin_centres_to_edges
-from .event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue, log10eaxis, longitudeaxis, latitudeaxis
+from gammabayes.utils import hdp_credible_interval_1d, bin_centres_to_edges, iterate_logspace_simps, logspace_simpson
+from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis
 from matplotlib.colors import LogNorm
 
 
@@ -39,8 +39,12 @@ def logdensity_matrix_plot(axes, logprobmatrix, truevals=None, sigmalines_1d=Tru
     for rowidx in range(numaxes):
         for colidx in range(numaxes):
             if rowidx==colidx:
-                marginal_prob = np.exp(logsumexp(logprobmatrix, axis=(*np.delete(np.arange(numaxes), [rowidx]),)))
-                marginal_prob = marginal_prob/simps(y=marginal_prob, x=axes[rowidx])
+                integration_axes_indices = np.delete(np.arange(numaxes), [rowidx])
+                integration_axes = [axes[integration_axis_idx] for integration_axis_idx in integration_axes_indices]
+                log_marginal_prob = iterate_logspace_simps(logprobmatrix, 
+                                        axes=integration_axes, 
+                                        axisindices=integration_axes_indices)
+                marginal_prob = np.exp(log_marginal_prob-logspace_simpson(logy=log_marginal_prob, x=axes[rowidx]))
                 ax[rowidx,rowidx].plot(axes[rowidx], marginal_prob)
                 if truevals!=None:
                     ax[rowidx, rowidx].axvline(truevals[rowidx], ls='--', lw=1, c='tab:orange')
@@ -56,16 +60,19 @@ def logdensity_matrix_plot(axes, logprobmatrix, truevals=None, sigmalines_1d=Tru
                         else:
                             color = 'tab:green'
                         for val in hdp_credible_interval_1d(y=marginal_prob, x=axes[rowidx], sigma=sigma):
-                            ax[rowidx, rowidx].axvline(val, ls='--',c=color, alpha=0.8)
+                            ax[rowidx, rowidx].axvline(val, ls=':',c=color, alpha=0.8)
 
 
-                if axis_names is not None:
+                if not(axis_names is None) and rowidx==numaxes-1:
                     ax[rowidx, rowidx].set_xlabel(axis_names[rowidx])
             elif colidx<rowidx:
-                integrationaxes = np.delete(np.arange(numaxes), [rowidx,colidx])
-                marginal_prob = np.exp(logsumexp(logprobmatrix, axis=(*integrationaxes,))).T
+                integration_axes_indices = np.delete(np.arange(numaxes), [rowidx,colidx])
+                integration_axes = [axes[integration_axis_idx] for integration_axis_idx in integration_axes_indices]
+                log_marginal_prob = iterate_logspace_simps(logprobmatrix, 
+                                                axes=integration_axes, 
+                                                axisindices=integration_axes_indices).T
 
-                ax[rowidx, colidx].pcolormesh(axes[colidx], axes[rowidx], marginal_prob)
+                ax[rowidx, colidx].pcolormesh(axes[colidx], axes[rowidx], np.exp(log_marginal_prob))
                 if truevals!=None:
                     ax[rowidx,colidx].axvline(truevals[colidx], ls='--', lw=1, c='tab:orange')
                     ax[rowidx,colidx].axhline(truevals[rowidx], ls='--', lw=1, c='tab:orange')
@@ -73,30 +80,33 @@ def logdensity_matrix_plot(axes, logprobmatrix, truevals=None, sigmalines_1d=Tru
                 ax[rowidx,colidx].set_xlim([axes[colidx].min(), axes[colidx].max()])
                 ax[rowidx,colidx].set_ylim([axes[rowidx].min(), axes[rowidx].max()])
 
-                normed_marginal_prob = (marginal_prob/marginal_prob.sum())
+                normed_marginal_prob = np.exp(log_marginal_prob - logsumexp(log_marginal_prob))
                 t = np.linspace(0, normed_marginal_prob.max(), n)
                 integral = ((normed_marginal_prob >= t[:, None, None]) * normed_marginal_prob).sum(axis=(1,2))
 
                 f = interp1d(integral, t)
                 t_contours = f(levels)
-                ax[rowidx,colidx].contour(normed_marginal_prob, t_contours, 
-                                extent=[axes[colidx].min(), axes[colidx].max(), axes[rowidx].min(), axes[rowidx].max(),], colors='white', linewidths=0.5)
-                if axis_names is not None:
+                ax[rowidx,colidx].contour(axes[colidx], axes[rowidx], normed_marginal_prob, levels=t_contours, colors='white', linewidths=0.5)
+                if not(axis_names is None) and rowidx==numaxes-1:
                     ax[rowidx, colidx].set_xlabel(axis_names[colidx])
+                if not(axis_names is None) and colidx==0:
                     ax[rowidx, colidx].set_ylabel(axis_names[rowidx])
             else:
                 ax[rowidx,colidx].set_axis_off()
-                
+
     plt.tight_layout()
+
+    return fig,ax
+                
 
 
 def plot_loge_lon_lat_prior_samples(samples, 
     twodhist_xlabel='Galactic Longitude [deg]', twodhist_ylabel='Galactic Latitude [deg]', 
     onedhist_xlabel = r'Log$_{10}$ Energy [TeV]',
-    onedhist_bins = bin_centres_to_edges(log10eaxistrue),
+    onedhist_bins = bin_centres_to_edges(energy_true_axis),
     twodhist_bins = (bin_centres_to_edges(longitudeaxistrue), bin_centres_to_edges(latitudeaxistrue)),
     dist_names = None, 
-    log10eaxistrue=log10eaxistrue, longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue, 
+    energy_true_axis=energy_true_axis, longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue, 
     **kwargs,):
 
     num_priors = len(samples)
@@ -120,10 +130,10 @@ def plot_loge_lon_lat_prior_samples(samples,
 def plot_loge_lon_lat_recon_samples(samples, 
     twodhist_xlabel='Galactic Longitude [deg]', twodhist_ylabel='Galactic Latitude [deg]', 
     onedhist_xlabel = r'Log$_{10}$ Energy [TeV]',
-    onedhist_bins = bin_centres_to_edges(log10eaxis),
+    onedhist_bins = bin_centres_to_edges(energy_recon_axis),
     twodhist_bins = (bin_centres_to_edges(longitudeaxis), bin_centres_to_edges(latitudeaxis)),
     dist_names = None, 
-    log10eaxis=log10eaxis, longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, 
+    log10eaxis=energy_recon_axis, longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, 
     **kwargs,):
 
     num_priors = len(samples)

@@ -9,17 +9,21 @@ import yaml, warnings, sys, os
 from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
 
-def convertlonlat_to_offset(fov_coord):
+def convertlonlat_to_offset(fov_coord, pointing_direction=None):
     """Takes a coordinate and translates that into an offset assuming small angles
 
     Args:
         fov_coord (np.ndarray): A coordinate in FOV frame
+        point_direction (np.ndarray): Pointing direction of telescope
 
     Returns:
         np.ndarray or float: The corresponding offset values for the given fov coordinates
             assuming small angles
     """
-    return np.linalg.norm(fov_coord, axis=0)
+    if pointing_direction==None:
+        return np.linalg.norm(fov_coord, axis=0)
+    else:
+        return np.linalg.norm(fov_coord-pointing_direction, axis=0)
 
 
 def angularseparation(coord1, coord2=None):
@@ -73,14 +77,15 @@ def hdp_credible_interval_1d(y, sigma, x):
 
 
 def power_law(energy, index, phi0=1):
-    """_summary_
-
-    Args:
-        energy (_type_): _description_
-        index (_type_): _description_
-        phi0 (int, optional): _description_. Defaults to 1.
-
-    Returns:
-        _type_: _description_
-    """
     return phi0*energy**(index)
+
+
+
+
+
+
+
+
+
+
+

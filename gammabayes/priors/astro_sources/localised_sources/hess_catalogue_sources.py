@@ -1,6 +1,6 @@
 
-from gammabayes.utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
-from gammabayes.utils.utils import power_law, resources_dir, convertlonlat_to_offset
+from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
+from gammabayes.utils import resources_dir, convertlonlat_to_offset, iterate_logspace_simps, logspace_simpson
 from gammabayes.utils.event_axes import makelogjacob
 from gammabayes.likelihoods.irfs.gammapy_wrappers import log_aeff
 import numpy as np
@@ -17,17 +17,17 @@ from gammapy.modeling.models import (
 from gammapy.catalog import SourceCatalogHGPS
 
 
-def construct_hess_source_map(log10eaxis=log10eaxistrue, 
+def construct_hess_source_map(energy_axis=energy_true_axis, 
     longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
     log_aeff=log_aeff):
-    
+
     hess_catalog = SourceCatalogHGPS(resources_dir+"/hgps_catalog_v1.fits.gz")
 
     hess_models = hess_catalog.to_models()
     
-    trueenergyaxis = 10**log10eaxis*u.TeV
+    trueenergyaxis = energy_axis*u.TeV
 
-    energy_axis_true = MapAxis.from_nodes(trueenergyaxis, interp='log', name="energy_true")
+    energy_axis_true_nodes = MapAxis.from_nodes(trueenergyaxis, interp='log', name="energy_true")
 
     HESSgeom = WcsGeom.create(
         skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
@@ -35,12 +35,12 @@ def construct_hess_source_map(log10eaxis=log10eaxistrue,
         width=(np.ptp(longitudeaxis)+np.diff(longitudeaxis)[0], np.ptp(latitudeaxis)+np.diff(latitudeaxis)[0]),
         frame="galactic",
         proj="CAR",
-        axes=[energy_axis_true],
+        axes=[energy_axis_true_nodes],
     )
 
     HESSmap = Map.from_geom(HESSgeom)
     
-    hessenergyaxis = energy_axis_true.center.value 
+    hessenergyaxis = energy_axis_true_nodes.center.value 
     
     
     count=0 # To keep track of the number of sources satisfying the conditions
@@ -101,7 +101,7 @@ def construct_hess_source_map(log10eaxis=log10eaxistrue,
     hesslonvals[hesslonvals>180] = hesslonvals[hesslonvals>180]-360
 
 
-    energymesh, lonmesh, latmesh = np.meshgrid(10**log10eaxis, longitudeaxis, latitudeaxis, indexing='ij')
+    energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
     log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
 
@@ -113,24 +113,26 @@ def construct_hess_source_map(log10eaxis=log10eaxistrue,
                 
 
 
-def construct_hess_source_map_interpolation(log10eaxis=log10eaxistrue, 
-    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
+def construct_hess_source_map_interpolation(energy_true_axis=energy_true_axis, 
+    longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue,
     log_aeff=log_aeff, normalise=True):
+    axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue]
 
-    log_astro_sourcemap = np.log(construct_hess_source_map(log10eaxis=log10eaxistrue, 
+
+    log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_true_axis, 
         longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
         log_aeff=log_aeff))
-    print(log_astro_sourcemap.min(), log_astro_sourcemap.max(), np.sum(np.isnan(log_astro_sourcemap)))
 
     if normalise:
-        log_astro_sourcemap = log_astro_sourcemap - logsumexp(log_astro_sourcemap+makelogjacob(log10eaxis)[:, None, None])
+        log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_simps(log_astro_sourcemap, axes=axes)
 
-
+    # Have to interpolate actual probabilities as otherwise these maps include -inf
     hess_grid_interpolator = interpolate.RegularGridInterpolator(
-        (log10eaxistrue, longitudeaxistrue, latitudeaxistrue), 
+        (*axes,), 
         np.exp(log_astro_sourcemap))
 
-    log_astro_func = lambda logenergy, longitude, latitude: np.log(hess_grid_interpolator((logenergy, longitude, latitude)))
+    # Then we make a wrapper to put the result of the function in log space
+    log_astro_func = lambda energy, longitude, latitude: np.log(hess_grid_interpolator((energy, longitude, latitude)))
 
 
     return log_astro_func

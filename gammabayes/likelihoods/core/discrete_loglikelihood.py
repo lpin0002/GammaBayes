@@ -1,6 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
-from gammabayes.samplers import inverse_transform_sampler
+from gammabayes.samplers import integral_inverse_transform_sampler
+from gammabayes.utils import iterate_logspace_simps, logspace_simpson
 from matplotlib import pyplot as plt
 
 
@@ -143,17 +144,17 @@ class discrete_loglikelihood(object):
         
         loglikevals = np.squeeze(self.__call__(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))
 
-        loglikevalswithlogjacob = loglikevals+self.logjacob - logsumexp(loglikevals+self.logjacob, axis=(*np.arange(self.axes_dim),))
+        loglikevals = loglikevals - interate_logspace_simps(loglikevals, axes=self.axes)
 
-        
-        sampled_indices = np.squeeze(inverse_transform_sampler(loglikevalswithlogjacob.flatten(), numsamples))
+        simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
+
+        # sampled_indices = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
             
-        reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
+        # reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
         
-        simvals = []  
-        for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
-            simvals.append(axis[axis_sim_index])
-       
+        # simvals = []  
+        # for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
+        #     simvals.append(axis[axis_sim_index])
             
         return np.array(simvals).T
         

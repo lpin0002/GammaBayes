@@ -16,18 +16,18 @@ irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.18
 
 edispfull = irfs['edisp']
 psffull = irfs['psf']
-edispfull.normalize()
+
 psf3d = psffull.to_psf3d()
 aefffull = irfs['aeff']
 
 aefffunc = lambda energy, offset: aefffull.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-def log_aeff(logetrue, true_lon, true_lat):
+def log_aeff(true_energy, true_lon, true_lat):
     """Wrapper for the Gammapy interpretation of the log of 
         the CTA effective area function.
 
     Args:
-        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_energy (float): True energy of a gamma-ray event detected by the CTA
         true_lon (float): True FOV longitude of a gamma-ray event 
             detected by the CTA
         true_lat (float): True FOV latitude of a gamma-ray event 
@@ -36,15 +36,15 @@ def log_aeff(logetrue, true_lon, true_lat):
     Returns:
         float: The natural log of the effective area of the CTA in m^2
     """
-    return np.log(aefffull.evaluate(energy_true = 10**logetrue*u.TeV, 
+    return np.log(aefffull.evaluate(energy_true = true_energy*u.TeV, 
                              offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).to(u.cm**2).value)
     
-def log_edisp(reconloge, logetrue, true_lon, true_lat):
+def log_edisp(recon_energy, true_energy, true_lon, true_lat):
     """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
     Args:
-        reconloge (float): Measured energy value by the CTA
-        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        recon_energy (float): Measured energy value by the CTA
+        true_energy (float): True energy of a gamma-ray event detected by the CTA
         true_lon (float): True FOV longitude of a gamma-ray event 
             detected by the CTA
         true_lat (_type_): True FOV latitude of a gamma-ray event 
@@ -54,12 +54,12 @@ def log_edisp(reconloge, logetrue, true_lon, true_lat):
         float: natural log of the CTA energy dispersion likelihood for the given 
             gamma-ray event data
     """
-    return np.log(edispfull.evaluate(energy_true=np.power(10.,logetrue)*u.TeV,
-                                                    migra = np.power(10.,reconloge-logetrue), 
+    return np.log(edispfull.evaluate(energy_true=true_energy*u.TeV,
+                                                    migra = recon_energy/true_energy, 
                                                     offset=convertlonlat_to_offset(np.array([true_lon, true_lat]))*u.deg).value)
 
 
-def log_psf(recon_lon, recon_lat, logetrue, true_lon, true_lat):
+def log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat):
     """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
     Args:
@@ -67,7 +67,7 @@ def log_psf(recon_lon, recon_lat, logetrue, true_lon, true_lat):
             detected by the CTA
         recon_lat (float): Measured FOV latitude of a gamma-ray event
             detected by the CTA
-        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_energy (float): True energy of a gamma-ray event detected by the CTA
         true_lon (float): True FOV longitude of a gamma-ray event 
             detected by the CTA
         true_lat (float): True FOV latitude of a gamma-ray event 
@@ -81,24 +81,24 @@ def log_psf(recon_lon, recon_lat, logetrue, true_lon, true_lat):
     truespatialcoord = np.array([true_lon, true_lat])
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
     offset  = convertlonlat_to_offset(truespatialcoord).flatten()
-    output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
+    output = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
                                                     rad = rad*u.deg, 
                                                     offset=offset*u.deg).value)
     
     return output
 
 
-def single_loglikelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, true_lat):
+def single_loglikelihood(recon_energy, recon_lon, recon_lat, true_energy, true_lon, true_lat):
     """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
         likelihood values for the given gamma-ray event data
 
     Args:
-        reconloge (float): Measured energy value by the CTA
+        recon_energy (float): Measured energy value by the CTA
         recon_lon (float): Measured FOV longitude of a gamma-ray event
             detected by the CTA
         recon_lat (float): Measured FOV latitude of a gamma-ray event
             detected by the CTA
-        logetrue (float): True energy of a gamma-ray event detected by the CTA
+        true_energy (float): True energy of a gamma-ray event detected by the CTA
         true_lon (float): True FOV longitude of a gamma-ray event 
             detected by the CTA
         true_lat (float): True FOV latitude of a gamma-ray event 
@@ -112,12 +112,12 @@ def single_loglikelihood(reconloge, recon_lon, recon_lat, logetrue, true_lon, tr
     truespatialcoord = np.array([true_lon, true_lat])
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
     offset  = convertlonlat_to_offset(truespatialcoord).flatten()
-    output = np.log(psffull.evaluate(energy_true=10**logetrue*u.TeV,
+    output  = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
                                                     rad = rad*u.deg, 
                                                     offset=offset*u.deg).value)
     
-    output+=np.log(edispfull.evaluate(energy_true=10**logetrue*u.TeV,
-                                                    migra = 10**(reconloge-logetrue), 
+    output  += np.log(edispfull.evaluate(energy_true=true_energy*u.TeV,
+                                                    migra = recon_energy/true_energy, 
                                                     offset=offset*u.deg).value)
     
     return output

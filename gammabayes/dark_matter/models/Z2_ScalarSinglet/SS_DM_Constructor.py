@@ -1,9 +1,8 @@
 import numpy as np
 from astropy import units as u
-from gammapy.astro.darkmatter import (
-    profiles,
-    JFactory
-)
+from gammapy.astro.darkmatter import JFactory, profiles
+from gammabayes.dark_matter.density_profiles import str_to_gammapy_profile_dict
+
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
@@ -18,7 +17,7 @@ import time
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class SS_DM_dist(object):
     
-    def __init__(self, longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile(), ratios=True):
+    def __init__(self, longitudeaxis, latitudeaxis, density_profile='einasto', ratios=True):
         self.longitudeaxis = longitudeaxis
         self.latitudeaxis = latitudeaxis
         self.density_profile = density_profile
@@ -44,7 +43,6 @@ class SS_DM_dist(object):
                 or the annihilation __ratios__. Defaults to False.
         """
         
-    
     
         darkSUSY_to_PPPC_converter = {
             "nuenue":"nu_e",
@@ -83,11 +81,14 @@ class SS_DM_dist(object):
             try:
                 gammapychannel = darkSUSY_to_PPPC_converter[darkSUSYchannel]
                 
-                tempspectragrid = np.load(single_channel_spectral_data_path+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
+                tempspectragrid = np.load(
+                    single_channel_spectral_data_path+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
                 
                 # Square root is to preserve positivity during interpolation
-                sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator((np.log10(massvalues/1e3), log10xvals), np.sqrt(np.array(tempspectragrid)), 
-                                                                                        method='cubic', bounds_error=False, fill_value=0)
+                sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator(
+                    (np.log10(massvalues/1e3), log10xvals), 
+                    np.sqrt(np.array(tempspectragrid)), 
+                    method='cubic', bounds_error=False, fill_value=0)
             except:
                 sqrtchannelfuncdictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0 # inputs should be a tuple or list of log_10(mass) in TeV and log_10(x)
 
@@ -97,22 +98,29 @@ class SS_DM_dist(object):
         if self.ratios:
             darkSUSY_BFs_cleaned_vals = darkSUSY_BFs_cleaned_vals/np.sum(darkSUSY_BFs_cleaned_vals, axis=1)[:, np.newaxis]
             
-        self.partial_sigmav_interpolator_dictionary = {channel: interpolate.LinearNDInterpolator((darkSUSY_massvalues, darkSUSY_lambdavalues),darkSUSY_BFs_cleaned_vals[:,idx]) for idx, channel in enumerate(list(darkSUSY_to_PPPC_converter.keys()))}
+        self.partial_sigmav_interpolator_dictionary = {
+            channel: interpolate.LinearNDInterpolator(
+                (darkSUSY_massvalues, darkSUSY_lambdavalues),
+                darkSUSY_BFs_cleaned_vals[:,idx]) for idx, channel in enumerate(list(darkSUSY_to_PPPC_converter.keys())
+                )
+                }
         
+        density_profile = str_to_gammapy_profile_dict[density_profile]
         self.profile = density_profile
 
         # Adopt standard values used in HESS
-        profiles.DMProfile.DISTANCE_GC = 8.5 * u.kpc
-        profiles.DMProfile.LOCAL_DENSITY = 0.39 * u.Unit("GeV / cm3")
+        profiles.DISTANCE_GC = 8.5 * u.kpc
+        profiles.LOCAL_DENSITY = 0.39 * u.Unit("GeV / cm3")
 
         self.profile.scale_to_local_density()
 
         self.central_position = SkyCoord(0.0, 0.0, frame="galactic", unit="deg")
+
+        # Presuming even spacings
         self.geom = WcsGeom.create(skydir=self.central_position, 
-                            binsz=(self.longitudeaxis[1]-self.longitudeaxis[0], 
-                                self.latitudeaxis[1]-self.latitudeaxis[0]),
-                            width=(self.longitudeaxis[-1]-self.longitudeaxis[0]+self.longitudeaxis[1]-self.longitudeaxis[0], 
-                                self.latitudeaxis[-1]-self.latitudeaxis[0]+self.latitudeaxis[1]-self.latitudeaxis[0]),
+                            binsz=(np.diff(self.longitudeaxis)[0], np.diff(self.latitudeaxis)[0]),
+                            width=(self.longitudeaxis[-1]-self.longitudeaxis[0]+np.diff(self.longitudeaxis)[0], 
+                                self.latitudeaxis[-1]-self.latitudeaxis[0]+np.diff(self.latitudeaxis)[0]),
                             frame="galactic")
 
 
@@ -121,36 +129,24 @@ class SS_DM_dist(object):
         )
         self.diffjfact_array = (jfactory.compute_differential_jfactor().value).T
 
-        self.diffJfactor_function = interpolate.RegularGridInterpolator((self.longitudeaxis, self.latitudeaxis), self.diffjfact_array, method='linear', bounds_error=False, fill_value=0)
+        self.diffJfactor_function = interpolate.RegularGridInterpolator(
+            (self.longitudeaxis, self.latitudeaxis), 
+            self.diffjfact_array, 
+            method='linear', bounds_error=False, fill_value=0)
 
 
-    def nontrivial_coupling(self, logmass, logenergy, coupling=0.1, 
-                            partial_sigmav_interpolator_dictionary=None, sqrtchannelfuncdictionary=None):
+    def nontrivial_coupling(self, mass, energy, coupling=0.1):
         """Calculates Z_2 scalar singlet dark matter annihilation gamma-ray 
             spectra for a set of mass and coupling values.
 
         Args:
-            logmass (float): Float value of log_10 of the dark matter mass in 
-                TeV.
+            mass (float): Float value of the dark matter mass in TeV.
 
-            logenergy (np.ndarray or float): Float values for log_10 gamma ray 
-                energy values in TeV.
+            energy (np.ndarray or float): Float values for gamma ray energy 
+                values in TeV.
 
             coupling (float, optional): Value for the Higgs coupling. Defaults 
                 to 0.1.
-
-            partial_sigmav_interpolator_dictionary (dict, optional): A dictionary
-                where the keys are the names of the dark matter annihilation final
-                states as in DarkSUSY and the values being interpolation functions
-                to calculate the partial annihilation cross-sections for the
-                respective final states for a log_10 mass (TeV) and coupling 
-                values. Defaults to None.
-
-            channelfuncdictionary (dict, optional): A dictionary
-                where the keys are the names of the dark matter annihilation final
-                states as in DarkSUSY and the values being interpolation functions
-                to calculate the spectral flux of gamma-rays for the respective final
-                state. Defaults to None.
 
         Returns:
             np.ndarray: The total gamma-ray flux for the Z_2 Scalar Singlet 
@@ -163,7 +159,12 @@ class SS_DM_dist(object):
         logspectra = -np.inf
 
         for channel in sqrtchannelfuncdictionary.keys():
-            logspectra = np.logaddexp(logspectra, np.log(partial_sigmav_interpolator_dictionary[channel](10**logmass, coupling)*(sqrtchannelfuncdictionary[channel]((logmass, logenergy-logmass)))**2))
+            logspectra = np.logaddexp(
+                logspectra, 
+                np.log(
+                    partial_sigmav_interpolator_dictionary[channel](mass, coupling)\
+                        *(sqrtchannelfuncdictionary[channel]((np.log10(mass), 
+                        np.log10(energy)-np.log10(mass))))**2))
         
         return logspectra
 
@@ -180,24 +181,24 @@ class SS_DM_dist(object):
             energy, sky position, log mass and higgs coupling value.
         """
         
-        def DM_signal_dist(log10eval, lonval, latval, logmass, coupling=0.1):
+        def DM_signal_dist(energyval, lonval, latval, mass, coupling=0.1):
 
-            unique_log10eval = np.unique(log10eval.flatten())
-            spectralvals = self.nontrivial_coupling(unique_log10eval*0+logmass.flatten()[0], unique_log10eval)
-            mask = unique_log10eval[:, None] == log10eval.flatten()
+            unique_energyval = np.unique(energyval.flatten())
+            spectralvals = self.nontrivial_coupling(unique_energyval*0+mass.flatten()[0], unique_energyval)
+            mask = unique_energyval[:, None] == energyval.flatten()
 
             slices = np.where(mask, spectralvals[:, None], 0.0)
 
-            spectralvals = np.sum(slices, axis=0).reshape(log10eval.shape)
-            # except:
-            #     spectralvals = np.squeeze(logspecfunc(logmass, log10eval))
+            spectralvals = np.sum(slices, axis=0).reshape(energyval.shape)
 
-            spatialvals = np.log(self.diffJfactor_function((lonval.flatten(), latval.flatten()))).reshape(log10eval.shape)
+            spatialvals = np.log(
+                self.diffJfactor_function((lonval.flatten(), latval.flatten()))
+                ).reshape(energyval.shape)
 
 
             log_aeffvals = np.log( 
-                aefffunc(10**log10eval.flatten(), np.sqrt((lonval.flatten()**2)+(latval.flatten()**2)))
-                ).reshape(log10eval.shape)
+                aefffunc(energyval.flatten(), np.sqrt((lonval.flatten()**2)+(latval.flatten()**2)))
+                ).reshape(energyval.shape)
                     
 
             logpdfvalues = spectralvals+spatialvals+log_aeffvals
