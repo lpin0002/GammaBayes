@@ -144,7 +144,7 @@ class discrete_loglikelihood(object):
         
         loglikevals = np.squeeze(self.__call__(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))
 
-        loglikevals = loglikevals - interate_logspace_simps(loglikevals, axes=self.axes)
+        loglikevals = loglikevals - iterate_logspace_simps(loglikevals, axes=self.axes)
 
         simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
 

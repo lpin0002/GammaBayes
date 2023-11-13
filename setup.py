@@ -26,7 +26,8 @@ setup(name='GammaBayes',
     ],
       classifiers=[
           "License :: OSI Approved :: MIT License",
-          "Operating System :: Unix"],
+          "Operating System :: Unix",
+],
       package_data={
           'gammabayes':['package_data/*.gz', 
                         'package_data/*.txt',

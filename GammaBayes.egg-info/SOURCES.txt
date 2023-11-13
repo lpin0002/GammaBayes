@@ -93,7 +93,7 @@ gammabayes/utils/__init__.py
 gammabayes/utils/config_utils.py
 gammabayes/utils/event_axes.py
 gammabayes/utils/generate_sigmav_posterior.py
+gammabayes/utils/integration.py
 gammabayes/utils/ozstarscriptgen.py
 gammabayes/utils/plotting.py
-gammabayes/utils/plotting_deprecated.py
 gammabayes/utils/utils.py

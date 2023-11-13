@@ -7,7 +7,7 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
-from gammabayes.likelihoods.irfs.gammapy_wrappers import aefffunc
+from gammabayes.likelihoods.irfs import log_aeff
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
@@ -65,6 +65,7 @@ class SS_DM_dist(object):
         }
 
 
+
         darkSUSY_BFs_cleaned = pd.read_csv(ScalarSinglet_Folder_Path+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
 
         darkSUSY_massvalues = darkSUSY_BFs_cleaned.iloc[:,1]/1e3
@@ -119,16 +120,16 @@ class SS_DM_dist(object):
         # Presuming even spacings
         self.geom = WcsGeom.create(skydir=self.central_position, 
                             binsz=(np.diff(self.longitudeaxis)[0], np.diff(self.latitudeaxis)[0]),
-                            width=(self.longitudeaxis[-1]-self.longitudeaxis[0]+np.diff(self.longitudeaxis)[0], 
-                                self.latitudeaxis[-1]-self.latitudeaxis[0]+np.diff(self.latitudeaxis)[0]),
+                            width=(np.ptp(self.longitudeaxis)+np.diff(self.longitudeaxis)[0], 
+                                np.ptp(self.latitudeaxis)+np.diff(self.latitudeaxis)[0]),
                             frame="galactic")
 
 
         jfactory = JFactory(
             geom=self.geom, profile=self.profile, distance=profiles.DMProfile.DISTANCE_GC
         )
-        self.diffjfact_array = (jfactory.compute_differential_jfactor().value).T
-
+        self.diffjfact_array = jfactory.compute_differential_jfactor().to(u.TeV**2/(u.cm**5*u.sr))
+        self.diffjfact_array = (self.diffjfact_array.value).T
         self.diffJfactor_function = interpolate.RegularGridInterpolator(
             (self.longitudeaxis, self.latitudeaxis), 
             self.diffjfact_array, 
@@ -196,9 +197,7 @@ class SS_DM_dist(object):
                 ).reshape(energyval.shape)
 
 
-            log_aeffvals = np.log( 
-                aefffunc(energyval.flatten(), np.sqrt((lonval.flatten()**2)+(latval.flatten()**2)))
-                ).reshape(energyval.shape)
+            log_aeffvals = log_aeff(energyval.flatten(), lonval.flatten(), latval.flatten()**2).reshape(energyval.shape)
                     
 
             logpdfvalues = spectralvals+spatialvals+log_aeffvals

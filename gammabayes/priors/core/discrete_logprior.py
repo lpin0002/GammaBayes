@@ -115,7 +115,7 @@ class discrete_logprior(object):
     
 
     
-    def normalisation(self, log_prior_values=None, hyperparametervalues=None, logjacob=None):
+    def normalisation(self, log_prior_values=None, hyperparametervalues=None):
         """Return the integrated value of the prior for a given hyperparameter 
         over the default axes
 
@@ -127,13 +127,11 @@ class discrete_logprior(object):
             float: the integrated value of the prior for a given hyperparameter 
         over the default axes
         """
-        if logjacob==None:
-            logjacob = self.logjacob
 
         if (log_prior_values is None) and (hyperparametervalues is None):
-            log_prior_values = self.logfunction(self.axes_mesh, **self.default_hyperparameter_values)+self.logjacob
+            log_prior_values = self.logfunction(self.axes_mesh, **self.default_hyperparameter_values)
         elif (log_prior_values is None) and not(hyperparametervalues is None):
-            log_prior_values = self.logfunction(self.axes_mesh, **hyperparametervalues)+self.logjacob
+            log_prior_values = self.logfunction(self.axes_mesh, **hyperparametervalues)
 
         log_prior_norms = log_prior_values
         for axis in self.axes:

@@ -71,8 +71,7 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
 
             psfvals = log_psf(longitude_axis_mesh.flatten(), latitude_axis_mesh.flatten(), 
                                 energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape)
-
-            psfnormvals = iterate_logspace_simps(psfvals+psflogjacob, axes=[longitudeaxis, latitudeaxis], axisindices=[-2,-1])
+            psfnormvals = iterate_logspace_simps(np.squeeze(psfvals+psflogjacob), axes=[longitudeaxis, latitudeaxis], axisindices=[1,2])
             
             psflogerow.append(psfnormvals)
         psfnorm.append(psflogerow)
@@ -86,7 +85,7 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
                                                                                                             indexing='ij')
         edispvals = np.squeeze(log_edisp(energy_recon_axis_mesh.flatten(), 
                                         energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape))
-        edispnormvals = iterate_logspace_simps(edispvals+edisplogjacob, axes=[energy_recon_axis], axisindices=[-1])
+        edispnormvals = iterate_logspace_simps(np.squeeze(edispvals+edisplogjacob), axes=[energy_recon_axis], axisindices=[2])
         
         edispnorm.append(edispnormvals)
 

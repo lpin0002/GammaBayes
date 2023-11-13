@@ -18,14 +18,15 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 
-def construct_fermi_gaggero_matrix(log_aeff=log_aeff):
+def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis, 
+    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff):
 
-    energy_axis_true = MapAxis.from_nodes(energy_true_axis*u.TeV, interp='log', name="energy_true")
+    energy_axis_true = MapAxis.from_nodes(energy_axis*u.TeV, interp='log', name="energy_true")
 
     HESSgeom = WcsGeom.create(
         skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
-        binsz=longitudeaxistrue[1]-longitudeaxistrue[0],
-        width=(longitudeaxistrue[-1]-longitudeaxistrue[0]+longitudeaxistrue[1]-longitudeaxistrue[0], latitudeaxistrue[-1]-latitudeaxistrue[0]+longitudeaxistrue[1]-longitudeaxistrue[0]),
+        binsz=(np.diff(longitudeaxis)[0], np.diff(latitudeaxis)[0]),
+        width=(np.ptp(longitudeaxis)+np.diff(longitudeaxis)[0], np.ptp(latitudeaxis)+np.diff(latitudeaxis)[0]),
         frame="galactic",
         proj="CAR",
         axes=[energy_axis_true],
@@ -45,13 +46,15 @@ def construct_fermi_gaggero_matrix(log_aeff=log_aeff):
     fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.m**2))
 
     # Normalising so I can apply the normalisation of that in Gaggero et al.
-    fermi_integral_values= logspace_simpson(logy=np.log(fermievaluated.value), x=energy_true_axis, axis=0)
-    fermi_integral_values = fermi_integral_values - logspace_simpson(logy=logspace_simpson(logy=fermi_integral_values, x=longitudeaxistrue, axis=0), x=latitudeaxistrue)
+    fermi_integral_values= logspace_simpson(logy=np.log(fermievaluated.value), x=energy_axis, axis=0)
+    fermi_integral_values = fermi_integral_values - logspace_simpson(
+        logy=logspace_simpson(
+            logy=fermi_integral_values, x=longitudeaxis, axis=0), x=latitudeaxis, axis=0)
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
-    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_true_axis, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
+    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
 
-    energymesh, lonmesh, latmesh = np.meshgrid(energy_true_axis, longitudeaxistrue, latitudeaxistrue, indexing='ij')
+    energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
     log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
 
@@ -62,11 +65,11 @@ def construct_fermi_gaggero_matrix(log_aeff=log_aeff):
 
     return diffuse_background_observed_event_rate
 
-def construct_log_fermi_gaggero_bkg(energy_true_axis=energy_true_axis, 
-                            longitudeaxistrue=longitudeaxistrue, 
-                            latitudeaxistrue=latitudeaxistrue, 
+def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis, 
+                            longitudeaxis=longitudeaxistrue, 
+                            latitudeaxis=latitudeaxistrue, 
                             log_aeff=log_aeff, normalise=True):
-    axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue]
+    axes = [energy_axis, longitudeaxis, latitudeaxis]
     log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(log_aeff=log_aeff))
 
     if normalise:

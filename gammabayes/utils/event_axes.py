@@ -45,15 +45,16 @@ logjacobtrue = makelogjacob(energy_true_axis)
 
 
 
-def create_axis(lower_bound, upper_bound, number_of_bins_per_unit=100, resolution=None):
-    if resolution is None:
-        return np.linspace(lower_bound, 
-                           upper_bound, 
-                           int(round(number_of_bins_per_unit*(upper_bound-lower_bound))+1))
-    else:
-        return np.linspace(lower_bound, 
-                         upper_bound, 
-                         int(round((upper_bound-lower_bound)/resolution)+1))
+def create_linear_axis(lower_bound, upper_bound,resolution=10):
+    return np.linspace(lower_bound, 
+                        upper_bound, 
+                        int(round((upper_bound-lower_bound)/resolution)+1))
+    
+
+def create_loguniform_axis(lower_bound, upper_bound, number_of_bins_per_unit=100):
+    return np.logspace(np.log10(lower_bound), 
+                        np.log10(upper_bound), 
+                        int(round(number_of_bins_per_unit*(np.log10(upper_bound)-np.log10(lower_bound)))+1))
     
 def create_axes(energy_min, energy_max, 
                     energy_bins_per_decade, spatial_res, 
@@ -65,8 +66,8 @@ def create_axes(energy_min, energy_max,
                     longitude_min, longitude_max,
                     latitude_min, latitude_max)
     
-    energy_axis = create_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)
-    longitude_axis = create_axis(longitude_min, longitude_max, resolution=spatial_res)
-    latitude_axis = create_axis(latitude_min, latitude_max, resolution=spatial_res)
+    energy_axis = create_loguniform_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)
+    longitude_axis = create_linear_axis(longitude_min, longitude_max, resolution=spatial_res)
+    latitude_axis = create_linear_axis(latitude_min, latitude_max, resolution=spatial_res)
 
     return energy_axis, longitude_axis, latitude_axis

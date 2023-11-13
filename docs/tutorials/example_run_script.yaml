@@ -1,20 +1,20 @@
 
 identifier        : 'example_config_run'
-Nevents           : 1000
-logmass           : 0.0
-xi                : 0.5
-nbins_logmass     : 81
-nbins_xi          : 161
+Nevents           : 100
+mass              : 50.0
+signal_fraction   : 0.5
+nbins_mass        : 81
+nbins_sigfrac     : 161
 dmdensity_profile : "einasto"
 numcores          : 8
 runnumber         : 3
-totalevents       : 1000
+totalevents       : 100
 batch_job         : 0
 
 
-log10_true_energy_min   : -1
-log10_true_energy_max   : 2
-log10_true_energy_bins_per_decade : 100
+true_energy_min   : 0.1
+true_energy_max   : 100
+true_energy_bins_per_decade : 100
 true_spatial_res        : 0.2
 true_longitude_min      : -3.5
 true_longitude_max      : 3.5
@@ -22,9 +22,9 @@ true_latitude_min       : -3.
 true_latitude_max       : 3.
 
 
-log10_recon_energy_min   : -1
-log10_recon_energy_max   : 2
-log10_recon_energy_bins_per_decade : 100
+recon_energy_min   : 0.1
+recon_energy_max   : 100
+recon_energy_bins_per_decade : 50
 recon_spatial_res        : 0.4
 recon_longitude_min      : -3.5
 recon_longitude_max      : 3.5

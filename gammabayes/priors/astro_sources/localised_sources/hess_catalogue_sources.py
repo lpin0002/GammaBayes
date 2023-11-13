@@ -61,7 +61,7 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
             
             
         # If the location of the source satisfies the criteria above then we start to store it's flux values
-        if np.abs(temp_l_value)<5 and np.abs(temp_b_value)<5:
+        if np.abs(temp_l_value)<np.max(longitudeaxis) and np.abs(temp_b_value)<np.max(latitudeaxis):
         
             # We extract the flux by assigning it to the HESSmap object
             HESSmap.quantity = model.evaluate_geom(HESSmap.geom)
