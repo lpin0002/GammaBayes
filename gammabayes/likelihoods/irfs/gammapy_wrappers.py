@@ -119,5 +119,43 @@ def single_loglikelihood(recon_energy, recon_lon, recon_lat, true_energy, true_l
     output  += np.log(edispfull.evaluate(energy_true=true_energy*u.TeV,
                                                     migra = recon_energy/true_energy, 
                                                     offset=offset*u.deg).value)
-    
     return output
+
+
+
+def dynesty_single_loglikelihood(true_energy, true_lon, true_lat, reconvals=[1.0, 0.0,0.0]):
+    """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
+        likelihood values for the given gamma-ray event data
+
+    Args:
+        recon_energy (float): Measured energy value by the CTA
+        recon_lon (float): Measured FOV longitude of a gamma-ray event
+            detected by the CTA
+        recon_lat (float): Measured FOV latitude of a gamma-ray event
+            detected by the CTA
+        true_energy (float): True energy of a gamma-ray event detected by the CTA
+        true_lon (float): True FOV longitude of a gamma-ray event 
+            detected by the CTA
+        true_lat (float): True FOV latitude of a gamma-ray event 
+            detected by the CTA
+
+    Returns:
+        float: natural log of the full CTA likelihood for the given gamma-ray 
+            event data
+    """
+    true_energy, true_lon, true_lat         = truevals
+    recon_energy, recon_lon, recon_lat      = reconvals
+    reconstructed_spatialcoord              = np.array([recon_lon, recon_lat])
+    truespatialcoord                        = np.array([true_lon, true_lat])
+    rad                                     = angularseparation(reconstructed_spatialcoord, 
+                                                                truespatialcoord).flatten()
+
+    offset  = convertlonlat_to_offset(truespatialcoord).flatten()
+    output  = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
+                                                    rad = rad*u.deg, 
+                                                    offset=offset*u.deg).value)
+    
+    output  += np.log(edispfull.evaluate(energy_true=true_energy*u.TeV,
+                                                    migra = recon_energy/true_energy, 
+                                                    offset=offset*u.deg).value)
+    return np.squeeze(output)

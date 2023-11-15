@@ -9,7 +9,9 @@ GammaBayes.egg-info/requires.txt
 GammaBayes.egg-info/top_level.txt
 gammabayes/__init__.py
 gammabayes/dark_matter/__init__.py
+gammabayes/dark_matter/base_DM_angular_profile_constructor.py
 gammabayes/dark_matter/base_DM_constructor.py
+gammabayes/dark_matter/base_DM_spectra_constructor.py
 gammabayes/dark_matter/channel_spectra/__init__.py
 gammabayes/dark_matter/channel_spectra/dark_matter_spectra/AtProduction_gammas.dat
 gammabayes/dark_matter/channel_spectra/griddata/__init__.py
@@ -57,6 +59,7 @@ gammabayes/dark_matter/models/Z2_ScalarSinglet/temp/__init__.py
 gammabayes/dark_matter/models/Z2_ScalarSinglet/temp/bfmlambdaarray.npy
 gammabayes/dark_matter/models/Z2_ScalarSinglet/temp/lambdarange.npy
 gammabayes/dark_matter/models/Z2_ScalarSinglet/temp/massrange.npy
+gammabayes/dark_matter/models/core/__init__.py
 gammabayes/hyper_inference/__init__.py
 gammabayes/hyper_inference/discrete_hyperparameter_likelihood.py
 gammabayes/likelihoods/__init__.py

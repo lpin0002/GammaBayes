@@ -1,7 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
-from gammabayes.utils import logspace_simpson
+from gammabayes.utils import iterate_logspace_simps
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):
@@ -11,7 +11,7 @@ class discrete_logprior(object):
                  axes=None, axes_names='[None]', 
                  hyperparameter_axes=None, hyperparameter_names='[None]',
                  default_hyperparameter_values=None, 
-                 logjacob=0):
+                 logjacob=0, iterative_logspace_integrator=iterate_logspace_simps):
         """Initialise a discrete_logprior class instance.
 
         Args:
@@ -77,7 +77,7 @@ class discrete_logprior(object):
         else:
             self.default_hyperparameter_values = (*default_hyperparameter_values,)
             self.input_values_mesh = np.meshgrid(*self.axes, *self.default_hyperparameter_values, indexing='ij')
-
+        self.logspace_integrator=iterative_logspace_integrator
             
 
             
@@ -110,10 +110,6 @@ class discrete_logprior(object):
             
         return self.logfunction(*args, **kwargs)
 
-
-    
-    
-
     
     def normalisation(self, log_prior_values=None, hyperparametervalues=None):
         """Return the integrated value of the prior for a given hyperparameter 
@@ -133,9 +129,7 @@ class discrete_logprior(object):
         elif (log_prior_values is None) and not(hyperparametervalues is None):
             log_prior_values = self.logfunction(self.axes_mesh, **hyperparametervalues)
 
-        log_prior_norms = log_prior_values
-        for axis in self.axes:
-            log_prior_norms = logspace_simpson(logy=log_prior_norms, x=axis, axis=0)
+        log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=self.axes)
 
         return log_prior_norms
     
@@ -178,23 +172,10 @@ class discrete_logprior(object):
                 # So we will double check the normalisation
             logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
             logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
-            logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
                         
             simvals = integral_inverse_transform_sampler(logpriorvalues, axes=self.axes, 
                                                 Nsamples=numsamples, logjacob=self.logjacob)
             
-            # simulatedindices = inverse_transform_sampler(logpriorvalues_flattened, Nsamples=numsamples)
-            
-            
-            # reshaped_simulated_indices = np.unravel_index(simulatedindices,logpriorvalues.shape)
-            
-            
-            # if self.num_axes==1:
-            #     simvals = self.axes[reshaped_simulated_indices]
-            # else:
-            #     simvals = []  
-            #     for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
-            #         simvals.append(axis[axis_sim_index])
                 
             return np.array(simvals)
         else:
@@ -235,7 +216,6 @@ class discrete_logprior(object):
 
         # This is left as an option to decrease computation time
         if normalise:
-            outputarray = outputarray - self.normalisation(outputarray)
             outputarray = outputarray - self.normalisation(outputarray)
             outputarray = outputarray - self.normalisation(outputarray)
              

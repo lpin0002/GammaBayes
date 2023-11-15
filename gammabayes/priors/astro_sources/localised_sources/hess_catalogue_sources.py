@@ -115,7 +115,7 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
 
 def construct_hess_source_map_interpolation(energy_true_axis=energy_true_axis, 
     longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue,
-    log_aeff=log_aeff, normalise=True):
+    log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_simps):
     axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue]
 
 
@@ -124,7 +124,7 @@ def construct_hess_source_map_interpolation(energy_true_axis=energy_true_axis,
         log_aeff=log_aeff))
 
     if normalise:
-        log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_simps(log_astro_sourcemap, axes=axes)
+        log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_integrator(log_astro_sourcemap, axes=axes)
 
     # Have to interpolate actual probabilities as otherwise these maps include -inf
     hess_grid_interpolator = interpolate.RegularGridInterpolator(
