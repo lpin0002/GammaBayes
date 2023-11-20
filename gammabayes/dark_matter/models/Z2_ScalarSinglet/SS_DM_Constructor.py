@@ -184,14 +184,23 @@ class SS_DM_dist(object):
         """
         
         def DM_signal_dist(energyval, lonval, latval, mass, coupling=0.1):
+            
+
 
             unique_energyval = np.unique(energyval.flatten())
-            spectralvals = self.nontrivial_coupling(unique_energyval*0+mass.flatten()[0], unique_energyval)
-            mask = unique_energyval[:, None] == energyval.flatten()
 
-            slices = np.where(mask, spectralvals[:, None], 0.0)
+            flatten_param_vals = np.array([mass.flatten(), energyval.flatten(),])
+            unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
-            spectralvals = np.sum(slices, axis=0).reshape(energyval.shape)
+
+            spectralvals = self.nontrivial_coupling(*unique_param_vals)
+
+
+            mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
+
+            slices = np.where(mask, spectralvals[None, :], 0.0)
+
+            spectralvals = np.sum(slices, axis=-1).reshape(energyval.shape)
 
             spatialvals = np.log(
                 self.diffJfactor_function((lonval.flatten(), latval.flatten()))
