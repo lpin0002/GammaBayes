@@ -11,14 +11,13 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
-irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
+prod5irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
-
-edispfull = irfs['edisp']
-psffull = irfs['psf']
+edispfull = prod5irfs['edisp']
+psffull = prod5irfs['psf']
 
 psf3d = psffull.to_psf3d()
-aefffull = irfs['aeff']
+aefffull = prod5irfs['aeff']
 
 aefffunc = lambda energy, offset: aefffull.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 

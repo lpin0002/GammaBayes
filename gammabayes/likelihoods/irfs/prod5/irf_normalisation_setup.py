@@ -2,7 +2,7 @@
     # If you're running from a script there shouldn't be any issues as setup is just a func
 from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis, logjacob
 from gammabayes.utils import angularseparation, convertlonlat_to_offset, resources_dir, iterate_logspace_simps, logspace_simpson
-from gammabayes.likelihoods.irfs.gammapy_wrappers import log_edisp, log_psf
+from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
 
 
 from tqdm import tqdm
@@ -96,8 +96,8 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
     edispnorm[np.isneginf(edispnorm)] = 0
     psfnorm[np.isneginf(psfnorm)] = 0
     if save_results:
-        np.save(save_directory+"/log_psf_normalisations.npy", psfnorm)
-        np.save(save_directory+"/log_edisp_normalisations.npy", edispnorm)
+        np.save(save_directory+"/log_prod5_psf_normalisations.npy", psfnorm)
+        np.save(save_directory+"/log_prod5_edisp_normalisations.npy", edispnorm)
 
     if outputresults:
         return psfnorm, edispnorm
