@@ -69,6 +69,7 @@ class DM_dist(object):
                     partial_sigmav_interpolator_dictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0
             except:
                 channelfuncdictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0
+                partial_sigmav_interpolator_dictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0
 
         self.channelfuncdictionary = channelfuncdictionary
         self.partial_sigmav_interpolator_dictionary = partial_sigmav_interpolator_dictionary
@@ -111,8 +112,8 @@ class DM_dist(object):
 
         for channel in channelfuncdictionary.keys():
             logspectra = np.logaddexp(logspectra, 
-                                      np.log(partial_sigmav_interpolator_dictionary[channel](10**logmass, 
-                                                                                             coupling)*channelfuncdictionary[channel]((logmass, logenergy-logmass))))
+                                      np.log(partial_sigmav_interpolator_dictionary[channel]([10**logmass, 
+                                                                                             coupling])*channelfuncdictionary[channel]((logmass, logenergy-logmass))))
         
         return logspectra
 
