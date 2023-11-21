@@ -149,8 +149,9 @@ if sensitivity_plot:
     credible_95_levels = []
 
     amplitudearray  = np.logspace(-9,       0,      19)
-    meanarray       = np.linspace(-1e-25, 1e-25, 3)
-    sigmaarray      = np.logspace(-29,      -23,    19)
+    # meanarray       = np.array([-1e-24, -5e-25, -1e-25, -5e-26, -1e-26, 0, 1e-26, 5e-26, 1e-25, 5e-25, 1e-24])
+    meanarray       = np.array([-5e-25,  0, 5e-25])
+    sigmaarray      = np.logspace(-29,      -23,    13)
 
     fitstart_flattened_meshes = [meshentry.flatten() for meshentry in np.meshgrid(amplitudearray, meanarray, sigmaarray, indexing='ij')]
 

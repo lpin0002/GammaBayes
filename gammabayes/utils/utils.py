@@ -15,7 +15,9 @@ resources_dir = path.join(path.dirname(__file__), '../package_data')
 
 np.seterr(divide = 'ignore')
 # I believe this is the alpha configuration of the array as there are no LSTs
-irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
+# irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
+irfs = load_cta_irfs(resources_dir+'/prod3b_v2_South_z20_50h_irf_file.fits')
+print("You are using the prod3b-v2 irfs")
 
 
 

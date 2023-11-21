@@ -119,12 +119,6 @@ class SS_DM_dist(object):
         return logspectra
 
     
-
-    
-    
-    
-    
-    
     def func_setup(self):
     
         def DM_signal_dist(log10eval, lonval, latval, logmass, coupling=0.1):
