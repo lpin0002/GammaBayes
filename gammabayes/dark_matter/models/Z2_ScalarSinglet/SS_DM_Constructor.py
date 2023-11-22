@@ -1,7 +1,6 @@
 import numpy as np
 from astropy import units as u
 from gammapy.astro.darkmatter import JFactory, profiles
-from gammabayes.dark_matter.density_profiles import str_to_gammapy_profile_dict
 
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
@@ -9,6 +8,7 @@ from scipy import interpolate
 import pandas as pd
 from gammabayes.likelihoods.irfs import log_aeff
 from os import path
+from gammabayes.dark_matter.density_profiles import check_profile_module, DMProfiles
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
 from gammabayes.dark_matter.channel_spectra import single_channel_spectral_data_path
@@ -17,7 +17,7 @@ import time
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class SS_DM_dist(object):
     
-    def __init__(self, longitudeaxis, latitudeaxis, density_profile='einasto', ratios=True):
+    def __init__(self, longitudeaxis, latitudeaxis, density_profile=DMProfiles.Einasto, ratios=True):
         self.longitudeaxis = longitudeaxis
         self.latitudeaxis = latitudeaxis
         self.density_profile = density_profile
@@ -34,8 +34,8 @@ class SS_DM_dist(object):
             density_profile (_type_, optional): The density profile to be used 
                 for the calculation of the differential J-factor. Must be of
                 the same type as the profile contained in the 
-                gamma.astro.darkmatter.profiles module as we use Gammapy to
-                calculate our differential J-factors.
+                gamma.astro.darkmatter.profiles module, attribute of the dark_matter.density_profiles.DMProfiles class,
+                or string representing profile
 
                 Defaults to profiles.EinastoProfile().
 
@@ -105,8 +105,9 @@ class SS_DM_dist(object):
                 darkSUSY_BFs_cleaned_vals[:,idx]) for idx, channel in enumerate(list(darkSUSY_to_PPPC_converter.keys())
                 )
                 }
+
+        density_profile = check_profile_module(density_profile)
         
-        density_profile = str_to_gammapy_profile_dict[density_profile]
         self.profile = density_profile
 
         # Adopt standard values used in HESS
@@ -183,21 +184,30 @@ class SS_DM_dist(object):
         """
         
         def DM_signal_dist(energyval, lonval, latval, mass, coupling=0.1):
+            
+
 
             unique_energyval = np.unique(energyval.flatten())
-            spectralvals = self.nontrivial_coupling(unique_energyval*0+mass.flatten()[0], unique_energyval)
-            mask = unique_energyval[:, None] == energyval.flatten()
 
-            slices = np.where(mask, spectralvals[:, None], 0.0)
+            flatten_param_vals = np.array([mass.flatten(), energyval.flatten(),])
+            unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
-            spectralvals = np.sum(slices, axis=0).reshape(energyval.shape)
+
+            spectralvals = self.nontrivial_coupling(*unique_param_vals)
+
+
+            mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
+
+            slices = np.where(mask, spectralvals[None, :], 0.0)
+
+            spectralvals = np.sum(slices, axis=-1).reshape(energyval.shape)
 
             spatialvals = np.log(
                 self.diffJfactor_function((lonval.flatten(), latval.flatten()))
                 ).reshape(energyval.shape)
 
 
-            log_aeffvals = log_aeff(energyval.flatten(), lonval.flatten(), latval.flatten()**2).reshape(energyval.shape)
+            log_aeffvals = log_aeff(energyval.flatten(), lonval.flatten(), latval.flatten()).reshape(energyval.shape)
                     
 
             logpdfvalues = spectralvals+spatialvals+log_aeffvals

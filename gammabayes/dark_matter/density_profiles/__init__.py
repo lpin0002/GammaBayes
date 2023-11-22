@@ -1,1 +1,1 @@
-from .gammapy_wrappers import str_to_gammapy_profile_dict
+from .gammapy_wrappers import *

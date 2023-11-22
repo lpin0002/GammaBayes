@@ -3,19 +3,26 @@ import matplotlib.pyplot as plt
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from scipy import integrate, special
+from scipy.optimize import curve_fit
+
+
 from utils.utils import aeff_efficient, convertlonlat_to_offset
 from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
+from utils.config_utils import read_config_file
+from inverse_transform_sampling import inverse_transform_sampling
+# from SingleChannel_DM_Prior import DM_dist
+from SS_DM_Prior import SS_DM_dist as DM_dist
+
+
 from gammapy.astro.darkmatter import (
     profiles,
     JFactory
 )
-from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
+from gammapy.maps import WcsGeom
+
 from tqdm import tqdm
-import os, sys
-from GammaBayes.gammabayes.utils.inverse_transform_sampling import inverse_transform_sampling
-from GammaBayes.gammabayes.dark_matter.SS_DM_Constructor import SS_DM_dist
 from os import path
-from utils.config_utils import read_config_file
+import time, sys, csv
 
 
 aux_data_dir = path.join(path.dirname(__file__), 'aux_data')
@@ -71,8 +78,6 @@ def convert_to_sigmav(xi_val, log10massDM, totalnumevents,
         np.exp(spectra_vals+lonlat_integral[np.newaxis, :]),
         10**log10eaxis, axis=1)
     
-    print(sigmav.shape)
-
     return sigmav
 
 
@@ -87,14 +92,20 @@ try:
 except:
     raise Exception('Number of events not input cannot calculate sigma v')
 
+print(totalevents)
 
 try:
     sensitivity_plot = int(sys.argv[3])
 except:
     sensitivity_plot = False
+
+try:
+    plot_each_fit = int(sys.argv[4])
+except:
+    plot_each_fit = False
     
 try:
-    projectednumber = int(sys.argv[4])
+    projectednumber = int(sys.argv[5])
 except:
     projectednumber = int(float(1e8))
 
@@ -105,11 +116,6 @@ logmassrange    = np.load(f'{stemfolder}/logmassrange.npy', allow_pickle=True)
 
 
 log_posterior               = log_posterior-special.logsumexp(log_posterior)
-sampledindices              = inverse_transform_sampling(log_posterior.flatten(), Nsamples=int(1e4))
-reshaped_sampled_indices    = np.unravel_index(sampledindices,log_posterior.shape)
-logmass_values              = logmassrange[reshaped_sampled_indices[1]]
-xi_values                   = xi_range[reshaped_sampled_indices[0]]
-
 
 
 params = read_config_file(f"data/{sys.argv[1]}/singlerundata/inputconfig.yaml")
@@ -120,99 +126,13 @@ truelogmass     = params['logmass']
 
 
 
-SS_DM_Class_instance = SS_DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile=profiles.EinastoProfile(), ratios=True)
-
-
-
-sigmav_samples = convert_to_sigmav(xi_val=xi_values, log10massDM=logmass_values, totalnumevents=totalevents, 
-                                   fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
-                                   )/np.sqrt(projectednumber/totalevents)
-
-truesigmav = convert_to_sigmav(xi_val=true_xi, log10massDM=truelogmass, totalnumevents=totalevents, 
-                                   fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
-                                   )/np.sqrt(projectednumber/totalevents)
-print('\n\n')
-print(sigmav_samples)
-print('\n\n')
-
-# Now you have samples of sigmav. You can use them to estimate its PDF.
-# For example, you can use a histogram to estimate the PDF.
-
-# Create a histogram to estimate the PDF of sigmav
-plt.figure(dpi=300, figsize=(5,4))
-upperbound = np.quantile(sigmav_samples, 0.997)
-
-lowerbound = np.quantile(sigmav_samples, 0.003)
-
-if lowerbound==0:
-    lowerbound = np.min(sigmav_samples[sigmav_samples>0])
-
-print(f"Upper: {upperbound}\nLower: {lowerbound}")
-# hist, bins, patches = plt.hist(sigmav_samples, density=True, bins=np.logspace(np.log10(lowerbound), np.log10(upperbound), 61))
-hist, bins, patches = plt.hist(sigmav_samples, density=True, bins=np.linspace(lowerbound, upperbound, 61))
-plt.axvline(truesigmav, c="tab:orange", ls='--')
-
-# plt.axvline(np.quantile(sigmav_samples, 0.90), c='tab:orange')
-# plt.axvline(np.quantile(sigmav_samples, 0.10), c='tab:orange')
-
-
-plt.xlabel(r'$\langle \sigma v \rangle$', size=14)
-plt.ylim([0,None])
-# plt.xscale('log')
-# plt.xlim(np.quantile(sigmav_samples, 0.04), np.quantile(sigmav_samples, 0.96))
-plt.tight_layout()
-# plt.savefig(f"data/{sys.argv[1]}/sigmav_hist.pdf")
-plt.savefig(f"data/{sys.argv[1]}/sigmav_hist_linear_binning.pdf")
-plt.show()
+SS_DM_Class_instance = DM_dist(longitudeaxistrue, latitudeaxistrue, density_profile=profiles.EinastoProfile(), ratios=True)
 
 
 
 if sensitivity_plot:
-    fig, ax = plt.subplots()
+    # fig, ax = plt.subplots()
     normed_posterior = np.exp(log_posterior-special.logsumexp(log_posterior))
-    
-    ax.pcolormesh(logmassrange, xi_range, normed_posterior)
-
-    n = 10000
-    t = np.linspace(0, normed_posterior.max(), n)
-    integral = ((normed_posterior >= t[:, None, None]) * normed_posterior).sum(axis=(1,2))
-
-    from scipy import interpolate
-    f = interpolate.interp1d(integral, t)
-    t_contours = f(np.array([1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5), 0.05]))
-    contours = ax.contour(normed_posterior, t_contours, extent=[logmassrange[0],logmassrange[-1], xi_range[0],xi_range[-1]], colors='white', linewidths=0.5)
-    plt.show()
-    
-    
-    
-    # Checking contours
-    onesigma_contour_vertices = contours.allsegs[2][0]
-    onesigma_logmassvals = onesigma_contour_vertices[:,0]
-    onesigma_xi_vals = onesigma_contour_vertices[:,1]
-    
-    twosigma_contour_vertices = contours.allsegs[1][0]
-    twosigma_logmassvals = twosigma_contour_vertices[:,0]
-    twosigma_xi_vals = twosigma_contour_vertices[:,1]
-    
-    threesigma_contour_vertices = contours.allsegs[0][0]
-    threesigma_logmassvals = threesigma_contour_vertices[:,0]
-    threesigma_xi_vals = threesigma_contour_vertices[:,1]
-    
-    plt.figure()
-    plt.pcolormesh(logmassrange, xi_range, normed_posterior)
-    plt.plot(onesigma_logmassvals, onesigma_xi_vals, c='white')
-    plt.plot(twosigma_logmassvals, twosigma_xi_vals, c='red')
-    plt.plot(threesigma_logmassvals, threesigma_xi_vals, c='yellow')
-    plt.show()
-    
-
-    sigmavvals = convert_to_sigmav(xi_val=twosigma_xi_vals, log10massDM=twosigma_logmassvals, totalnumevents=totalevents, 
-                                   fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=52.5*60*60,
-                                   )/np.sqrt(projectednumber/totalevents)
-
-            
-    # sorted_indices = np.argsort(twosigma_logmassvals)
-    import csv
     
     aacharya = []
     with open(f"{aux_data_dir}/sensitivitypaper_points.csv", 'r', encoding='UTF8') as file:
@@ -221,25 +141,137 @@ if sensitivity_plot:
             aacharya.append([float(row[0]),float(row[1])])
 
     aacharya = np.array(aacharya)
+    
+
+    def log_gauss(x, A, x0, sigma): 
+        return - (x - x0) ** 2 / (2 * sigma**2) + A - 0.5* np.log(2*np.pi*sigma**2)
+
+    credible_95_levels = []
+
+    amplitudearray  = np.logspace(-9,       0,      19)
+    # meanarray       = np.array([-1e-24, -5e-25, -1e-25, -5e-26, -1e-26, 0, 1e-26, 5e-26, 1e-25, 5e-25, 1e-24])
+    meanarray       = np.array([-5e-25,  0, 5e-25])
+    sigmaarray      = np.logspace(-29,      -23,    13)
+
+    fitstart_flattened_meshes = [meshentry.flatten() for meshentry in np.meshgrid(amplitudearray, meanarray, sigmaarray, indexing='ij')]
+
+    for idx, logmass in tqdm(enumerate(logmassrange[logmassrange>np.log10(0.14)]), total=len(logmassrange[logmassrange>np.log10(0.14)])):
+        
+        # plt.plot(xi_range, normed_posterior[:, idx])
+
+        sigmav_values = convert_to_sigmav(xi_val=xi_range, log10massDM=logmass, totalnumevents=totalevents, 
+                                   fulllogDMspectra=SS_DM_Class_instance.nontrivial_coupling, tobs_seconds=525*60*60,
+                                   )/np.sqrt(projectednumber/totalevents)
+                
+        bounds = ((None, None, 1e-30), 
+            (None, None, None),)
+    
+        ave_sigma_list = []
+        fit_params = []
+        fit_metrics = []
+        indices_above_0 = normed_posterior[:, idx]>0
+
+        # Fitting is very unstable so multiple initial guess are chosen and then the one with the smallest square residual is chosen from the outputs
+        for fitstart in zip(*fitstart_flattened_meshes):
+
+            try:
+                fitvals, _ = curve_fit(log_gauss, 
+                                        xdata=sigmav_values[indices_above_0], 
+                                        ydata=np.log(normed_posterior[:, idx])[indices_above_0], 
+                                        p0=fitstart,
+                                        # bounds=bounds, 
+                                        sigma=(np.log(normed_posterior[:, idx])[indices_above_0])**2,
+                                        method='lm'
+                                        )
+                ave_sigma_list.append(fitvals[2])
+                residuals = np.log(normed_posterior[:, idx][indices_above_0]) - log_gauss(sigmav_values[indices_above_0], *fitvals)
+                fit_metric = np.sum(residuals**2)
+
+                fit_params.append(fitvals)
+                fit_metrics.append(fit_metric)
+            except KeyboardInterrupt:
+                print(1/0)
+            except:
+                print(f"Bad Starting Values: {fitstart}")
+        
+        fit_metrics = np.array(fit_metrics)
+        fit_params = np.array(fit_params)
+        if plot_each_fit:
+            print(fit_metrics.shape, fit_params.shape)
+            plt.figure()
+            plt.title(f"index = {idx}, logmass = {logmass}")
+            plt.plot(sigmav_values[indices_above_0], normed_posterior[:, idx][indices_above_0], label='data', lw=2)
+            plt.plot(sigmav_values[indices_above_0], 
+                    np.exp(log_gauss(sigmav_values[indices_above_0], *fit_params[fit_metrics.argmin()])), 
+                    label='best fit', lw=1)
+
+            plt.show()
+
+
+        if fit_params[fit_metrics.argmin()][2]<0:
+            print(fit_params[fit_metrics.argmin()][2])
+        credible_95_levels.append(1.96*np.abs(fit_params[fit_metrics.argmin()][2]))
+    
+    test_idx = 10
+    save_sigma_list = []
+    fit_params = []
+    fit_metrics = []
+    indices_above_0 = normed_posterior[:, test_idx]>0
 
     
-    plt.figure(figsize=(4,3), dpi=200)
-    # plt.plot(10**twosigma_logmassvals, sigmavvals/np.sqrt(10))
-    # plt.plot(10**twosigma_logmassvals[window_size:-window_size], np.exp(sigma_smoothed)[window_size:-window_size])
-    # plt.plot(10**twosigma_logmassvals[window_size:], np.exp(cubic_func(twosigma_logmassvals[window_size:], cubicfit)), label='this work')
-    plt.plot(10**twosigma_logmassvals, sigmavvals, label='this work')
+    for fitstart in zip(*fitstart_flattened_meshes):
+
+        try:
+            fitvals, _ = curve_fit(log_gauss, 
+                                    xdata=sigmav_values[indices_above_0], 
+                                    ydata=np.log(normed_posterior[:, test_idx])[indices_above_0], 
+                                    p0=fitstart,
+                                    # bounds=bounds, 
+                                    sigma=(np.log(normed_posterior[:, test_idx])[indices_above_0])**2,
+                                    method='lm'
+                                    )
+            ave_sigma_list.append(fitvals[2])
+            residuals = np.log(normed_posterior[:, test_idx][indices_above_0]) - log_gauss(sigmav_values[indices_above_0], *fitvals)
+            fit_metric = np.sum(residuals**2)
+
+            fit_params.append(fitvals)
+            fit_metrics.append(fit_metric)
+        except KeyboardInterrupt:
+                print(1/0)
+        except:
+            print(f"Bad Starting Values: {fitstart}")
+    
+    fit_metrics = np.array(fit_metrics)
+    fit_params = np.array(fit_params)
+
+    plt.figure()
+    plt.plot(sigmav_values[indices_above_0], normed_posterior[:, test_idx][indices_above_0], label='data')
+    plt.plot(sigmav_values[indices_above_0], 
+             np.exp(log_gauss(sigmav_values[indices_above_0], *fit_params[fit_metrics.argmin()])), 
+             label='best fit')
+    plt.legend()
+    plt.show()
+
+
+
+
+    plt.figure()
+    plt.title(r'Z$_2$ Scalar Singlet sensitivity')
+    plt.plot(10**logmassrange[logmassrange>np.log10(0.14)], credible_95_levels, label='this work')
     plt.plot(aacharya[:,0]/1e3, aacharya[:,1], label='CTA consortium 2021')
-    # plt.axhline(2e-26, ls='--', c='grey', alpha=0.5, label=r'DarkSUSY thermal $\langle \sigma v \rangle$')
+    plt.axhline(2e-26, ls='--', c='grey', alpha=0.5, label=r'DarkSUSY thermal $\langle \sigma v \rangle$')
     plt.ylim([1e-27, 1e-23])
     plt.xlim([1e-1,1e2])
     plt.grid(color='grey', alpha=0.2)
     plt.loglog()
     plt.xlabel(r'$m_\chi$ [TeV]')
     plt.ylabel(r'$\langle \sigma v \rangle$ [cm$^3$ s$^{-1}$]')
-    plt.text(1.1e-1, 1.1e-27, 'signal: Einasto \nbackground: CR + IEM', fontsize=6)
-    plt.legend(fontsize=6)
+    plt.legend()
     plt.tight_layout()
-    plt.savefig(f"data/{sys.argv[1]}/sensitivity_plot.pdf")
+
+    plt.savefig(time.strftime(f"data/{sys.argv[1]}/sensitivity_plot_mean_gauss_fits_%m%d_%H%M.pdf"))
+            
+    np.save(time.strftime(f'data/{sys.argv[1]}/sensitivity_plot_mean_gauss_fits_vals_%m%d_%H%M.npy'), [10**logmassrange[logmassrange>np.log10(0.14)], credible_95_levels])
+
     plt.show()
-            
-            
+    

@@ -1,7 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_simps, logspace_simpson
+from gammabayes.utils import iterate_logspace_simps
 from matplotlib import pyplot as plt
 
 
@@ -9,7 +9,7 @@ class discrete_loglikelihood(object):
     
     def __init__(self, name='[None]', inputunit=None, logfunction=None, axes=None, 
                  dependent_axes=None, axes_names='[None]', dependent_axes_names='[None]',
-                 logjacob = 0):
+                 logjacob = 0, iterative_logspace_integrator=iterate_logspace_simps):
         """Initialise a discrete_loglikelihood class instance.
 
         Args:
@@ -63,8 +63,6 @@ class discrete_loglikelihood(object):
             elif len(self.axes)==1:
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
-                # self.axes_mesh = np.meshgrid(axes, *dependent_axes, indexing='ij')
-                # self.dependent_axes_dim = len(self.dependent_axes)
 
             else:
                 self.axes_dim = len(axes)
@@ -72,8 +70,6 @@ class discrete_loglikelihood(object):
                 self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
                 
                 self.dependent_axes_dim = 1
-
-                # self.axes_mesh = np.meshgrid(*axes, dependent_axes, indexing='ij')
         else:
             self.axes_dim = len(axes)
             
@@ -82,8 +78,7 @@ class discrete_loglikelihood(object):
 
             self.dependent_axes_dim = len(self.dependent_axes)
 
-            # self.axes_mesh = np.meshgrid(*axes, *dependent_axes, indexing='ij')
-                    
+        self.iterative_logspace_integrator = iterative_logspace_integrator 
         
     def __call__(self, *inputs):
         """_summary_
@@ -144,17 +139,9 @@ class discrete_loglikelihood(object):
         
         loglikevals = np.squeeze(self.__call__(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))
 
-        loglikevals = loglikevals - iterate_logspace_simps(loglikevals, axes=self.axes)
+        loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
 
         simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
-
-        # sampled_indices = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
-            
-        # reshaped_simulated_indices = np.unravel_index(sampled_indices, self.axes_shape)
-        
-        # simvals = []  
-        # for axis, axis_sim_index in zip(self.axes,reshaped_simulated_indices):
-        #     simvals.append(axis[axis_sim_index])
             
         return np.array(simvals).T
         

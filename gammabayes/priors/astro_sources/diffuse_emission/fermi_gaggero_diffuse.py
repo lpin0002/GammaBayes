@@ -19,7 +19,7 @@ from astropy import units as u
 
 
 def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis, 
-    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff):
+    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff, logspace_integrator=logspace_simpson):
 
     energy_axis_true = MapAxis.from_nodes(energy_axis*u.TeV, interp='log', name="energy_true")
 
@@ -46,9 +46,9 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
     fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.m**2))
 
     # Normalising so I can apply the normalisation of that in Gaggero et al.
-    fermi_integral_values= logspace_simpson(logy=np.log(fermievaluated.value), x=energy_axis, axis=0)
-    fermi_integral_values = fermi_integral_values - logspace_simpson(
-        logy=logspace_simpson(
+    fermi_integral_values= logspace_integrator(logy=np.log(fermievaluated.value), x=energy_axis, axis=0)
+    fermi_integral_values = fermi_integral_values - logspace_integrator(
+        logy=logspace_integrator(
             logy=fermi_integral_values, x=longitudeaxis, axis=0), x=latitudeaxis, axis=0)
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
@@ -68,12 +68,12 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
 def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis, 
                             longitudeaxis=longitudeaxistrue, 
                             latitudeaxis=latitudeaxistrue, 
-                            log_aeff=log_aeff, normalise=True):
+                            log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_simps):
     axes = [energy_axis, longitudeaxis, latitudeaxis]
     log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(log_aeff=log_aeff))
 
     if normalise:
-        log_fermi_diffuse = log_fermi_diffuse - iterate_logspace_simps(log_fermi_diffuse, axes=axes)
+        log_fermi_diffuse = log_fermi_diffuse - iterate_logspace_integrator(log_fermi_diffuse, axes=axes)
 
     # Have to interpolate actual probabilities as otherwise these maps include -inf
     fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(

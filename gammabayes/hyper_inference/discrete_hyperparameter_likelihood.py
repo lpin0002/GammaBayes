@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import logsumexp
 import functools
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_simps, logspace_simpson
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
@@ -13,7 +13,8 @@ class discrete_hyperparameter_likelihood(object):
                  dependent_axes=None, dependent_logjacob=0, 
                  hyperparameter_axes=(), numcores=8, 
                  likelihoodnormalisation= (), log_margresults=None, mixture_axes = None,
-                 log_posterior=0):
+                 log_posterior=0, iterative_logspace_integrator=iterate_logspace_simps,
+                 prior_matrix_list=None):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
@@ -91,22 +92,12 @@ class discrete_hyperparameter_likelihood(object):
         else:
             self.mixture_axes = np.array([*mixture_axes])
 
+
         self.log_posterior = log_posterior
+        self.iterative_logspace_integrator = iterative_logspace_integrator
+
+        self.prior_matrix_list = prior_matrix_list
         
-    # def construct_prior_arrays_over_hyper_axes(self, prior, 
-    #                            dependent_axes, dependent_logjacob,
-    #                            hyperparameter_axes):
-    #     if dependent_axes is None:
-    #         dependent_axes = self.dependent_axes
-    #     if dependent_logjacob is None:
-    #         dependent_logjacob = self.dependent_logjacob
-    #     if hyperparameter_axes is None:
-    #         if not(self.hyperparameter_axes is None):
-    #             return prior.construct_prior_array(self.hyperparameter_axes)
-    #         else:
-    #             return (prior.construct_prior_array(), )
-
-
     
     def observation_nuisance_marg(self, axisvals, prior_matrix_list):
         """Returns a list of the log marginalisation values for a single set of gamma-ray
@@ -142,17 +133,21 @@ class discrete_hyperparameter_likelihood(object):
         
         likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
         
-
         all_log_marg_results = []
         for idx, prior_matrices in enumerate(prior_matrix_list):
-            single_parameter_log_margvals = []
-            for idx2, single_prior_matrix in enumerate(prior_matrices):
-                logintegrandvalues = single_prior_matrix+self.dependent_logjacob+likelihoodvalues
+            # single_parameter_log_margvals = []
+            prior_matrices = np.asarray(prior_matrices)
+            # for idx2, single_prior_matrix in enumerate(prior_matrices):
+            logintegrandvalues = np.squeeze(prior_matrices+self.dependent_logjacob+likelihoodvalues)
 
-                output = iterate_logspace_simps(np.squeeze(logintegrandvalues), 
-                    axes=self.dependent_axes)
+            likelihoodvalues_ndim = np.squeeze(likelihoodvalues).ndim
+            prior_matrices_ndim = np.squeeze(prior_matrices).ndim
+            axisindices = np.arange(prior_matrices_ndim-likelihoodvalues_ndim, prior_matrices_ndim)
 
-                single_parameter_log_margvals.append(output)
+            output = self.iterative_logspace_integrator(logintegrandvalues,   
+                axes=self.dependent_axes, axisindices=axisindices, )
+
+            single_parameter_log_margvals = output
 
             all_log_marg_results.append(np.squeeze(np.asarray(single_parameter_log_margvals)))
             
@@ -167,34 +162,34 @@ class discrete_hyperparameter_likelihood(object):
         np.seterr(divide='ignore', invalid='ignore')
         # log10eaxistrue,  longitudeaxistrue, latitudeaxistrue = axes
         
+        nans = 0
+        if self.prior_matrix_list is None:
+            print("prior_matrix_list does not exist. Constructing priors.")
+            prior_matrix_list = []
+            for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
+                prior_matrices = []
 
-        prior_matrix_list = []
-        for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
-            prior_matrices = []
-            for hyperparametervalue in tqdm(zip(*np.meshgrid(*self.hyperparameter_axes[idx])), leave=False):
-                priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
+                hyper_parameter_coords = np.asarray(np.meshgrid(*self.hyperparameter_axes[idx], indexing='ij'))
 
-                # plt.figure()
-                # plt.title(hyperparametervalue)
-                # plt.plot(self.dependent_axes[0], iterate_logspace_simpson(priorvals, 
-                #                                                         axes=[self.dependent_axes[1],
-                #                                                             self.dependent_axes[2]], 
-                #                                                         axisindices=[1,1]))
-                # try:
-                #     plt.axvline(hyperparametervalue[0], c='tab:orange', ls='--', lw=1.0)
-                # except:
-                #     pass
-                # plt.xscale('log')
-                # plt.show()
+                flattened_hyper_parameter_coords = np.asarray([mesh.flatten() for mesh in hyper_parameter_coords]).T
 
-                prior_matrices.append(priorvals)
-            prior_matrix_list.append(prior_matrices)
-            
+                prior_matrices = np.empty(shape=(flattened_hyper_parameter_coords.shape[0],*np.squeeze(self.likelihoodnormalisation).shape,))
+                for idx, hyperparametervalue in enumerate(flattened_hyper_parameter_coords):
+                    prior_matrix = np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
+                    nans+=np.sum(np.isnan(prior_matrix))
+                    prior_matrices[idx,...] = prior_matrix
 
-        marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=prior_matrix_list)
+                print(f"Total cumulative number of nan values within all prior matrices: { {nans} }")
+
+                prior_matrices = prior_matrices.reshape(tuple(list(hyper_parameter_coords[0].shape)+list(prior_matrices[0].shape)))
+
+                prior_matrix_list.append(prior_matrices)
+                
+            self.prior_matrix_list = prior_matrix_list
+        marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=self.prior_matrix_list)
 
         with Pool(self.numcores) as pool:
-            margresults = pool.map(marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
+            margresults = pool.map(marg_partial, zip(*axisvals))
         
         return margresults
     
@@ -311,7 +306,7 @@ and number of prior components is {len(self.priors)}.""")
         """
         self.log_hyperparameter_likelihoods += log_hyperparameter_likelihoods
 
-    def apply_uniform_hyperparameter_log_priors(priorinfo_tuple):
+    def apply_uniform_hyperparameter_log_priors(self, priorinfo):
         """A function to apply uniform log priors for the given prior information.
 
         Format for each set of prior information within the tuple should be
@@ -331,12 +326,12 @@ and number of prior components is {len(self.priors)}.""")
         """
         priormesh = 0
         priorval_list = []
-        for prior_info in priorinfo_tuple:
+        for prior_info in priorinfo:
             hyper_prioraxis = np.arange(prior_info[0], prior_info[1], prior_info[2])
             hyper_priorvals = hyper_prioraxis*0+1/len(hyper_prioraxis)
-            hyper_priorval_list.append(hyper_priorvals[:priorinfo[3]])
+            priorval_list.append(hyper_priorvals[:priorinfo[3]])
 
-        hyper_priormesh = np.meshgrid(*hyper_priorval_list, indexing='ij')
+        hyper_priormesh = np.meshgrid(*priorval_list, indexing='ij')
 
         self.log_posterior = self.log_hyperparameter_likelihoods+np.log(hyper_priormesh)
 

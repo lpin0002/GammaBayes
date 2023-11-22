@@ -156,6 +156,7 @@ def iterate_logspace_simps(logy, axes, axisindices=None):
         # TODO: Remove this for loop, any for loop, all the for loops
         for loop_idx, (axis, axis_idx) in enumerate(zip(axes, axisindices)):
             # Assuming the indices are in order we subtract the loop idx from the axis index
+            # print(loop_idx, axis_idx-loop_idx, axis.shape, logintegrandvalues.shape)
             logintegrandvalues = logspace_simpson(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
 
 
