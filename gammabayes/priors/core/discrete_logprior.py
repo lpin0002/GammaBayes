@@ -216,8 +216,9 @@ class discrete_logprior(object):
 
         # This is left as an option to decrease computation time
         if normalise:
-            outputarray = outputarray - self.normalisation(outputarray)
-            outputarray = outputarray - self.normalisation(outputarray)
+            if not np.isneginf(self.normalisation(outputarray)):
+                outputarray = outputarray - self.normalisation(outputarray)
+                outputarray = outputarray - self.normalisation(outputarray)
              
         return outputarray
 

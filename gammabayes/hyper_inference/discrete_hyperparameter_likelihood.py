@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import logsumexp
 import functools
-from tqdm.auto import tqdm
+from tqdm import tqdm
 from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_simps, logspace_simpson
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
@@ -13,7 +13,8 @@ class discrete_hyperparameter_likelihood(object):
                  dependent_axes=None, dependent_logjacob=0, 
                  hyperparameter_axes=(), numcores=8, 
                  likelihoodnormalisation= (), log_margresults=None, mixture_axes = None,
-                 log_posterior=0, iterative_logspace_integrator=iterate_logspace_simps):
+                 log_posterior=0, iterative_logspace_integrator=iterate_logspace_simps,
+                 prior_matrix_list=None):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
@@ -91,8 +92,11 @@ class discrete_hyperparameter_likelihood(object):
         else:
             self.mixture_axes = np.array([*mixture_axes])
 
+
         self.log_posterior = log_posterior
         self.iterative_logspace_integrator = iterative_logspace_integrator
+
+        self.prior_matrix_list = prior_matrix_list
         
     
     def observation_nuisance_marg(self, axisvals, prior_matrix_list):
@@ -129,17 +133,21 @@ class discrete_hyperparameter_likelihood(object):
         
         likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
         
-
         all_log_marg_results = []
         for idx, prior_matrices in enumerate(prior_matrix_list):
-            single_parameter_log_margvals = []
-            for idx2, single_prior_matrix in enumerate(prior_matrices):
-                logintegrandvalues = single_prior_matrix+self.dependent_logjacob+likelihoodvalues
+            # single_parameter_log_margvals = []
+            prior_matrices = np.asarray(prior_matrices)
+            # for idx2, single_prior_matrix in enumerate(prior_matrices):
+            logintegrandvalues = np.squeeze(prior_matrices+self.dependent_logjacob+likelihoodvalues)
 
-                output = self.iterative_logspace_integrator(np.squeeze(logintegrandvalues), 
-                    axes=self.dependent_axes)
+            likelihoodvalues_ndim = np.squeeze(likelihoodvalues).ndim
+            prior_matrices_ndim = np.squeeze(prior_matrices).ndim
+            axisindices = np.arange(prior_matrices_ndim-likelihoodvalues_ndim, prior_matrices_ndim)
 
-                single_parameter_log_margvals.append(output)
+            output = self.iterative_logspace_integrator(logintegrandvalues,   
+                axes=self.dependent_axes, axisindices=axisindices, )
+
+            single_parameter_log_margvals = output
 
             all_log_marg_results.append(np.squeeze(np.asarray(single_parameter_log_margvals)))
             
@@ -154,21 +162,34 @@ class discrete_hyperparameter_likelihood(object):
         np.seterr(divide='ignore', invalid='ignore')
         # log10eaxistrue,  longitudeaxistrue, latitudeaxistrue = axes
         
+        nans = 0
+        if self.prior_matrix_list is None:
+            print("prior_matrix_list does not exist. Constructing priors.")
+            prior_matrix_list = []
+            for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
+                prior_matrices = []
 
-        prior_matrix_list = []
-        for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
-            prior_matrices = []
-            for hyperparametervalue in tqdm(zip(*np.meshgrid(*self.hyperparameter_axes[idx])), leave=False):
-                priorvals= np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
+                hyper_parameter_coords = np.asarray(np.meshgrid(*self.hyperparameter_axes[idx], indexing='ij'))
 
-                prior_matrices.append(priorvals)
-            prior_matrix_list.append(prior_matrices)
-            
+                flattened_hyper_parameter_coords = np.asarray([mesh.flatten() for mesh in hyper_parameter_coords]).T
 
-        marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=prior_matrix_list)
+                prior_matrices = np.empty(shape=(flattened_hyper_parameter_coords.shape[0],*np.squeeze(self.likelihoodnormalisation).shape,))
+                for idx, hyperparametervalue in enumerate(flattened_hyper_parameter_coords):
+                    prior_matrix = np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
+                    nans+=np.sum(np.isnan(prior_matrix))
+                    prior_matrices[idx,...] = prior_matrix
+
+                print(f"Total cumulative number of nan values within all prior matrices: { {nans} }")
+
+                prior_matrices = prior_matrices.reshape(tuple(list(hyper_parameter_coords[0].shape)+list(prior_matrices[0].shape)))
+
+                prior_matrix_list.append(prior_matrices)
+                
+            self.prior_matrix_list = prior_matrix_list
+        marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=self.prior_matrix_list)
 
         with Pool(self.numcores) as pool:
-            margresults = pool.map(marg_partial, tqdm(zip(*axisvals), total=len(list(axisvals[0])), desc='Performing parallelized direct event marginalisation'))
+            margresults = pool.map(marg_partial, zip(*axisvals))
         
         return margresults
     
