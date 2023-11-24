@@ -179,11 +179,13 @@ class discrete_hyperparameter_likelihood(object):
                     nans+=np.sum(np.isnan(prior_matrix))
                     prior_matrices[idx,...] = prior_matrix
 
-                print(f"Total cumulative number of nan values within all prior matrices: { {nans} }")
 
                 prior_matrices = prior_matrices.reshape(tuple(list(hyper_parameter_coords[0].shape)+list(prior_matrices[0].shape)))
 
                 prior_matrix_list.append(prior_matrices)
+
+            print(f"Total cumulative number of nan values within all prior matrices: {nans}")
+
                 
             self.prior_matrix_list = prior_matrix_list
         marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=self.prior_matrix_list)

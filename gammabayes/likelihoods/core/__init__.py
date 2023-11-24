@@ -1,1 +1,1 @@
-from .discrete_loglikelihood import discrete_loglikelihood 
+from .discrete_loglikelihood import discrete_loglike 

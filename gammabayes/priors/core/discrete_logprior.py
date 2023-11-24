@@ -111,7 +111,7 @@ class discrete_logprior(object):
         return self.logfunction(*args, **kwargs)
 
     
-    def normalisation(self, log_prior_values=None, hyperparametervalues=None):
+    def normalisation(self, log_prior_values=None, hyperparametervalues=None, axes=None):
         """Return the integrated value of the prior for a given hyperparameter 
         over the default axes
 
@@ -123,13 +123,34 @@ class discrete_logprior(object):
             float: the integrated value of the prior for a given hyperparameter 
         over the default axes
         """
+        if log_prior_values is None:
+            if axes is None:
+                if hyperparametervalues is None:
+                    inputmeshes = np.meshgrid(*self.axes,  *self.default_hyperparameter_values, indexing='ij')
 
-        if (log_prior_values is None) and (hyperparametervalues is None):
-            log_prior_values = self.logfunction(self.axes_mesh, **self.default_hyperparameter_values)
-        elif (log_prior_values is None) and not(hyperparametervalues is None):
-            log_prior_values = self.logfunction(self.axes_mesh, **hyperparametervalues)
+                    log_prior_values = self.logfunction(*inputmeshes)
+                elif not(hyperparametervalues is None):
+                    inputmeshes = np.meshgrid(*self.axes,  *hyperparametervalues, indexing='ij')
 
-        log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=self.axes)
+                    log_prior_values = self.logfunction(*inputmeshes)
+
+                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=self.axes)
+            else:
+                if (hyperparametervalues is None):
+                    inputmeshes = np.meshgrid(*axes,  *self.default_hyperparameter_values, indexing='ij')
+
+                    log_prior_values = self.logfunction(*inputmeshes)
+                else:
+                    inputmeshes = np.meshgrid(*axes,  *hyperparametervalues, indexing='ij')
+
+                    log_prior_values = self.logfunction(*inputmeshes)
+
+                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=axes)
+        else:
+            if axes is None:
+                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=self.axes)
+            else:
+                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=axes)
 
         return log_prior_norms
     
@@ -181,7 +202,7 @@ class discrete_logprior(object):
         else:
             return  np.array([np.array([]) for idx in range(self.num_axes)])
     
-    def construct_prior_array(self, hyperparameters=None, normalise=False):
+    def construct_prior_array(self, hyperparameters=None, normalise=False, axes=None):
         """Construct a matrix of log prior values for input hyperparameters.
 
         For the input hyperparameters, if none given then the defaults are used, 
@@ -205,20 +226,33 @@ class discrete_logprior(object):
         if hyperparameters is None:
             hyperparameters = self.default_hyperparameter_values
 
-        try:
-            inputmesh = np.meshgrid(*self.axes,*hyperparameters, indexing='ij') 
-            outputarray = self.logfunction(*inputmesh)            
+        if axes is None:
+            try:
+                inputmesh = np.meshgrid(*self.axes,*hyperparameters, indexing='ij') 
+                outputarray = self.logfunction(*inputmesh)
 
-        except:
-            inputmesh = np.meshgrid(*self.axes, indexing='ij') 
-            outputarray = self.logfunction(*inputmesh)            
+            except:
+                inputmesh = np.meshgrid(*self.axes, indexing='ij') 
+                outputarray = self.logfunction(*inputmesh)
+            if normalise:
+                if not np.isneginf(self.normalisation(outputarray)):
+                    outputarray = outputarray - self.normalisation(outputarray)
+                    outputarray = outputarray - self.normalisation(outputarray)
+        else:
+            try:
+                inputmesh = np.meshgrid(*axes,*hyperparameters, indexing='ij') 
+                outputarray = self.logfunction(*inputmesh)
 
+            except:
+                inputmesh = np.meshgrid(*axes, indexing='ij') 
+                outputarray = self.logfunction(*inputmesh)
 
-        # This is left as an option to decrease computation time
-        if normalise:
-            if not np.isneginf(self.normalisation(outputarray)):
-                outputarray = outputarray - self.normalisation(outputarray)
-                outputarray = outputarray - self.normalisation(outputarray)
+            # This is left as an option to decrease computation time
+            if normalise:
+                first_norm = self.normalisation(outputarray, axes=axes)
+                if not np.isneginf(first_norm):
+                    outputarray = outputarray - first_norm
+                    outputarray = outputarray - self.normalisation(outputarray, axes=axes)
              
         return outputarray
 

@@ -2,10 +2,9 @@ from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_simps
-from matplotlib import pyplot as plt
 
 
-class discrete_loglikelihood(object):
+class discrete_loglike(object):
     
     def __init__(self, name='[None]', inputunit=None, logfunction=None, axes=None, 
                  dependent_axes=None, axes_names='[None]', dependent_axes_names='[None]',
@@ -80,7 +79,7 @@ class discrete_loglikelihood(object):
 
         self.iterative_logspace_integrator = iterative_logspace_integrator 
         
-    def __call__(self, *inputs):
+    def __call__(self, *args, **kwargs):
         """_summary_
         Args:
             input: Inputs in the same format as would be used for the 
@@ -89,7 +88,7 @@ class discrete_loglikelihood(object):
         Returns:
             float or np.ndarray: The log-likelihood values for the given inputs.
         """
-        return self.logfunction(*inputs)
+        return self.logfunction(*args, **kwargs)
     
     
     

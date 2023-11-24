@@ -20,8 +20,8 @@ longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart                     = -1
 log10eend                       = 2
-true_energy_bins_per_decade     = 50
-recon_energy_bins_per_decade    = 250
+recon_energy_bins_per_decade    = 50
+true_energy_bins_per_decade     = 100
 log10erange                     = log10eend - log10estart
 energy_recon_axis               = np.logspace(log10estart,log10eend,int(np.round(log10erange*recon_energy_bins_per_decade))+1)
 energy_true_axis                = np.logspace(log10estart,log10eend,int(np.round(log10erange*true_energy_bins_per_decade))+1)

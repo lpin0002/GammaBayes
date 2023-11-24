@@ -20,10 +20,10 @@ def convertlonlat_to_offset(fov_coord, pointing_direction=None):
         np.ndarray or float: The corresponding offset values for the given fov coordinates
             assuming small angles
     """
-    if pointing_direction==None:
+    if pointing_direction is None:
         return np.linalg.norm(fov_coord, axis=0)
     else:
-        return np.linalg.norm(fov_coord-pointing_direction, axis=0)
+        return np.linalg.norm(fov_coord.T-pointing_direction.T, axis=1)
 
 
 def angularseparation(coord1, coord2=None):
