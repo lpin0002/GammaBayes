@@ -1,5 +1,5 @@
 from gammabayes.utils import power_law, resources_dir, convertlonlat_to_offset, power_law
-from gammabayes.utils import iterate_logspace_simps, logspace_simpson
+from gammabayes.utils import iterate_logspace_integration, logspace_riemann
 from gammabayes.utils.event_axes import longitudeaxistrue, latitudeaxistrue, energy_true_axis
 from gammabayes.likelihoods.irfs.gammapy_wrappers import log_aeff
 import numpy as np
@@ -19,7 +19,7 @@ from astropy import units as u
 
 
 def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis, 
-    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff, logspace_integrator=logspace_simpson):
+    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff, logspace_integrator=logspace_riemann):
 
     energy_axis_true = MapAxis.from_nodes(energy_axis*u.TeV, interp='log', name="energy_true")
 
@@ -68,12 +68,18 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
 def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis, 
                             longitudeaxis=longitudeaxistrue, 
                             latitudeaxis=latitudeaxistrue, 
-                            log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_simps):
+                            log_aeff=log_aeff, normalise=True, logspace_integrator=logspace_riemann):
     axes = [energy_axis, longitudeaxis, latitudeaxis]
     log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(log_aeff=log_aeff))
 
     if normalise:
-        log_fermi_diffuse = log_fermi_diffuse - iterate_logspace_integrator(log_fermi_diffuse, axes=axes)
+        log_fermi_diffuse = log_fermi_diffuse - logspace_integrator(
+            logy = logspace_integrator(
+                logy =logspace_integrator(
+                    logy=log_fermi_diffuse, 
+                    x=energy_axis, axis=0), 
+                x=longitudeaxis, axis=0), 
+            x=latitudeaxis, axis=0)
 
     # Have to interpolate actual probabilities as otherwise these maps include -inf
     fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(

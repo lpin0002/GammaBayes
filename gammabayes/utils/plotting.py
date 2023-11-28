@@ -6,7 +6,7 @@ import time
 from matplotlib import cm
 import sys, os
 from scipy.special import logsumexp
-from gammabayes.utils import hdp_credible_interval_1d, bin_centres_to_edges, iterate_logspace_simps, logspace_simpson
+from gammabayes.utils import hdp_credible_interval_1d, bin_centres_to_edges, logspace_simpson, logspace_riemann, iterate_logspace_integration
 from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis
 from matplotlib.colors import LogNorm
 
@@ -30,8 +30,8 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                            cmap=cm.get_cmap('Blues_r'), contours2d = False,
                            levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
                            axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm=None,
-                           single_dim_yscales='symlog', single_dim_ylabel='', vmin=None, vmax=None,
-                           **kwargs):
+                           single_dim_yscales='symlog', single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
+                           single_dim_logspace_integrator=logspace_riemann, **kwargs):
     numaxes = len(axes)
     n = 1000
 
@@ -42,11 +42,11 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
             if rowidx==colidx:
                 integration_axes_indices = np.delete(np.arange(numaxes), [rowidx])
                 integration_axes = [axes[integration_axis_idx] for integration_axis_idx in integration_axes_indices]
-                log_marginal_dist = iterate_logspace_simps(log_dist_matrix, 
+                log_marginal_dist = iteratable_logspace_integrator(log_dist_matrix, 
                                         axes=integration_axes, 
-                                        axisindices=integration_axes_indices)
+                                        axisindices=integration_axes_indices,)
                 if plot_density:
-                    marginal_dist = np.exp(log_marginal_dist-logspace_simpson(logy=log_marginal_dist, x=axes[rowidx]))
+                    marginal_dist = np.exp(log_marginal_dist-single_dim_logspace_integrator(logy=log_marginal_dist, x=axes[rowidx]))
                 else:
                     marginal_dist = np.exp(log_marginal_dist)
                 ax[rowidx,rowidx].plot(axes[rowidx], marginal_dist)
@@ -78,7 +78,7 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
             elif colidx<rowidx:
                 integration_axes_indices = np.delete(np.arange(numaxes), [rowidx,colidx])
                 integration_axes = [axes[integration_axis_idx] for integration_axis_idx in integration_axes_indices]
-                log_marginal_dist = iterate_logspace_simps(log_dist_matrix, 
+                log_marginal_dist = iteratable_logspace_integrator(log_dist_matrix, 
                                                 axes=integration_axes, 
                                                 axisindices=integration_axes_indices).T
 

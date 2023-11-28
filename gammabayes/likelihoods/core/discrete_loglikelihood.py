@@ -1,14 +1,14 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_simps
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 
 
 class discrete_loglike(object):
     
     def __init__(self, name='[None]', inputunit=None, logfunction=None, axes=None, 
                  dependent_axes=None, axes_names='[None]', dependent_axes_names='[None]',
-                 logjacob = 0, iterative_logspace_integrator=iterate_logspace_simps):
+                 iterative_logspace_integrator=iterate_logspace_integration):
         """Initialise a discrete_loglikelihood class instance.
 
         Args:
@@ -51,7 +51,6 @@ class discrete_loglike(object):
         print(f'Number of input dimensions {len(self.axes)}')
         self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
-        self.logjacob = logjacob
         if len(self.axes)==1 or len(self.dependent_axes)==1:
             if len(self.axes)==1 and len(self.dependent_axes)==1:
                 self.axes_dim = 1
@@ -133,6 +132,7 @@ class discrete_loglike(object):
         Returns:
             np.ndarray: Array of sampled values.
         """
+
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
 
         
@@ -140,7 +140,9 @@ class discrete_loglike(object):
 
         loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
 
-        simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
+        logdx = construct_log_dx_mesh(self.axes)
+
+        simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples))
             
         return np.array(simvals).T
         

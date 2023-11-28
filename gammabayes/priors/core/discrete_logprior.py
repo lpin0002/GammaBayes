@@ -1,7 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_simps
+from gammabayes.utils import iterate_logspace_integration
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):
@@ -11,7 +11,7 @@ class discrete_logprior(object):
                  axes=None, axes_names='[None]', 
                  hyperparameter_axes=None, hyperparameter_names='[None]',
                  default_hyperparameter_values=None, 
-                 logjacob=0, iterative_logspace_integrator=iterate_logspace_simps):
+                 iterative_logspace_integrator=iterate_logspace_integration):
         """Initialise a discrete_logprior class instance.
 
         Args:
@@ -49,10 +49,6 @@ class discrete_logprior(object):
             default_hyperparameter_values (tuple, optional): Default values 
                 of the hyperparameters for the prior if needed. Defaults to 
                     None.
-
-            logjacob (int, optional): Natural log of the jacobian needed for 
-                normalisation, if axes are of size (axis_1,), (axis_2,), ..., 
-                (axis_n,). Defaults to 0.
         """
         self.name = name
         self.inputunit = inputunit
@@ -62,7 +58,6 @@ class discrete_logprior(object):
         self.hyperparameter_axes = hyperparameter_axes
         self.hyperparameter_names = hyperparameter_names
         self.num_axes = len(axes)
-        self.logjacob = logjacob
         if self.num_axes==1:
             self.axes_mesh = (axes,)
             self.axes = (axes,)
@@ -123,34 +118,19 @@ class discrete_logprior(object):
             float: the integrated value of the prior for a given hyperparameter 
         over the default axes
         """
+        if axes is None:
+            axes = self.axes
+        if hyperparametervalues is None:
+            hyperparametervalues = self.default_hyperparameter_values
+
         if log_prior_values is None:
-            if axes is None:
-                if hyperparametervalues is None:
-                    inputmeshes = np.meshgrid(*self.axes,  *self.default_hyperparameter_values, indexing='ij')
 
-                    log_prior_values = self.logfunction(*inputmeshes)
-                elif not(hyperparametervalues is None):
-                    inputmeshes = np.meshgrid(*self.axes,  *hyperparametervalues, indexing='ij')
+            inputmeshes = np.meshgrid(*self.axes,  *self.default_hyperparameter_values, indexing='ij')
 
-                    log_prior_values = self.logfunction(*inputmeshes)
+            log_prior_values = self.logfunction(*inputmeshes)
 
-                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=self.axes)
-            else:
-                if (hyperparametervalues is None):
-                    inputmeshes = np.meshgrid(*axes,  *self.default_hyperparameter_values, indexing='ij')
+        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=axes)
 
-                    log_prior_values = self.logfunction(*inputmeshes)
-                else:
-                    inputmeshes = np.meshgrid(*axes,  *hyperparametervalues, indexing='ij')
-
-                    log_prior_values = self.logfunction(*inputmeshes)
-
-                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=axes)
-        else:
-            if axes is None:
-                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=self.axes)
-            else:
-                log_prior_norms = self.logspace_integrator(logy=log_prior_values, axes=axes)
 
         return log_prior_norms
     
@@ -193,9 +173,20 @@ class discrete_logprior(object):
                 # So we will double check the normalisation
             logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
             logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
+
+            dxlist = []
+            for axis in self.axes:
+                dx = np.diff(axis)
+                if dx[-2]!=dx[-1]:
+                    dx = axis*10**(np.log10(axis[1])-np.log10(axis[0]))
+                else:
+                    dx = np.append(dx, dx[-1])
+                dxlist.append(dx)
+
+            logdx = np.sum(np.log(np.meshgrid(*dxlist, indexing='ij')), axis=0)
                         
-            simvals = integral_inverse_transform_sampler(logpriorvalues, axes=self.axes, 
-                                                Nsamples=numsamples, logjacob=self.logjacob)
+            simvals = integral_inverse_transform_sampler(logpriorvalues+logdx, axes=self.axes, 
+                                                Nsamples=numsamples)
             
                 
             return np.array(simvals)

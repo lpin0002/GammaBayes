@@ -1,7 +1,6 @@
 
 from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
-from gammabayes.utils import resources_dir, convertlonlat_to_offset, iterate_logspace_simps, logspace_simpson
-from gammabayes.utils.event_axes import makelogjacob
+from gammabayes.utils import resources_dir, convertlonlat_to_offset, iterate_logspace_integration
 from gammabayes.likelihoods.irfs.gammapy_wrappers import log_aeff
 import numpy as np
 from scipy import interpolate
@@ -115,7 +114,7 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
 
 def construct_hess_source_map_interpolation(energy_true_axis=energy_true_axis, 
     longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue,
-    log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_simps):
+    log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_integration):
     axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue]
 
 

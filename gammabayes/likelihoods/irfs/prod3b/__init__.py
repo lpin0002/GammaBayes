@@ -1,5 +1,4 @@
 from .gammapy_wrappers import *
-from .irf_normalisation_setup import *
 import warnings
 try:
     from .load_irf_norms import log_psf_normalisations, log_edisp_normalisations

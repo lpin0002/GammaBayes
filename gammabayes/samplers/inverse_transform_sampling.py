@@ -23,28 +23,9 @@ def inverse_transform_sampler(logpmf, Nsamples=1):
     return indices
 
 # Need to figure out a more rigorous solution. Stable for up to ...
-def integral_inverse_transform_sampler(logpmf, axes=None, log10unif_axes = [], Nsamples=1, logjacob=None):
+def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples=1):
 
-    if logjacob is None:
-        if axes is None:
-            raise Exception("No axes or jacobian given.")
-        else:
-            # Following bit of code is to make it so the jacobian matrix is the same 
-            #   size as the logpmf matrix
-            jacobian_axes = [makelogjacob(axis) for axis in axes[log10unif_axes]]
-            uniform_axes_and_logjacob_axes = []
-            counter_idx = 0
-            for idx in range(len(axes)):
-                if idx in log10unif_axes:
-                    uniform_axes_and_logjacob_axes.append(jacobian_axes[counter_idx])
-                    counter_idx+=1
-                else:
-                    uniform_axes_and_logjacob_axes.append(axes[idx])
-            
-            logjacob = np.sum(np.meshgrid(*uniform_axes_and_logjacob_axes, 
-                                                    indexing='ij')[log10unif_axes])
-
-    logpmf_with_jacob = logpmf+logjacob
+    logpmf_with_jacob = logpmf
 
     logpmf_with_jacob_flattened = logpmf_with_jacob.flatten()
 
