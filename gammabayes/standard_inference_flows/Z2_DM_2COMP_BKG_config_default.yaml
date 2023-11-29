@@ -1,0 +1,41 @@
+signalfraction:                   0.3
+ccr_of_bkg_fraction:              0.8
+Nevents:                          1000
+nbins_mass:                       61
+dmdensity_profile:                'einasto'
+mass:                             1.0
+mass_upper_bd_for_inference:      2.
+mass_lower_bd_for_inference:      -1.
+numcores:                         8
+
+nbins_signalfraction:             161
+sigfrac_upper_bd:                 1.
+sigfrac_lower_bd:                 0.
+sigfrac_spacing:                  'linear'
+
+nbins_ccrfraction:             161
+ccrfrac_upper_bd:                 1.
+ccrfrac_lower_bd:                 0.
+cccrfrac_spacing:                  'linear'
+
+
+mixture_fraction_sampling:        'scan' # Either stochastic or scan
+
+
+true_energy_min:                  0.1
+true_energy_max:                  100
+true_energy_bins_per_decade:      100
+true_spatial_res:                 0.2
+true_longitude_min:               -3.5
+true_longitude_max:               3.5
+true_latitude_min:                -3
+true_latitude_max:                3
+
+recon_energy_min:                 0.1
+recon_energy_max:                 100
+recon_energy_bins_per_decade:     50
+recon_spatial_res:                0.4
+recon_longitude_min:              -3.5
+recon_longitude_max:              3.5
+recon_latitude_min:               -3
+recon_latitude_max:               3

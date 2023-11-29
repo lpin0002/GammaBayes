@@ -1,17 +1,23 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_integration
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 import matplotlib.pyplot as plt
 
 class discrete_logprior(object):
     
-    def __init__(self, name='[None]', 
-                 inputunit=None, logfunction=None, 
-                 axes=None, axes_names='[None]', 
-                 hyperparameter_axes=None, hyperparameter_names='[None]',
-                 default_hyperparameter_values=None, 
-                 iterative_logspace_integrator=iterate_logspace_integration):
+    def __init__(self, name: str='[None]', 
+                 inputunit: str=None, 
+                 logfunction: callable=None, 
+                 axes: tuple[np.ndarray] | None = None, 
+                 axes_names: list[str] | tuple[str] = ['None'], 
+                 hyperparameter_axes: tuple[np.ndarray] | None = None, 
+                 hyperparameter_names: list[str] | tuple[str] =['None'],
+
+                 # This argument greatly depends on the prior function used. As are similar argument in the class methods
+                 default_hyperparameter_values: any =None,  
+                 
+                 iterative_logspace_integrator: callable = iterate_logspace_integration):
         """Initialise a discrete_logprior class instance.
 
         Args:
@@ -32,7 +38,7 @@ class discrete_logprior(object):
                         ...). 
 
             axes (tuple): A tuple of the axes that the discrete prior is 
-                defined/normalised along. Presumed to be energy and sky position axes.
+                defined/normalised along. Generally presumed to be energy and sky position axes.
 
             axes_names (list, optional): A list of strings for the names of 
                 the axes. Defaults to '[None]'.
@@ -57,12 +63,11 @@ class discrete_logprior(object):
         
         self.hyperparameter_axes = hyperparameter_axes
         self.hyperparameter_names = hyperparameter_names
+        self.axes = axes
         self.num_axes = len(axes)
         if self.num_axes==1:
             self.axes_mesh = (axes,)
-            self.axes = (axes,)
         else:
-            self.axes = axes
             self.axes_mesh = (*np.meshgrid(*axes, indexing='ij'),)
             
         if default_hyperparameter_values is None:
@@ -79,7 +84,7 @@ class discrete_logprior(object):
     
     
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Dunder method for what is the output when `print` is used on a class 
             instance.
 
@@ -96,7 +101,7 @@ class discrete_logprior(object):
         return string_text
     
     
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs)  -> np.ndarray | float:
         """_summary_
 
         Returns:
@@ -106,7 +111,9 @@ class discrete_logprior(object):
         return self.logfunction(*args, **kwargs)
 
     
-    def normalisation(self, log_prior_values=None, hyperparametervalues=None, axes=None):
+    def normalisation(self, log_prior_values: np.ndarray = None, 
+                      hyperparametervalues: any = None, 
+                      axes: tuple[np.ndarray] | list[np.ndarray] = None) -> np.ndarray | float:
         """Return the integrated value of the prior for a given hyperparameter 
         over the default axes
 
@@ -125,7 +132,7 @@ class discrete_logprior(object):
 
         if log_prior_values is None:
 
-            inputmeshes = np.meshgrid(*self.axes,  *self.default_hyperparameter_values, indexing='ij')
+            inputmeshes = np.meshgrid(*axes,  *hyperparametervalues, indexing='ij')
 
             log_prior_values = self.logfunction(*inputmeshes)
 
@@ -136,7 +143,7 @@ class discrete_logprior(object):
     
     
     
-    def sample(self, numsamples, logpriorvalues=None):
+    def sample(self, numsamples: int, logpriorvalues: np.ndarray = None)  -> np.ndarray:
         """Returns the specified number of samples weighted by the prior 
             distribution.
 
@@ -174,16 +181,7 @@ class discrete_logprior(object):
             logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
             logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
 
-            dxlist = []
-            for axis in self.axes:
-                dx = np.diff(axis)
-                if dx[-2]!=dx[-1]:
-                    dx = axis*10**(np.log10(axis[1])-np.log10(axis[0]))
-                else:
-                    dx = np.append(dx, dx[-1])
-                dxlist.append(dx)
-
-            logdx = np.sum(np.log(np.meshgrid(*dxlist, indexing='ij')), axis=0)
+            logdx = construct_log_dx_mesh(self.axes)
                         
             simvals = integral_inverse_transform_sampler(logpriorvalues+logdx, axes=self.axes, 
                                                 Nsamples=numsamples)
@@ -193,7 +191,10 @@ class discrete_logprior(object):
         else:
             return  np.array([np.array([]) for idx in range(self.num_axes)])
     
-    def construct_prior_array(self, hyperparameters=None, normalise=False, axes=None):
+    def construct_prior_array(self, 
+                              hyperparameters: any = None, 
+                              normalise: bool = False, 
+                              axes: tuple[np.ndarray] | list[np.ndarray] = None)  -> np.ndarray:
         """Construct a matrix of log prior values for input hyperparameters.
 
         For the input hyperparameters, if none given then the defaults are used, 
@@ -225,6 +226,7 @@ class discrete_logprior(object):
             except:
                 inputmesh = np.meshgrid(*self.axes, indexing='ij') 
                 outputarray = self.logfunction(*inputmesh)
+
             if normalise:
                 if not np.isneginf(self.normalisation(outputarray)):
                     outputarray = outputarray - self.normalisation(outputarray)

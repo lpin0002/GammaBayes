@@ -183,6 +183,7 @@ class irf_extractor(object):
             float: natural log of the CTA energy dispersion likelihood for the given 
                 gamma-ray event data
         """
+
         return np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
                                                         migra = recon_energy/true_energy, 
                                                         offset=convertlonlat_to_offset(
@@ -239,16 +240,30 @@ class irf_extractor(object):
             float: natural log of the full CTA likelihood for the given gamma-ray 
                 event data
         """
+        offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
+
+        
+        # Unique edisp input filtering
+        flatten_edisp_param_vals = np.array([recon_energy.flatten(), true_energy.flatten(), offset])
+        unique_param_vals = np.unique(flatten_edisp_param_vals, axis=1)
+
+        unique_edisp_output = np.log(self.edisp_default.evaluate(energy_true=unique_param_vals[1,:]*u.TeV,
+                                                        migra = unique_param_vals[0,:]/unique_param_vals[1,:], 
+                                                        offset=unique_param_vals[2,:]*u.deg).value)
+
+        mask = np.all(unique_param_vals[:, None, :] == flatten_edisp_param_vals[:, :, None], axis=0)
+        slices = np.where(mask, unique_edisp_output[None, :], 0.0)
+
+        output = np.sum(slices, axis=-1).reshape(recon_energy.shape)
+                
+        
+        # Standard input method for psf (for now)
         reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
         truespatialcoord = np.array([true_lon, true_lat])
         rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
-        offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
-        output  = np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
+
+        output+=  np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
                                                         rad = rad*u.deg, 
-                                                        offset=offset*u.deg).value)
-        
-        output  += np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
-                                                        migra = recon_energy/true_energy, 
                                                         offset=offset*u.deg).value)
         return output
 

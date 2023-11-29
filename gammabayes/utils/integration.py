@@ -4,7 +4,7 @@ from scipy import special
 
 
 
-def construct_log_dx(axis):
+def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
     dx = np.diff(axis)
     
     # Isclose calculate with ``absolute(a - b) <= (atol + rtol * absolute(b))''
@@ -17,7 +17,7 @@ def construct_log_dx(axis):
 
     return np.log(dx)
 
-def construct_log_dx_mesh(axes):
+def construct_log_dx_mesh(axes: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray | float:
     dxlist = []
     for axis in axes:
         dxlist.append(construct_log_dx(axis))
@@ -27,7 +27,7 @@ def construct_log_dx_mesh(axes):
     return logdx
 
 
-def logspace_riemann(logy, x, axis=-1):
+def logspace_riemann(logy: np.ndarray, x: np.ndarray, axis: int=-1) -> np.ndarray|float:
     """Basic 'integration' used over uniform 
     (uniform or log-uniform) discrete values"""
     logdx = construct_log_dx(x)
@@ -40,7 +40,7 @@ def logspace_riemann(logy, x, axis=-1):
 
 
 
-def logspace_trapz(logy, x, axis=-1):
+def logspace_trapz(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray|float:
     h = np.diff(x)
 
     logfkm1    = logy[:-1]
@@ -51,7 +51,7 @@ def logspace_trapz(logy, x, axis=-1):
     return trapz_int
 
 
-def logspace_simpson(logy, x, axis=-1):
+def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray|float:
     """
     Perform vectorized Simpson integration for log integrand values. 
         
@@ -136,7 +136,7 @@ def logspace_simpson(logy, x, axis=-1):
         return logspace_trapz(logy, x, axis=axis)
 
 
-def iterate_logspace_integration(logy, axes, logspace_integrator=logspace_riemann, axisindices=None):
+def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
     logintegrandvalues = logy
             
     if axisindices is None:

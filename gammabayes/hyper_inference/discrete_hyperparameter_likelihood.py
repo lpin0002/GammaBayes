@@ -9,13 +9,17 @@ import json, os, warnings
 import matplotlib.pyplot as plt
 
 class discrete_hyperparameter_likelihood(object):
-    def __init__(self, priors, likelihood, axes=None,
-                 dependent_axes=None,
-                 hyperparameter_axes=(), numcores=8, 
-                 likelihoodnormalisation= (), log_margresults=None, mixture_axes = None,
-                 log_posterior=0, iterative_logspace_integrator=iterate_logspace_integration,
-                 logspace_integrator = logspace_riemann,
-                 prior_matrix_list=None):
+    def __init__(self, priors, likelihood, axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
+                 dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 hyperparameter_axes: list | tuple = (), 
+                 numcores: int = 8, 
+                 likelihoodnormalisation: np.ndarray | float = 0., 
+                 log_margresults: np.ndarray | None = None, 
+                 mixture_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 log_posterior: np.ndarray | float = 0., 
+                 iterative_logspace_integrator: callable = iterate_logspace_integration,
+                 logspace_integrator: callable = logspace_riemann,
+                 prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
@@ -96,7 +100,7 @@ class discrete_hyperparameter_likelihood(object):
         self.prior_matrix_list              = prior_matrix_list
         
     
-    def observation_nuisance_marg(self, axisvals, prior_matrix_list):
+    def observation_nuisance_marg(self, axisvals: list | np.ndarray, prior_matrix_list: list[np.ndarray]) -> np.ndarray:
         """Returns a list of the log marginalisation values for a single set of gamma-ray
             event measurements for various log prior matrices.
 
@@ -152,7 +156,7 @@ class discrete_hyperparameter_likelihood(object):
         return np.array(all_log_marg_results, dtype=object)
 
 
-    def nuisance_log_marginalisation(self, axisvals):
+    def nuisance_log_marginalisation(self, axisvals: list | np.ndarray) -> list:
 
         
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
@@ -192,7 +196,7 @@ class discrete_hyperparameter_likelihood(object):
         
         return margresults
     
-    def apply_direchlet_stick_breaking_direct(self, xi_axes, depth):
+    def apply_direchlet_stick_breaking_direct(self, xi_axes: list | tuple, depth: int) -> np.ndarray | float:
         direchletmesh = 1
 
         for i in range(depth):
@@ -204,7 +208,7 @@ class discrete_hyperparameter_likelihood(object):
     
     
     
-    def add_log_nuisance_marg_results(self, new_log_marg_results):
+    def add_log_nuisance_marg_results(self, new_log_marg_results: np.ndarray) -> None:
         """Add log nuisance marginalisation results to those within the class.
 
         Args:
@@ -213,7 +217,8 @@ class discrete_hyperparameter_likelihood(object):
         """
         self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
-    def create_discrete_mixture_log_hyper_likelihood(self, mixture_axes=None, log_margresults=None):
+    def create_discrete_mixture_log_hyper_likelihood(self, mixture_axes: list | tuple | np.ndarray | None = None, 
+                                                     log_margresults: list | tuple | np.ndarray | None = None):
         if mixture_axes is None:
             mixture_axes = self.mixture_axes
             if mixture_axes is None:
@@ -294,17 +299,25 @@ and number of prior components is {len(self.priors)}.""")
         return log_hyperparameter_likelihood
         
 
-    def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihood):
+    def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihood: np.ndarray) -> np.ndarray:
         """To combine log hyperparameter likelihoods from multiple runs by 
             adding the resultant log_hyperparameter_likelihood together.
 
         Args:
             log_hyperparameter_likelihood (np.ndarray): Hyperparameter 
                 log-likelihood results from a separate run with the same hyperparameter axes.
+
+        Returns:
+            np.ndarray: Updated log_hyperparameter_likelihood
         """
         self.log_hyperparameter_likelihood += log_hyperparameter_likelihood
 
-    def apply_uniform_hyperparameter_priors(self, priorinfos, hyper_param_axes=None, log_hyper_priormesh=None, integrator=None):
+        return self.log_hyperparameter_likelihood
+
+    def apply_uniform_hyperparameter_priors(self, priorinfos: list[dict] | tuple[dict], 
+                                            hyper_param_axes: list[np.ndarray] | tuple[np.ndarray] | None = None, 
+                                            log_hyper_priormesh: np.ndarray = None, 
+                                            integrator: callable = None):
         """A function to apply uniform log priors for the given prior information.
 
         Format for each set of prior information within the tuple should be
@@ -402,7 +415,7 @@ and number of prior components is {len(self.priors)}.""")
 
             
             
-    def save_data(self, directory_path='', reduce_mem_consumption=True):
+    def save_data(self, directory_path: str = '', reduce_mem_consumption: bool = True):
         """A method to save the information contained within a class instance.
 
         This method saves all the attributes of a class instance to a dictionary 
@@ -427,7 +440,6 @@ and number of prior components is {len(self.priors)}.""")
             data_to_save['priors']                              = self.priors
             data_to_save['likelihood']                          = self.likelihood
             
-        data_to_save['dependent_logjacob']                  = self.dependent_logjacob
         data_to_save['axes']                                = self.axes
         data_to_save['dependent_axes']                      = self.dependent_axes
         data_to_save['marg_results']                        = self.marg_results

@@ -25,13 +25,12 @@ def inverse_transform_sampler(logpmf, Nsamples=1):
 # Need to figure out a more rigorous solution. Stable for up to ...
 def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples=1):
 
-    logpmf_with_jacob = logpmf
 
-    logpmf_with_jacob_flattened = logpmf_with_jacob.flatten()
+    logpmf_flattened = logpmf.flatten()
 
-    logpmf_with_jacob_flattened = logpmf_with_jacob_flattened - logsumexp(logpmf_with_jacob_flattened)
+    logpmf_flattened = logpmf_flattened - logsumexp(logpmf_flattened)
 
-    flat_logcdf = np.logaddexp.accumulate(logpmf_with_jacob_flattened)
+    flat_logcdf = np.logaddexp.accumulate(logpmf_flattened)
 
     flat_cdf = np.exp(flat_logcdf-flat_logcdf[-1])  
 
