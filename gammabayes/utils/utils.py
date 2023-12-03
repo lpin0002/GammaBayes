@@ -9,7 +9,7 @@ import yaml, warnings, sys, os
 from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
 
-def convertlonlat_to_offset(fov_coord, pointing_direction=None):
+def convertlonlat_to_offset(fov_coord: np.ndarray, pointing_direction: np.ndarray|None=None) -> float|np.ndarray:
     """Takes a coordinate and translates that into an offset assuming small angles
 
     Args:
@@ -20,13 +20,13 @@ def convertlonlat_to_offset(fov_coord, pointing_direction=None):
         np.ndarray or float: The corresponding offset values for the given fov coordinates
             assuming small angles
     """
-    if pointing_direction==None:
+    if pointing_direction is None:
         return np.linalg.norm(fov_coord, axis=0)
     else:
-        return np.linalg.norm(fov_coord-pointing_direction, axis=0)
+        return np.linalg.norm(fov_coord.T-pointing_direction.T, axis=1)
 
 
-def angularseparation(coord1, coord2=None):
+def angularseparation(coord1: np.ndarray, coord2: np.ndarray|None =None) -> float|np.ndarray:
     """Calculates the angular separation between coord1 and coord2 in FOV frame
         assuming small angles.
 
@@ -47,11 +47,11 @@ def angularseparation(coord1, coord2=None):
             return np.linalg.norm(coord2.T-coord1, axis=1)
 
 
-def bin_centres_to_edges(axis):
+def bin_centres_to_edges(axis: np.ndarray) -> np.ndarray:
     return np.append(axis-np.diff(axis)[0]/2, axis[-1]+np.diff(axis)[0]/2)
 
 
-def hdp_credible_interval_1d(y, sigma, x):
+def hdp_credible_interval_1d(y: np.ndarray, sigma: np.ndarray|list, x: np.ndarray) -> list[float, float]|list[float]:
     y = y/integrate.simps(y=y, x=x)
     levels = np.linspace(0, y.max(),1000)
 
@@ -76,7 +76,7 @@ def hdp_credible_interval_1d(y, sigma, x):
         return [x[probidx]]
 
 
-def power_law(energy, index, phi0=1):
+def power_law(energy: np.ndarray|float, index: float, phi0: int =1) -> np.ndarray|float:
     return phi0*energy**(index)
 
 

@@ -20,15 +20,15 @@ longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/
 # Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
 log10estart                     = -1
 log10eend                       = 2
-true_energy_bins_per_decade     = 50
-recon_energy_bins_per_decade    = 250
+recon_energy_bins_per_decade    = 50
+true_energy_bins_per_decade     = 200
 log10erange                     = log10eend - log10estart
 energy_recon_axis               = np.logspace(log10estart,log10eend,int(np.round(log10erange*recon_energy_bins_per_decade))+1)
 energy_true_axis                = np.logspace(log10estart,log10eend,int(np.round(log10erange*true_energy_bins_per_decade))+1)
 
 
 
-def makelogjacob(energyaxis):
+def makelogjacob(energyaxis: np.ndarray) -> np.ndarray:
     """Generates log jacobian for using log-spaced energy for proper integrals
 
     Args:
@@ -45,21 +45,21 @@ logjacobtrue = makelogjacob(energy_true_axis)
 
 
 
-def create_linear_axis(lower_bound, upper_bound,resolution=10):
+def create_linear_axis(lower_bound: float, upper_bound: float,resolution: int = 10) -> np.ndarray:
     return np.linspace(lower_bound, 
                         upper_bound, 
                         int(round((upper_bound-lower_bound)/resolution)+1))
     
 
-def create_loguniform_axis(lower_bound, upper_bound, number_of_bins_per_unit=100):
+def create_loguniform_axis(lower_bound: float, upper_bound: float, number_of_bins_per_unit: int = 100) -> np.ndarray:
     return np.logspace(np.log10(lower_bound), 
                         np.log10(upper_bound), 
                         int(round(number_of_bins_per_unit*(np.log10(upper_bound)-np.log10(lower_bound)))+1))
     
-def create_axes(energy_min, energy_max, 
-                    energy_bins_per_decade, spatial_res, 
-                    longitude_min, longitude_max,
-                    latitude_min, latitude_max):
+def create_axes(energy_min: float, energy_max: float, 
+                    energy_bins_per_decade: int, spatial_res: float, 
+                    longitude_min: float, longitude_max: float,
+                    latitude_min: float, latitude_max: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     
     print(energy_min, energy_max, 
                     energy_bins_per_decade, spatial_res, 

@@ -8,10 +8,11 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
-from ..likelihoods.instrument_response_funcs import aefffunc
+from gammabayes.likelihoods.irfs import aefffunc
 from os import path
 from .base_DM_angular_profile_constructor import base_DM_angular_dist_constructor
 from .base_DM_spectra_constructor import base_DM_spectra_constructor
+from gammabayes.utils.event_axes import longitudeaxistrue, latitudeaxistrue
 darkmatter_dir = path.dirname(__file__)
 
 
@@ -20,7 +21,7 @@ class construct_DM_dist(object):
     
     def __init__(self,  angular_dist_constructor = base_DM_angular_dist_constructor, 
                        spectral_dist_constructor = base_DM_spectra_constructor,
-                longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile(), 
+                longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, density_profile=profiles.EinastoProfile(), 
                  ratios=False, partial_sigmav_interpolator_dictionary=None):
 
         self.longitudeaxis      = longitudeaxis

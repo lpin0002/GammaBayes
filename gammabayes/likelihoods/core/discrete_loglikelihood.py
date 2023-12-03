@@ -1,25 +1,24 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_simps
-from matplotlib import pyplot as plt
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 
 
-class discrete_loglikelihood(object):
+class discrete_loglike(object):
     
-    def __init__(self, name='[None]', inputunit=None, logfunction=None, axes=None, 
-                 dependent_axes=None, axes_names='[None]', dependent_axes_names='[None]',
-                 logjacob = 0, iterative_logspace_integrator=iterate_logspace_simps):
+    def __init__(self, 
+                 logfunction: callable,
+                 axes: list[np.ndarray] | tuple[np.ndarray], 
+                 dependent_axes: list[np.ndarray], 
+                 name: list[str] | tuple[str]                   = ['None'], 
+                 inputunit: str | list[str] | tuple[str]        = ['None'], 
+                 axes_names: list[str] | tuple[str]             = ['None'], 
+                 dependent_axes_names: list[str] | tuple[str]   = ['None'], 
+                 iterative_logspace_integrator: callable        = iterate_logspace_integration
+                 ) -> None:
         """Initialise a discrete_loglikelihood class instance.
 
         Args:
-            name (str, optional): Name given to an instance of the class. 
-                Defaults to '[None]'.
-
-            inputunit (list or tuple, optional): A list or tuple containing 
-                representations of the units of the 'axes' arguments. 
-                Defaults to None.
-
             logfunction (func): A function that outputs the log 
                 likelihood values for the relevant axes and dependent axes. 
 
@@ -31,6 +30,13 @@ class discrete_loglikelihood(object):
             axes on which the likelihood is dependent on that the likelihood is
             not normalised with respect to. Defaults to None.
 
+            name (str, optional): Name given to an instance of the class. 
+                Defaults to '[None]'.
+
+            inputunit (list or tuple, optional): A list or tuple containing 
+                representations of the units of the 'axes' arguments. 
+                Defaults to None.
+
             axes_names (list, optional): A list of the names of the axes within
             the axes argument. 
             Defaults to ['None'].
@@ -38,11 +44,6 @@ class discrete_loglikelihood(object):
             dependent_axes_names (list, optional): A list of the names of the 
             axes within the dependent axesaxes argument. 
             Defaults to ['None'].
-
-            logjacob (float or np.ndarray, optional): The jacobian used for normalisation,
-            if the input axes are of shapes (m_1,), (m_2,), ..., (m_n) then the jacobian 
-            is either a float or np.ndarray of shape (m_1, m_2, ..., m_n,). 
-            Defaults to 0.
         """
         self.name = name
         self.inputunit = inputunit
@@ -52,7 +53,6 @@ class discrete_loglikelihood(object):
         print(f'Number of input dimensions {len(self.axes)}')
         self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
-        self.logjacob = logjacob
         if len(self.axes)==1 or len(self.dependent_axes)==1:
             if len(self.axes)==1 and len(self.dependent_axes)==1:
                 self.axes_dim = 1
@@ -80,7 +80,7 @@ class discrete_loglikelihood(object):
 
         self.iterative_logspace_integrator = iterative_logspace_integrator 
         
-    def __call__(self, *inputs):
+    def __call__(self, *args, **kwargs) -> np.ndarray | float:
         """_summary_
         Args:
             input: Inputs in the same format as would be used for the 
@@ -89,11 +89,11 @@ class discrete_loglikelihood(object):
         Returns:
             float or np.ndarray: The log-likelihood values for the given inputs.
         """
-        return self.logfunction(*inputs)
+        return self.logfunction(*args, **kwargs)
     
     
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Dunder method for what is the output when `print` is used on a class 
             instance.
 
@@ -113,27 +113,9 @@ class discrete_loglikelihood(object):
     
     
     
-    def sample(self, dependentvalues, numsamples):
-        """Returns the specified number of samples weighted by the likelihood
-            distribution.
+    def sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray, numsamples: int = 1) -> np.ndarray:
 
-        Args:
-            dependentvalues (tuple): A tuple of the dependent values to create
-                a matrix of probabilities values.
 
-            numsamples (int): Number of samples required.
-            Defaults to 1.
-
-            axes (tuple, optional): Axes to be used instead of default is 
-                required. 
-
-            logjacob (float or np.ndarray, optional): Natural log of the jacobian
-                to be used if using different axes or default logjacobian is 
-                incorrect.
-
-        Returns:
-            np.ndarray: Array of sampled values.
-        """
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
 
         
@@ -141,7 +123,9 @@ class discrete_loglikelihood(object):
 
         loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
 
-        simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals, axes=self.axes, Nsamples=numsamples, logjacob=self.logjacob))
+        logdx = construct_log_dx_mesh(self.axes)
+
+        simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples))
             
         return np.array(simvals).T
         

@@ -1,68 +1,57 @@
 import numpy as np
 from scipy import special
 
-def _basic_simps(y, x):
-    """
-    Perform vectorized Simpson integration. 
-        
-    Not suitable for potentially numerically unstable x values.
 
-    Parameters:
-    - y: Array of function values.
-    - x: Array of x values (evenly spaced in log10 space).
 
-    Returns:
-    - result: Simpson's rule integration result.
-    """
-    if len(y) != len(x):
-        raise ValueError("Input arrays y and x must have the same length.")
 
-    # Calculate the step size
-    h = np.diff(x)
-    length_h = len(h)
-
-        
+def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
+    dx = np.diff(axis)
     
-    if length_h%2==0:
-        # even case
-        result  = (h[:-1:2]+h[1::2])*(
-            (2 - h[1::2]/h[:-1:2]) * y[:-1:2] + \
-            (h[:-1:2] + h[1::2])**2 / (h[:-1:2]*h[1::2]) * y[1:-1:2] + \
-            (2 - h[:-1:2]/h[1::2]) * y[2::2]
-            )
-        result = np.sum(result)
-
-    
+    # Isclose calculate with ``absolute(a - b) <= (atol + rtol * absolute(b))''
+    # With the default values being atol=1e-8 and rtol=1e-5. Need to be careful
+    # If we ever have differences ~1e-8 
+    if np.isclose(dx[1], dx[0]):
+        dx = np.append(dx, dx[-1])
     else:
-        # odd case
-        result  = (h[:-1:2]+h[1::2])*(
-            (2 - h[1::2]/h[:-1:2]) * y[:-2:2] + \
-            (h[:-1:2] + h[1::2])**2 / (h[:-1:2]*h[1::2]) * y[1:-1:2] + \
-            (2 - h[:-1:2]/h[1::2]) * y[2::2]
-            )
+        dx = axis*(10**(np.log10(axis[1])-np.log10(axis[0])))
 
-        result = np.sum(result)
-        _alpha  = (2*h[-1]**2 + 3*h[-1]*h[-2])/(h[-2] + h[-1])
-        _beta   = (h[-1]**2 + 3*h[-1]*h[-2])/h[-2]
-        _eta    = h[-1]**3 / (h[-2] * (h[-2] + h[-1]))
+    return np.log(dx)
 
-        result+= _alpha*y[-1]+_beta*y[-2]-_eta*y[-3]
+def construct_log_dx_mesh(axes: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray | float:
+    dxlist = []
+    for axis in axes:
+        dxlist.append(construct_log_dx(axis))
+
+    logdx = np.sum(np.meshgrid(*dxlist, indexing='ij'), axis=0)
+
+    return logdx
 
 
-    return result/6
+def logspace_riemann(logy: np.ndarray, x: np.ndarray, axis: int=-1) -> np.ndarray|float:
+    """Basic 'integration' used over uniform 
+    (uniform or log-uniform) discrete values"""
+    logdx = construct_log_dx(x)
+    indices = list(range(logy.ndim))
+    indices.pop(axis)
 
-def logspace_trapz(logy, x, axis=-1):
+    logdx = np.expand_dims(logdx, axis=indices)
+
+    return special.logsumexp(logy+logdx, axis=axis)
+
+
+
+def logspace_trapz(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray|float:
     h = np.diff(x)
 
     logfkm1    = logy[:-1]
     logfk      = logy[1:]
 
-    trapz_int = special.logsumexp(np.logaddexp(logfkm1, logfk)+np.log(h) - np.log(2))
+    trapz_int = special.logsumexp(np.logaddexp(logfkm1, logfk)+np.log(h) - np.log(2), axis=axis)
 
     return trapz_int
 
 
-def logspace_simpson(logy, x, axis=-1):
+def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray|float:
     """
     Perform vectorized Simpson integration for log integrand values. 
         
@@ -71,12 +60,15 @@ def logspace_simpson(logy, x, axis=-1):
     Parameters:
     - logy: Array of function values.
     - x: Array of x values (evenly spaced in log10 space).
+    - logjacob: A variable to keep a standard input of all the integrators
 
     Returns:
     - result: Simpson's rule integration result.
     """
     if logy.shape[axis] != len(x):
         raise ValueError("Input arrays y and x must have the same length.")
+    
+    logy = logy
 
     # Calculate the step size
     
@@ -144,20 +136,26 @@ def logspace_simpson(logy, x, axis=-1):
         return logspace_trapz(logy, x, axis=axis)
 
 
-def iterate_logspace_simps(logy, axes, axisindices=None):
+def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
     logintegrandvalues = logy
             
     if axisindices is None:
         for axis in axes:
-            logintegrandvalues = logspace_simpson(logy = logintegrandvalues, x=axis, axis=0)
+            logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=0)
     else:
         axisindices = np.asarray(axisindices)
 
         # TODO: Remove this for loop, any for loop, all the for loops
         for loop_idx, (axis, axis_idx) in enumerate(zip(axes, axisindices)):
+
             # Assuming the indices are in order we subtract the loop idx from the axis index
             # print(loop_idx, axis_idx-loop_idx, axis.shape, logintegrandvalues.shape)
-            logintegrandvalues = logspace_simpson(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
+            try:
+                logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
+            except:
+                print(loop_idx, axis.shape, axis_idx, logintegrandvalues.shape)
+                raise Exception("Error occurred during integration.")
+
 
 
     return logintegrandvalues

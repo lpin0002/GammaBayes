@@ -1,7 +1,7 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
-from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis, logjacob
-from gammabayes.utils import angularseparation, convertlonlat_to_offset, resources_dir, iterate_logspace_simps, logspace_simpson
+from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis, logjacob, makelogjacob
+from gammabayes.utils import angularseparation, convertlonlat_to_offset, resources_dir, iterate_logspace_integration
 from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
 
 
@@ -15,8 +15,8 @@ import os, sys
 
 def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_recon_axis, 
           longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
-          edisplogjacob=0, psflogjacob=0, save_directory = resources_dir, psf=log_psf, edisp=log_edisp,
-          save_results=True, outputresults=False):
+          save_directory = resources_dir, log_psf=log_psf, log_edisp=log_edisp,
+          save_results=False):
     """Produces default IRF normalisation matrices
 
     Args:
@@ -37,10 +37,6 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
 
         latitudeaxis (np.ndarray, optional): Dicrete measured fov latitude values
             of CTA event data. Defaults to latitudeaxis.
-
-        edisplogjacob (np.ndarray, optional): _description_. Defaults to 0.
-
-        psflogjacob (np.ndarray, optional): _description_. Defaults to 0.
 
         save_directory (str, optional): Path to save results. Defaults to resources_dir.
 
@@ -71,7 +67,7 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
 
             psfvals = log_psf(longitude_axis_mesh.flatten(), latitude_axis_mesh.flatten(), 
                                 energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape)
-            psfnormvals = iterate_logspace_simps(np.squeeze(psfvals+psflogjacob), axes=[longitudeaxis, latitudeaxis], axisindices=[1,2])
+            psfnormvals = iterate_logspace_integration(np.squeeze(psfvals), axes=[longitudeaxis, latitudeaxis], axisindices=[1,2])
             
             psflogerow.append(psfnormvals)
         psfnorm.append(psflogerow)
@@ -85,7 +81,7 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
                                                                                                             indexing='ij')
         edispvals = np.squeeze(log_edisp(energy_recon_axis_mesh.flatten(), 
                                         energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape))
-        edispnormvals = iterate_logspace_simps(np.squeeze(edispvals+edisplogjacob), axes=[energy_recon_axis], axisindices=[2])
+        edispnormvals = iterate_logspace_integration(np.squeeze(edispvals), axes=[energy_recon_axis], axisindices=[2])
         
         edispnorm.append(edispnormvals)
 
@@ -99,8 +95,7 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
         np.save(save_directory+"/log_prod5_psf_normalisations.npy", psfnorm)
         np.save(save_directory+"/log_prod5_edisp_normalisations.npy", edispnorm)
 
-    if outputresults:
-        return psfnorm, edispnorm
+    return psfnorm, edispnorm
 
 
 if __name__=="__main__":

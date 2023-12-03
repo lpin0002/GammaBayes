@@ -2,19 +2,24 @@ import numpy as np
 from scipy.special import logsumexp
 import functools
 from tqdm import tqdm
-from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_simps, logspace_simpson
+from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_integration, logspace_riemann
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
 import json, os, warnings
 import matplotlib.pyplot as plt
 
 class discrete_hyperparameter_likelihood(object):
-    def __init__(self, priors, likelihood, axes=None,
-                 dependent_axes=None, dependent_logjacob=0, 
-                 hyperparameter_axes=(), numcores=8, 
-                 likelihoodnormalisation= (), log_margresults=None, mixture_axes = None,
-                 log_posterior=0, iterative_logspace_integrator=iterate_logspace_simps,
-                 prior_matrix_list=None):
+    def __init__(self, priors, likelihood, axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
+                 dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 hyperparameter_axes: list | tuple = (), 
+                 numcores: int = 8, 
+                 likelihoodnormalisation: np.ndarray | float = 0., 
+                 log_margresults: np.ndarray | None = None, 
+                 mixture_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 log_posterior: np.ndarray | float = 0., 
+                 iterative_logspace_integrator: callable = iterate_logspace_integration,
+                 logspace_integrator: callable = logspace_riemann,
+                 prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
@@ -35,12 +40,6 @@ class discrete_hyperparameter_likelihood(object):
                 events can take. e.g. axis of possible true energy values, true
                 longitude values, and true latitude values. 
                 Defaults to None.
-
-            dependent_logjacob (np.ndarray or float, optional): A matrix of
-                log jacobian values used during marginalisation, must be either 
-                a single float value or if the depepdent axes are shapes 
-                (m1,), (m2,),..., (mn,) then the dependent_logjacob must be of
-                the shape (m1, m2,..., mn). Defaults to 0.
 
             hyperparameter_axes (tuple, optional): Tuple containing the default 
                 values at which the priors will be evaluated. For example, if 
@@ -63,7 +62,7 @@ class discrete_hyperparameter_likelihood(object):
             mixture_axes (tuple, optional): A tuple containing the weights for
                 each prior within a mixture model. Defaults to None.
 
-            log_hyperparameter_likelihoods (np.ndarray, optional): A numpy array
+            log_hyperparameter_likelihood (np.ndarray, optional): A numpy array
                 containing the log of hyperparameter marginalisation results. 
                 Defaults to 0.
 
@@ -80,10 +79,14 @@ class discrete_hyperparameter_likelihood(object):
         else:
             self.dependent_axes             = dependent_axes
             
-        self.dependent_logjacob         = dependent_logjacob
         self.hyperparameter_axes        = hyperparameter_axes
         self.numcores                   = numcores
         self.likelihoodnormalisation    = likelihoodnormalisation
+        self.iterative_logspace_integrator  = iterative_logspace_integrator
+        self.logspace_integrator            = logspace_integrator
+
+
+
         self.log_margresults               = log_margresults
         if mixture_axes is None:
             self.mixture_axes               = np.array([np.linspace(0,1,101)]*(len(priors)-1))
@@ -93,13 +96,11 @@ class discrete_hyperparameter_likelihood(object):
             self.mixture_axes = np.array([*mixture_axes])
 
 
-        self.log_posterior = log_posterior
-        self.iterative_logspace_integrator = iterative_logspace_integrator
-
-        self.prior_matrix_list = prior_matrix_list
+        self.log_posterior                  = log_posterior
+        self.prior_matrix_list              = prior_matrix_list
         
     
-    def observation_nuisance_marg(self, axisvals, prior_matrix_list):
+    def observation_nuisance_marg(self, axisvals: list | np.ndarray, prior_matrix_list: list[np.ndarray]) -> np.ndarray:
         """Returns a list of the log marginalisation values for a single set of gamma-ray
             event measurements for various log prior matrices.
 
@@ -138,14 +139,14 @@ class discrete_hyperparameter_likelihood(object):
             # single_parameter_log_margvals = []
             prior_matrices = np.asarray(prior_matrices)
             # for idx2, single_prior_matrix in enumerate(prior_matrices):
-            logintegrandvalues = np.squeeze(prior_matrices+self.dependent_logjacob+likelihoodvalues)
+            logintegrandvalues = np.squeeze(prior_matrices+likelihoodvalues)
 
             likelihoodvalues_ndim = np.squeeze(likelihoodvalues).ndim
             prior_matrices_ndim = np.squeeze(prior_matrices).ndim
             axisindices = np.arange(prior_matrices_ndim-likelihoodvalues_ndim, prior_matrices_ndim)
 
             output = self.iterative_logspace_integrator(logintegrandvalues,   
-                axes=self.dependent_axes, axisindices=axisindices, )
+                axes=self.dependent_axes, axisindices=axisindices)
 
             single_parameter_log_margvals = output
 
@@ -155,7 +156,7 @@ class discrete_hyperparameter_likelihood(object):
         return np.array(all_log_marg_results, dtype=object)
 
 
-    def nuisance_log_marginalisation(self, axisvals):
+    def nuisance_log_marginalisation(self, axisvals: list | np.ndarray) -> list:
 
         
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
@@ -179,11 +180,13 @@ class discrete_hyperparameter_likelihood(object):
                     nans+=np.sum(np.isnan(prior_matrix))
                     prior_matrices[idx,...] = prior_matrix
 
-                print(f"Total cumulative number of nan values within all prior matrices: { {nans} }")
 
                 prior_matrices = prior_matrices.reshape(tuple(list(hyper_parameter_coords[0].shape)+list(prior_matrices[0].shape)))
 
                 prior_matrix_list.append(prior_matrices)
+
+            print(f"Total cumulative number of nan values within all prior matrices: {nans}")
+
                 
             self.prior_matrix_list = prior_matrix_list
         marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=self.prior_matrix_list)
@@ -193,7 +196,7 @@ class discrete_hyperparameter_likelihood(object):
         
         return margresults
     
-    def apply_direchlet_stick_breaking_direct(self, xi_axes, depth):
+    def apply_direchlet_stick_breaking_direct(self, xi_axes: list | tuple, depth: int) -> np.ndarray | float:
         direchletmesh = 1
 
         for i in range(depth):
@@ -205,7 +208,7 @@ class discrete_hyperparameter_likelihood(object):
     
     
     
-    def add_log_nuisance_marg_results(self, new_log_marg_results):
+    def add_log_nuisance_marg_results(self, new_log_marg_results: np.ndarray) -> None:
         """Add log nuisance marginalisation results to those within the class.
 
         Args:
@@ -214,7 +217,8 @@ class discrete_hyperparameter_likelihood(object):
         """
         self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
-    def create_discrete_mixture_log_hyper_likelihood(self, mixture_axes=None, log_margresults=None):
+    def create_discrete_mixture_log_hyper_likelihood(self, mixture_axes: list | tuple | np.ndarray | None = None, 
+                                                     log_margresults: list | tuple | np.ndarray | None = None):
         if mixture_axes is None:
             mixture_axes = self.mixture_axes
             if mixture_axes is None:
@@ -288,58 +292,130 @@ and number of prior components is {len(self.priors)}.""")
         for idx, mixture_component in enumerate(mixture_array_list):
             combined_mixture = np.logaddexp(combined_mixture, mixture_component)
 
-        unnormed_log_posterior = np.sum(combined_mixture, axis=0)
+        log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
 
-        # # Saving the result to the object
-        # self.unnormed_log_posterior = unnormed_log_posterior
+        self.log_hyperparameter_likelihood = log_hyperparameter_likelihood
 
-        return unnormed_log_posterior
+        return log_hyperparameter_likelihood
         
 
-    def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihoods):
+    def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihood: np.ndarray) -> np.ndarray:
         """To combine log hyperparameter likelihoods from multiple runs by 
-            adding the resultant log_hyperparameter_likelihoods together.
+            adding the resultant log_hyperparameter_likelihood together.
 
         Args:
-            log_hyperparameter_likelihoods (np.ndarray): Hyperparameter 
+            log_hyperparameter_likelihood (np.ndarray): Hyperparameter 
                 log-likelihood results from a separate run with the same hyperparameter axes.
-        """
-        self.log_hyperparameter_likelihoods += log_hyperparameter_likelihoods
 
-    def apply_uniform_hyperparameter_log_priors(self, priorinfo):
+        Returns:
+            np.ndarray: Updated log_hyperparameter_likelihood
+        """
+        self.log_hyperparameter_likelihood += log_hyperparameter_likelihood
+
+        return self.log_hyperparameter_likelihood
+
+    def apply_uniform_hyperparameter_priors(self, priorinfos: list[dict] | tuple[dict], 
+                                            hyper_param_axes: list[np.ndarray] | tuple[np.ndarray] | None = None, 
+                                            log_hyper_priormesh: np.ndarray = None, 
+                                            integrator: callable = None):
         """A function to apply uniform log priors for the given prior information.
 
         Format for each set of prior information within the tuple should be
-        priorinfo[0] = minimum value of hyperparameter range
-        priorinfo[1] = maximum value of hyperparameter range
-        priorinfo[2] = hyperparameter range spacing
-        priorinfo[3] = number of entries sampled within the hyperparameter range
+        priorinfo['min'] = minimum value of hyperparameter range
+        priorinfo['max'] = maximum value of hyperparameter range
+        priorinfo['spacing'] = hyperparameter value spacing (log10/linear)
+        priorinfo['uniformity'] = Whether prior values are uniform (linear) 
+                                                    or log-uniform (log) 
+        priorinfo['bins] = number of entries sampled within the hyperparameter range
 
+        Optional:
+            priorinfo['upper_cutoff'] = Cut-off value above which values aren't used.
+                                        Defaults to max value.
+            priorinfo['lower_cutoff'] = Cut-off value below which values aren't used
+                                        Defaults to min value.
+            Used as `hyper_param_axis[np.where(np.logical_and(hyper_param_axis>=lower_cutoff, 
+                                                              hyper_param_axis<=upper_cutoff,))]
+    
         And each entry of the tuple then corresponds to each hyperparameter
         Args:
-            priorinfo_tuple (tuple): A tuple containing the min, max and spacing
+            priorinfo (tuple): A tuple containing the min, max and spacing
                 of the hyperparameter axes sampled to generate the discrete 
                 hyperparameter log likelihood
+
+            hyper_param_axes (tuple of array-like): A tuple containing the values of
+                the priors. If given min, max and bin arguments are not needed in priorinfo
+
+            log_hyper_priormesh (float or array-like): An array or float presenting 
+                wanted mesh of log prior values. Overwrites priorinfo and 
+                hyper_param_axes input if given
         Returns:
             array like: The natural log of the discrete hyperparameter uniform 
                 prior values
         """
-        priormesh = 0
-        priorval_list = []
-        for prior_info in priorinfo:
-            hyper_prioraxis = np.arange(prior_info[0], prior_info[1], prior_info[2])
-            hyper_priorvals = hyper_prioraxis*0+1/len(hyper_prioraxis)
-            priorval_list.append(hyper_priorvals[:priorinfo[3]])
+        if integrator is None:
+            integrator = self.logspace_integrator
+        if log_hyper_priormesh is None:
+            hyper_val_list = []
+            log_prior_val_list = []
+            axes_included_indices = []
+            if hyper_param_axes is None:
+                for prior_info in priorinfos:
+                    print('prior_info: ', prior_info)
 
-        hyper_priormesh = np.meshgrid(*priorval_list, indexing='ij')
+                    if prior_info['spacing'].lower()=='log':
+                        hyper_param_axis = np.logspace(np.log(prior_info['min']), np.log(prior_info['max']), prior_info['bins'])
+                        hyper_param_axes.append(hyper_param_axis)
 
-        self.log_posterior = self.log_hyperparameter_likelihoods+np.log(hyper_priormesh)
+                    elif prior_info['spacing'].lower()=='linear':
+                        hyper_param_axis = np.linspace(prior_info['min'], prior_info['max'], prior_info['bins'])
+                        hyper_param_axes.append(hyper_param_axis)
 
-        return np.log(hyper_priormesh)
+
+            for prior_info, hyper_param_axis in zip(priorinfos, hyper_param_axes):
+                print('There is a hyper param axis')
+                if prior_info['uniformity'].lower()=='log' and prior_info['spacing'].lower()=='log10':
+                    log_hyper_prior_axis = hyper_param_axis*0 # Just need a constant value
+                    log_hyper_prior_axis = log_hyper_prior_axis-integrator(logy=log_hyper_prior_axis, x=np.log10(hyper_param_axis))
+
+                elif prior_info['uniformity'].lower()=='log' and not(prior_info['spacing'].lower()=='log10'):
+                    log_hyper_prior_axis = np.log(1/hyper_param_axis)# Just need something proportional to 1/hyperparameter value
+                    log_hyper_prior_axis = log_hyper_prior_axis-integrator(logy=log_hyper_prior_axis, x=hyper_param_axis)
+
+                elif prior_info['uniformity'].lower()=='linear' and prior_info['spacing'].lower()=='log10':
+                    log_hyper_prior_axis = np.log(hyper_param_axis)# Just need values proportional to the hyperparameter values
+                    log_hyper_prior_axis = log_hyper_prior_axis-integrator(logy=log_hyper_prior_axis, x=hyper_param_axis)
+
+                else:
+                    log_hyper_prior_axis = hyper_param_axis*0# Just need a constant value
+                    log_hyper_prior_axis = log_hyper_prior_axis-integrator(logy=log_hyper_prior_axis, x=hyper_param_axis)
+
+
+                lower_cutoff_val = prior_info.get('lower_cutoff', hyper_param_axis.min())
+                upper_cutoff_val = prior_info.get('upper_cutoff', hyper_param_axis.max())
+
+                axes_included_indices.append(np.where(np.logical_and(hyper_param_axis>=lower_cutoff_val, 
+                                                                            hyper_param_axis<=upper_cutoff_val,)))
+
+                hyper_val_list.append(hyper_param_axis)
+                log_prior_val_list.append(log_hyper_prior_axis)
+            print(axes_included_indices)
+
+
+        for idx, axes_included_indexs in enumerate(axes_included_indices):
+            log_prior_val_list[idx] = log_prior_val_list[idx][axes_included_indexs]
+            hyper_val_list[idx] = hyper_val_list[idx][axes_included_indexs]
+
+
+        log_hyper_priormesh_list = np.meshgrid(*log_prior_val_list, indexing='ij')
+        log_hyper_priormesh = np.prod(log_hyper_priormesh_list, axis=0)
+
+        self.log_posterior = np.squeeze(self.log_hyperparameter_likelihood)+log_hyper_priormesh
+
+        return self.log_posterior, log_prior_val_list, hyper_val_list
 
             
             
-    def save_data(self, directory_path='', reduce_mem_consumption=True):
+    def save_data(self, directory_path: str = '', reduce_mem_consumption: bool = True):
         """A method to save the information contained within a class instance.
 
         This method saves all the attributes of a class instance to a dictionary 
@@ -364,12 +440,11 @@ and number of prior components is {len(self.priors)}.""")
             data_to_save['priors']                              = self.priors
             data_to_save['likelihood']                          = self.likelihood
             
-        data_to_save['dependent_logjacob']                  = self.dependent_logjacob
         data_to_save['axes']                                = self.axes
         data_to_save['dependent_axes']                      = self.dependent_axes
         data_to_save['marg_results']                        = self.marg_results
         data_to_save['mixture_axes']                        = self.mixture_axes
-        data_to_save['log_hyperparameter_likelihoods']      = self.log_hyperparameter_likelihoods
+        data_to_save['log_hyperparameter_likelihood']      = self.log_hyperparameter_likelihood
         data_to_save['log_posterior']                       = self.log_posterior
         
                 

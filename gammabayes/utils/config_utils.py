@@ -106,7 +106,6 @@ def create_true_axes_from_config(config_dict):
                      config_dict['true_longitude_min'], config_dict['true_longitude_max'],
                      config_dict['true_latitude_min'], config_dict['true_latitude_max'])
 
-
 def create_recon_axes_from_config(config_dict):
     return create_axes(config_dict['recon_energy_min'], config_dict['recon_energy_max'], 
                      config_dict['recon_energy_bins_per_decade'], config_dict['recon_spatial_res'], 
