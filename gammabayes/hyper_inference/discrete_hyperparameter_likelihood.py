@@ -75,7 +75,13 @@ class discrete_hyperparameter_likelihood(object):
         self.axes                       = axes
             
         if dependent_axes is None:
-            self.dependent_axes             = self.likelihood[0].dependent_axes
+            try:
+                self.dependent_axes             = self.likelihood.dependent_axes
+            except:
+                try:
+                    self.dependent_axes             = self.priors[0].axes
+                except:
+                    raise Exception("Dependent value axes used for calculations not given.")
         else:
             self.dependent_axes             = dependent_axes
             

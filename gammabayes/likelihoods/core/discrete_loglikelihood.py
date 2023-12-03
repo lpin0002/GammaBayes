@@ -44,6 +44,9 @@ class discrete_loglike(object):
             dependent_axes_names (list, optional): A list of the names of the 
             axes within the dependent axesaxes argument. 
             Defaults to ['None'].
+
+            iterative_logspace_integrator (callable, optional): Integration
+            method used for normalisation. Defaults to iterate_logspace_integration.
         """
         self.name = name
         self.inputunit = inputunit
@@ -58,8 +61,6 @@ class discrete_loglike(object):
                 self.axes_dim = 1
                 self.dependent_axes_dim = 1
                 self.axes_shape = self.axes[0].shape
-
-                self.axes_mesh = np.meshgrid(axes, dependent_axes, indexing='ij')
             elif len(self.axes)==1:
                 self.axes_shape = self.axes[0].shape
                 self.axes_dim = 1
@@ -81,7 +82,8 @@ class discrete_loglike(object):
         self.iterative_logspace_integrator = iterative_logspace_integrator 
         
     def __call__(self, *args, **kwargs) -> np.ndarray | float:
-        """_summary_
+        """Dunder method to be able to use the class in the same method 
+        as the logfunction input.
         Args:
             input: Inputs in the same format as would be used for the 
                 logfunction used in the class.
@@ -114,6 +116,17 @@ class discrete_loglike(object):
     
     
     def sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray, numsamples: int = 1) -> np.ndarray:
+        """A method to sample the likelihood for given dependent values (e.g. true event data)
+
+        Args:
+            dependentvalues (tuple[float] | list[float] | np.ndarray): Dependent values
+            to generate a probability distribution.
+
+            numsamples (int, optional): self-explanatory. Defaults to 1.
+
+        Returns:
+            np.ndarray: The resultant samples of the given axes.
+        """
 
 
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
