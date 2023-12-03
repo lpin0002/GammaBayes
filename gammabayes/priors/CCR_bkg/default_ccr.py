@@ -9,7 +9,6 @@ irfs = load_cta_irfs(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.18
 bkgfull = irfs['bkg']
 
 
-
 def log_bkg_CCR_dist(energyval, lon, lat):
     """Wrapper for the Gammapy interpretation of the log of 
         the CTA's background charged cosmic-ray mis-identification rate.
@@ -24,4 +23,4 @@ def log_bkg_CCR_dist(energyval, lon, lat):
     Returns:
         float: Natural log of the charged cosmic ray mis-idenfitication rate for the CTA
     """
-    return np.log(bkgfull.evaluate(energy=energyval*u.TeV, fov_lon=np.abs(lon)*u.deg, fov_lat=np.abs(lat)*u.deg).value*1e6)
+    return np.log(bkgfull.evaluate(energy=energyval*u.TeV, fov_lon=lon*u.deg, fov_lat=lat*u.deg).to((u.TeV*u.sr*u.s)**(-1)).value)
