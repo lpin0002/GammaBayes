@@ -38,8 +38,9 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
     )
 
     HESSmap = Map.from_geom(HESSgeom)
+
     
-    hessenergyaxis = energy_axis_true_nodes.center.value 
+    
     
     
     count=0 # To keep track of the number of sources satisfying the conditions
@@ -85,7 +86,6 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
             
     # Transposing the longitude and latitude values such that the order of indices goes [logenergy_index, longitude_index, latitude_index]
     full_hess_flux = np.transpose(full_hess_flux, axes=(0,2,1))
-    full_hess_flux*=100**2
     full_hess_flux = np.flip(full_hess_flux, axis=1)
     
     hessgeom = HESSmap.geom
@@ -112,14 +112,14 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
                 
 
 
-def construct_hess_source_map_interpolation(energy_true_axis=energy_true_axis, 
-    longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue,
+def construct_hess_source_map_interpolation(energy_axis=energy_true_axis, 
+    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
     log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_integration):
-    axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue]
+    axes = [energy_axis, longitudeaxis, latitudeaxis]
 
 
-    log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_true_axis, 
-        longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
+    log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_axis, 
+        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis,
         log_aeff=log_aeff))
 
     if normalise:

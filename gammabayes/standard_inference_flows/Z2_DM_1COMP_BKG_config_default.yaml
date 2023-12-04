@@ -1,3 +1,7 @@
+diagnostics:                      False
+blockplot:                        False
+
+
 signalfraction:                   0.3
 Nevents:                          1000
 nbins_mass:                       61

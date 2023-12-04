@@ -10,7 +10,7 @@ setup(name='GammaBayes',
       author='Liam Pinchbeck',
       author_email='Liam.Pinchbeck@monash.edu',
       license="MIT",
-      version='0.0.45',
+      version='0.0.46',
       packages=find_packages(),
       install_requires=[
           "astropy>=5.1",
@@ -40,6 +40,7 @@ setup(name='GammaBayes',
                         'dark_matter/channel_spectra/dark_matter_spectra/AtProduction_gammas.dat',
                         'dark_matter/models/Z2_ScalarSinglet/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
                         'dark_matter/models/Z2_ScalarSinglet/temp/*',
+                        'standard_inference_flows/*',
                         ]
       }
       )

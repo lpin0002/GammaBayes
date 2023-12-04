@@ -55,6 +55,9 @@ class discrete_logprior(object):
             default_hyperparameter_values (tuple, optional): Default values 
                 of the hyperparameters for the prior if needed. Defaults to 
                     None.
+
+            iterative_logspace_integrator (callable, optional): Integration
+            method used for normalisation. Defaults to iterate_logspace_integration.
         """
         self.name = name
         self.inputunit = inputunit
@@ -102,10 +105,11 @@ class discrete_logprior(object):
     
     
     def __call__(self, *args, **kwargs)  -> np.ndarray | float:
-        """_summary_
+        """Dunder method to be able to use the class in the same method 
+        as the logfunction input.
 
         Returns:
-            _type_: _description_
+            np.ndarray | float: Output of the logfunction for the given inputs.
         """
             
         return self.logfunction(*args, **kwargs)
@@ -156,9 +160,6 @@ class discrete_logprior(object):
             numsamples (int): Number of wanted samples
             logpriorvalues (np.ndarray, optional): The matrix of log prior 
                 values to sample, if none given one will be constructed. 
-
-            logpriorvalues (array like): Log probability values for a different 
-            prior than the default
 
         Returns:
             np.ndarray: A numpy array containing the sampled axis values in 

@@ -1,3 +1,6 @@
+diagnostics:                      False
+blockplot:                        False
+
 signalfraction:                   0.3
 ccr_of_bkg_fraction:              0.8
 Nevents:                          1000
@@ -8,18 +11,15 @@ mass_upper_bd_for_inference:      2.
 mass_lower_bd_for_inference:      -1.
 numcores:                         8
 
-nbins_signalfraction:             161
+nbins_signalfraction:             51
 sigfrac_upper_bd:                 1.
 sigfrac_lower_bd:                 0.
 sigfrac_spacing:                  'linear'
 
-nbins_ccrfraction:             161
+nbins_ccrfraction:                51
 ccrfrac_upper_bd:                 1.
 ccrfrac_lower_bd:                 0.
-cccrfrac_spacing:                  'linear'
-
-
-mixture_fraction_sampling:        'scan' # Either stochastic or scan
+cccrfrac_spacing:                 'linear'
 
 
 true_energy_min:                  0.1
@@ -39,3 +39,10 @@ recon_longitude_min:              -3.5
 recon_longitude_max:              3.5
 recon_latitude_min:               -3
 recon_latitude_max:               3
+
+
+mixture_fraction_sampling:        'scan' # Either stochastic or scan
+
+
+# Parameters for stochastic sampling if chosen
+nestedsampler_kwarg_dict: {'nlive': 900}

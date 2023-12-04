@@ -52,7 +52,7 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
             logy=fermi_integral_values, x=longitudeaxis, axis=0), x=latitudeaxis, axis=0)
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
-    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis, index=-2.41, phi0=1.36*1e-4))[:, np.newaxis, np.newaxis])
+    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis, index=-2.41, phi0=1.36*1e-8))[:, np.newaxis, np.newaxis])
 
     energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
@@ -66,11 +66,10 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
     return diffuse_background_observed_event_rate
 
 def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis, 
-                            longitudeaxis=longitudeaxistrue, 
-                            latitudeaxis=latitudeaxistrue, 
-                            log_aeff=log_aeff, normalise=True, logspace_integrator=logspace_riemann):
+    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff, normalise=True, logspace_integrator=logspace_riemann):
     axes = [energy_axis, longitudeaxis, latitudeaxis]
-    log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(log_aeff=log_aeff))
+    log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(energy_axis=energy_axis, 
+    longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_aeff=log_aeff))
 
     if normalise:
         log_fermi_diffuse = log_fermi_diffuse - logspace_integrator(

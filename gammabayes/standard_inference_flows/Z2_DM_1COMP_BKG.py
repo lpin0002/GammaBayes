@@ -12,7 +12,7 @@ from gammabayes.dark_matter import SS_DM_dist
 from gammabayes.priors.astro_sources import construct_hess_source_map, construct_fermi_gaggero_matrix
 from gammabayes.utils import bin_centres_to_edges
 from gammabayes.utils.config_utils import create_true_axes_from_config, create_recon_axes_from_config
-# from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis
+from gammabayes.likelihoods.irfs import irf_loglikelihood
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -31,22 +31,70 @@ random.seed(1)
 
 from gammabayes.likelihoods.irfs import irf_norm_setup
 
-# log_psf_normalisations, log_edisp_normalisations = irf_norm_setup(save_results=True)
-
 
 class Z2_DM_1COMP_BKG(object):
         
-    def __init__(self, config_dict: dict, diagnostics: bool = False, blockplot: bool = False, ):
+    def __init__(self, config_dict: dict = {}, config_file_path = None):
+        try:
+            self.config_dict    = config_dict
+            assert (len(self.config_dict)>0) and (type(self.config_dict)==dict)
+        except:
+            try:
+                self.config_dict = read_config_file(config_file_path)
+            except:
+                os.system(f"cp {os.path.dirname(__file__)+'/Z2_DM_1COMP_BKG_config_default.yaml'} {os.getcwd()}")
+                raise Exception("""No configuration dictionary or file path found. 
+    A standard config file has been copied into your working directory.\n
+    You can use use this path for the `config_file_path` argument of this class. Or use the `read_config_file` function 
+    in Gammabayes to access it as a dictionary and pass it into the `config_dict` argument.\n""")
 
-        self.diagnostics    = diagnostics
-        self.blockplot      = blockplot
-        self.config_dict    = config_dict
+        try:
+            self.diagnostics    = self.config_dict['diagnostics']
+        except:
+            self.diagnostics    = False
+
+        try:
+            self.blockplot    = self.config_dict['blockplot']
+        except:
+            self.blockplot    = False    
+
+        try:
+            self.plot_result    = self.config_dict['plot_result']
+        except:
+            self.plot_result    = False
+
+        try:
+            self.name    = self.config_dict['name']
+        except:
+            self.name    = time.strftime(f"DM{self.config_dict['mass']}_SIGFRAC{self.config_dict['signalfraction']}_1COMP_BKG_%m|%d_%H:%M")
+
+        try:
+            self.save_path = self.config_dict['save_path']
+        except:
+            self.save_path = f'data/{self.name}'
+            os.makedirs('data', exist_ok=True)
+            os.makedirs(f'data/{self.name}', exist_ok=True)
+
+
+        try:
+            self.save_figure_path = self.config_dict['save_figure_path']
+            self.save_eventdata_path = self.config_dict['save_eventdata_path']
+            self.save_analysisresults_path = self.config_dict['save_analysisresults_path']
+        except:
+            self.save_figure_path = self.save_path
+            self.save_eventdata_path = self.save_path
+            self.save_analysisresults_path = self.save_path
+
+        os.makedirs(self.save_figure_path, exist_ok=True)
+        os.makedirs(self.save_eventdata_path, exist_ok=True)
+        os.makedirs(self.save_analysisresults_path, exist_ok=True)
+
+        self.nsig                        = int(round(self.config_dict['signalfraction']*self.config_dict['Nevents']))
+        self.nbkg                        = int(round((1-self.config_dict['signalfraction'])*self.config_dict['Nevents']))
+
 
         self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue   = create_true_axes_from_config(self.config_dict)
         self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis          = create_recon_axes_from_config(self.config_dict)
-
-        # self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue   = energy_true_axis, longitudeaxistrue, latitudeaxistrue
-        # self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis          = energy_recon_axis, longitudeaxis, latitudeaxis
 
 
         self.log_psf_normalisations, self.log_edisp_normalisations = irf_norm_setup(energy_true_axis=self.energy_true_axis, 
@@ -92,18 +140,18 @@ class Z2_DM_1COMP_BKG(object):
                                     default_hyperparameter_values=[self.config_dict['mass']], 
                                     hyperparameter_names=['mass'], )
         
-        self.edisp_like = discrete_loglike(logfunction=log_edisp, 
-                                    axes=(self.energy_recon_axis,), axes_names='E recon',
-                                    name='energy dispersion',
-                                    dependent_axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
-                                    dependent_axes_names = ['E true', 'lon true', 'lat true'])
+        self.irf_like = irf_loglikelihood(axes=[self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis], 
+                                          axes_names=['E recon', 'lon recon', 'lat recon'],
+                                            name='irf likelihood',
+                                          dependent_axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue])
 
-        self.psf_like = discrete_loglike(logfunction=log_psf, 
-                                            axes=(self.longitudeaxis, self.latitudeaxis), axes_names=['longitude recon', 'latitude recon'],
-                                            name='point spread function ', 
-                                            dependent_axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,),
-                                            dependent_axes_names = ['E true', 'lon', 'lat'])
-        
+    def _save_state(self):
+        pass
+
+
+
+
+
     def test_priors(self):
 
         sigpriorvals = np.squeeze(self.DM_prior.construct_prior_array())
@@ -134,7 +182,7 @@ class Z2_DM_1COMP_BKG(object):
                                                     axes=[self.longitudeaxistrue, 
                                                           self.latitudeaxistrue], axisindices=(1,2)).T )
         plt.xscale('log')
-
+        plt.savefig(self.save_figure_path+'/testpriordensities.pdf')
         plt.show(block=self.blockplot)
         
     def simulate(self):
@@ -143,6 +191,11 @@ class Z2_DM_1COMP_BKG(object):
 
         self.bkg_energy_vals,self.bkglonvals,self.bkglatvals  = self.bkg_prior.sample(
                 int(round((1-self.config_dict['signalfraction'])*self.config_dict['Nevents'])))
+        
+
+        np.save(self.save_eventdata_path+'/true_sig_sim_event_data.npy', [self.sig_energy_vals,self.siglonvals,self.siglatvals])
+        np.save(self.save_eventdata_path+'/true_bkg_sim_event_data.npy', [self.bkg_energy_vals,self.bkglonvals,self.bkglatvals])
+
         
         if self.diagnostics:
             plt.figure(dpi=250)
@@ -163,31 +216,19 @@ class Z2_DM_1COMP_BKG(object):
             spectralvals = np.exp(logspectralvals)
             plt.plot(self.energy_true_axis,spectralvals/np.mean(spectralvals)*np.mean(sigtrue_histvals[0]), lw=0.5)
             plt.loglog()
+            plt.savefig(self.save_figure_path+'/true_sim_results.pdf')
+
             plt.show(block=self.blockplot)
 
-        self.sig_energy_measured = [np.squeeze(self.edisp_like.sample((energy_val,*coord,), numsamples=1)) for energy_val,coord  in notebook_tqdm(zip(self.sig_energy_vals, np.array([self.siglonvals, self.siglatvals]).T), total=int(self.config_dict['signalfraction']*self.config_dict['Nevents']))]
-
-        self.signal_lon_measured = []
-        self.signal_lat_measured = []
-
-            
-        sig_lonlat_psf_samples =  [self.psf_like.sample((energy_val,*coord,), 1).tolist() for energy_val,coord  in notebook_tqdm(zip(self.sig_energy_vals, np.array([self.siglonvals, self.siglatvals]).T), total=self.config_dict['signalfraction']*self.config_dict['Nevents'])]
-                
-        for sig_lonlat_psf_sample in sig_lonlat_psf_samples:
-            self.signal_lon_measured.append(sig_lonlat_psf_sample[0])
-            self.signal_lat_measured.append(sig_lonlat_psf_sample[1])
-            
-        self.bkg_energy_measured = [np.squeeze(self.edisp_like.sample((energy,*coord,), numsamples=1)) for energy,coord  in notebook_tqdm(zip(self.bkg_energy_vals, np.array([self.bkglonvals, self.bkglatvals]).T), total=(1-self.config_dict['signalfraction'])*self.config_dict['Nevents'])]
-
-        self.bkg_lon_measured = []
-        self.bkg_lat_measured = []
+        self.sig_energy_measured, self.signal_lon_measured, self.signal_lat_measured = np.asarray([np.squeeze(self.irf_like.sample((energy_val,*coord,), numsamples=1)) for energy_val,coord  in notebook_tqdm(zip(self.sig_energy_vals, 
+                                                                                                                                                      np.array([self.siglonvals, 
+                                                                                                                                                                self.siglatvals]).T), 
+                                                                                                                                                                total=self.nsig)]).T
 
             
-        bkg_lonlat_psf_samples =  [self.psf_like.sample((energy,*coord,), 1).tolist() for energy,coord  in notebook_tqdm(zip(self.bkg_energy_vals, np.array([self.bkglonvals, self.bkglatvals]).T), total=(1-self.config_dict['signalfraction'])*self.config_dict['Nevents'])]
-
-        for bkg_lonlat_psf_sample in bkg_lonlat_psf_samples:
-            self.bkg_lon_measured.append(bkg_lonlat_psf_sample[0])
-            self.bkg_lat_measured.append(bkg_lonlat_psf_sample[1])
+        self.bkg_energy_measured, self.bkg_lon_measured, self.bkg_lat_measured = np.asarray([np.squeeze(self.irf_like.sample((energy,*coord,), numsamples=1)) for energy,coord  in notebook_tqdm(zip(self.bkg_energy_vals, 
+                                                                                                                                              np.array([self.bkglonvals, self.bkglatvals]).T), 
+                                                                                                                                              total=self.nbkg)]).T
 
         if self.diagnostics:
             plt.figure(dpi=250)
@@ -204,8 +245,14 @@ class Z2_DM_1COMP_BKG(object):
             plt.subplot(224)
             plt.hist(self.sig_energy_measured, bins=bin_centres_to_edges(self.energy_recon_axis))
             plt.loglog()
-
+            plt.savefig(self.save_figure_path+'/measured_sim_results.pdf')
             plt.show(block=self.blockplot)
+
+
+        np.save(self.save_eventdata_path+'/measured_sig_sim_event_data.npy', [self.sig_energy_measured, self.signal_lon_measured, self.signal_lat_measured])
+        np.save(self.save_eventdata_path+'/measured_bkg_sim_event_data.npy', [self.bkg_energy_measured, self.bkg_lon_measured, self.bkg_lat_measured])
+
+
 
         self.measured_energy = list(self.sig_energy_measured)+list(self.bkg_energy_measured)
         self.measured_lon = list(self.signal_lon_measured)+list(self.bkg_lon_measured)
@@ -217,20 +264,27 @@ class Z2_DM_1COMP_BKG(object):
 
         self.hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
             priors                  = (self.DM_prior, self.bkg_prior,), 
-            likelihood              = single_loglikelihood, 
+            likelihood              = self.irf_like, 
             dependent_axes          = (self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue), 
             hyperparameter_axes     = [[self.massrange], [None]], 
             numcores                = self.config_dict['numcores'], 
             likelihoodnormalisation = self.log_psf_normalisations+self.log_edisp_normalisations)
 
         self.measured_energy = [float(measured_energy_val) for measured_energy_val in self.measured_energy]
+
+        start = time.perf_counter()
         margresults = self.hyperparameter_likelihood_instance.nuisance_log_marginalisation(
             axisvals= (self.measured_energy, self.measured_lon, self.measured_lat)
             )
+        end = time.perf_counter()
+
+        print(f"Time to marginalise: {end-start}")
 
         self.margresultsarray = np.asarray(margresults)
         sigmargresults = np.squeeze(np.vstack(self.margresultsarray[:,0])).T
 
+        np.save(self.save_analysisresults_path+'/massrange.npy', self.massrange)
+        np.save(self.save_analysisresults_path+'/margresultsarray.npy', self.margresultsarray)
 
         from matplotlib.pyplot import get_cmap
         cmap = get_cmap(name='cool')
@@ -242,41 +296,35 @@ class Z2_DM_1COMP_BKG(object):
                 plt.plot(self.massrange, line, label=idx, c=cmap(idx/len(logmass_lines)), alpha=0.5, lw=1.0)
             plt.axvline(self.config_dict['mass'], c='tab:orange')
             plt.xscale('log')
+            plt.savefig(self.save_figure_path+'/massposterior_per_event.pdf')
             plt.show(block=self.blockplot)
 
     def generate_hyper_param_likelihood(self):
-        lambdawindowwidth      = 4/np.sqrt(self.config_dict['Nevents'])
+        self.sigfrac_range            = np.linspace(0 ,1, self.config_dict['nbins_signalfraction']) 
+
+        np.save(self.save_analysisresults_path+'/sigfrac_range.npy', self.sigfrac_range)
 
 
-        lambdalowerbound       = self.config_dict['signalfraction']-lambdawindowwidth
-        lambdaupperbound       = self.config_dict['signalfraction']+lambdawindowwidth
+        log_hyper_param_likelihood= self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+            mixture_axes=(self.sigfrac_range,), log_margresults=self.margresultsarray)
+
+        self.log_hyper_param_likelihood=np.squeeze(log_hyper_param_likelihood)
+
+        np.save(self.save_analysisresults_path+'/log_hyper_param_likelihood.npy', self.log_hyper_param_likelihood)
+
+        log_hyper_param_likelihood_plotvers = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
 
 
-
-
-        if lambdalowerbound<0:
-            lambdalowerbound = 0
-        if lambdaupperbound>1:
-            lambdaupperbound = 1
-
-
-        self.lambdarange            = np.linspace(lambdalowerbound, lambdaupperbound, self.config_dict['nbins_signalfraction']) 
-
-        new_log_posterior = self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
-            mixture_axes=(self.lambdarange,), log_margresults=self.margresultsarray)
-
-        self.log_posterior=np.squeeze(new_log_posterior)
-
-        log_posterior = self.log_posterior-special.logsumexp(self.log_posterior)
-
-        fig, ax = logdensity_matrix_plot([self.lambdarange, self.massrange, ], log_posterior, truevals=[self.config_dict['signalfraction'], self.config_dict['mass'],],       
-                                    sigmalines_1d=0, contours2d=0, plot_density=0, single_dim_yscales='linear',
-                                axis_names=['signal fraction', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
-        fig.figure.dpi = 120
-        ax[1,1].set_xscale('log')
-        ax[1,0].set_yscale('log')
-        plt.tight_layout()
-        plt.show()
+        if self.plot_result or self.diagnostics:
+            fig, ax = logdensity_matrix_plot([self.sigfrac_range, self.massrange, ], log_hyper_param_likelihood_plotvers, truevals=[self.config_dict['signalfraction'], self.config_dict['mass'],],       
+                                        sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
+                                    axis_names=['signal fraction', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
+            fig.figure.dpi = 120
+            ax[1,1].set_xscale('log')
+            ax[1,0].set_yscale('log')
+            plt.tight_layout()
+            plt.savefig(self.save_figure_path+'/log_hyper_param_scan.pdf')
+            plt.show()
 
     def run(self):
         if self.diagnostics:
@@ -288,7 +336,7 @@ class Z2_DM_1COMP_BKG(object):
         self.generate_hyper_param_likelihood()
 
 if __name__=="__main__":
-    config_inputs = read_config_file(os.path.dirname(__file__)+'/Z2_DM_1COMP_BKG_config_default.yaml')
+    config_file_path = sys.argv[1]
 
-    Z2_DM_1COMP_BKG_instance = Z2_DM_1COMP_BKG(config_dict=config_inputs,)
+    Z2_DM_1COMP_BKG_instance = Z2_DM_1COMP_BKG(config_file_path=config_file_path,)
     Z2_DM_1COMP_BKG_instance.run()

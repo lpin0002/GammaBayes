@@ -81,7 +81,7 @@ class discrete_hyperparameter_continuous_mix_post_process_sampler(object):
                 np.squeeze(np.log(self.apply_direchlet_stick_breaking_direct(xivals=mixture_vals, depth=idx))+logmargresult))
         return np.sum(ln_like)
 
-    def generate_log_hyperlike(self, nestedsampler_kwarg_dict={}, run_nested_kwarg_dict={}, numcores=None):
+    def generate_posterior(self, nestedsampler_kwarg_dict={}, run_nested_kwarg_dict={}, numcores=None):
         if numcores==None:
             numcores=self.numcores
         if self.multiprocess or (numcores>1):
