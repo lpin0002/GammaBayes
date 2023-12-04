@@ -2,7 +2,7 @@
 identifier        : 'example_config_run'
 Nevents           : 1000
 mass              : 1.0
-signal_fraction   : 0.1
+signal_fraction   : 0.5
 nbins_mass        : 61
 nbins_sigfrac     : 501
 dmdensity_profile : "burkert"
