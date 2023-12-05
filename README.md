@@ -23,7 +23,7 @@ This code is an adaption of a previous work by Abhi Mangipudi and the relevant p
 ## Warning
 
 Within the analysis we slice into matrices for the normalisation values of likelihood functions to enforce a normalisation on the interpolation done.
-These matrices can be quite large depending on the resolution of the axes chosen. Keep this in mind when implementing multi-processing as pytohn will
+These matrices can be quite large depending on the resolution of the axes chosen. Keep this in mind when implementing multi-processing as python will
 duplicate the arrays instead of reference the same one.
 
 ## Introduction
