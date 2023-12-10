@@ -8,12 +8,11 @@ from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
-from ..likelihoods.instrument_response_funcs import aefffunc
+from gammabayes.likelihoods.irfs import aefffunc
 from os import path
 darkmatter_dir = path.dirname(__file__)
 
-
-# DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
+# TODO: Add capability to give variable central position, distance, mass density and local mass density
 class base_DM_angular_dist_constructor(object):
     
     def __init__(self, longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile(),):

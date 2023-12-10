@@ -9,42 +9,68 @@ import yaml, warnings, sys, os
 from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
 
-def convertlonlat_to_offset(fov_coord: np.ndarray, pointing_direction: np.ndarray|None=None) -> float|np.ndarray:
-    """Takes a coordinate and translates that into an offset assuming small angles
+
+def fill_missing_keys(dictionary, default_values):
+    for key, default_value in default_values.items():
+        dictionary[key] = dictionary.get(key, default_value)
+
+
+def haversine(lon1, lat1, lon2, lat2):
+    # Convert degrees to radians
+    lon1, lat1 = np.radians([lon1, lat1])
+    lon2, lat2 = np.radians([lon2, lat2])
+
+    # Haversine formula
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    angular_separation_rad = 2 * np.arcsin(np.sqrt(a))
+
+
+    return np.degrees(angular_separation_rad)
+
+
+
+def convertlonlat_to_offset(angular_coord: np.ndarray, pointing_direction: np.ndarray=np.array([0,0])) -> float|np.ndarray:
+    """Takes a coordinate and translates that into an offset
 
     Args:
-        fov_coord (np.ndarray): A coordinate in FOV frame
+        angular_coord (np.ndarray): Angular coordinates
         point_direction (np.ndarray): Pointing direction of telescope
 
     Returns:
         np.ndarray or float: The corresponding offset values for the given fov coordinates
             assuming small angles
     """
-    if pointing_direction is None:
-        return np.linalg.norm(fov_coord, axis=0)
-    else:
-        return np.linalg.norm(fov_coord.T-pointing_direction.T, axis=1)
+    delta_y = angular_coord[1, :] - pointing_direction[1]
+    delta_x = angular_coord[0, :] - pointing_direction[0]
+
+    # Calculate the angular separation using arctangent
+    angles = np.arctan2(delta_y, delta_x)
+
+    return angles * 180 / np.pi
+
 
 
 def angularseparation(coord1: np.ndarray, coord2: np.ndarray|None =None) -> float|np.ndarray:
-    """Calculates the angular separation between coord1 and coord2 in FOV frame
-        assuming small angles.
+    """Takes a coordinate and translates that into an offset
 
     Args:
-        coord1 (np.ndarray): First coordinate in FOV frame
-        coord2 (np.ndarray): Second coordinate in FOV frame
+        angular_coord (np.ndarray): Angular coordinates
+        point_direction (np.ndarray): Pointing direction of telescope
 
     Returns:
-        float: Angular sepration between the two coords assuming small angles
-    """    
+        np.ndarray or float: The corresponding offset values for the given fov coordinates
+            assuming small angles
+    """
     
-    try:
-        return np.linalg.norm(coord2-coord1, axis=0)
-    except:
-        try:
-            return np.linalg.norm(coord2-coord1.T, axis=1)
-        except:
-            return np.linalg.norm(coord2.T-coord1, axis=1)
+    delta_y = coord1[1, :] - coord2[1, :]
+    delta_x = coord1[0, :] - coord2[0, :]
+
+    # Calculate the angular separation using arctangent
+    angles = np.arctan2(delta_y, delta_x)
+
+    return angles * 180 / np.pi
 
 
 def bin_centres_to_edges(axis: np.ndarray) -> np.ndarray:

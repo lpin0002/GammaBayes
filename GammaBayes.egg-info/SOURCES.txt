@@ -46,6 +46,7 @@ gammabayes/dark_matter/channel_spectra/griddata/channel=tau_massenergy_diffflux_
 gammabayes/dark_matter/channel_spectra/griddata/energyvals_massenergy_diffflux_grid.npy
 gammabayes/dark_matter/channel_spectra/griddata/log10xvals_massenergy_diffflux_grid.npy
 gammabayes/dark_matter/channel_spectra/griddata/massvals_massenergy_diffflux_grid.npy
+gammabayes/dark_matter/density_profiles/DM_Profiles.py
 gammabayes/dark_matter/density_profiles/__init__.py
 gammabayes/dark_matter/density_profiles/gammapy_wrappers.py
 gammabayes/dark_matter/models/__init__.py
