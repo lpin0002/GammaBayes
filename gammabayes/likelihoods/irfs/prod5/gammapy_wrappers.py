@@ -1,4 +1,4 @@
-from gammabayes.utils import convertlonlat_to_offset, angularseparation, resources_dir
+from gammabayes.utils import convertlonlat_to_offset, angularseparation, resources_dir, haversine
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_irf_dict_from_file
@@ -21,7 +21,7 @@ aefffull = prod5irfs['aeff']
 
 aefffunc = lambda energy, offset: aefffull.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-def log_aeff(true_energy, true_lon, true_lat, pointing_direction=None):
+def log_aeff(true_energy, true_lon, true_lat, pointing_direction=[0,0]):
     """Wrapper for the Gammapy interpretation of the log of 
         the CTA effective area function.
 
@@ -36,10 +36,10 @@ def log_aeff(true_energy, true_lon, true_lat, pointing_direction=None):
         float: The natural log of the effective area of the CTA in m^2
     """
     return np.log(aefffull.evaluate(energy_true = true_energy*u.TeV, 
-                             offset=convertlonlat_to_offset(
-                                 np.array([true_lon, true_lat]), pointing_direction=pointing_direction)*u.deg).to(u.cm**2).value)
+                             offset=haversine(
+                                 true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).to(u.cm**2).value)
     
-def log_edisp(recon_energy, true_energy, true_lon, true_lat, pointing_direction=None):
+def log_edisp(recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
     """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
     Args:
@@ -56,12 +56,11 @@ def log_edisp(recon_energy, true_energy, true_lon, true_lat, pointing_direction=
     """
     return np.log(edispfull.evaluate(energy_true=true_energy*u.TeV,
                                                     migra = recon_energy/true_energy, 
-                                                    offset=convertlonlat_to_offset(
-                                                        np.array([true_lon, true_lat]), 
-                                                        pointing_direction=pointing_direction)*u.deg).value)
+                                                    offset=haversine(
+                                 true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).value)
 
 
-def log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=None):
+def log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
     """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
     Args:
@@ -82,7 +81,7 @@ def log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_dire
     reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
     truespatialcoord = np.array([true_lon, true_lat])
     rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
-    offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
+    offset  = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1]).flatten()
     output = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
                                                     rad = rad*u.deg, 
                                                     offset=offset*u.deg).value)
@@ -90,7 +89,7 @@ def log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_dire
     return output
 
 
-def single_loglikelihood(recon_energy, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=None):
+def single_loglikelihood(recon_energy, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
     """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
         likelihood values for the given gamma-ray event data
 
@@ -112,8 +111,9 @@ def single_loglikelihood(recon_energy, recon_lon, recon_lat, true_energy, true_l
     """
     reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
     truespatialcoord = np.array([true_lon, true_lat])
-    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
-    offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
+    rad = haversine(reconstructed_spatialcoord[0], reconstructed_spatialcoord[1], 
+                    truespatialcoord[0], truespatialcoord[1]).flatten()
+    offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0].flatten(), pointing_direction[1].flatten()).flatten()
     output  = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
                                                     rad = rad*u.deg, 
                                                     offset=offset*u.deg).value)
@@ -147,8 +147,9 @@ def dynesty_single_loglikelihood(true_vals, recon_energy, recon_lon, recon_lat, 
     true_energy, true_lon, true_lat = true_vals
     reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
     truespatialcoord = np.array([true_lon, true_lat])
-    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
-    offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
+    rad = haversine(reconstructed_spatialcoord[0], reconstructed_spatialcoord[1], truespatialcoord[0], truespatialcoord[1]).flatten()
+    offset  = haversine(truespatialcoord[0].flatten(), truespatialcoord[1].flatten(), 
+                        pointing_direction[0].flatten(), pointing_direction[1].flatten()).flatten()
     output  = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
                                                     rad = rad*u.deg, 
                                                     offset=offset*u.deg).value)

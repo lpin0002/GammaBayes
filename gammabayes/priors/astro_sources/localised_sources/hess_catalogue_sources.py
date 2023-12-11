@@ -1,7 +1,7 @@
 
 from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
-from gammabayes.utils import resources_dir, convertlonlat_to_offset, iterate_logspace_integration
-from gammabayes.likelihoods.irfs.gammapy_wrappers import log_aeff
+from gammabayes.utils import resources_dir, convertlonlat_to_offset, iterate_logspace_integration, haversine
+from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_aeff
 import numpy as np
 from scipy import interpolate
 from scipy.special import logsumexp
@@ -102,7 +102,8 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
 
     energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
-    log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
+    log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten(), pointing_direction=[0,0]).reshape(energymesh.shape)
+    # log_aeff_table = 0
 
     log_point_hess_background_source_flux = np.log(full_hess_flux)
 

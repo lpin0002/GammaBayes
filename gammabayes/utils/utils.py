@@ -17,8 +17,8 @@ def fill_missing_keys(dictionary, default_values):
 
 def haversine(lon1, lat1, lon2, lat2):
     # Convert degrees to radians
-    lon1, lat1 = np.radians([lon1, lat1])
-    lon2, lat2 = np.radians([lon2, lat2])
+    lon1, lat1 = lon1*np.pi/180, lat1*np.pi/180
+    lon2, lat2 = lon2*np.pi/180, lat2*np.pi/180
 
     # Haversine formula
     dlon = lon2 - lon1
@@ -27,7 +27,7 @@ def haversine(lon1, lat1, lon2, lat2):
     angular_separation_rad = 2 * np.arcsin(np.sqrt(a))
 
 
-    return np.degrees(angular_separation_rad)
+    return angular_separation_rad*180/np.pi
 
 
 

@@ -170,6 +170,7 @@ class discrete_hyperparameter_likelihood(object):
         # log10eaxistrue,  longitudeaxistrue, latitudeaxistrue = axes
         
         nans = 0
+        infs = 0
         if self.prior_matrix_list is None:
             print("prior_matrix_list does not exist. Constructing priors.")
             prior_matrix_list = []
@@ -184,6 +185,7 @@ class discrete_hyperparameter_likelihood(object):
                 for idx, hyperparametervalue in enumerate(flattened_hyper_parameter_coords):
                     prior_matrix = np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
                     nans+=np.sum(np.isnan(prior_matrix))
+                    infs+=np.sum(np.isinf(prior_matrix))
                     prior_matrices[idx,...] = prior_matrix
 
 
@@ -192,6 +194,7 @@ class discrete_hyperparameter_likelihood(object):
                 prior_matrix_list.append(prior_matrices)
 
             print(f"Total cumulative number of nan values within all prior matrices: {nans}")
+            print(f"Total cumulative number of inf values within all prior matrices: {infs}")
 
                 
             self.prior_matrix_list = prior_matrix_list

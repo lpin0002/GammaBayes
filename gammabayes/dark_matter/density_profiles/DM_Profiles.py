@@ -16,7 +16,7 @@ import numpy as np
 import astropy.units as u
 from gammabayes.utils import logspace_riemann, convertlonlat_to_offset, haversine, fill_missing_keys
 
-
+import time
 
 
 
@@ -36,13 +36,13 @@ class DM_Profile(object):
                  angular_central_coords: np.ndarray = np.array([0,0]),
                  kwd_profile_default_vals: dict = {}):
 
-        self.log_profile_func   = log_profile_func
-        self.LOCAL_DENSITY      = LOCAL_DENSITY
-        self.DISTANCE           = dist_to_source
-        self.annihilation       = annihilation
-        self.kwd_profile_default_vals = kwd_profile_default_vals
-        self.default_r_s        = default_r_s
-        self.default_rho_s      = default_rho_s
+        self.log_profile_func           = log_profile_func
+        self.LOCAL_DENSITY              = LOCAL_DENSITY
+        self.DISTANCE                   = dist_to_source
+        self.annihilation               = annihilation
+        self.kwd_profile_default_vals   = kwd_profile_default_vals
+        self.default_r_s                = default_r_s
+        self.default_rho_s              = default_rho_s
         self.angular_central_coords     = angular_central_coords
 
         self.scale_density_profile(self.LOCAL_DENSITY, self.DISTANCE, **kwd_profile_default_vals)
@@ -68,8 +68,8 @@ class DM_Profile(object):
         return returnval
 
 
-    def diffJ(self, angular_coords: float | np.ndarray, 
-              int_resolution: int = 6001, 
+    def logdiffJ(self, angular_coords: float | np.ndarray, 
+              int_resolution: int = 601, 
               integration_method: callable = logspace_riemann, 
               kwd_profile_vals: dict = {}) -> float | np.ndarray :
         
@@ -81,22 +81,21 @@ class DM_Profile(object):
         fill_missing_keys(kwd_profile_vals, self.kwd_profile_default_vals)
 
         t = np.linspace(0, 6, int_resolution)
-        logy= self.log_profile_func(self._radius(t, angular_offset, self.DISTANCE),  **kwd_profile_vals)**(1+self.annihilation)
+        logy= (1+self.annihilation)*self.log_profile_func(self._radius(t, angular_offset, self.DISTANCE),  **kwd_profile_vals)
 
-        integral = integration_method(
+        logintegral = integration_method(
             logy=logy,
             x=t, 
             axis=0)
         
 
-
-        return integral*self.DISTANCE*np.cos(angular_offset*np.pi/180)
-
+        return logintegral+np.log(self.DISTANCE)+np.log(np.cos(angular_offset*np.pi/180))
 
 
 
 
-class Einasto(DM_Profile):
+
+class Einasto_Profile(DM_Profile):
 
     @staticmethod
     def log_profile(radius: float | np.ndarray , 
@@ -122,7 +121,7 @@ class Einasto(DM_Profile):
 
 
 
-class GNFW(DM_Profile):
+class GNFW_Profile(DM_Profile):
 
 
     @staticmethod
@@ -155,5 +154,39 @@ class GNFW(DM_Profile):
 
 
 
+class Burkert_Profile(DM_Profile):
+    @staticmethod
+    def log_profile(radius, r_s, rho_s):
+        rr = radius / r_s
+        return np.log(rho_s) - (np.log(1 + rr) + np.log(1 + rr**2))
+    
+    def __init__(self, 
+                 default_rho_s: float = 1., 
+                 default_r_s: float = 12.67, *args, **kwargs):
+        super().__init__(
+            log_profile_func=self.log_profile, 
+            kwd_profile_default_vals = {'r_s': default_r_s, 
+                                        'rho_s':default_rho_s},
+            *args, **kwargs
+        )
+ 
 
 
+
+class Moore_Profile(DM_Profile):
+
+
+    @staticmethod
+    def log_profile(radius, r_s, rho_s):
+        rr = radius / r_s
+        return np.log(rho_s) - 1.16*np.log(rr)  - 1.84* np.log(1 + rr)
+    
+    def __init__(self, 
+                 default_rho_s: float = 1., 
+                 default_r_s: float = 30.28, *args, **kwargs):
+        super().__init__(
+            log_profile_func=self.log_profile, 
+            kwd_profile_default_vals = {'r_s': default_r_s, 
+                                        'rho_s':default_rho_s},
+            *args, **kwargs
+        )

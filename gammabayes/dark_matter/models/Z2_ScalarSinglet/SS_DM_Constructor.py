@@ -7,6 +7,7 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 from scipy import interpolate
 import pandas as pd
 from gammabayes.likelihoods.irfs import log_aeff
+from gammabayes.dark_matter.density_profiles import DM_Profiles
 from os import path
 from gammabayes.dark_matter.density_profiles import check_profile_module, DMProfiles
 ScalarSinglet_Folder_Path = path.dirname(__file__)
@@ -17,10 +18,11 @@ import time
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class SS_DM_dist(object):
     
-    def __init__(self, longitudeaxis, latitudeaxis, density_profile=DMProfiles.Einasto, ratios=True):
+    def __init__(self, longitudeaxis, latitudeaxis, density_profile=DM_Profiles.Einasto_Profile, density_kwargs={}, ratios=True):
         self.longitudeaxis = longitudeaxis
         self.latitudeaxis = latitudeaxis
         self.density_profile = density_profile
+        self.density_kwargs     = density_kwargs
         self.ratios = ratios
         """Initialise an SS_DM_dist class instance.
 
@@ -37,7 +39,7 @@ class SS_DM_dist(object):
                 gamma.astro.darkmatter.profiles module, attribute of the dark_matter.density_profiles.DMProfiles class,
                 or string representing profile
 
-                Defaults to profiles.EinastoProfile().
+                Defaults to DM_Profiles.Einasto_Profile.
 
             ratios (bool, optional): A bool representing whether one wants to use the input differential cross-sections
                 or the annihilation __ratios__. Defaults to False.
@@ -105,36 +107,8 @@ class SS_DM_dist(object):
                 darkSUSY_BFs_cleaned_vals[:,idx]) for idx, channel in enumerate(list(darkSUSY_to_PPPC_converter.keys())
                 )
                 }
-
-        density_profile = check_profile_module(density_profile)
         
-        self.profile = density_profile
-
-        # Adopt standard values used in HESS
-        profiles.DISTANCE_GC = 8.5 * u.kpc
-        profiles.LOCAL_DENSITY = 0.39 * u.Unit("GeV / cm3")
-
-        self.profile.scale_to_local_density()
-
-        self.central_position = SkyCoord(0.0, 0.0, frame="galactic", unit="deg")
-
-        # Presuming even spacings
-        self.geom = WcsGeom.create(skydir=self.central_position, 
-                            binsz=(np.diff(self.longitudeaxis)[0], np.diff(self.latitudeaxis)[0]),
-                            width=(np.ptp(self.longitudeaxis)+np.diff(self.longitudeaxis)[0], 
-                                np.ptp(self.latitudeaxis)+np.diff(self.latitudeaxis)[0]),
-                            frame="galactic")
-
-
-        jfactory = JFactory(
-            geom=self.geom, profile=self.profile, distance=profiles.DMProfile.DISTANCE_GC
-        )
-        self.diffjfact_array = jfactory.compute_differential_jfactor().to(u.TeV**2/(u.cm**5*u.sr))
-        self.diffjfact_array = (self.diffjfact_array.value).T
-        self.diffJfactor_function = interpolate.RegularGridInterpolator(
-            (self.longitudeaxis, self.latitudeaxis), 
-            self.diffjfact_array, 
-            method='linear', bounds_error=False, fill_value=0)
+        self.profile = density_profile(**density_kwargs)
 
 
     def nontrivial_coupling(self, mass, energy, coupling=0.1):
@@ -173,10 +147,6 @@ class SS_DM_dist(object):
     
 
     
-    
-    
-    
-    
     def func_setup(self):
         """A method that pumps out a function representing the natural log of 
             the flux of dark matter annihilation gamma rays for a given log 
@@ -185,38 +155,65 @@ class SS_DM_dist(object):
         
         def DM_signal_dist(energyval, lonval, latval, mass, coupling=0.1):
             
-
             flatten_param_vals = np.array([mass.flatten(), energyval.flatten(),])
             unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
-
-            spectralvals = self.nontrivial_coupling(*unique_param_vals)
-
+            logspectralvals = self.nontrivial_coupling(*unique_param_vals)
 
             mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
 
-            slices = np.where(mask, spectralvals[None, :], 0.0)
+            slices = np.where(mask, logspectralvals[None, :], 0.0)
 
+            logspectralvals = np.sum(slices, axis=-1).reshape(energyval.shape)
 
+            ####################
 
-            spectralvals = np.sum(slices, axis=-1).reshape(energyval.shape)
+            flatten_spatial_param_vals = np.array([lonval.flatten(), latval.flatten(),])
+            unique_spatial_param_vals = np.unique(flatten_spatial_param_vals, axis=1)
 
+            logspatialvals = self.profile.logdiffJ(unique_spatial_param_vals)
 
-            spatialvals = np.log(
-                self.diffJfactor_function((lonval.flatten(), latval.flatten()))
-                ).reshape(energyval.shape)
+            spatial_mask = np.all(unique_spatial_param_vals[:, None, :] == flatten_spatial_param_vals[:, :, None], axis=0)
 
+            spatial_slices = np.where(spatial_mask, logspatialvals[None, :], 0.0)
 
+            logspatialvals = np.sum(spatial_slices, axis=-1).reshape(energyval.shape)
 
+            ####################
             log_aeffvals = log_aeff(energyval.flatten(), lonval.flatten(), latval.flatten()).reshape(energyval.shape)
 
-                    
-
-            logpdfvalues = spectralvals+spatialvals+log_aeffvals
+        
+            logpdfvalues = logspectralvals+logspatialvals+log_aeffvals
 
             
             return logpdfvalues
         
-        return DM_signal_dist
+
+        def DM_signal_dist_mesh_efficient(energyvals, lonvals, latvals, mass, coupling=0.1):
+
+            
+            energy_mesh, mass_mesh = np.meshgrid(energyvals, mass, indexing='ij')
+
+            logspectralvals = self.nontrivial_coupling(mass_mesh.flatten(), energy_mesh.flatten()).reshape(energyvals.shape)
+
+
+            ####################
+
+            lon_mesh, lat_mesh = np.meshgrid(lonvals, latvals, indexing='ij')
+
+            logspatialvals = self.profile.logdiffJ(np.array([lon_mesh.flatten(), lat_mesh.flatten()])).reshape(lon_mesh.shape)
+
+
+            ####################
+
+            aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energyvals, lonvals, latvals, indexing='ij')
+
+            log_aeffvals = log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
+
+            logpdfvalues = logspectralvals[:, None, None] +logspatialvals[None, :, :]+log_aeffvals
+
+            return logpdfvalues
+        
+        return DM_signal_dist, DM_signal_dist_mesh_efficient
     
     

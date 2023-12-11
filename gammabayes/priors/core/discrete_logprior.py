@@ -3,12 +3,14 @@ import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 import matplotlib.pyplot as plt
+import warnings
 
 class discrete_logprior(object):
     
     def __init__(self, name: str='[None]', 
                  inputunit: str=None, 
                  logfunction: callable=None, 
+                 log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
                  axes_names: list[str] | tuple[str] = ['None'], 
                  hyperparameter_axes: tuple[np.ndarray] | None = None, 
@@ -68,10 +70,18 @@ class discrete_logprior(object):
         self.hyperparameter_names = hyperparameter_names
         self.axes = axes
         self.num_axes = len(axes)
+
+        if not(log_mesh_efficient_func is None):
+            self.efficient_exist = True
+            self.log_mesh_efficient_func = log_mesh_efficient_func
+        else:
+            self.efficient_exist = False
+            warnings.warn('No function to calculate on mesh efficiently given')
+
         if self.num_axes==1:
             self.axes_mesh = (axes,)
         else:
-            self.axes_mesh = (*np.meshgrid(*axes, indexing='ij'),)
+            self.axes_mesh = np.meshgrid(*axes, indexing='ij')
             
         if default_hyperparameter_values is None:
             self.default_hyperparameter_values = None
@@ -129,6 +139,7 @@ class discrete_logprior(object):
             float: the integrated value of the prior for a given hyperparameter 
         over the default axes
         """
+        
         if axes is None:
             axes = self.axes
         if hyperparametervalues is None:
@@ -136,9 +147,13 @@ class discrete_logprior(object):
 
         if log_prior_values is None:
 
-            inputmeshes = np.meshgrid(*axes,  *hyperparametervalues, indexing='ij')
+            if self.efficient_exist:
+                log_prior_values = self.log_mesh_efficient_func(*axes, *hyperparametervalues)
+            else:
 
-            log_prior_values = self.logfunction(*inputmeshes)
+                inputmeshes = np.meshgrid(*axes,  *hyperparametervalues, indexing='ij')
+
+                log_prior_values = self.logfunction(*inputmeshes)
 
         log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=axes)
 
@@ -169,10 +184,14 @@ class discrete_logprior(object):
         """
         if numsamples>0:
             if logpriorvalues is None:
-                logpriorvalues = self.logfunction(*self.input_values_mesh)
+                if self.efficient_exist:
+                    logpriorvalues = self.log_mesh_efficient_func(*self.axes, *self.default_hyperparameter_values)
+
+                else:
+                    logpriorvalues = self.logfunction(*self.input_values_mesh)
         
             if type(logpriorvalues)!=np.ndarray:
-                logpriorvalues = np.array(logpriorvalues)
+                logpriorvalues = np.asarray(logpriorvalues)
                 
                 
                 
@@ -220,18 +239,11 @@ class discrete_logprior(object):
             hyperparameters = self.default_hyperparameter_values
 
         if axes is None:
-            try:
-                inputmesh = np.meshgrid(*self.axes,*hyperparameters, indexing='ij') 
-                outputarray = self.logfunction(*inputmesh)
+            axes = self.axes
 
-            except:
-                inputmesh = np.meshgrid(*self.axes, indexing='ij') 
-                outputarray = self.logfunction(*inputmesh)
+        if self.efficient_exist:
+            outputarray = self.log_mesh_efficient_func(*axes, *hyperparameters)
 
-            if normalise:
-                if not np.isneginf(self.normalisation(outputarray)):
-                    outputarray = outputarray - self.normalisation(outputarray)
-                    outputarray = outputarray - self.normalisation(outputarray)
         else:
             try:
                 inputmesh = np.meshgrid(*axes,*hyperparameters, indexing='ij') 
@@ -240,13 +252,12 @@ class discrete_logprior(object):
             except:
                 inputmesh = np.meshgrid(*axes, indexing='ij') 
                 outputarray = self.logfunction(*inputmesh)
+        if normalise:
+            normalisation = self.normalisation(outputarray)
+            if not np.isneginf(normalisation):
+                outputarray = outputarray - normalisation
+                outputarray = outputarray - self.normalisation(outputarray)
 
-            # This is left as an option to decrease computation time
-            if normalise:
-                first_norm = self.normalisation(outputarray, axes=axes)
-                if not np.isneginf(first_norm):
-                    outputarray = outputarray - first_norm
-                    outputarray = outputarray - self.normalisation(outputarray, axes=axes)
              
         return outputarray
 
