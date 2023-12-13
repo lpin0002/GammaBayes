@@ -8,4 +8,5 @@ Author-email: Liam.Pinchbeck@monash.edu
 License: MIT
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: Unix
+Requires-Python: >=3.6
 License-File: LICENSE

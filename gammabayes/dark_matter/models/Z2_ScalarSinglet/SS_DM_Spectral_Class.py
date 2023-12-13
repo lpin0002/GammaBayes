@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import interpolate
 import pandas as pd
-from gammabayes.likelihoods.irfs import log_aeff
 from gammabayes.dark_matter.density_profiles import DM_Profiles
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
@@ -10,33 +9,11 @@ from gammabayes.dark_matter.channel_spectra import single_channel_spectral_data_
 import time
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
-class SS_DM_dist(object):
+class SS_Spectra(object):
     
-    def __init__(self, longitudeaxis, latitudeaxis, density_profile=DM_Profiles.Einasto_Profile, density_kwargs={}, ratios=True):
-        self.density_profile = density_profile
-        self.density_kwargs     = density_kwargs
+    def __init__(self, ratios: bool = True):
+
         self.ratios = ratios
-        """Initialise an SS_DM_dist class instance.
-
-        Args:
-            longitudeaxis (np.ndarray): Array of the galactic longitude values 
-                to sample for the calculation of the different J-factor
-
-            latitudeaxis (np.ndarray): Array of the galactic latitude values 
-                to sample for the calculation of the different J-factor
-
-            density_profile (_type_, optional): The density profile to be used 
-                for the calculation of the differential J-factor. Must be of
-                the same type as the profile contained in the 
-                gamma.astro.darkmatter.profiles module, attribute of the dark_matter.density_profiles.DMProfiles class,
-                or string representing profile
-
-                Defaults to DM_Profiles.Einasto_Profile.
-
-            ratios (bool, optional): A bool representing whether one wants to use the input differential cross-sections
-                or the annihilation __ratios__. Defaults to False.
-        """
-        
     
         darkSUSY_to_PPPC_converter = {
             "nuenue":"nu_e",
@@ -100,10 +77,11 @@ class SS_DM_dist(object):
                 )
                 }
         
-        self.profile = density_profile(**density_kwargs)
 
 
-    def nontrivial_coupling(self, mass, energy, coupling=0.1):
+    def point_spectral_gen(self, energy: float | np.ndarray | list, 
+                           mass: float | np.ndarray | list, 
+                           coupling: float | np.ndarray | list = 0.1) -> np.ndarray | float:
         """Calculates Z_2 scalar singlet dark matter annihilation gamma-ray 
             spectra for a set of mass and coupling values.
 
@@ -139,73 +117,50 @@ class SS_DM_dist(object):
     
 
     
-    def func_setup(self):
-        """A method that pumps out a function representing the natural log of 
-            the flux of dark matter annihilation gamma rays for a given log 
-            energy, sky position, log mass and higgs coupling value.
-        """
         
-        def DM_signal_dist(energyval, lonval, latval, mass, coupling=0.1):
+    def spectral_gen(self, 
+                     energy: list | np.ndarray | float, 
+                     mass: list | np.ndarray | float, 
+                     theta_params: dict = {'coupling': 0.1}) -> np.ndarray | float:
+        energy = np.asarray(energy)
+        mass = np.asarray(mass)
+
+        for key, val in theta_params.items():
+            asarray_param = np.asarray(val) 
+            theta_params[key] = asarray_param
+
+        flatten_param_vals = np.asarray([energy.flatten(), mass.flatten(), *[theta_param_mesh.flatten() for theta_param_mesh in theta_params.values()]])
             
-            flatten_param_vals = np.array([mass.flatten(), energyval.flatten(),])
-            unique_param_vals = np.unique(flatten_param_vals, axis=1)
+        unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
-            logspectralvals = self.nontrivial_coupling(*unique_param_vals)
+        logspectralvals = self.point_spectral_gen(energy=unique_param_vals[0], mass=unique_param_vals[1], **{theta_param_key: unique_param_vals[2+idx].flatten() for idx, theta_param_key in enumerate(theta_params.keys())})
 
-            mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
+        mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
 
-            slices = np.where(mask, logspectralvals[None, :], 0.0)
+        slices = np.where(mask, logspectralvals[None, :], 0.0)
 
-            logspectralvals = np.sum(slices, axis=-1).reshape(energyval.shape)
-
-            ####################
-
-            flatten_spatial_param_vals = np.array([lonval.flatten(), latval.flatten(),])
-            unique_spatial_param_vals = np.unique(flatten_spatial_param_vals, axis=1)
-
-            logspatialvals = self.profile.logdiffJ(unique_spatial_param_vals)
-
-            spatial_mask = np.all(unique_spatial_param_vals[:, None, :] == flatten_spatial_param_vals[:, :, None], axis=0)
-
-            spatial_slices = np.where(spatial_mask, logspatialvals[None, :], 0.0)
-
-            logspatialvals = np.sum(spatial_slices, axis=-1).reshape(energyval.shape)
-
-            ####################
-            log_aeffvals = log_aeff(energyval.flatten(), lonval.flatten(), latval.flatten()).reshape(energyval.shape)
-
-        
-            logpdfvalues = logspectralvals+logspatialvals+log_aeffvals
-
+        logspectralvals = np.sum(slices, axis=-1).reshape(energy.shape)
             
-            return logpdfvalues
+        return logspectralvals
+    
+
+    def mesh_efficient_spectral_gen(self, 
+                                    energy: list | np.ndarray | float, 
+                                    mass: list | np.ndarray | float, 
+                                    theta_params: dict = {'coupling': 0.1}) -> np.ndarray | float:
+
+        mass = np.asarray(mass)
+
+        theta_params = {theta_param_key: np.asarray(theta_param_val) for theta_param_key, theta_param_val in theta_params.items()}
+
+        param_meshes = np.meshgrid(energy, mass, *theta_params.values(), indexing='ij')
+
+        logspectralvals = self.point_spectral_gen(energy = param_meshes[0].flatten(), mass = param_meshes[1].flatten(), **{theta_param_key: param_meshes[2+idx].flatten() for idx, theta_param_key in enumerate(theta_params.keys())}).reshape(param_meshes[0].shape)
         
-
-        def DM_signal_dist_mesh_efficient(energyvals, lonvals, latvals, mass, coupling=0.1):
-
-            
-            energy_mesh, mass_mesh = np.meshgrid(energyvals, mass, indexing='ij')
-
-            logspectralvals = self.nontrivial_coupling(mass_mesh.flatten(), energy_mesh.flatten()).reshape(energyvals.shape)
-
-
-            ####################
-
-            lon_mesh, lat_mesh = np.meshgrid(lonvals, latvals, indexing='ij')
-
-            logspatialvals = self.profile.logdiffJ(np.array([lon_mesh.flatten(), lat_mesh.flatten()])).reshape(lon_mesh.shape)
-
-
-            ####################
-
-            aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energyvals, lonvals, latvals, indexing='ij')
-
-            log_aeffvals = log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
-
-            logpdfvalues = logspectralvals[:, None, None] +logspatialvals[None, :, :]+log_aeffvals
-
-            return logpdfvalues
+        return logspectralvals
+    
+    def __call__(self, *args, **kwargs) -> np.ndarray | float:
+        return self.spectral_gen(*args, **kwargs)
         
-        return DM_signal_dist, DM_signal_dist_mesh_efficient
     
     

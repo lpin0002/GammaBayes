@@ -1,20 +1,10 @@
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Utilities to compute J-factor maps."""
-import html
 import numpy as np
 import astropy.units as u
 
-__all__ = ["JFactory"]
 
-
-
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""Dark matter profiles."""
-import abc
-import html
 import numpy as np
 import astropy.units as u
-from gammabayes.utils import logspace_riemann, convertlonlat_to_offset, haversine, fill_missing_keys
+from gammabayes.utils import logspace_riemann, haversine, fill_missing_keys
 
 import time
 
@@ -90,6 +80,11 @@ class DM_Profile(object):
         
 
         return logintegral+np.log(self.DISTANCE)+np.log(np.cos(angular_offset*np.pi/180))
+    
+
+    def mesh_efficient_logdiffJ(self, lon, lat, *args, **kwargs) -> float | np.ndarray :
+        angular_coords = np.asarray([mesh.flatten() for mesh in np.meshgrid(lon, lat, indexing='ij')])
+        return self.logdiffJ(angular_coords=angular_coords, *args, **kwargs).reshape(lon.shape[0], lat.shape[0])
 
 
 

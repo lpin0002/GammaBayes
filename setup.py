@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import subprocess
 import sys
 import os
-
+import time
 
 setup(name='GammaBayes',
       description='A package for Bayesian dark matter inference',
@@ -12,6 +12,9 @@ setup(name='GammaBayes',
       license="MIT",
       version='0.0.48',
       packages=find_packages(),
+
+      # For a lot of the DM spectral classes we require that dict types are ordered
+      python_requires='>=3.6',
       install_requires=[
           "astropy>=5.1",
         "corner>=2.2.2",
@@ -42,5 +45,5 @@ setup(name='GammaBayes',
                         'dark_matter/models/Z2_ScalarSinglet/temp/*',
                         'standard_inference_flows/*',
                         ]
-      }
+      },
       )
