@@ -1,13 +1,12 @@
-astropy>=5.1
+astropy
 corner
-dynesty==2.1.2
+dynesty
 matplotlib
-scipy==1.11.3
-tqdm>=4.65.0
+scipy
+tqdm
 numpy
 gammapy
 pandas
 pytest
 setuptools
-tqdm
 pyyaml
