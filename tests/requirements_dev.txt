@@ -1,5 +1,5 @@
 astropy>=5.1
-corner>=2.2.2
+corner
 dynesty==2.1.2
 matplotlib
 scipy==1.11.3
@@ -11,4 +11,3 @@ pytest
 setuptools
 tqdm
 pyyaml
-corner
