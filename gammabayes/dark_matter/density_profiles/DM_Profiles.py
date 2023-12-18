@@ -4,7 +4,7 @@ import astropy.units as u
 
 import numpy as np
 import astropy.units as u
-from gammabayes.utils import logspace_riemann, haversine, fill_missing_keys
+from gammabayes.utils import logspace_riemann, haversine, update_with_defaults
 
 import time
 
@@ -58,20 +58,20 @@ class DM_Profile(object):
         return returnval
 
 
-    def logdiffJ(self, angular_coords: float | np.ndarray, 
+    def logdiffJ(self, longitude: float | np.ndarray, 
+                 latitude: float | np.ndarray, 
               int_resolution: int = 601, 
               integration_method: callable = logspace_riemann, 
-              kwd_profile_vals: dict = {}) -> float | np.ndarray :
-        
-        angular_offset = haversine(angular_coords[0,:], 
-                                   angular_coords[1,:], 
+              kwd_parameters: dict = {}) -> float | np.ndarray :
+        angular_offset = haversine(longitude, 
+                                   latitude, 
                                    self.angular_central_coords[0], 
                                    self.angular_central_coords[1],)
         
-        fill_missing_keys(kwd_profile_vals, self.kwd_profile_default_vals)
+        update_with_defaults(kwd_parameters, self.kwd_profile_default_vals)
 
         t = np.linspace(0, 6, int_resolution)
-        logy= (1+self.annihilation)*self.log_profile_func(self._radius(t, angular_offset, self.DISTANCE),  **kwd_profile_vals)
+        logy= (1+self.annihilation)*self.log_profile_func(self._radius(t, angular_offset, self.DISTANCE),  **kwd_parameters)
 
         logintegral = integration_method(
             logy=logy,
@@ -82,9 +82,18 @@ class DM_Profile(object):
         return logintegral+np.log(self.DISTANCE)+np.log(np.cos(angular_offset*np.pi/180))
     
 
-    def mesh_efficient_logdiffJ(self, lon, lat, *args, **kwargs) -> float | np.ndarray :
-        angular_coords = np.asarray([mesh.flatten() for mesh in np.meshgrid(lon, lat, indexing='ij')])
-        return self.logdiffJ(angular_coords=angular_coords, *args, **kwargs).reshape(lon.shape[0], lat.shape[0])
+    def mesh_efficient_logdiffJ(self, longitude, latitude, kwd_parameters={}, *args, **kwargs) -> float | np.ndarray :
+
+        parameter_meshes = np.meshgrid(longitude, latitude, *kwd_parameters.values(), indexing='ij')
+        parameter_values_flattened_meshes = np.asarray([mesh.flatten() for mesh in parameter_meshes])
+
+        return self.logdiffJ(
+            longitude=parameter_values_flattened_meshes[0], 
+            latitude=parameter_values_flattened_meshes[1], 
+            kwd_parameters = {param_key: parameter_values_flattened_meshes[2+idx] for idx, param_key in enumerate(kwd_parameters)},
+            *args, 
+            **kwargs
+            ).reshape(parameter_meshes[0].shape)
 
 
 

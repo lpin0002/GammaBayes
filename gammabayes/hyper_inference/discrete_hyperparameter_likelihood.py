@@ -2,16 +2,19 @@ import numpy as np
 from scipy.special import logsumexp
 import functools
 from tqdm import tqdm
-from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_integration, logspace_riemann
+from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_integration, logspace_riemann, update_with_defaults
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
 import json, os, warnings
 import matplotlib.pyplot as plt
+import time
 
 class discrete_hyperparameter_likelihood(object):
-    def __init__(self, priors, likelihood, axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
+    def __init__(self, priors, 
+                 likelihood: callable, 
+                 axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
-                 hyperparameter_axes: list | tuple = (), 
+                 hyperparameter_axes: dict = {}, 
                  numcores: int = 8, 
                  likelihoodnormalisation: np.ndarray | float = 0., 
                  log_margresults: np.ndarray | None = None, 
@@ -23,7 +26,7 @@ class discrete_hyperparameter_likelihood(object):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
-            priors (tuple, optional): Tuple containing instances of the 
+            priors (tuple|list, optional): Tuple containing instances of the 
                 discrete_logprior object. Defaults to None.
 
             likelihood (function, optional): A function that takes in axes and 
@@ -41,11 +44,8 @@ class discrete_hyperparameter_likelihood(object):
                 longitude values, and true latitude values. 
                 Defaults to None.
 
-            hyperparameter_axes (tuple, optional): Tuple containing the default 
-                values at which the priors will be evaluated. For example, if 
-                there are two priors there will be two tuples each containing
-                the range of hyperparameters at which each prior will be 
-                evaluated at. Defaults to ().
+            hyperparameter_axes (dict, optional): Dict containing the default 
+                values at which the priors will be evaluated. Defaults to {}.
 
             numcores (int, optional): If wanting to multi-core parallelize, 
                 this represents the number of cores that will be used. 
@@ -84,8 +84,30 @@ class discrete_hyperparameter_likelihood(object):
                     raise Exception("Dependent value axes used for calculations not given.")
         else:
             self.dependent_axes             = dependent_axes
+
+        _num_priors = len(priors)
+        _num_hyper_axes = len(hyperparameter_axes)
+        
+        if _num_priors==_num_hyper_axes:
+            self.hyperparameter_axes        = hyperparameter_axes
+        else:
+            diff_in_num_hyperaxes_vs_priors = _num_priors-_num_hyper_axes
+            if diff_in_num_hyperaxes_vs_priors<0:
+                raise Exception(f'''
+You have specifed {np.abs(diff_in_num_hyperaxes_vs_priors)} more hyperparameter axes than priors.''')
             
-        self.hyperparameter_axes        = hyperparameter_axes
+            else:
+                warnings.warn(f"""
+You have specifed {diff_in_num_hyperaxes_vs_priors} less hyperparameter axes than priors. 
+Assigning empty hyperparameter axes for remaining priors.""")
+                
+                for __idx in range(int(diff_in_num_hyperaxes_vs_priors)):
+                    hyperparameter_axes.append({'spectral_parameters':{}, 'spatial_parameters': {}})
+
+                self.hyperparameter_axes        = hyperparameter_axes
+
+
+
         self.numcores                   = numcores
         self.likelihoodnormalisation    = likelihoodnormalisation
         self.iterative_logspace_integrator  = iterative_logspace_integrator
@@ -106,7 +128,9 @@ class discrete_hyperparameter_likelihood(object):
         self.prior_matrix_list              = prior_matrix_list
         
     
-    def observation_nuisance_marg(self, axisvals: list | np.ndarray, prior_matrix_list: list[np.ndarray]) -> np.ndarray:
+    def observation_nuisance_marg(self, 
+                                  axisvals: list | np.ndarray, 
+                                  prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray:
         """Returns a list of the log marginalisation values for a single set of gamma-ray
             event measurements for various log prior matrices.
 
@@ -131,33 +155,52 @@ class discrete_hyperparameter_likelihood(object):
             np.ndarray: A numpy array of the log marginalisation values for 
                 each of the priors.
         """
-        
+
         meshvalues  = np.meshgrid(*axisvals, *self.dependent_axes, indexing='ij')
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        
-        likelihoodvalues = self.likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape)
-        
+        t2 = time.perf_counter()
+
+        likelihoodvalues = np.squeeze(self.likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
+        likelihoodvalues_ndim = likelihoodvalues.ndim
+
+        t3 = time.perf_counter()
+
         likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
+
+        t4 = time.perf_counter()
         
         all_log_marg_results = []
-        for idx, prior_matrices in enumerate(prior_matrix_list):
-            # single_parameter_log_margvals = []
-            prior_matrices = np.asarray(prior_matrices)
-            # for idx2, single_prior_matrix in enumerate(prior_matrices):
-            logintegrandvalues = np.squeeze(prior_matrices+likelihoodvalues)
 
-            likelihoodvalues_ndim = np.squeeze(likelihoodvalues).ndim
-            prior_matrices_ndim = np.squeeze(prior_matrices).ndim
-            axisindices = np.arange(prior_matrices_ndim-likelihoodvalues_ndim, prior_matrices_ndim)
+        t5_1s = []
+        t5_2s = []
+        t5_3s = []
+        t5_4s = []
 
-            output = self.iterative_logspace_integrator(logintegrandvalues,   
-                axes=self.dependent_axes, axisindices=axisindices)
-
-            single_parameter_log_margvals = output
-
-            all_log_marg_results.append(np.squeeze(np.asarray(single_parameter_log_margvals)))
+        for prior_matrices in prior_matrix_list:
+            t5_1s.append(time.perf_counter())
+            logintegrandvalues = prior_matrices+likelihoodvalues
             
+            t5_2s.append(time.perf_counter())
+
+            single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
+                axes=self.dependent_axes, axisindices=[1,2,3])
+
+            t5_3s.append(time.perf_counter())
+
+            all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
+
+            t5_4s.append(time.perf_counter())
+
+
+        t5 = time.perf_counter()
+
+        t5_1s = np.array(t5_1s)
+        t5_2s = np.array(t5_2s)
+        t5_3s = np.array(t5_3s)
+
+
+        print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}", end='\r')
             
         return np.array(all_log_marg_results, dtype=object)
 
@@ -168,48 +211,108 @@ class discrete_hyperparameter_likelihood(object):
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
         np.seterr(divide='ignore', invalid='ignore')
         # log10eaxistrue,  longitudeaxistrue, latitudeaxistrue = axes
-        
+        prior_marged_shapes = np.empty(shape=(len(self.priors),), dtype=object)
         nans = 0
-        infs = 0
         if self.prior_matrix_list is None:
             print("prior_matrix_list does not exist. Constructing priors.")
             prior_matrix_list = []
-            for idx, prior in tqdm(enumerate(self.priors), total=len(self.priors), desc='Setting up prior matrices'):
-                prior_matrices = []
+            for _outer_idx, prior in tqdm(enumerate(self.priors), 
+                                   total=len(self.priors), 
+                                   desc='Setting up prior matrices', 
+                                   position=0, miniters=1, mininterval=0.1):
 
-                hyper_parameter_coords = np.asarray(np.meshgrid(*self.hyperparameter_axes[idx], indexing='ij'))
+                parameter_dictionaries  = self.hyperparameter_axes[_outer_idx]
+                update_with_defaults(parameter_dictionaries, {'spectral_parameters':{}, 'spatial_parameters':{}})
+
+                prior_spectral_params   = parameter_dictionaries['spectral_parameters']
+                prior_spatial_params    = parameter_dictionaries['spatial_parameters']
+
+                num_spec_params         = len(prior_spectral_params)
+
+                hyper_parameter_coords  = np.asarray(
+                    np.meshgrid(*prior_spectral_params.values(),
+                                *prior_spatial_params.values(), indexing='ij'))
 
                 flattened_hyper_parameter_coords = np.asarray([mesh.flatten() for mesh in hyper_parameter_coords]).T
 
-                prior_matrices = np.empty(shape=(flattened_hyper_parameter_coords.shape[0],*np.squeeze(self.likelihoodnormalisation).shape,))
-                for idx, hyperparametervalue in enumerate(flattened_hyper_parameter_coords):
-                    prior_matrix = np.squeeze(prior.construct_prior_array(hyperparameters=hyperparametervalue, normalise=True))
-                    nans+=np.sum(np.isnan(prior_matrix))
-                    infs+=np.sum(np.isinf(prior_matrix))
-                    prior_matrices[idx,...] = prior_matrix
+                try:
+
+                    prior_matrices  = np.empty(shape = (
+                    flattened_hyper_parameter_coords.shape[0],
+                    *np.squeeze(self.likelihoodnormalisation).shape,)
+                    )
 
 
-                prior_matrices = prior_matrices.reshape(tuple(list(hyper_parameter_coords[0].shape)+list(prior_matrices[0].shape)))
+                    prior_marged_shapes[_outer_idx] = (len(axisvals[0]), *hyper_parameter_coords[0].shape)
+                
+                    for _inner_idx, hyperparametervalues in tqdm(enumerate(flattened_hyper_parameter_coords), 
+                                                        total=len(flattened_hyper_parameter_coords),
+                                                        position=1, miniters=1, mininterval=0.1):                        
+                        prior_matrix = np.squeeze(
+                            prior.construct_prior_array(
+                                spectral_parameters = {param_key: hyperparametervalues[param_idx] for param_idx, param_key in enumerate(prior_spectral_params.keys())},
+                                spatial_parameters = {param_key: hyperparametervalues[num_spec_params+ param_idx] for param_idx, param_key in enumerate(prior_spatial_params.keys())},
+                                normalise=True)
+                                )
+                        
+                        nans+=np.sum(np.isnan(prior_matrix))
+                        prior_matrices[_inner_idx,...] = prior_matrix
+
+                except IndexError:
+
+                    prior_matrices  = np.empty(shape = (
+                    1,
+                    *np.squeeze(self.likelihoodnormalisation).shape,)
+                    )
+
+                    prior_marged_shapes[_outer_idx] = (len(axisvals[0]), )
+
+
+                    warnings.warn(f'No hyperparameters axes specified for prior number {_outer_idx}.')
+
+                    prior_matrix = np.squeeze(
+                            prior.construct_prior_array(
+                                spectral_parameters = {},
+                                spatial_parameters = {},
+                                normalise=True)
+                                )
+        
+                    prior_matrices[0,...] = prior_matrix
+
+
+                prior_matrices = np.asarray(prior_matrices, dtype=float)
 
                 prior_matrix_list.append(prior_matrices)
 
             print(f"Total cumulative number of nan values within all prior matrices: {nans}")
-            print(f"Total cumulative number of inf values within all prior matrices: {infs}")
-
                 
             self.prior_matrix_list = prior_matrix_list
-        marg_partial = functools.partial(self.observation_nuisance_marg, prior_matrix_list=self.prior_matrix_list)
+
+        marg_partial = functools.partial(
+            self.observation_nuisance_marg, 
+            prior_matrix_list=self.prior_matrix_list)
 
         with Pool(self.numcores) as pool:
-            margresults = pool.map(marg_partial, zip(*axisvals))
-        
-        return margresults
+            marg_results = pool.map(marg_partial, zip(*axisvals))
+
+        marg_results = np.asarray(marg_results)
+
+        reshaped_marg_results = []
+        for _prior_idx in range(len(self.priors)):
+            nice_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
+            print('nice shape: ', nice_marg_results.shape)
+            nice_marg_results = nice_marg_results.reshape(prior_marged_shapes[_prior_idx])
+            reshaped_marg_results.append(nice_marg_results)
+
+        return reshaped_marg_results
     
-    def apply_direchlet_stick_breaking_direct(self, xi_axes: list | tuple, depth: int) -> np.ndarray | float:
+    def apply_direchlet_stick_breaking_direct(self, 
+                                              xi_axes: list | tuple, 
+                                              depth: int) -> np.ndarray | float:
         direchletmesh = 1
 
-        for i in range(depth):
-            direchletmesh*=(1-xi_axes[i])
+        for _dirichlet_i in range(depth):
+            direchletmesh*=(1-xi_axes[_dirichlet_i])
         if depth!=len(xi_axes):
             direchletmesh*=xi_axes[depth]
 
@@ -226,8 +329,9 @@ class discrete_hyperparameter_likelihood(object):
         """
         self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
-    def create_discrete_mixture_log_hyper_likelihood(self, mixture_axes: list | tuple | np.ndarray | None = None, 
-                                                     log_margresults: list | tuple | np.ndarray | None = None):
+    def create_discrete_mixture_log_hyper_likelihood(self, 
+                                                     mixture_axes: list | tuple | np.ndarray = None, 
+                                                     log_margresults: list | tuple | np.ndarray = None):
         if mixture_axes is None:
             mixture_axes = self.mixture_axes
             if mixture_axes is None:
@@ -244,61 +348,62 @@ and number of prior components is {len(self.priors)}.""")
 
         mix_axes = np.meshgrid(*mixture_axes, indexing='ij')
 
-
-
-        # reshape log_margresults into shape of (num_components, ...)
-        reshaped_log_margresults = np.asarray(log_margresults)
-
-        # Creating components of mixture for each prior
-        mixture_array_list = []
-        for idx in range(log_margresults.shape[1]):
-            log_margresults_for_idx = np.vstack(reshaped_log_margresults[:,idx])
-            mixcomp = np.expand_dims(np.log(
-                self.apply_direchlet_stick_breaking_direct(xi_axes=mix_axes, depth=idx)), 
-                axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes)), 
-                                    np.arange(len(mix_axes))+1),)) 
-
-            mixcomp=mixcomp+np.expand_dims(log_margresults_for_idx, 
-                                        axis=(*(np.arange(len(mix_axes))+1),)
-                                    )
-            # print(idx, np.sum(np.where(np.isnan(mixcomp))))
-            mixture_array_list.append(mixcomp)
-
-
-        # Now to get around the fact that every component of the mixture can be a different shape
-        # This should be the final output except for the dimension over which there are different observations (shown here as len(self.log_margresults))
+        # To get around the fact that every component of the mixture can be a different shape
         final_output_shape = [len(log_margresults), *np.arange(len(mixture_axes)), ]
 
         # Axes for each of the priors to __not__ expand in
         prioraxes = []
+
         # Counter for how many hyperparameter axes we have used
         hyper_idx = len(mixture_axes)+1
-        for idx, hyperparameteraxes in enumerate(self.hyperparameter_axes):
+
+
+        # Creating components of mixture for each prior
+        mixture_array_list = []
+        for prior_idx, log_margresults_for_idx in enumerate(log_margresults):
+
+            # Including 'event' and mixture axes for eventual __non__ expansion into
             prior_axis_instance = list(range(1+len(mix_axes)))
-            for hyperparameteraxis in hyperparameteraxes:
-                try:
-                    final_output_shape.append(hyperparameteraxis.shape[0])
-                except:
-                    final_output_shape.append(1)
+
+            for length_of_axis in log_margresults_for_idx.shape[1:]:
+
+                final_output_shape.append(length_of_axis)
+
                 prior_axis_instance.append(hyper_idx)
-            hyper_idx+=1
+
+                hyper_idx+=1
+
             prioraxes.append(prior_axis_instance)
 
 
-        # Making all the mixture components the same shape that is compatible for adding together (in logspace)
-        for prior_idx, mixture_array in enumerate(mixture_array_list):
-            axis = []
-            for i in range(len(final_output_shape)):
-                if not(i in prioraxes[prior_idx]):
-                    axis.append(i)
-            axis = tuple(axis)
-            mixture_array   =   np.expand_dims(mixture_array, axis=axis)
-            mixture_array_list[prior_idx] = mixture_array
+            mixcomp = np.expand_dims(np.log(
+                self.apply_direchlet_stick_breaking_direct(xi_axes=mix_axes, depth=prior_idx)), 
+                axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes)), 
+                                    np.arange(len(mix_axes))+1),)) 
 
+
+            mixcomp=mixcomp+np.expand_dims(log_margresults_for_idx, 
+                                        axis=(*(np.arange(len(mix_axes))+1),)
+                                    )
+            
+
+            mixture_array_list.append(mixcomp)
+            
+        # Making all the mixture components the same shape that is compatible for adding together (in logspace)
+        for _prior_idx, mixture_array in enumerate(mixture_array_list):
+            axis = []
+            for _axis_idx in range(len(final_output_shape)):
+                if not(_axis_idx in prioraxes[_prior_idx]):
+                    axis.append(_axis_idx)
+            axis = tuple(axis)
+
+            mixture_array   = np.expand_dims(mixture_array, axis=axis)
+
+            mixture_array_list[_prior_idx] = mixture_array
 
         # Now to combine the results for all the data and to 
         combined_mixture = -np.inf
-        for idx, mixture_component in enumerate(mixture_array_list):
+        for mixture_component in mixture_array_list:
             combined_mixture = np.logaddexp(combined_mixture, mixture_component)
 
         log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
@@ -308,7 +413,9 @@ and number of prior components is {len(self.priors)}.""")
         return log_hyperparameter_likelihood
         
 
-    def combine_hyperparameter_likelihoods(self, log_hyperparameter_likelihood: np.ndarray) -> np.ndarray:
+    def combine_hyperparameter_likelihoods(self, 
+                                           log_hyperparameter_likelihood: np.ndarray
+                                           ) -> np.ndarray:
         """To combine log hyperparameter likelihoods from multiple runs by 
             adding the resultant log_hyperparameter_likelihood together.
 
@@ -424,7 +531,9 @@ and number of prior components is {len(self.priors)}.""")
 
             
             
-    def save_data(self, directory_path: str = '', reduce_mem_consumption: bool = True):
+    def save_data(self, 
+                  directory_path: str = '', 
+                  reduce_mem_consumption: bool = True):
         """A method to save the information contained within a class instance.
 
         This method saves all the attributes of a class instance to a dictionary 

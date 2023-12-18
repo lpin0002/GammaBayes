@@ -1,3 +1,3 @@
 from .models import SS_DM_dist
-from .DM_discrete_prior_wrappers import combine_DM_models
+from .combine_DM_class import combine_DM_models
 

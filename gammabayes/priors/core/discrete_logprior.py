@@ -1,7 +1,7 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
 import matplotlib.pyplot as plt
 import warnings
 
@@ -13,13 +13,10 @@ class discrete_logprior(object):
                  log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
                  axes_names: list[str] | tuple[str] = ['None'], 
-                 hyperparameter_axes: tuple[np.ndarray] | None = None, 
-                 hyperparameter_names: list[str] | tuple[str] =['None'],
-
-                 # This argument greatly depends on the prior function used. As are similar argument in the class methods
-                 default_hyperparameter_values: any =None,  
-                 
-                 iterative_logspace_integrator: callable = iterate_logspace_integration):
+                 default_spectral_parameters: dict = {},  
+                 default_spatial_parameters: dict = {},  
+                 iterative_logspace_integrator: callable = iterate_logspace_integration,
+                 ):
         """Initialise a discrete_logprior class instance.
 
         Args:
@@ -45,18 +42,13 @@ class discrete_logprior(object):
             axes_names (list, optional): A list of strings for the names of 
                 the axes. Defaults to '[None]'.
 
-            hyperparameter_axes (tuple, optional): A tuple of the sets 
-                default hyperparameter axis vals for the priors to be 
-                    evaluated at. If there are two priors for example, there 
-                    would be two tuples containing the tuple of hyperparameter 
-                    axes for each respective prior. Defaults to None.
+            default_spectral_parameters (dict, optional): Default dictionary 
+                of the parameters for spectral factor of the prior if needed. 
+                Defaults to {}.
 
-            hyperparameter_names (list, optional): A list containing the 
-                names of the hyperparameter axes. Defaults to '[None]'.
-
-            default_hyperparameter_values (tuple, optional): Default values 
-                of the hyperparameters for the prior if needed. Defaults to 
-                    None.
+            default_spatial_parameters (dict, optional): Default dictionary 
+                of the parameters for spatial factor of the prior if needed. 
+                Defaults to {}.
 
             iterative_logspace_integrator (callable, optional): Integration
             method used for normalisation. Defaults to iterate_logspace_integration.
@@ -66,8 +58,6 @@ class discrete_logprior(object):
         self.logfunction = logfunction
         self.axes_names = axes_names
         
-        self.hyperparameter_axes = hyperparameter_axes
-        self.hyperparameter_names = hyperparameter_names
         self.axes = axes
         self.num_axes = len(axes)
 
@@ -82,15 +72,16 @@ class discrete_logprior(object):
             self.axes_mesh = (axes,)
         else:
             self.axes_mesh = np.meshgrid(*axes, indexing='ij')
-            
-        if default_hyperparameter_values is None:
-            self.default_hyperparameter_values = None
-            self.input_values_mesh = np.meshgrid(*self.axes, indexing='ij')
 
-        else:
-            self.default_hyperparameter_values = (*default_hyperparameter_values,)
-            self.input_values_mesh = np.meshgrid(*self.axes, *self.default_hyperparameter_values, indexing='ij')
-        self.logspace_integrator=iterative_logspace_integrator
+            
+        self.default_spectral_parameters = default_spectral_parameters
+        self.default_spatial_parameters = default_spatial_parameters
+
+        self.num_spec_params = len(default_spectral_parameters)
+        self.num_spat_params = len(default_spatial_parameters)
+
+
+        self.logspace_integrator = iterative_logspace_integrator
             
 
             
@@ -110,7 +101,6 @@ class discrete_logprior(object):
         string_text = string_text+f'logfunction type is {self.logfunction}\n'
         string_text = string_text+f'input units of {self.inputunit}\n'
         string_text = string_text+f'over axes {self.axes_names}\n'        
-        string_text = string_text+f'with hyperparameter(s) {self.hyperparameter_names}\n'        
         return string_text
     
     
@@ -125,44 +115,53 @@ class discrete_logprior(object):
         return self.logfunction(*args, **kwargs)
 
     
-    def normalisation(self, log_prior_values: np.ndarray = None, 
-                      hyperparametervalues: any = None, 
-                      axes: tuple[np.ndarray] | list[np.ndarray] = None) -> np.ndarray | float:
+    def normalisation(self, log_prior_values: np.ndarray = [], 
+                      spectral_parameters: dict = {}, 
+                      spatial_parameters: dict = {}) -> np.ndarray | float:
         """Return the integrated value of the prior for a given hyperparameter 
         over the default axes
 
         Args:
             hyperparametervalues (tuple, optional): Tuple of the hyperparameters 
-            for the prior. Defaults to None.
+            for the prior. Defaults to an empty list.
 
         Returns:
             float: the integrated value of the prior for a given hyperparameter 
         over the default axes
         """
         
-        if axes is None:
-            axes = self.axes
-        if hyperparametervalues is None:
-            hyperparametervalues = self.default_hyperparameter_values
 
-        if log_prior_values is None:
+        if log_prior_values is []:
+            # Checks if spectral_parameters is an empty dict. If so, it sets it to the defaults
+            update_with_defaults(spectral_parameters, self.default_spectral_parameters)
+            update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 
             if self.efficient_exist:
-                log_prior_values = self.log_mesh_efficient_func(*axes, *hyperparametervalues)
+                log_prior_values = self.log_mesh_efficient_func(*self.axes, 
+                                                                spectral_parameters = spectral_parameters,
+                                                                spatial_parameters = spatial_parameters)
             else:
 
-                inputmeshes = np.meshgrid(*axes,  *hyperparametervalues, indexing='ij')
+                inputmeshes = np.meshgrid(*self.axes,  
+                                          *spectral_parameters.values(), 
+                                          *spatial_parameters.values(), indexing='ij')
 
-                log_prior_values = self.logfunction(*inputmeshes)
+                log_prior_values = self.logfunction(*inputmeshes[:self.num_axes], 
+                                                    spectral_parameters = {hyper_key: inputmeshes[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                    spatial_parameters = {hyper_key: inputmeshes[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())})
 
-        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=axes)
+        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.axes)
 
 
         return log_prior_norms
     
     
     
-    def sample(self, numsamples: int, logpriorvalues: np.ndarray = None)  -> np.ndarray:
+    def sample(self, 
+               numsamples: int, 
+               log_prior_values: np.ndarray = None, 
+               spectral_parameters: dict = {}, 
+               spatial_parameters: dict = {})  -> np.ndarray:
         """Returns the specified number of samples weighted by the prior 
             distribution.
 
@@ -182,39 +181,45 @@ class discrete_logprior(object):
                 the axes argument. If 3 axes given the np.ndarray will have 
                 shape (3,numsamples,).
         """
+        update_with_defaults(spectral_parameters, self.default_spectral_parameters)
+        update_with_defaults(spatial_parameters, self.default_spatial_parameters)
         if numsamples>0:
-            if logpriorvalues is None:
+            if log_prior_values is None:
                 if self.efficient_exist:
-                    logpriorvalues = self.log_mesh_efficient_func(*self.axes, *self.default_hyperparameter_values)
+                    log_prior_values = self.log_mesh_efficient_func(*self.axes, 
+                                                                  spectral_parameters = spectral_parameters,
+                                                                  spatial_parameters = spatial_parameters)
 
                 else:
-                    logpriorvalues = self.logfunction(*self.input_values_mesh)
+                    inputmeshes = np.meshgrid(*self.axes, *spectral_parameters.values(), *spatial_parameters.values(), indexing='ij')
+                    log_prior_values = self.logfunction(*inputmeshes[:self.num_axes], 
+                                                        spectral_parameters = {hyper_key: inputmeshes[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                        spatial_parameters = {hyper_key: inputmeshes[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                                                        )
         
-            if type(logpriorvalues)!=np.ndarray:
-                logpriorvalues = np.asarray(logpriorvalues)
+            log_prior_values = np.asarray(log_prior_values)
                 
                 
                 
             # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
                 # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
                 # So we will double check the normalisation
-            logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
-            logpriorvalues = np.squeeze(logpriorvalues) - self.normalisation(logpriorvalues)
+            log_prior_values = np.squeeze(log_prior_values) - self.normalisation(log_prior_values=log_prior_values)
 
             logdx = construct_log_dx_mesh(self.axes)
                         
-            simvals = integral_inverse_transform_sampler(logpriorvalues+logdx, axes=self.axes, 
+            simvals = integral_inverse_transform_sampler(log_prior_values+logdx, axes=self.axes, 
                                                 Nsamples=numsamples)
             
                 
-            return np.array(simvals)
+            return np.asarray(simvals)
         else:
-            return  np.array([np.array([]) for idx in range(self.num_axes)])
+            return  np.asarray([np.asarray([]) for idx in range(self.num_axes)])
     
     def construct_prior_array(self, 
-                              hyperparameters: any = None, 
-                              normalise: bool = False, 
-                              axes: tuple[np.ndarray] | list[np.ndarray] = None)  -> np.ndarray:
+                              spectral_parameters: dict = {}, 
+                              spatial_parameters: dict = {}, 
+                              normalise: bool = False,)  -> np.ndarray:
         """Construct a matrix of log prior values for input hyperparameters.
 
         For the input hyperparameters, if none given then the defaults are used, 
@@ -235,28 +240,29 @@ class discrete_logprior(object):
                 values for the input hyperparameters over the given axes
         """
         
-        if hyperparameters is None:
-            hyperparameters = self.default_hyperparameter_values
-
-        if axes is None:
-            axes = self.axes
+        update_with_defaults(spectral_parameters, self.default_spectral_parameters)
+        update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 
         if self.efficient_exist:
-            outputarray = self.log_mesh_efficient_func(*axes, *hyperparameters)
+            outputarray = self.log_mesh_efficient_func(*self.axes, 
+                                                       spectral_parameters=spectral_parameters, 
+                                                       spatial_parameters=spatial_parameters)
 
         else:
-            try:
-                inputmesh = np.meshgrid(*axes,*hyperparameters, indexing='ij') 
-                outputarray = self.logfunction(*inputmesh)
-
-            except:
-                inputmesh = np.meshgrid(*axes, indexing='ij') 
-                outputarray = self.logfunction(*inputmesh)
+            inputmesh = np.meshgrid(*self.axes, 
+                                    *spectral_parameters.values(),
+                                    *spatial_parameters.values(), indexing='ij') 
+            
+            outputarray = self.logfunction(*inputmesh[:self.num_axes], 
+                                            spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                            spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                                            )
+    
         if normalise:
-            normalisation = self.normalisation(outputarray)
+            normalisation = self.normalisation(log_prior_values = outputarray)
             if not np.isneginf(normalisation):
                 outputarray = outputarray - normalisation
-                outputarray = outputarray - self.normalisation(outputarray)
+                outputarray = outputarray - self.normalisation(log_prior_values = outputarray)
 
              
         return outputarray

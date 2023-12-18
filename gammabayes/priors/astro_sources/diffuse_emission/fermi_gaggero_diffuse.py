@@ -66,7 +66,9 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
     return diffuse_background_observed_event_rate
 
 def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis, 
-    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff, normalise=True, logspace_integrator=logspace_riemann):
+    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, 
+    log_aeff=log_aeff, normalise=True, logspace_integrator=logspace_riemann):
+    
     axes = [energy_axis, longitudeaxis, latitudeaxis]
     log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(energy_axis=energy_axis, 
     longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_aeff=log_aeff))
@@ -87,7 +89,9 @@ def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis,
         )
 
     # Then we make a wrapper to put the result of the function in log space
-    log_fermi_diffuse_func = lambda energy, longitude, latitude: np.log(
+    def log_fermi_diffuse_func(energy, longitude, latitude, 
+                               spectral_parameters={}, spatial_parameters={}): 
+        return np.log(
         fermi_diffuse_interpolator(
             (energy, longitude, latitude)
             ))

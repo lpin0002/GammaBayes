@@ -9,7 +9,7 @@ irfs = load_irf_dict_from_file(resources_dir+'/Prod5-South-20deg-AverageAz-14MST
 bkgfull = irfs['bkg']
 
 
-def log_bkg_CCR_dist(energyval, lon, lat):
+def log_bkg_CCR_dist(energyval, lon, lat, spectral_parameters={}, spatial_parameters={}):
     """Wrapper for the Gammapy interpretation of the log of 
         the CTA's background charged cosmic-ray mis-identification rate.
 

@@ -10,9 +10,16 @@ from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
 
 
-def fill_missing_keys(dictionary, default_values):
-    for key, default_value in default_values.items():
-        dictionary[key] = dictionary.get(key, default_value)
+def update_with_defaults(target_dict, default_dict):
+    """
+    Updates the target dictionary in place, adding missing keys from the default dictionary.
+
+    Args:
+        target_dict (dict): The dictionary to be updated.
+        default_dict (dict): The dictionary containing default values.
+    """
+    for key, value in default_dict.items():
+        target_dict.setdefault(key, value)
 
 
 def haversine(lon1, lat1, lon2, lat2):

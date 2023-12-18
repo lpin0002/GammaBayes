@@ -78,9 +78,7 @@ def log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_dire
         float: natural log of the CTA point spread function likelihood for the given 
             gamma-ray event data
     """
-    reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
-    truespatialcoord = np.array([true_lon, true_lat])
-    rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
+    rad = haversine(recon_lon, recon_lat, true_lon, true_lat).flatten()
     offset  = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1]).flatten()
     output = np.log(psffull.evaluate(energy_true=true_energy*u.TeV,
                                                     rad = rad*u.deg, 
