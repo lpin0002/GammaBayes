@@ -29,6 +29,8 @@ class combine_DM_models:
                        spectral_parameters: dict = {'mass': 1.0, },
                        spatial_parameters: dict = {}, ) -> np.ndarray:
 
+        energy, longitude, latitude = np.asarray(energy), np.asarray(longitude), np.asarray(latitude)
+
         spectral_parameters = {param_key: np.asarray(param_val) for param_key, param_val in spectral_parameters.items()}
 
         

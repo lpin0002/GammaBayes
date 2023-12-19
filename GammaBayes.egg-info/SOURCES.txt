@@ -142,3 +142,10 @@ gammabayes/utils/integration.py
 gammabayes/utils/ozstarscriptgen.py
 gammabayes/utils/plotting.py
 gammabayes/utils/utils.py
+tests/__init__.py
+tests/test_1_utils.py
+tests/test_2_integration.py
+tests/test_3_irfs.py
+tests/test_4_darkmatter.py
+tests/test_5_discrete_logprior.py
+tests/test_6_gauss_sim.py

@@ -1,4 +1,4 @@
-from gammabayes.utils import power_law, resources_dir, convertlonlat_to_offset, power_law, haversine
+from gammabayes.utils import power_law, resources_dir, power_law, haversine
 from gammabayes.utils import iterate_logspace_integration, logspace_riemann
 from gammabayes.utils.event_axes import longitudeaxistrue, latitudeaxistrue, energy_true_axis
 from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_aeff

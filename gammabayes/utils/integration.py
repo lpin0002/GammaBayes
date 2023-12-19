@@ -11,8 +11,10 @@ def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
     # With the default values being atol=1e-8 and rtol=1e-5. Need to be careful
     # If we ever have differences ~1e-8 
     if np.isclose(dx[1], dx[0]):
+        # Equal spacing, therefore the last dx can just be the same as the second last
         dx = np.append(dx, dx[-1])
     else:
+        # Presuming log-uniform spacing
         dx = axis*(10**(np.log10(axis[1])-np.log10(axis[0])))
 
     return np.log(dx)

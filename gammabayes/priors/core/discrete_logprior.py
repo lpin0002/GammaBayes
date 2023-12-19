@@ -75,6 +75,7 @@ class discrete_logprior(object):
 
             
         self.default_spectral_parameters = default_spectral_parameters
+        print('assigned spectral defaults: ', self.default_spectral_parameters)
         self.default_spatial_parameters = default_spatial_parameters
 
         self.num_spec_params = len(default_spectral_parameters)
@@ -115,7 +116,7 @@ class discrete_logprior(object):
         return self.logfunction(*args, **kwargs)
 
     
-    def normalisation(self, log_prior_values: np.ndarray = [], 
+    def normalisation(self, log_prior_values: np.ndarray = None, 
                       spectral_parameters: dict = {}, 
                       spatial_parameters: dict = {}) -> np.ndarray | float:
         """Return the integrated value of the prior for a given hyperparameter 
@@ -131,7 +132,7 @@ class discrete_logprior(object):
         """
         
 
-        if log_prior_values is []:
+        if (log_prior_values is []) | (log_prior_values is None):
             # Checks if spectral_parameters is an empty dict. If so, it sets it to the defaults
             update_with_defaults(spectral_parameters, self.default_spectral_parameters)
             update_with_defaults(spatial_parameters, self.default_spatial_parameters)
@@ -141,17 +142,15 @@ class discrete_logprior(object):
                                                                 spectral_parameters = spectral_parameters,
                                                                 spatial_parameters = spatial_parameters)
             else:
-
-                inputmeshes = np.meshgrid(*self.axes,  
-                                          *spectral_parameters.values(), 
-                                          *spatial_parameters.values(), indexing='ij')
-
-                log_prior_values = self.logfunction(*inputmeshes[:self.num_axes], 
-                                                    spectral_parameters = {hyper_key: inputmeshes[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                                    spatial_parameters = {hyper_key: inputmeshes[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())})
-
+                inputmesh = np.meshgrid(*self.axes, 
+                                *spectral_parameters.values(),
+                                *spatial_parameters.values(), indexing='ij') 
+        
+                log_prior_values = self.logfunction(*inputmesh[:self.num_axes], 
+                                                spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                                                )    
         log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.axes)
-
 
         return log_prior_norms
     
@@ -160,8 +159,8 @@ class discrete_logprior(object):
     def sample(self, 
                numsamples: int, 
                log_prior_values: np.ndarray = None, 
-               spectral_parameters: dict = {}, 
-               spatial_parameters: dict = {})  -> np.ndarray:
+               spectral_parameters: dict = None, 
+               spatial_parameters: dict = None)  -> np.ndarray:
         """Returns the specified number of samples weighted by the prior 
             distribution.
 
@@ -181,8 +180,14 @@ class discrete_logprior(object):
                 the axes argument. If 3 axes given the np.ndarray will have 
                 shape (3,numsamples,).
         """
+        if spectral_parameters is None:
+            spectral_parameters = self.default_spectral_parameters
+        if spatial_parameters is None:
+            spatial_parameters = self.default_spatial_parameters
+
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
+        
         if numsamples>0:
             if log_prior_values is None:
                 if self.efficient_exist:
@@ -191,11 +196,14 @@ class discrete_logprior(object):
                                                                   spatial_parameters = spatial_parameters)
 
                 else:
-                    inputmeshes = np.meshgrid(*self.axes, *spectral_parameters.values(), *spatial_parameters.values(), indexing='ij')
-                    log_prior_values = self.logfunction(*inputmeshes[:self.num_axes], 
-                                                        spectral_parameters = {hyper_key: inputmeshes[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                                        spatial_parameters = {hyper_key: inputmeshes[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
-                                                        )
+                    inputmesh = np.meshgrid(*self.axes, 
+                                    *spectral_parameters.values(),
+                                    *spatial_parameters.values(), indexing='ij') 
+            
+                    log_prior_values = self.logfunction(*inputmesh[:self.num_axes], 
+                                                    spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                    spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                                                    )
         
             log_prior_values = np.asarray(log_prior_values)
                 

@@ -1,4 +1,4 @@
-from gammabayes.utils import convertlonlat_to_offset, angularseparation, resources_dir, haversine
+from gammabayes.utils import resources_dir, haversine
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_irf_dict_from_file,load_cta_irfs
@@ -208,7 +208,6 @@ class irf_extractor(object):
             float: natural log of the CTA point spread function likelihood for the given 
                 gamma-ray event data
         """
-
         rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
         offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
         output = np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
