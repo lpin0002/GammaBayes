@@ -1,6 +1,6 @@
 
 from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
-from gammabayes.utils import resources_dir, convertlonlat_to_offset, iterate_logspace_integration, haversine
+from gammabayes.utils import resources_dir, iterate_logspace_integration, haversine
 from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_aeff
 import numpy as np
 from scipy import interpolate

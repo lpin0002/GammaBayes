@@ -1,10 +1,10 @@
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_irf_dict_from_file
-from gammabayes.utils import convertlonlat_to_offset, angularseparation, resources_dir
+from gammabayes.utils import resources_dir
 
 
-irfs = load_irf_dict_from_file(resources_dir+'/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
+irfs = load_irf_dict_from_file(resources_dir+'/irf_fits_files/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits')
 
 bkgfull = irfs['bkg']
 

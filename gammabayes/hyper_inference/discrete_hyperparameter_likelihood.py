@@ -1,12 +1,10 @@
 import numpy as np
-from scipy.special import logsumexp
 import functools
 from tqdm import tqdm
-from gammabayes.utils import angularseparation, convertlonlat_to_offset, iterate_logspace_integration, logspace_riemann, update_with_defaults
+from gammabayes.utils import iterate_logspace_integration, logspace_riemann, update_with_defaults
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
-import json, os, warnings
-import matplotlib.pyplot as plt
+import os, warnings
 import time
 
 class discrete_hyperparameter_likelihood(object):

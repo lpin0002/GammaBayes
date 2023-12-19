@@ -1,12 +1,12 @@
-astropy
+astropy==5.3.4
 corner
 dynesty
 matplotlib
 scipy
 tqdm
 numpy
-gammapy
 pandas
 pytest
 setuptools
 pyyaml
+gammapy

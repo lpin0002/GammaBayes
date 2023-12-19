@@ -38,46 +38,46 @@ def haversine(lon1, lat1, lon2, lat2):
 
 
 
-def convertlonlat_to_offset(angular_coord: np.ndarray, pointing_direction: np.ndarray=np.array([0,0])) -> float|np.ndarray:
-    """Takes a coordinate and translates that into an offset
+# def convertlonlat_to_offset(angular_coord: np.ndarray, pointing_direction: np.ndarray=np.array([0,0])) -> float|np.ndarray:
+#     """Takes a coordinate and translates that into an offset
 
-    Args:
-        angular_coord (np.ndarray): Angular coordinates
-        point_direction (np.ndarray): Pointing direction of telescope
+#     Args:
+#         angular_coord (np.ndarray): Angular coordinates
+#         point_direction (np.ndarray): Pointing direction of telescope
 
-    Returns:
-        np.ndarray or float: The corresponding offset values for the given fov coordinates
-            assuming small angles
-    """
-    delta_y = angular_coord[1, :] - pointing_direction[1]
-    delta_x = angular_coord[0, :] - pointing_direction[0]
+#     Returns:
+#         np.ndarray or float: The corresponding offset values for the given fov coordinates
+#             assuming small angles
+#     """
+#     delta_y = angular_coord[1, :] - pointing_direction[1]
+#     delta_x = angular_coord[0, :] - pointing_direction[0]
 
-    # Calculate the angular separation using arctangent
-    angles = np.arctan2(delta_y, delta_x)
+#     # Calculate the angular separation using arctangent
+#     angles = np.arctan2(delta_y, delta_x)
 
-    return angles * 180 / np.pi
+#     return angles * 180 / np.pi
 
 
 
-def angularseparation(coord1: np.ndarray, coord2: np.ndarray|None =None) -> float|np.ndarray:
-    """Takes a coordinate and translates that into an offset
+# def angularseparation(coord1: np.ndarray, coord2: np.ndarray|None =None) -> float|np.ndarray:
+#     """Takes a coordinate and translates that into an offset
 
-    Args:
-        angular_coord (np.ndarray): Angular coordinates
-        point_direction (np.ndarray): Pointing direction of telescope
+#     Args:
+#         angular_coord (np.ndarray): Angular coordinates
+#         point_direction (np.ndarray): Pointing direction of telescope
 
-    Returns:
-        np.ndarray or float: The corresponding offset values for the given fov coordinates
-            assuming small angles
-    """
+#     Returns:
+#         np.ndarray or float: The corresponding offset values for the given fov coordinates
+#             assuming small angles
+#     """
     
-    delta_y = coord1[1, :] - coord2[1, :]
-    delta_x = coord1[0, :] - coord2[0, :]
+#     delta_y = coord1[1, :] - coord2[1, :]
+#     delta_x = coord1[0, :] - coord2[0, :]
 
-    # Calculate the angular separation using arctangent
-    angles = np.arctan2(delta_y, delta_x)
+#     # Calculate the angular separation using arctangent
+#     angles = np.arctan2(delta_y, delta_x)
 
-    return angles * 180 / np.pi
+#     return angles * 180 / np.pi
 
 
 def bin_centres_to_edges(axis: np.ndarray) -> np.ndarray:

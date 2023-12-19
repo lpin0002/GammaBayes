@@ -1,7 +1,7 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
 from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis, logjacob, makelogjacob
-from gammabayes.utils import angularseparation, convertlonlat_to_offset, resources_dir, iterate_logspace_integration
+from gammabayes.utils import resources_dir, iterate_logspace_integration
 from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
 
 
@@ -66,7 +66,9 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
                                                                                                                                     latitudeaxis, indexing='ij')
 
             psfvals = log_psf(longitude_axis_mesh.flatten(), latitude_axis_mesh.flatten(), 
-                                energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape)
+                                energy_true_axis_mesh.flatten(), 
+                                longitude_axis_true_mesh.flatten(), 
+                                latitude_axis_true_mesh.flatten(),).reshape(energy_true_axis_mesh.shape)
             psfnormvals = iterate_logspace_integration(np.squeeze(psfvals), axes=[longitudeaxis, latitudeaxis], axisindices=[1,2])
             
             psflogerow.append(psfnormvals)
@@ -80,7 +82,9 @@ def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_r
                                                                                                             energy_recon_axis,
                                                                                                             indexing='ij')
         edispvals = np.squeeze(log_edisp(energy_recon_axis_mesh.flatten(), 
-                                        energy_true_axis_mesh.flatten(), longitude_axis_true_mesh.flatten(), latitude_axis_true_mesh.flatten()).reshape(energy_true_axis_mesh.shape))
+                                        energy_true_axis_mesh.flatten(), 
+                                        longitude_axis_true_mesh.flatten(), 
+                                        latitude_axis_true_mesh.flatten(),).reshape(energy_true_axis_mesh.shape))
         edispnormvals = iterate_logspace_integration(np.squeeze(edispvals), axes=[energy_recon_axis], axisindices=[2])
         
         edispnorm.append(edispnormvals)
