@@ -3,15 +3,16 @@ from gammabayes.priors import discrete_logprior
 import warnings
 import numpy as np
 
-def test_discrete_logprior_io():
+def test_discrete_logprior():
     energy_true_axis, longitudeaxistrue, latitudeaxistrue = np.logspace(-1,2,16), np.linspace(-5,5,11), np.linspace(-4,4,9)
 
-    def _fake_func(energy, longitude, latitude, spectral_parameters, spatial_parameters={}):
+    def fake_func(energy, longitude, latitude, spectral_parameters, spatial_parameters={}):
         result = -(energy-spectral_parameters['centre'])**2/(2)
         return result
+
     warnings.simplefilter("ignore", category=UserWarning)
 
-    discrete_logprior_instance = discrete_logprior(logfunction=_fake_func, 
+    discrete_logprior_instance = discrete_logprior(logfunction=fake_func, 
                              name='Fake Test Func',
                              axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], 
                              axes_names=['energy', 'lon', 'lat'],
@@ -25,6 +26,7 @@ def test_discrete_logprior_io():
     print('can construct')
     discrete_logprior_instance.normalisation(spectral_parameters= {'centre':0.0})
     print('can normalise')
+
 
 
 

@@ -77,7 +77,7 @@ def test_gauss_sim():
     measured_longitude = list(g1_longitude_meas)+list(g2_longitude_meas)
     measured_latitude = list(g1_latitude_meas)+list(g2_latitude_meas)
 
-    centre_range = np.logspace(1.2, np.log10(30),301)
+    centre_range = np.logspace(1.2, np.log10(30),61)
 
     hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
         priors                  = (gauss1_prior, gauss2_prior), 
@@ -95,7 +95,7 @@ def test_gauss_sim():
         axisvals= (measured_energy, measured_longitude, measured_latitude)
         )
 
-    g1frac_range = np.linspace(0.1,0.5,201)
+    g1frac_range = np.linspace(0.1,0.5,51)
     new_log_posterior = hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
         mixture_axes=(g1frac_range,), log_margresults=margresults)
     new_log_posterior = np.squeeze(new_log_posterior - special.logsumexp(new_log_posterior))
