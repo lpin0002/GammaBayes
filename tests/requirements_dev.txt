@@ -5,8 +5,8 @@ matplotlib
 scipy
 tqdm
 numpy
-gammapy
 pandas
 pytest
 setuptools
 pyyaml
+gammapy
