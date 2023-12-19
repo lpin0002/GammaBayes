@@ -5,21 +5,6 @@ __Supervisor(s)__: Csaba Balazs, Eric Thrane
 
 __Documentation__: [ReadtheDocs](https://gammabayes.readthedocs.io/en/latest/index.html)
 
-## Referencing
-
-This code is an adaption of a previous work by Abhi Mangipudi and the relevant paper for referencing can be found [here](https://arxiv.org/abs/2112.10371) from ArXiv. The bibtex code for it is
-
-@article{Mangipudi:2021ivm,
-    author = "Mangipudi, Abhi and Thrane, Eric and Balazs, Csaba",
-    title = "{Bayesian WIMP detection with the Cherenkov Telescope Array}",
-    eprint = "2112.10371",
-    archivePrefix = "arXiv",
-    primaryClass = "astro-ph.HE",
-    month = "12",
-    year = "2021"
-}
-
-
 ## Warning
 
 Within the analysis we slice into matrices for the normalisation values of likelihood functions to enforce a normalisation on the interpolation done.
