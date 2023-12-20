@@ -17,7 +17,9 @@ def test_logspace_riemann():
     logy = x*0
     integration_result = logspace_riemann(logy=logy, x=x)
 
-    # Real low bar for entry
+    # Real low bar for entry. In exact-ness comes from the need for 
+        # linear binning and slightly weird integration for the 
+        # inverse transform sampling
     assert np.abs(integration_result)<10/intervals
 
 def test_iterate_logspace_riemann():

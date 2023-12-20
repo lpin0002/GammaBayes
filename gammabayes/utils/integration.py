@@ -138,6 +138,12 @@ def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarr
         return logspace_trapz(logy, x, axis=axis)
 
 
+# Vectorised this function and chucked it into cython. 
+    # best speed increase I got was about 6% with lots of loss in generality
+    # Key bottlenecks if you can get around them is the creation of logdx
+    # Also tried lintegrate library but couldn't get it to work
+    # (from one of the issues doesn't seem to be 64-bit?)
+
 def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
     logintegrandvalues = logy
             
@@ -147,7 +153,6 @@ def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_in
     else:
         axisindices = np.asarray(axisindices)
 
-        # TODO: Remove this for loop, any for loop, all the for loops
         for loop_idx, (axis, axis_idx) in enumerate(zip(axes, axisindices)):
 
             # Assuming the indices are in order we subtract the loop idx from the axis index

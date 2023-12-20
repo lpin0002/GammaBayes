@@ -199,7 +199,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
 
         print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}", end='\r')
-            
+        
         return np.array(all_log_marg_results, dtype=object)
 
 
@@ -298,6 +298,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
         reshaped_marg_results = []
         for _prior_idx in range(len(self.priors)):
             nice_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
+            print('\n')
             print('nice shape: ', nice_marg_results.shape)
             nice_marg_results = nice_marg_results.reshape(prior_marged_shapes[_prior_idx])
             reshaped_marg_results.append(nice_marg_results)
