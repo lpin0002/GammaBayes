@@ -37,9 +37,6 @@ import pandas as pd
 from warnings import warn
 # random.seed(1)
 
-from gammabayes.likelihoods.irfs import irf_norm_setup
-
-# log_psf_normalisations, log_edisp_normalisations = irf_norm_setup(save_results=True)
 
 
 class Z2_DM_3COMP_BKG(object):
@@ -114,9 +111,11 @@ class Z2_DM_3COMP_BKG(object):
                                      dependent_axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue])
 
 
-
+        print("Going to create normalisations...")
         self.log_psf_normalisations, self.log_edisp_normalisations = self.irf_loglike.create_log_norm_matrices()
 
+
+        print("Constructing background priors...")
 
         self.astrophysicalbackground = construct_hess_source_map(energy_axis=self.energy_true_axis,
                                                                  longitudeaxis=self.longitudeaxistrue,
@@ -134,7 +133,7 @@ class Z2_DM_3COMP_BKG(object):
                                axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
 
-
+        print("Constructing dark matter prior...")
         SS_DM_combine_instance = combine_DM_models(SS_Spectra, Einasto_Profile, self.irf_loglike, spectral_class_kwds={'ratios':True})
         self.logDMpriorfunc, self.logDMpriorfunc_mesh_efficient = SS_DM_combine_instance.DM_signal_dist, SS_DM_combine_instance.DM_signal_dist_mesh_efficient
 
@@ -212,6 +211,8 @@ class Z2_DM_3COMP_BKG(object):
         plt.show(block=self.blockplot)
         
     def simulate(self):
+        print("Simulating true values...")
+
         self.sig_energy_vals,self.siglonvals,self.siglatvals  = self.DM_prior.sample(self.nsig)
         
         self.ccr_bkg_energy_vals,self.ccr_bkglonvals,self.ccr_bkglatvals  = self.ccr_bkg_prior.sample(self.nccr)
@@ -256,6 +257,9 @@ class Z2_DM_3COMP_BKG(object):
 
         
             plt.show(block=self.blockplot)
+
+        print("Simulating reconstructed values...")
+
         self.sig_energy_meas, self.sig_longitude_meas, self.sig_latitude_meas = np.asarray([self.irf_loglike.sample(dependentvalues=[*nuisance_vals]) for nuisance_vals in tqdm(zip(self.sig_energy_vals,
                                                                                                                                                                                     self.siglonvals,
                                                                                                                                                                                     self.siglatvals))]).T
@@ -303,6 +307,8 @@ class Z2_DM_3COMP_BKG(object):
 
         
             plt.show(block=self.blockplot)
+
+        print("Combining reconstructed values for later use...")
 
         self.measured_energy = list(self.sig_energy_meas)+list(self.ccr_bkg_energy_meas)+list(self.diffuse_bkg_energy_meas)+list(self.point_bkg_energy_meas)
         self.measured_longitude = list(self.sig_longitude_meas)+list(self.ccr_bkg_longitude_meas)+list(self.diffuse_bkg_longitude_meas)+list(self.point_astro_bkg_longitude_meas)
