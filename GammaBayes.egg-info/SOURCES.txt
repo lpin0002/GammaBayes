@@ -139,7 +139,6 @@ gammabayes/utils/config_utils.py
 gammabayes/utils/event_axes.py
 gammabayes/utils/generate_sigmav_posterior.py
 gammabayes/utils/integration.py
-gammabayes/utils/ozstarscriptgen.py
 gammabayes/utils/plotting.py
 gammabayes/utils/utils.py
 gammabayes/utils/ozstar/default_ozstar_config.yaml

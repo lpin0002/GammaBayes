@@ -76,7 +76,7 @@ class Z2_DM_3COMP_BKG(object):
         try:
             self.name    = self.config_dict['name']
         except:
-            self.name    = time.strftime(f"DM{self.config_dict['mass']}_SIGFRAC{self.config_dict['signalfraction']}_CCRFRAC{self.config_dict['ccr_of_bkg_fraction']}_DIFFUSEFRAC{self.config_dict['diffuse_of_astro_fraction']}_3COMP_BKG_%m|%d_%H:%M")
+            self.name    = time.strftime(f"DM{self.config_dict['dark_matter_mass']}_SIGFRAC{self.config_dict['signalfraction']}_CCRFRAC{self.config_dict['ccr_of_bkg_fraction']}_DIFFUSEFRAC{self.config_dict['diffuse_of_astro_fraction']}_3COMP_BKG_%m|%d_%H:%M")
 
         try:
             self.save_path = self.config_dict['save_path']
@@ -143,7 +143,7 @@ class Z2_DM_3COMP_BKG(object):
                              name='Scalar Singlet Dark Matter Prior',
                              axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue], 
                              axes_names=['energy', 'lon', 'lat'],
-                             default_spectral_parameters={'mass':self.config_dict['mass']}, 
+                             default_spectral_parameters={'mass':self.config_dict['dark_matter_mass']}, 
                               )
         
 
@@ -167,7 +167,7 @@ class Z2_DM_3COMP_BKG(object):
                        iterate_logspace_integration(sigpriorvals, 
                                                     axes=[self.longitudeaxistrue, 
                                                           self.latitudeaxistrue], axisindices=(1,2)).T )
-        plt.axvline(self.config_dict['mass'])
+        plt.axvline(self.config_dict['dark_matter_mass'])
         plt.xscale('log')
         
         plt.subplot(423)
@@ -309,9 +309,14 @@ class Z2_DM_3COMP_BKG(object):
         self.measured_latitude = list(self.sig_latitude_meas)+list(self.ccr_bkg_latitude_meas)+list(self.diffuse_bkg_latitude_meas)+list(self.point_astro_bkg_latitude_meas)
         
     def nuisance_marg(self):
-        self.massrange            = np.logspace(np.log10(self.config_dict['mass'])-5/np.sqrt(self.config_dict['Nevents']), 
-                                                        np.log10(self.config_dict['mass'])+5/np.sqrt(self.config_dict['Nevents']),
-                                                        self.config_dict['nbins_mass']) 
+        logmass_lower_bd             = np.log10(self.config_dict['dark_matter_mass'])-5/np.sqrt(self.nsig)
+        logmass_upper_bd             = np.log10(self.config_dict['dark_matter_mass'])+5/np.sqrt(self.nsig)
+        if logmass_lower_bd<np.log10(self.energy_true_axis.min()):
+            logmass_lower_bd = np.log10(self.energy_true_axis.min())
+        if logmass_upper_bd>2:
+            logmass_upper_bd = 2
+
+        self.massrange            = np.logspace(logmass_lower_bd, logmass_upper_bd, self.config_dict['nbins_mass']) 
 
         self.hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
             priors                  = (self.DM_prior, self.ccr_bkg_prior, self.diffuse_astro_bkg_prior, self.point_astro_bkg_prior), 
@@ -357,7 +362,7 @@ class Z2_DM_3COMP_BKG(object):
                                             truevals=[self.config_dict['signalfraction'], 
                                                       self.config_dict['ccr_of_bkg_fraction'], 
                                                       self.config_dict['diffuse_of_astro_fraction'], 
-                                                      self.config_dict['mass'],],   
+                                                      self.config_dict['dark_matter_mass'],],   
                                             sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
                                             axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
             fig.figure.dpi = 120
@@ -388,7 +393,7 @@ class Z2_DM_3COMP_BKG(object):
                 show_titles=True, truths =(self.config_dict['signalfraction'], 
                                            self.config_dict['ccr_of_bkg_fraction'], 
                                            self.config_dict['diffuse_of_astro_fraction'], 
-                                           self.config_dict['mass']),  **defaults_kwargs)
+                                           self.config_dict['dark_matter_mass']),  **defaults_kwargs)
             plt.suptitle(f"Nevents: {self.config_dict['Nevents']}", size=24)
 
             plt.tight_layout()
