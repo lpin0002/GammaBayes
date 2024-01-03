@@ -10,8 +10,8 @@ def makejobscripts(ozstar_config_dict, job_config_file_path, path_to_run_file='g
 
     job_str = f"""#!/bin/bash
 #
-#SBATCH --job-name={ozstar_config_dict['mail_address']}
-#SBATCH --output=data/LatestFolder/{ozstar_config_dict['mail_address']}.txt
+#SBATCH --job-name={ozstar_config_dict['jobname']}
+#SBATCH --output=data/LatestFolder/{ozstar_config_dict['jobname']}.txt
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={ozstar_config_dict['numcores']}
