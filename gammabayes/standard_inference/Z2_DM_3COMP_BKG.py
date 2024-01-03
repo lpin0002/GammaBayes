@@ -422,6 +422,7 @@ class Z2_DM_3COMP_BKG(object):
             pass
 
 if __name__=="__main__":
+    print('does it even start')
     try:
         config_file_path = sys.argv[1]
     except:
