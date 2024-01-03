@@ -127,13 +127,10 @@ gammabayes/samplers/inverse_transform_sampling.py
 gammabayes/samplers/sampler_utils.py
 gammabayes/samplers/dynesty/__init__.py
 gammabayes/samplers/dynesty/discrete_continuous_mix_samplers.py
-gammabayes/standard_inference_flows/Z2_DM_1COMP_BKG.py
-gammabayes/standard_inference_flows/Z2_DM_1COMP_BKG_config_default.yaml
-gammabayes/standard_inference_flows/Z2_DM_2COMP_BKG.py
-gammabayes/standard_inference_flows/Z2_DM_2COMP_BKG_config_default.yaml
-gammabayes/standard_inference_flows/Z2_DM_3COMP_BKG.py
-gammabayes/standard_inference_flows/Z2_DM_3COMP_BKG_config_default.yaml
-gammabayes/standard_inference_flows/__init__.py
+gammabayes/standard_inference/Z2_DM_1COMP_BKG.py
+gammabayes/standard_inference/Z2_DM_2COMP_BKG.py
+gammabayes/standard_inference/Z2_DM_3COMP_BKG.py
+gammabayes/standard_inference/__init__.py
 gammabayes/utils/__init__.py
 gammabayes/utils/config_utils.py
 gammabayes/utils/event_axes.py

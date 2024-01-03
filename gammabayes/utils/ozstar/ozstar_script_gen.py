@@ -23,7 +23,7 @@ except:
 
 
 
-
+    raise Exception
     # workingfolder = os.path.realpath(os.path.join(sys.path[0]))
     workingfolder = os.getcwd()
     print('\n\n\nWorking directory: '+workingfolder,'\n\n\n')
