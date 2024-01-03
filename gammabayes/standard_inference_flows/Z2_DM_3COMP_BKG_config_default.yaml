@@ -1,4 +1,4 @@
-diagnostics:                      False
+diagnostics:                      True
 blockplot:                        False
 
 signalfraction:                   0.3
@@ -30,7 +30,7 @@ diffusefrac_spacing:              'linear'
 
 true_energy_min:                  0.1
 true_energy_max:                  100
-true_energy_bins_per_decade:      100
+true_energy_bins_per_decade:      50
 true_spatial_res:                 0.2
 true_longitude_min:               -3.5
 true_longitude_max:               3.5
@@ -39,7 +39,7 @@ true_latitude_max:                3
 
 recon_energy_min:                 0.1
 recon_energy_max:                 100
-recon_energy_bins_per_decade:     50
+recon_energy_bins_per_decade:     20
 recon_spatial_res:                0.4
 recon_longitude_min:              -3.5
 recon_longitude_max:              3.5

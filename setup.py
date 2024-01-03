@@ -45,6 +45,7 @@ setup(name='GammaBayes',
                         'dark_matter/models/Z2_ScalarSinglet/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
                         'dark_matter/models/Z2_ScalarSinglet/temp/*',
                         'standard_inference_flows/*',
+                        'utils/ozstar/*'
                         ]
       },
       )

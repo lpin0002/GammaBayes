@@ -1,18 +1,23 @@
 import os, sys, time
 from tqdm import tqdm
 
-from gammabayes.likelihoods.irfs import log_edisp, log_psf, single_loglikelihood
+from gammabayes.likelihoods.irfs import irf_loglikelihood
+from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
+from gammabayes.likelihoods import discrete_loglike
+from gammabayes.priors.astro_sources import construct_hess_source_map, construct_fermi_gaggero_matrix, construct_hess_source_map_interpolation, construct_log_fermi_gaggero_bkg
+from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
+
 from gammabayes.utils.plotting import logdensity_matrix_plot
 from gammabayes.utils.config_utils import read_config_file
 from gammabayes.utils import logspace_riemann, iterate_logspace_integration
-from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
-from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
-from gammabayes.likelihoods import discrete_loglike
-from gammabayes.dark_matter import SS_DM_dist
-from gammabayes.priors.astro_sources import construct_hess_source_map, construct_fermi_gaggero_matrix, construct_hess_source_map_interpolation, construct_log_fermi_gaggero_bkg
 from gammabayes.utils import bin_centres_to_edges
 from gammabayes.utils.config_utils import create_true_axes_from_config, create_recon_axes_from_config
+
 from gammabayes.samplers import discrete_hyperparameter_continuous_mix_post_process_sampler
+
+from gammabayes.dark_matter.models import SS_Spectra
+from gammabayes.dark_matter import combine_DM_models
+from gammabayes.dark_matter.density_profiles import Einasto_Profile
 
 # from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis
 import numpy as np
@@ -29,6 +34,7 @@ import functools, random
 from multiprocessing import Pool, freeze_support
 import multiprocessing
 import pandas as pd
+from warnings import warn
 # random.seed(1)
 
 from gammabayes.likelihoods.irfs import irf_norm_setup
@@ -104,12 +110,12 @@ class Z2_DM_3COMP_BKG(object):
         self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis          = create_recon_axes_from_config(self.config_dict)
 
 
-        self.log_psf_normalisations, self.log_edisp_normalisations = irf_norm_setup(energy_true_axis=self.energy_true_axis, 
-                                                                                    energy_recon_axis=self.energy_recon_axis, 
-                                                                                    longitudeaxistrue=self.longitudeaxistrue, 
-                                                                                    longitudeaxis=self.longitudeaxis, 
-                                                                                    latitudeaxistrue=self.latitudeaxistrue, 
-                                                                                    latitudeaxis=self.latitudeaxis)
+        self.irf_loglike = irf_loglikelihood(axes=[self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis], 
+                                     dependent_axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue])
+
+
+
+        self.log_psf_normalisations, self.log_edisp_normalisations = self.irf_loglike.create_log_norm_matrices()
 
 
         self.astrophysicalbackground = construct_hess_source_map(energy_axis=self.energy_true_axis,
@@ -128,26 +134,19 @@ class Z2_DM_3COMP_BKG(object):
                                axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
 
-        self.SS_DM_dist_instance= SS_DM_dist(self.longitudeaxistrue, self.latitudeaxistrue, density_profile=self.config_dict['dmdensity_profile'])
-        self.logDMpriorfunc = self.SS_DM_dist_instance.func_setup()
 
-        self.DM_prior = discrete_logprior(logfunction=self.logDMpriorfunc, name='Scalar Singlet Dark Matter Prior',
-                                    axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
-                                    axes_names=['energy', 'lon', 'lat'],
-                                    default_hyperparameter_values=[self.config_dict['mass']], 
-                                    hyperparameter_names=['mass'], )
+        SS_DM_combine_instance = combine_DM_models(SS_Spectra, Einasto_Profile, self.irf_loglike, spectral_class_kwds={'ratios':True})
+        self.logDMpriorfunc, self.logDMpriorfunc_mesh_efficient = SS_DM_combine_instance.DM_signal_dist, SS_DM_combine_instance.DM_signal_dist_mesh_efficient
+
+        self.DM_prior = discrete_logprior(logfunction=self.logDMpriorfunc, 
+                             log_mesh_efficient_func=self.logDMpriorfunc_mesh_efficient, 
+                             name='Scalar Singlet Dark Matter Prior',
+                             axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue], 
+                             axes_names=['energy', 'lon', 'lat'],
+                             default_spectral_parameters={'mass':self.config_dict['mass']}, 
+                              )
         
-        self.edisp_like = discrete_loglike(logfunction=log_edisp, 
-                                    axes=(self.energy_recon_axis,), axes_names='E recon',
-                                    name='energy dispersion',
-                                    dependent_axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
-                                    dependent_axes_names = ['E true', 'lon true', 'lat true'])
 
-        self.psf_like = discrete_loglike(logfunction=log_psf, 
-                                            axes=(self.longitudeaxis, self.latitudeaxis), axes_names=['longitude recon', 'latitude recon'],
-                                            name='point spread function ', 
-                                            dependent_axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,),
-                                            dependent_axes_names = ['E true', 'lon', 'lat'])
         
     def test_priors(self):
 
@@ -201,7 +200,7 @@ class Z2_DM_3COMP_BKG(object):
         plt.title('Point Astro BKG')
         plt.pcolormesh(self.longitudeaxistrue, 
                        self.latitudeaxistrue, 
-                       logspace_riemann(diffuse_astro_bkg_prior_vals, x=self.energy_true_axis, axis=0).T )
+                       logspace_riemann(point_astro_bkg_prior_vals, x=self.energy_true_axis, axis=0).T )
         
         plt.subplot(428)
         plt.plot(self.energy_true_axis, 
@@ -225,140 +224,90 @@ class Z2_DM_3COMP_BKG(object):
 
             plt.figure(dpi=250)
 
-            plt.subplot(321)
+            plt.subplot(421)
             plt.hist2d(self.siglonvals,self.siglatvals, bins=(bin_centres_to_edges(self.longitudeaxistrue), bin_centres_to_edges(self.latitudeaxistrue)))
 
 
-            plt.subplot(322)
-            sigtrue_histvals = plt.hist(self.sig_energy_vals, bins=bin_centres_to_edges(self.energy_true_axis))
-            logspectralvals = self.logDMpriorfunc(self.energy_true_axis, self.energy_true_axis*0.0, self.energy_true_axis*0.0, self.energy_true_axis*0.0+self.config_dict['mass'])
-            spectralvals = np.exp(logspectralvals)
-            plt.plot(self.energy_true_axis,spectralvals/np.mean(spectralvals)*np.mean(sigtrue_histvals[0]), lw=0.5)
+            plt.subplot(422)
+            plt.hist(self.sig_energy_vals, bins=bin_centres_to_edges(self.energy_true_axis))
             plt.loglog()
 
 
-            plt.subplot(323)
+            plt.subplot(423)
             plt.hist2d(self.ccr_bkglonvals,self.ccr_bkglatvals, bins=(bin_centres_to_edges(self.longitudeaxistrue), bin_centres_to_edges(self.latitudeaxistrue)))
 
-            plt.subplot(324)
+            plt.subplot(424)
             plt.hist(self.ccr_bkg_energy_vals, bins=bin_centres_to_edges(self.energy_true_axis))
             plt.loglog()
 
-            plt.subplot(325)
-            plt.hist2d(self.astro_bkglonvals,self.astro_bkglatvals, bins=(bin_centres_to_edges(self.longitudeaxistrue), bin_centres_to_edges(self.latitudeaxistrue)))
+            plt.subplot(425)
+            plt.hist2d(self.diffuse_astro_bkglonvals,self.diffuse_astro_bkglatvals, bins=(bin_centres_to_edges(self.longitudeaxistrue), bin_centres_to_edges(self.latitudeaxistrue)))
 
-            plt.subplot(326)
-            plt.hist(self.astro_bkg_energy_vals, bins=bin_centres_to_edges(self.energy_true_axis))
+            plt.subplot(426)
+            plt.hist(self.diffuse_astro_bkg_energy_vals, bins=bin_centres_to_edges(self.energy_true_axis))
+            plt.loglog()
+
+            plt.subplot(427)
+            plt.hist2d(self.point_astro_bkglonvals,self.point_astro_bkglatvals, bins=(bin_centres_to_edges(self.longitudeaxistrue), bin_centres_to_edges(self.latitudeaxistrue)))
+
+            plt.subplot(428)
+            plt.hist(self.point_astro_bkg_energy_vals, bins=bin_centres_to_edges(self.energy_true_axis))
             plt.loglog()
 
         
             plt.show(block=self.blockplot)
-
-        self.sig_energy_measured = [np.squeeze(self.edisp_like.sample((energy_val,*coord,), numsamples=1)) for energy_val,coord  in notebook_tqdm(zip(self.sig_energy_vals, 
-                                                                                                                                                      np.array([self.siglonvals, 
-                                                                                                                                                                self.siglatvals]).T), 
-                                                                                                                                                  total=self.nsig)]
-        self.signal_lon_measured = []
-        self.signal_lat_measured = []
-        sig_lonlat_psf_samples =  [self.psf_like.sample((energy_val,*coord,), 1).tolist() for energy_val,coord  in notebook_tqdm(zip(self.sig_energy_vals, 
-                                                                                                                                     np.array([self.siglonvals, 
-                                                                                                                                               self.siglatvals]).T), 
-                                                                                                                                 total= self.nsig)]
-        for sig_lonlat_psf_sample in sig_lonlat_psf_samples:
-            self.signal_lon_measured.append(sig_lonlat_psf_sample[0])
-            self.signal_lat_measured.append(sig_lonlat_psf_sample[1])
-
-
-            
-        self.ccr_bkg_energy_measured = [np.squeeze(self.edisp_like.sample((energy,*coord,), numsamples=1)) for energy,coord  in notebook_tqdm(zip(self.ccr_bkg_energy_vals, 
-                                                                                                                                                  np.array([self.ccr_bkglonvals, 
-                                                                                                                                                            self.ccr_bkglatvals]).T), 
-                                                                                                                                              total= self.nccr)]
-        self.ccr_bkg_lon_measured = []
-        self.ccr_bkg_lat_measured = []
-        ccr_bkg_lonlat_psf_samples =  [self.psf_like.sample((energy,*coord,), 1).tolist() for energy,coord  in notebook_tqdm(zip(self.ccr_bkg_energy_vals, 
-                                                                                                                                 np.array([self.ccr_bkglonvals, 
-                                                                                                                                           self.ccr_bkglatvals]).T), 
-                                                                                                                             total= self.nccr)]
-        for ccr_bkg_lonlat_psf_sample in ccr_bkg_lonlat_psf_samples:
-            self.ccr_bkg_lon_measured.append(ccr_bkg_lonlat_psf_sample[0])
-            self.ccr_bkg_lat_measured.append(ccr_bkg_lonlat_psf_sample[1])
-
-
-
-        self.diffuse_astro_bkg_energy_measured = [np.squeeze(self.edisp_like.sample((energy,*coord,), numsamples=1)) for energy,coord  in notebook_tqdm(zip(self.diffuse_astro_bkg_energy_vals, 
-                                                                                                                                                            np.array([self.diffuse_astro_bkglonvals, 
-                                                                                                                                                                      self.diffuse_astro_bkglatvals]).T), 
-                                                                                                                                                total= self.ndiffuse)]
-        self.diffuse_astro_bkg_lon_measured = []
-        self.diffuse_astro_bkg_lat_measured = []
-        diffuse_astro_bkg_lonlat_psf_samples =  [self.psf_like.sample((energy,*coord,), 1).tolist() for energy,coord  in notebook_tqdm(zip(self.diffuse_astro_bkg_energy_vals, 
-                                                                                                                                           np.array([self.diffuse_astro_bkglonvals, 
-                                                                                                                                                     self.diffuse_astro_bkglatvals]).T), 
-                                                                                                                               total= self.ndiffuse)]
-
-        for diffuse_astro_bkg_lonlat_psf_sample in diffuse_astro_bkg_lonlat_psf_samples:
-            self.diffuse_astro_bkg_lon_measured.append(diffuse_astro_bkg_lonlat_psf_sample[0])
-            self.diffuse_astro_bkg_lat_measured.append(diffuse_astro_bkg_lonlat_psf_sample[1])
-
-
-        self.point_astro_bkg_energy_measured = [np.squeeze(self.edisp_like.sample((energy,*coord,), numsamples=1)) for energy,coord  in notebook_tqdm(zip(self.point_astro_bkg_energy_vals, 
-                                                                                                                                                          np.array([self.point_astro_bkglonvals, 
-                                                                                                                                                                    self.point_astro_bkglatvals]).T), 
-                                                                                                                                                total= self.npoint)]
-
-        self.point_astro_bkg_lon_measured = []
-        self.point_astro_bkg_lat_measured = []
-
-            
-        point_astro_bkg_lonlat_psf_samples =  [self.psf_like.sample((energy,*coord,), 1).tolist() for energy,coord  in notebook_tqdm(zip(self.point_astro_bkg_energy_vals, 
-                                                                                                                                         np.array([self.point_astro_bkglonvals, 
-                                                                                                                                                   self.point_astro_bkglatvals]).T), 
-                                                                                                                               total= self.npoint)]
-
-        for point_astro_bkg_lonlat_psf_sample in point_astro_bkg_lonlat_psf_samples:
-            self.point_astro_bkg_lon_measured.append(point_astro_bkg_lonlat_psf_sample[0])
-            self.point_astro_bkg_lat_measured.append(point_astro_bkg_lonlat_psf_sample[1])
+        self.sig_energy_meas, self.sig_longitude_meas, self.sig_latitude_meas = np.asarray([self.irf_loglike.sample(dependentvalues=[*nuisance_vals]) for nuisance_vals in tqdm(zip(self.sig_energy_vals,
+                                                                                                                                                                                    self.siglonvals,
+                                                                                                                                                                                    self.siglatvals))]).T
+        self.ccr_bkg_energy_meas, self.ccr_bkg_longitude_meas, self.ccr_bkg_latitude_meas = np.asarray([self.irf_loglike.sample(dependentvalues=[*nuisance_vals]) for nuisance_vals in tqdm(zip(self.ccr_bkg_energy_vals,
+                                                                                                                                                                                                self.ccr_bkglonvals,
+                                                                                                                                                                                                self.ccr_bkglatvals))]).T
+        self.diffuse_bkg_energy_meas, self.diffuse_bkg_longitude_meas, self.diffuse_bkg_latitude_meas = np.asarray([self.irf_loglike.sample(dependentvalues=[*nuisance_vals]) for nuisance_vals in tqdm(zip(self.diffuse_astro_bkg_energy_vals, 
+                                                                                                                                                                                                            self.diffuse_astro_bkglonvals,
+                                                                                                                                                                                                            self.diffuse_astro_bkglatvals))]).T
+        self.point_bkg_energy_meas, self.point_astro_bkg_longitude_meas, self.point_astro_bkg_latitude_meas = np.asarray([self.irf_loglike.sample(dependentvalues=[*nuisance_vals]) for nuisance_vals in tqdm(zip(self.point_astro_bkg_energy_vals,
+                                                                                                                                                                                                                    self.point_astro_bkglonvals,
+                                                                                                                                                                                                                    self.point_astro_bkglatvals))]).T
 
 
         if self.diagnostics:
             plt.figure(dpi=250)
             plt.subplot(421)
-            plt.hist2d(self.signal_lon_measured,self.signal_lat_measured, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxis)))
+            plt.hist2d(self.sig_longitude_meas, self.sig_latitude_meas, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxis)))
 
             plt.subplot(422)
-            plt.hist(self.sig_energy_measured, bins=bin_centres_to_edges(self.energy_recon_axis))
+            plt.hist(self.sig_energy_meas, bins=bin_centres_to_edges(self.energy_recon_axis))
             plt.loglog()
 
             plt.subplot(423)
-            plt.hist2d(self.ccr_bkg_lon_measured, self.ccr_bkg_lat_measured, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxistrue)))
+            plt.hist2d(self.ccr_bkg_longitude_meas, self.ccr_bkg_latitude_meas, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxis)))
 
             plt.subplot(424)
-            plt.hist(self.ccr_bkg_energy_measured, bins=bin_centres_to_edges(self.energy_recon_axis))
+            plt.hist(self.ccr_bkg_energy_meas, bins=bin_centres_to_edges(self.energy_recon_axis))
             plt.loglog()
 
 
             plt.subplot(425)
-            plt.hist2d(self.diffuse_astro_bkg_lon_measured, self.diffuse_astro_bkg_lat_measured, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxistrue)))
+            plt.hist2d(self.diffuse_bkg_longitude_meas, self.diffuse_bkg_latitude_meas, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxis)))
 
             plt.subplot(426)
-            plt.hist(self.diffuse_astro_bkg_energy_measured, bins=bin_centres_to_edges(self.energy_recon_axis))
+            plt.hist(self.diffuse_bkg_energy_meas, bins=bin_centres_to_edges(self.energy_recon_axis))
             plt.loglog()
 
-            plt.subplot(425)
-            plt.hist2d(self.point_astro_bkg_lon_measured, self.point_astro_bkg_lat_measured, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxistrue)))
+            plt.subplot(427)
+            plt.hist2d(self.point_astro_bkg_longitude_meas, self.point_astro_bkg_latitude_meas, bins=(bin_centres_to_edges(self.longitudeaxis), bin_centres_to_edges(self.latitudeaxis)))
 
-            plt.subplot(426)
-            plt.hist(self.point_astro_bkg_energy_measured, bins=bin_centres_to_edges(self.energy_recon_axis))
+            plt.subplot(428)
+            plt.hist(self.point_bkg_energy_meas,  bins=bin_centres_to_edges(self.energy_recon_axis))
             plt.loglog()
 
         
             plt.show(block=self.blockplot)
 
-        self.measured_energy = list(self.sig_energy_measured)+list(self.ccr_bkg_energy_measured)+list(self.diffuse_astro_bkg_energy_measured)+list(self.point_astro_bkg_energy_measured)
-        self.measured_lon = list(self.signal_lon_measured)+list(self.ccr_bkg_lon_measured)+list(self.diffuse_astro_bkg_lon_measured)+list(self.point_astro_bkg_lon_measured)
-        self.measured_lat = list(self.signal_lat_measured)+list(self.ccr_bkg_lat_measured)+list(self.diffuse_astro_bkg_lat_measured)+list(self.point_astro_bkg_lat_measured)
-
+        self.measured_energy = list(self.sig_energy_meas)+list(self.ccr_bkg_energy_meas)+list(self.diffuse_bkg_energy_meas)+list(self.point_bkg_energy_meas)
+        self.measured_longitude = list(self.sig_longitude_meas)+list(self.ccr_bkg_longitude_meas)+list(self.diffuse_bkg_longitude_meas)+list(self.point_astro_bkg_longitude_meas)
+        self.measured_latitude = list(self.sig_latitude_meas)+list(self.ccr_bkg_latitude_meas)+list(self.diffuse_bkg_latitude_meas)+list(self.point_astro_bkg_latitude_meas)
+        
     def nuisance_marg(self):
         self.massrange            = np.logspace(np.log10(self.config_dict['mass'])-5/np.sqrt(self.config_dict['Nevents']), 
                                                         np.log10(self.config_dict['mass'])+5/np.sqrt(self.config_dict['Nevents']),
@@ -366,32 +315,19 @@ class Z2_DM_3COMP_BKG(object):
 
         self.hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
             priors                  = (self.DM_prior, self.ccr_bkg_prior, self.diffuse_astro_bkg_prior, self.point_astro_bkg_prior), 
-            likelihood              = single_loglikelihood, 
+            likelihood              = self.irf_loglike, 
             dependent_axes          = (self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue), 
-            hyperparameter_axes     = [[self.massrange], [None], [None], [None]], 
+            hyperparameter_axes     = [
+                {'spectral_parameters'  : {'mass'   : self.massrange}, 
+                                            }, 
+                                            ], 
             numcores                = self.config_dict['numcores'], 
             likelihoodnormalisation = self.log_psf_normalisations+self.log_edisp_normalisations)
 
-        self.measured_energy = [float(measured_energy_val) for measured_energy_val in self.measured_energy]
-        margresults = self.hyperparameter_likelihood_instance.nuisance_log_marginalisation(
-            axisvals= (self.measured_energy, self.measured_lon, self.measured_lat)
+        self.margresults = self.hyperparameter_likelihood_instance.nuisance_log_marginalisation(
+            axisvals= (self.measured_energy, self.measured_longitude, self.measured_latitude)
             )
 
-        self.margresultsarray = np.asarray(margresults)
-        sigmargresults = np.squeeze(np.vstack(self.margresultsarray[:,0])).T
-
-
-        from matplotlib.pyplot import get_cmap
-        cmap = get_cmap(name='cool')
-
-        if self.diagnostics:
-            plt.figure()
-            logmass_lines = np.exp(sigmargresults-logspace_riemann(sigmargresults, x=self.massrange, axis=0)).T
-            for idx, line in enumerate(logmass_lines):
-                plt.plot(self.massrange, line, label=idx, c=cmap(idx/len(logmass_lines)), alpha=0.5, lw=1.0)
-            plt.axvline(self.config_dict['mass'], c='tab:orange')
-            plt.xscale('log')
-            plt.show(block=self.blockplot)
 
     def generate_hyper_param_likelihood(self):
         self.sigfrac_of_total_range         = np.linspace(self.config_dict['sigfrac_lower_bd'], self.config_dict['sigfrac_upper_bd'], self.config_dict['nbins_signalfraction']) 
@@ -402,15 +338,15 @@ class Z2_DM_3COMP_BKG(object):
 
 
         if self.config_dict['mixture_fraction_sampling']=='scan':
-            skipfactor = 10
-            log_hyper_param_likelihood = 0
-            for dataidx in tqdm(range(int(round(self.margresultsarray.shape[0]/skipfactor)))):
-                tempmargresultsarray = self.margresultsarray[dataidx*skipfactor:dataidx*skipfactor+skipfactor]
-                log_hyper_param_likelihood += self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
-                    mixture_axes=(*mixtureaxes,), log_margresults=tempmargresultsarray)
+            skipfactor          = 10
+            self.log_hyper_param_likelihood =  0
+            for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/skipfactor)))):
+                _temp_log_marg_reults = [self.margresults[_index][_skip_idx*skipfactor:_skip_idx*skipfactor+skipfactor, ...] for _index in range(len(self.margresults))]
+                self.log_hyper_param_likelihood = self.log_hyper_param_likelihood + np.squeeze(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+                    mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
 
 
-            self.log_hyper_param_likelihood=np.squeeze(log_hyper_param_likelihood)
+            self.log_hyper_param_likelihood=np.squeeze(self.log_hyper_param_likelihood)
 
 
 
@@ -423,7 +359,7 @@ class Z2_DM_3COMP_BKG(object):
                                                       self.config_dict['diffuse_of_astro_fraction'], 
                                                       self.config_dict['mass'],],   
                                             sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
-                                            axis_names=['signal/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
+                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
             fig.figure.dpi = 120
             ax[3,3].set_xscale('log')
             ax[3,0].set_yscale('log')
@@ -475,7 +411,12 @@ class Z2_DM_3COMP_BKG(object):
             pass
 
 if __name__=="__main__":
-    config_file_path = sys.argv[1]
+    try:
+        config_file_path = sys.argv[1]
+    except:
+        warn('No configuration file given')
+        config_file_path = os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'
+
 
     Z2_DM_3COMP_BKG_instance = Z2_DM_3COMP_BKG(config_file_path=config_file_path,)
     Z2_DM_3COMP_BKG_instance.run()
