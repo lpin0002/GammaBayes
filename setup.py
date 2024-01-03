@@ -16,7 +16,7 @@ setup(name='GammaBayes',
       # For a lot of the DM spectral classes we require that dict types are ordered
       python_requires='>=3.6',
       install_requires=[
-          "astropy>=5.1",
+          "astropy==5.3.4",
         "corner>=2.2.2",
         "dynesty==2.1.2",
         "jupyterlab>=3.6.3",
