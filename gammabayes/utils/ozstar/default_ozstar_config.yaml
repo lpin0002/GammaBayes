@@ -8,6 +8,7 @@
 # single_job:                       False
 # immediate_run:                    True
 jobname:                          DM_3COMP_BKG_0p3_0p8_0p3_1p0
+stem_identifier:                  DM_3COMP_BKG_0p3_0p8_0p3_1p0
 numcores:                         8 
 numjobs:                          1
 
@@ -35,15 +36,15 @@ mail_address:                     progressemail1999@gmail.com
 signalfraction:                   0.3
 ccr_of_bkg_fraction:              0.8
 diffuse_of_astro_fraction:        0.3
-Nevents_per_job:                  1000
-Nevents:                          1000
+Nevents_per_job:                  10000
+Nevents:                          10000
 dmdensity_profile:                'einasto'
 dark_matter_mass:                 1.0
 
 # Parameters for the 'true' value axes for gamma ray events
 true_energy_min:                  0.1
 true_energy_max:                  100
-true_energy_bins_per_decade:      50
+true_energy_bins_per_decade:      100
 true_spatial_res:                 0.2
 true_longitude_min:               -3.5
 true_longitude_max:               3.5
@@ -53,7 +54,7 @@ true_latitude_max:                3
 # Parameters for the reconstructed value axes for gamma ray events
 recon_energy_min:                 0.1
 recon_energy_max:                 100
-recon_energy_bins_per_decade:     40
+recon_energy_bins_per_decade:     50
 recon_spatial_res:                0.4
 recon_longitude_min:              -3.5
 recon_longitude_max:              3.5
