@@ -19,7 +19,7 @@ def makejobscripts(ozstar_config_dict, job_config_file_path, path_to_run_file='g
 #SBATCH --mem-per-cpu={ozstar_config_dict['mem_per_cpu']}
 {mail_str}
 conda init bash
-conda activate DMPipe
+conda activate {ozstar_config_dict['env_name']}
 srun python3 {path_to_run_file} {job_config_file_path} """
     
     return job_str

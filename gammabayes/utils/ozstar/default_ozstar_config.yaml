@@ -7,6 +7,7 @@
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
 # single_job:                       False
 # immediate_run:                    True
+env_name:                         GammaBayesEnv
 jobname:                          DM_3COMP_BKG_0p3_0p8_0p3_1p0
 stem_identifier:                  DM_3COMP_BKG_0p3_0p8_0p3_1p0
 numcores:                         8 
