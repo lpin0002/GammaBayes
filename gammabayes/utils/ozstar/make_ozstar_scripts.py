@@ -1,7 +1,7 @@
 
 import os, sys, numpy as np, time, math, yaml
 
-def makejobscripts(ozstar_config_dict, job_config_file_path, path_to_run_file='gammabayes.standard_inference.Z2_DM_3COMP_BKG'):
+def makejobscripts(ozstar_config_dict:dict, job_config_file_path:str, path_to_run_file: str) -> str:
     if int(ozstar_config_dict['time_mins'])<10:
         ozstar_config_dict['time_mins'] = f"0{ozstar_config_dict['time_mins']}"
     if bool(ozstar_config_dict['mail_progress']):

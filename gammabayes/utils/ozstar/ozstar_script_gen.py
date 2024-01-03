@@ -19,7 +19,7 @@ except:
     config_inputs = read_config_file(config_file_path)
     print(config_inputs)
 
-    bash_file_body = makejobscripts(config_inputs, config_file_path, path_to_run_file='gammabayes.standard_inference.Z3_DM_3COMP_BKG')
+    bash_file_body = makejobscripts(config_inputs, config_file_path, path_to_run_file='gammabayes.standard_inference.Z2_DM_3COMP_BKG')
 
 
 
