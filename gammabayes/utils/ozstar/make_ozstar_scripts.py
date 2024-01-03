@@ -18,7 +18,7 @@ def makejobscripts(ozstar_config_dict, job_config_file_path, path_to_run_file='g
 #SBATCH --time={ozstar_config_dict['time_hrs']}:{ozstar_config_dict['time_mins']}:00
 #SBATCH --mem-per-cpu={ozstar_config_dict['mem_per_cpu']}
 {mail_str}
-conda activate {ozstar_config_dict['env_name']}
+source activate {ozstar_config_dict['env_name']}
 srun python3 -m {path_to_run_file} {job_config_file_path} """
     
     return job_str
