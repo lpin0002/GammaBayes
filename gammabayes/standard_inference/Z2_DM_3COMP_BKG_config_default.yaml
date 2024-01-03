@@ -7,7 +7,7 @@ diffuse_of_astro_fraction:        0.3
 Nevents:                          1000
 nbins_mass:                       61
 dmdensity_profile:                'einasto'
-mass:                             1.0
+dark_matter_mass:                 1.0
 mass_upper_bd_for_inference:      2.
 mass_lower_bd_for_inference:      -1.
 numcores:                         8
