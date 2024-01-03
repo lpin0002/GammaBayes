@@ -216,8 +216,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
             prior_matrix_list = []
             for _outer_idx, prior in tqdm(enumerate(self.priors), 
                                    total=len(self.priors), 
-                                   desc='Setting up prior matrices', 
-                                   position=0, miniters=1, mininterval=0.1):
+                                   desc='Setting up prior matrices'):
 
                 parameter_dictionaries  = self.hyperparameter_axes[_outer_idx]
                 update_with_defaults(parameter_dictionaries, {'spectral_parameters':{}, 'spatial_parameters':{}})
