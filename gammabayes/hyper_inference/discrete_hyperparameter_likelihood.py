@@ -17,6 +17,7 @@ class discrete_hyperparameter_likelihood(object):
                  likelihoodnormalisation: np.ndarray | float = 0., 
                  log_margresults: np.ndarray | None = None, 
                  mixture_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 log_hyperparameter_likelihood: np.ndarray | float = 0., 
                  log_posterior: np.ndarray | float = 0., 
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
                  logspace_integrator: callable = logspace_riemann,
@@ -121,7 +122,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
         else:
             self.mixture_axes = np.array([*mixture_axes])
 
-
+        self.log_hyperparameter_likelihood  = log_hyperparameter_likelihood
         self.log_posterior                  = log_posterior
         self.prior_matrix_list              = prior_matrix_list
         
@@ -406,12 +407,10 @@ and number of prior components is {len(self.priors)}.""")
 
         log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
 
-        self.log_hyperparameter_likelihood = log_hyperparameter_likelihood
-
         return log_hyperparameter_likelihood
         
 
-    def combine_hyperparameter_likelihoods(self, 
+    def update_hyperparameter_likelihood(self, 
                                            log_hyperparameter_likelihood: np.ndarray
                                            ) -> np.ndarray:
         """To combine log hyperparameter likelihoods from multiple runs by 
@@ -529,47 +528,46 @@ and number of prior components is {len(self.priors)}.""")
 
             
             
-    def save_data(self, 
-                  directory_path: str = '', 
-                  reduce_mem_consumption: bool = True):
-        """A method to save the information contained within a class instance.
+    def pack_data(self, reduce_mem_consumption: bool = True):
+        """A method to pack the information contained within a class 
+        instance into a dictionary.
 
-        This method saves all the attributes of a class instance to a dictionary 
-            and then pickles it to the specified directory path. By default the 
-            input priors and likelihoods are not saved to save on memory, but if 
-            this is not an issue and you wish to save these then set 
-            reduce_data_consumption to False.
+        This method saves all the attributes of a class instance to a dictionary. 
+            By default the input priors and likelihoods are not saved to save due
+            to the large amount of memory they can consume. If this is not an 
+            issue, and you wish to save these then set reduce_data_consumption to 
+            False.
 
         Args:
-            directory_path (str, optional): Path to where to save class data. 
-            Defaults to ''.
 
             reduce_mem_consumption (bool, optional): A bool parameter of whether
                 to not save the input prior and likelihoods to save on memory 
                 consumption. Defaults to True (meaning to __not__ save the prior 
                 and likelihood).
         """
-        data_to_save = {}
+        packed_data = {}
         
-        data_to_save['hyperparameter_axes']                 = self.hyperparameter_axes
+        packed_data['hyperparameter_axes']                 = self.hyperparameter_axes
         if not(reduce_mem_consumption):
-            data_to_save['priors']                              = self.priors
-            data_to_save['likelihood']                          = self.likelihood
+            packed_data['priors']                              = self.priors
+            packed_data['likelihood']                          = self.likelihood
             
-        data_to_save['axes']                                = self.axes
-        data_to_save['dependent_axes']                      = self.dependent_axes
-        data_to_save['marg_results']                        = self.marg_results
-        data_to_save['mixture_axes']                        = self.mixture_axes
-        data_to_save['log_hyperparameter_likelihood']      = self.log_hyperparameter_likelihood
-        data_to_save['log_posterior']                       = self.log_posterior
-        
+        packed_data['axes']                                = self.axes
+        packed_data['dependent_axes']                      = self.dependent_axes
+        packed_data['log_hyperparameter_likelihood']       = self.log_hyperparameter_likelihood
+        packed_data['mixture_axes']                        = self.mixture_axes
+
+        packed_data['self.log_posterior']                  = self.log_posterior
                 
-        save_file_path = os.path.join(directory_path, "hyper_parameter_data.yaml")
-        
-        
+        return packed_data
+    
+
+    def save_data(self, file_name="hyper_class_data.yaml", **kwargs):
+
+        data_to_save = self.pack_data(**kwargs)
         try:
-            save_config_file(data_to_save, save_file_path)
+            save_config_file(data_to_save, file_name)
         except:
-            warnings.warn("Something went wrong when trying to save to the specified directory. Saving to current working directory")
-            save_config_file("hyper_parameter_data.yaml", save_file_path)
-        
+            warnings.warn("""Something went wrong when trying to save to the specified directory. 
+Saving to current working directory as hyper_class_data.yaml""")
+            save_config_file("hyper_class_data.yaml", file_name)

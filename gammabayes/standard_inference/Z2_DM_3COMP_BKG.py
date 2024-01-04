@@ -1,4 +1,4 @@
-import os, sys, time
+import os, sys, time, warnings
 from tqdm import tqdm
 
 from gammabayes.likelihoods.irfs import irf_loglikelihood
@@ -8,10 +8,8 @@ from gammabayes.priors.astro_sources import construct_hess_source_map, construct
 from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
 
 from gammabayes.utils.plotting import logdensity_matrix_plot
-from gammabayes.utils.config_utils import read_config_file
-from gammabayes.utils import logspace_riemann, iterate_logspace_integration
-from gammabayes.utils import bin_centres_to_edges
-from gammabayes.utils.config_utils import create_true_axes_from_config, create_recon_axes_from_config
+from gammabayes.utils import save_to_pickle, logspace_riemann, iterate_logspace_integration, bin_centres_to_edges
+from gammabayes.utils.config_utils import read_config_file, create_true_axes_from_config, create_recon_axes_from_config
 
 from gammabayes.samplers import discrete_hyperparameter_continuous_mix_post_process_sampler
 
@@ -34,7 +32,6 @@ import functools, random
 from multiprocessing import Pool, freeze_support
 import multiprocessing
 import pandas as pd
-from warnings import warn
 # random.seed(1)
 
 
@@ -71,30 +68,33 @@ class Z2_DM_3COMP_BKG(object):
             self.plot_result    = False
 
         try:
-            self.name    = self.config_dict['name']
+            self.jobname    = self.config_dict['jobname']
         except:
-            self.name    = time.strftime(f"DM{self.config_dict['dark_matter_mass']}_SIGFRAC{self.config_dict['signalfraction']}_CCRFRAC{self.config_dict['ccr_of_bkg_fraction']}_DIFFUSEFRAC{self.config_dict['diffuse_of_astro_fraction']}_3COMP_BKG_%m|%d_%H:%M")
+            self.jobname    = time.strftime(f"DM{self.config_dict['dark_matter_mass']}_SIGFRAC{self.config_dict['signalfraction']}_CCRFRAC{self.config_dict['ccr_of_bkg_fraction']}_DIFFUSEFRAC{self.config_dict['diffuse_of_astro_fraction']}_3COMP_BKG_%m|%d_%H:%M")
 
         try:
             self.save_path = self.config_dict['save_path']
-        except:
-            self.save_path = f'data/{self.name}'
+            if not(os.path.exists(self.save_path)):
+                folderstructure = self.save_path.split('/')
+                folderpath = folderstructure[0]
+                os.makedirs(folderpath, exist_ok=True)
+                for folder in folderstructure[1:-2]:
+                    folderpath = f"{folderpath}/{folder}"
+                    os.makedirs(folderpath, exist_ok=True)
+
+
+                print(folderstructure)
+
+                folderpath = f"{folderpath}/{folderstructure[-2]}"
+
+                # Making it so data isn't overwritten when specifying a save_path
+                os.makedirs(folderpath, exist_ok=False)
+        except Exception as excpt:
+            print(f"An error occured when trying to unpack save path: {excpt}")
+            self.save_path = f'data/{self.jobname}'
             os.makedirs('data', exist_ok=True)
-            os.makedirs(f'data/{self.name}', exist_ok=True)
+            os.makedirs(f'data/{self.jobname}', exist_ok=True)
 
-
-        try:
-            self.save_figure_path = self.config_dict['save_figure_path']
-            self.save_eventdata_path = self.config_dict['save_eventdata_path']
-            self.save_analysisresults_path = self.config_dict['save_analysisresults_path']
-        except:
-            self.save_figure_path = self.save_path
-            self.save_eventdata_path = self.save_path
-            self.save_analysisresults_path = self.save_path
-
-        os.makedirs(self.save_figure_path, exist_ok=True)
-        os.makedirs(self.save_eventdata_path, exist_ok=True)
-        os.makedirs(self.save_analysisresults_path, exist_ok=True)
 
 
         self.nsig                        = int(round(self.config_dict['signalfraction']*self.config_dict['Nevents']))
@@ -353,7 +353,7 @@ class Z2_DM_3COMP_BKG(object):
             self.log_hyper_param_likelihood =  0
             for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/skipfactor)))):
                 _temp_log_marg_reults = [self.margresults[_index][_skip_idx*skipfactor:_skip_idx*skipfactor+skipfactor, ...] for _index in range(len(self.margresults))]
-                self.log_hyper_param_likelihood = self.log_hyper_param_likelihood + np.squeeze(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+                self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
                     mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
 
 
@@ -377,6 +377,7 @@ class Z2_DM_3COMP_BKG(object):
             ax[3,1].set_yscale('log')
             ax[3,2].set_yscale('log')
             plt.tight_layout()
+            plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
             plt.show()
         else:
             from corner import corner
@@ -421,13 +422,36 @@ class Z2_DM_3COMP_BKG(object):
 
             pass
 
+    def save(self, filename=None, pack_kwargs = {}, save_kwargs={}):
+        if filename is None:
+            filename = self.save_path+'run_data.pkl'
+
+        packed_data = self.hyperparameter_likelihood_instance.pack_data(**pack_kwargs)
+        packed_data['measured_event_data'] = self.measured_energy, self.measured_longitude, self.measured_latitude
+        packed_data['true_event_data'] = {'sig':[self.sig_energy_vals,self.siglonvals,self.siglatvals],
+                                          'ccr':[self.ccr_bkg_energy_vals,self.ccr_bkglonvals,self.ccr_bkglatvals],
+                                          'diffuse': [self.diffuse_astro_bkg_energy_vals,self.diffuse_astro_bkglonvals,self.diffuse_astro_bkglatvals],
+                                          'point':[self.point_bkg_energy_meas, self.point_astro_bkg_longitude_meas, self.point_astro_bkg_latitude_meas]}
+        packed_data['config'] = self.config_dict
+
+        try:
+            save_to_pickle(object_to_save=packed_data, filename=filename)
+        except FileNotFoundError as fnfe:
+            warnings.warn("An error occured when trying to save results. Will atempt to save result to working directory as 'results.pkl'.")
+            save_to_pickle(object_to_save=packed_data, filename='results.pkl')
+
+            print("Error message: {fnfe}")
+
+
+
 if __name__=="__main__":
     try:
         config_file_path = sys.argv[1]
     except:
-        warn('No configuration file given')
+        warnings.warn('No configuration file given')
         config_file_path = os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'
 
 
     Z2_DM_3COMP_BKG_instance = Z2_DM_3COMP_BKG(config_file_path=config_file_path,)
     Z2_DM_3COMP_BKG_instance.run()
+    Z2_DM_3COMP_BKG_instance.save()

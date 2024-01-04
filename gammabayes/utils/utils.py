@@ -1,6 +1,6 @@
 from scipy import integrate, special, interpolate, stats
 import numpy as np
-import random, time
+import random, time, pickle
 from tqdm import tqdm
 from scipy.stats import norm as norm1d
 import yaml, warnings, sys, os
@@ -116,6 +116,9 @@ def power_law(energy: np.ndarray|float, index: float, phi0: int =1) -> np.ndarra
 
 
 
+def save_to_pickle(filename, object_to_save):
+    with open(filename, 'wb') as file:
+        pickle.dump(object_to_save, file)
 
 
 

@@ -1,33 +1,39 @@
-diagnostics:                      True
-blockplot:                        False
+##################################################################
+##################################################################
+### RUN PARAMETERS
+##################################################################
+##################################################################
+
+# # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
+# single_job:                       False
+# immediate_run:                    True
+jobname:                          '1'
+stem_identifier:                  'Z2_DM_3COMP_BKG_test'
+numcores:                         8 
+numjobs:                          1
+save_path:                        'data/Z2_DM_3COMP_BKG_test/rundata/1/'
+
+
+
+##################################################################
+##################################################################
+### GAMMABAYES RUN PARAMETERS
+##################################################################
+##################################################################
+
+
+##################################################################
+### Simulation Parameters
 
 signalfraction:                   0.3
 ccr_of_bkg_fraction:              0.8
 diffuse_of_astro_fraction:        0.3
+Nevents_per_job:                  1000
 Nevents:                          1000
-nbins_mass:                       61
 dmdensity_profile:                'einasto'
 dark_matter_mass:                 1.0
-mass_upper_bd_for_inference:      2.
-mass_lower_bd_for_inference:      -1.
-numcores:                         8
 
-nbins_signalfraction:             31
-sigfrac_upper_bd:                 1.
-sigfrac_lower_bd:                 0.
-sigfrac_spacing:                  'linear'
-
-nbins_ccrfraction:                31
-ccrfrac_upper_bd:                 1.
-ccrfrac_lower_bd:                 0.
-ccrfrac_spacing:                  'linear'
-
-nbins_diffusefraction:            31
-diffusefrac_upper_bd:             1.
-diffusefrac_lower_bd:             0.
-diffusefrac_spacing:              'linear'
-
-
+# Parameters for the 'true' value axes for gamma ray events
 true_energy_min:                  0.1
 true_energy_max:                  100
 true_energy_bins_per_decade:      50
@@ -37,9 +43,10 @@ true_longitude_max:               3.5
 true_latitude_min:                -3
 true_latitude_max:                3
 
+# Parameters for the reconstructed value axes for gamma ray events
 recon_energy_min:                 0.1
 recon_energy_max:                 100
-recon_energy_bins_per_decade:     20
+recon_energy_bins_per_decade:     40
 recon_spatial_res:                0.4
 recon_longitude_min:              -3.5
 recon_longitude_max:              3.5
@@ -47,8 +54,40 @@ recon_latitude_min:               -3
 recon_latitude_max:               3
 
 
-mixture_fraction_sampling:        'scan' # Either stochastic or scan
+##################################################################
+### Inference/Analysis Parameters
+
+
+# Dark Matter Inference Parameters
+nbins_signalfraction:             31
+sigfrac_upper_bd:                 1.
+sigfrac_lower_bd:                 0.
+sigfrac_spacing:                  'linear'
+
+nbins_mass:                       51
+
+
+
+# Misidentified Cosmic Ray Background Inference Parameters
+nbins_ccrfraction:                31
+ccrfrac_upper_bd:                 1.
+ccrfrac_lower_bd:                 0.
+ccrfrac_spacing:                  'linear'
+
+# Diffuse Gamma Ray Background Inference Parameters
+nbins_diffusefraction:            31
+diffusefrac_upper_bd:             1.
+diffusefrac_lower_bd:             0.
+diffusefrac_spacing:              'linear'
+
+
+# Refers to the method for exploring the mixture hyperparameters
+mixture_fraction_sampling:        'scan' # Either 'stochastic' or 'scan'
 
 
 # Parameters for stochastic sampling if chosen
-nestedsampler_kwarg_dict: {'nlive': 900}
+nestedsampler_kwarg_dict:         {'nlive': 900}
+
+# Debugging and plotting arguments
+diagnostics:                      False
+blockplot:                        True

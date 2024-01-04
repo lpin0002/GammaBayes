@@ -1,4 +1,7 @@
 data/nestedsamplingtest8*
+data/*
+build/*
+dist/*
 *margresults.npy
 *margresults.npz
 *sigmarglogz*
