@@ -5,12 +5,10 @@ from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
 from scipy import special
 from gammabayes.utils.plotting import logdensity_matrix_plot
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
-try:
-    config_file_path = sys.argv[1]
-except:
-    warnings.warn('No configuration file given')
-    config_file_path = os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'
+
+config_file_path = sys.argv[1]
 
 
 # Extracting base config dict
@@ -47,7 +45,7 @@ hyper_class_instance = discrete_hyperparameter_likelihood(axes=initial_saved_dat
 
 
 
-for subdirectory in subdirectories[1:]:
+for subdirectory in tqdm(subdirectories[1:], desc='Accessing directories and adding data'):
     saved_data = load_pickle(subdirectory+'/run_data.pkl')
     hyper_class_instance.update_hyperparameter_likelihood(saved_data['log_hyperparameter_likelihood'])
 
@@ -55,6 +53,7 @@ for subdirectory in subdirectories[1:]:
 plot_log_hyper_param_likelihood = hyper_class_instance.log_hyperparameter_likelihood-special.logsumexp(hyper_class_instance.log_hyperparameter_likelihood)
 
 try:
+    print("Plotting corner density plot")
     fig, ax = logdensity_matrix_plot([*hyper_class_instance.mixture_axes, initial_saved_data['massrange'], ], plot_log_hyper_param_likelihood, 
                                     truevals=[saved_data['config']['signalfraction'], 
                                                 saved_data['config']['ccr_of_bkg_fraction'], 
@@ -65,6 +64,9 @@ try:
                                     suptitle=float(saved_data['config']['numjobs'])*float(saved_data['config']['Nevents_per_job']), figsize=(10,10))
 
 except:
+    print("Failed plotting corner density plot")
+    print("Plotting unnormalised corner plot")
+
     fig, ax = logdensity_matrix_plot([*hyper_class_instance.mixture_axes, initial_saved_data['massrange'], ], plot_log_hyper_param_likelihood, 
                                     truevals=[saved_data['config']['signalfraction'], 
                                                 saved_data['config']['ccr_of_bkg_fraction'], 
