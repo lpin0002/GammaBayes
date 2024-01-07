@@ -4,12 +4,18 @@ from tqdm import tqdm
 from gammabayes.likelihoods.irfs import irf_loglikelihood
 from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
 from gammabayes.likelihoods import discrete_loglike
-from gammabayes.priors.astro_sources import construct_hess_source_map, construct_fermi_gaggero_matrix, construct_hess_source_map_interpolation, construct_log_fermi_gaggero_bkg
+from gammabayes.priors.astro_sources import (
+    construct_hess_source_map, 
+    construct_fermi_gaggero_matrix, 
+    construct_hess_source_map_interpolation, 
+    construct_log_fermi_gaggero_bkg
+)
 from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
 
 from gammabayes.utils.plotting import logdensity_matrix_plot
-from gammabayes.utils import save_to_pickle, logspace_riemann, iterate_logspace_integration, bin_centres_to_edges
 from gammabayes.utils.config_utils import read_config_file, create_true_axes_from_config, create_recon_axes_from_config
+from gammabayes.utils import save_to_pickle, logspace_riemann, iterate_logspace_integration, bin_centres_to_edges, generate_unique_int_from_string
+
 
 from gammabayes.samplers import discrete_hyperparameter_continuous_mix_post_process_sampler
 
@@ -32,11 +38,11 @@ import functools, random
 from multiprocessing import Pool, freeze_support
 import multiprocessing
 import pandas as pd
-# random.seed(1)
+from datetime import datetime
 
 
 
-class Z2_DM_3COMP_BKG(object):
+class Z2DM_3COMP_BKG(object):
         
     def __init__(self, config_dict: dict = {}, config_file_path = None):
         try:
@@ -44,6 +50,7 @@ class Z2_DM_3COMP_BKG(object):
             assert (len(self.config_dict)>0) and (type(self.config_dict)==dict)
         except:
             try:
+                print(f"config_file_path: {config_file_path}")
                 self.config_dict = read_config_file(config_file_path)
             except:
                 os.system(f"cp {os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'} {os.getcwd()}")
@@ -71,6 +78,28 @@ class Z2_DM_3COMP_BKG(object):
             self.jobname    = self.config_dict['jobname']
         except:
             self.jobname    = time.strftime(f"DM{self.config_dict['dark_matter_mass']}_SIGFRAC{self.config_dict['signalfraction']}_CCRFRAC{self.config_dict['ccr_of_bkg_fraction']}_DIFFUSEFRAC{self.config_dict['diffuse_of_astro_fraction']}_3COMP_BKG_%m|%d_%H:%M")
+            
+        try:
+            self.seed       = int(self.config_dict['seed'])
+        except Exception as excpt:
+            print(f"""An error occurred when trying to extract the seed: {excpt}\n
+            A seed will be generated based on the name of the job.""")
+            self.seed = generate_unique_int_from_string(self.jobname)
+        
+        try:
+            self.numjobs    = self.config_dict['numjobs']
+        except:
+            self.numjobs    = 1
+
+
+        ########################################################################
+        ########################################################################
+        #### Setting the random seed for calculations
+        random.seed(self.seed)
+
+        print("Set seed?")
+
+
 
         try:
             self.save_path = self.config_dict['save_path']
@@ -78,59 +107,79 @@ class Z2_DM_3COMP_BKG(object):
                 folderstructure = self.save_path.split('/')
                 folderpath = folderstructure[0]
                 os.makedirs(folderpath, exist_ok=True)
-                for folder in folderstructure[1:-2]:
+                for folder in folderstructure[1:-1]:
                     folderpath = f"{folderpath}/{folder}"
                     os.makedirs(folderpath, exist_ok=True)
 
 
-                print(folderstructure)
-
-                folderpath = f"{folderpath}/{folderstructure[-2]}"
-
-                # Making it so data isn't overwritten when specifying a save_path
-                os.makedirs(folderpath, exist_ok=False)
         except Exception as excpt:
             print(f"An error occured when trying to unpack save path: {excpt}")
-            self.save_path = f'data/{self.jobname}'
+            self.save_path = f'data/{self.jobname}/'
             os.makedirs('data', exist_ok=True)
             os.makedirs(f'data/{self.jobname}', exist_ok=True)
 
 
 
-        self.nsig                        = int(round(self.config_dict['signalfraction']*self.config_dict['Nevents']))
-        self.nccr                        = int(round((1-self.config_dict['signalfraction'])*self.config_dict['ccr_of_bkg_fraction']*self.config_dict['Nevents']))
-        self.ndiffuse               = int(round((1-self.config_dict['signalfraction'])*(1-self.config_dict['ccr_of_bkg_fraction'])*self.config_dict['diffuse_of_astro_fraction']*self.config_dict['Nevents']))
-        self.npoint                 =int(round((1-self.config_dict['signalfraction'])*(1-self.config_dict['ccr_of_bkg_fraction'])*(1-self.config_dict['diffuse_of_astro_fraction'])*self.config_dict['Nevents']))
+        self.nsig               = int(round(   self.config_dict['signalfraction']  *    self.config_dict['Nevents']))
+        self.nccr               = int(round((1-self.config_dict['signalfraction']) *    self.config_dict['ccr_of_bkg_fraction']  *    self.config_dict['Nevents']))
+        self.ndiffuse           = int(round((1-self.config_dict['signalfraction']) * (1-self.config_dict['ccr_of_bkg_fraction']) *    self.config_dict['diffuse_of_astro_fraction']  * self.config_dict['Nevents']))
+        self.npoint             = int(round((1-self.config_dict['signalfraction']) * (1-self.config_dict['ccr_of_bkg_fraction']) * (1-self.config_dict['diffuse_of_astro_fraction']) * self.config_dict['Nevents']))
 
 
-        self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue   = create_true_axes_from_config(self.config_dict)
-        self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis          = create_recon_axes_from_config(self.config_dict)
+        self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue       = create_true_axes_from_config(self.config_dict)
+        self.energy_recon_axis, self.longitudeaxis,     self.latitudeaxis           = create_recon_axes_from_config(self.config_dict)
 
 
-        self.irf_loglike = irf_loglikelihood(axes=[self.energy_recon_axis, self.longitudeaxis, self.latitudeaxis], 
-                                     dependent_axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue])
+        self.irf_loglike = irf_loglikelihood(axes   =   [self.energy_recon_axis,    self.longitudeaxis,     self.latitudeaxis], 
+                                     dependent_axes =   [self.energy_true_axis,     self.longitudeaxistrue, self.latitudeaxistrue])
+
+        try:
+            self.common_norm_matrices = self.config_dict['common_norm_matrices']
+        except:
+            self.common_norm_matrices = False
+
+        if not(self.common_norm_matrices):
+            print("Going to create normalisations...")
+            self.log_psf_normalisations, self.log_edisp_normalisations = self.irf_loglike.create_log_norm_matrices()
+            self.irf_norm_matrix = self.log_psf_normalisations + self.log_edisp_normalisations
+        else:
+            log_psf_norm_matrix_path = self.config_dict['log_psf_norm_matrix_path']
+            log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
+            try:
+                self.log_psf_normalisations, self.log_edisp_normalisations = np.load(log_psf_norm_matrix_path), np.load(log_edisp_norm_matrix_path)
+                self.irf_norm_matrix = self.log_psf_normalisations + self.log_edisp_normalisations
+            except Exception as excpt:
+                print(f"An error occured when trying to load log irf normalisation matrices: {excpt}")
+                print("Generating them based on configuration file.")
+                self.log_psf_normalisations, self.log_edisp_normalisations = self.irf_loglike.create_log_norm_matrices()
+                self.irf_norm_matrix = self.log_psf_normalisations + self.log_edisp_normalisations
 
 
-        print("Going to create normalisations...")
-        self.log_psf_normalisations, self.log_edisp_normalisations = self.irf_loglike.create_log_norm_matrices()
+
 
 
         print("Constructing background priors...")
 
-        self.astrophysicalbackground = construct_hess_source_map(energy_axis=self.energy_true_axis,
-                                                                 longitudeaxis=self.longitudeaxistrue,
-                                                                 latitudeaxis=self.latitudeaxistrue)
+        self.astrophysicalbackground = construct_hess_source_map(energy_axis    = self.energy_true_axis,
+                                                                 longitudeaxis  = self.longitudeaxistrue,
+                                                                 latitudeaxis   = self.latitudeaxistrue)
         
         self.ccr_bkg_prior = discrete_logprior(logfunction=log_bkg_CCR_dist, name='CCR Mis-identification Background Prior',
-                               axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
+                               axes=(   self.energy_true_axis, 
+                                        self.longitudeaxistrue, 
+                                        self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
 
         self.diffuse_astro_bkg_prior = discrete_logprior(logfunction=construct_log_fermi_gaggero_bkg(), name='Diffuse Astrophysical Background Prior',
-                               axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
+                               axes=(   self.energy_true_axis, 
+                                        self.longitudeaxistrue, 
+                                        self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
         
         self.point_astro_bkg_prior = discrete_logprior(logfunction=construct_hess_source_map_interpolation(), name='Point Source Astrophysical Background Prior',
-                               axes=(self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue,), 
+                               axes=(   self.energy_true_axis, 
+                                        self.longitudeaxistrue, 
+                                        self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
 
         print("Constructing dark matter prior...")
@@ -140,7 +189,9 @@ class Z2_DM_3COMP_BKG(object):
         self.DM_prior = discrete_logprior(logfunction=self.logDMpriorfunc, 
                              log_mesh_efficient_func=self.logDMpriorfunc_mesh_efficient, 
                              name='Scalar Singlet Dark Matter Prior',
-                             axes=[self.energy_true_axis, self.longitudeaxistrue, self.latitudeaxistrue], 
+                               axes=(   self.energy_true_axis, 
+                                        self.longitudeaxistrue, 
+                                        self.latitudeaxistrue,), 
                              axes_names=['energy', 'lon', 'lat'],
                              default_spectral_parameters={'mass':self.config_dict['dark_matter_mass']}, 
                               )
@@ -315,14 +366,14 @@ class Z2_DM_3COMP_BKG(object):
         self.measured_latitude = list(self.sig_latitude_meas)+list(self.ccr_bkg_latitude_meas)+list(self.diffuse_bkg_latitude_meas)+list(self.point_astro_bkg_latitude_meas)
         
     def nuisance_marg(self):
-        logmass_lower_bd             = np.log10(self.config_dict['dark_matter_mass'])-5/np.sqrt(self.nsig)
-        logmass_upper_bd             = np.log10(self.config_dict['dark_matter_mass'])+5/np.sqrt(self.nsig)
+        logmass_lower_bd             = np.log10(self.config_dict['dark_matter_mass'])-4/np.sqrt(self.nsig*self.numjobs)
+        logmass_upper_bd             = np.log10(self.config_dict['dark_matter_mass'])+4/np.sqrt(self.nsig*self.numjobs)
         if logmass_lower_bd<np.log10(self.energy_true_axis.min()):
             logmass_lower_bd = np.log10(self.energy_true_axis.min())
         if logmass_upper_bd>2:
             logmass_upper_bd = 2
 
-        self.massrange            = np.logspace(logmass_lower_bd, logmass_upper_bd, self.config_dict['nbins_mass']) 
+        self.massrange            = np.logspace(logmass_lower_bd,logmass_upper_bd, self.config_dict['nbins_mass']) 
 
         self.hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
             priors                  = (self.DM_prior, self.ccr_bkg_prior, self.diffuse_astro_bkg_prior, self.point_astro_bkg_prior), 
@@ -333,7 +384,7 @@ class Z2_DM_3COMP_BKG(object):
                                             }, 
                                             ], 
             numcores                = self.config_dict['numcores'], 
-            likelihoodnormalisation = self.log_psf_normalisations+self.log_edisp_normalisations)
+            likelihoodnormalisation = self.irf_norm_matrix)
 
         self.margresults = self.hyperparameter_likelihood_instance.nuisance_log_marginalisation(
             axisvals= (self.measured_energy, self.measured_longitude, self.measured_latitude)
@@ -361,24 +412,26 @@ class Z2_DM_3COMP_BKG(object):
 
 
 
+            try:
+                plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
 
-            plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
-
-            fig, ax = logdensity_matrix_plot([self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range, self.massrange, ], plot_log_hyper_param_likelihood, 
-                                            truevals=[self.config_dict['signalfraction'], 
-                                                      self.config_dict['ccr_of_bkg_fraction'], 
-                                                      self.config_dict['diffuse_of_astro_fraction'], 
-                                                      self.config_dict['dark_matter_mass'],],   
-                                            sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
-                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
-            fig.figure.dpi = 120
-            ax[3,3].set_xscale('log')
-            ax[3,0].set_yscale('log')
-            ax[3,1].set_yscale('log')
-            ax[3,2].set_yscale('log')
-            plt.tight_layout()
-            plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
-            plt.show()
+                fig, ax = logdensity_matrix_plot([self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range, self.massrange, ], plot_log_hyper_param_likelihood, 
+                                                truevals=[self.config_dict['signalfraction'], 
+                                                        self.config_dict['ccr_of_bkg_fraction'], 
+                                                        self.config_dict['diffuse_of_astro_fraction'], 
+                                                        self.config_dict['dark_matter_mass'],],   
+                                                sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
+                                                axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
+                fig.figure.dpi = 120
+                ax[3,3].set_xscale('log')
+                ax[3,0].set_yscale('log')
+                ax[3,1].set_yscale('log')
+                ax[3,2].set_yscale('log')
+                plt.tight_layout()
+                plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
+                plt.show()
+            except Exception as excpt:
+                print("An error occurred when trying to plot results: {except}")
         else:
             from corner import corner
             from gammabayes.utils.plotting import defaults_kwargs
@@ -433,6 +486,7 @@ class Z2_DM_3COMP_BKG(object):
                                           'diffuse': [self.diffuse_astro_bkg_energy_vals,self.diffuse_astro_bkglonvals,self.diffuse_astro_bkglatvals],
                                           'point':[self.point_bkg_energy_meas, self.point_astro_bkg_longitude_meas, self.point_astro_bkg_latitude_meas]}
         packed_data['config'] = self.config_dict
+        packed_data['massrange'] = self.massrange
 
         try:
             save_to_pickle(object_to_save=packed_data, filename=filename)
@@ -450,8 +504,9 @@ if __name__=="__main__":
     except:
         warnings.warn('No configuration file given')
         config_file_path = os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'
-
-
-    Z2_DM_3COMP_BKG_instance = Z2_DM_3COMP_BKG(config_file_path=config_file_path,)
+    config_dict = read_config_file(config_file_path)
+    print("Does it start?")
+    print(f"initial config_file_path: {config_file_path}")
+    Z2_DM_3COMP_BKG_instance = Z2DM_3COMP_BKG(config_dict=config_dict,)
     Z2_DM_3COMP_BKG_instance.run()
     Z2_DM_3COMP_BKG_instance.save()

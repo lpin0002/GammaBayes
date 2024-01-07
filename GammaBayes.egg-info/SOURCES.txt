@@ -1,5 +1,4 @@
 LICENSE
-MANIFEST.in
 README.md
 setup.py
 GammaBayes.egg-info/PKG-INFO
@@ -141,10 +140,13 @@ gammabayes/utils/generate_sigmav_posterior.py
 gammabayes/utils/integration.py
 gammabayes/utils/plotting.py
 gammabayes/utils/utils.py
+gammabayes/utils/ozstar/__init__.py
+gammabayes/utils/ozstar/combine_hyper_loglike.py
 gammabayes/utils/ozstar/default_ozstar_config.yaml
+gammabayes/utils/ozstar/gen_norm_matrices.py
 gammabayes/utils/ozstar/make_ozstar_scripts.py
-gammabayes/utils/ozstar/ozstar_script_gen.py
-gammabayes/utils/ozstar/ozstarsetup.sh
+gammabayes/utils/ozstar/ozstar_job_script_gen.py
+gammabayes/utils/ozstar/run_job_gen.py
 tests/__init__.py
 tests/test_1_utils.py
 tests/test_2_integration.py

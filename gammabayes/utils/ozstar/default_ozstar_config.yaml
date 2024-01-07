@@ -5,14 +5,12 @@
 ##################################################################
 
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
-# single_job:                       False
-# immediate_run:                    True
+immediate_run:                    False
 env_name:                         GammaBayesEnv
 jobname:                          '1'
 stem_identifier:                  'Z2_DM_3COMP_BKG_test'
 numcores:                         8 
-numjobs:                          1
-save_path:                        'data/Z2_DM_3COMP_BKG_test/rundata/1/'
+numjobs:                          10
 
 # Time and memory here is completely random. 
 # Run small test job to figure out time and memory allocation

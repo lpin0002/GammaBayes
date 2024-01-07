@@ -75,7 +75,6 @@ class discrete_logprior(object):
 
             
         self.default_spectral_parameters = default_spectral_parameters
-        print('assigned spectral defaults: ', self.default_spectral_parameters)
         self.default_spatial_parameters = default_spatial_parameters
 
         self.num_spec_params = len(default_spectral_parameters)

@@ -12,7 +12,7 @@ def read_config_file(file_path):
         print(f"Error: Input file '{file_path}' not found.")
         sys.exit(1)
     except yaml.YAMLError:
-        print(f"Error: Unable to parse YAML in '{file_path}'. Please ensure it is valid JSON.")
+        print(f"Error: Unable to parse YAML in '{file_path}'. Please ensure it is valid.")
         sys.exit(1)
         
         
@@ -95,8 +95,6 @@ def add_event_axes_config(config_dict, energy_axis_true, longitudeaxistrue, lati
 def save_config_file(config_dict, file_path):
     with open(file_path, 'w') as file:
         yaml.dump(config_dict, file, default_flow_style=False)
-    print("YAML saved to config_dict")
-
 
 
 def create_true_axes_from_config(config_dict):

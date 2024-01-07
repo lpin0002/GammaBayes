@@ -8,8 +8,8 @@ import os, warnings
 import time
 
 class discrete_hyperparameter_likelihood(object):
-    def __init__(self, priors, 
-                 likelihood: callable, 
+    def __init__(self, priors = None, 
+                 likelihood: callable = None, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  hyperparameter_axes: dict = {}, 
@@ -70,6 +70,8 @@ class discrete_hyperparameter_likelihood(object):
         """
         
         self.priors                     = priors
+        
+
         self.likelihood                 = likelihood
         self.axes                       = axes
             
@@ -84,8 +86,13 @@ class discrete_hyperparameter_likelihood(object):
         else:
             self.dependent_axes             = dependent_axes
 
-        _num_priors = len(priors)
         _num_hyper_axes = len(hyperparameter_axes)
+
+        try:
+            _num_priors = len(priors)
+        except Exception as excpt:
+            print(f"An error occured when trying to calculate the number of priors: {excpt}")
+            _num_priors = _num_hyper_axes
         
         if _num_priors==_num_hyper_axes:
             self.hyperparameter_axes        = hyperparameter_axes
@@ -116,11 +123,11 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
         self.log_margresults               = log_margresults
         if mixture_axes is None:
-            self.mixture_axes               = np.array([np.linspace(0,1,101)]*(len(priors)-1))
-        elif len(mixture_axes) != len(priors):
-            self.mixture_axes               = np.array([mixture_axes]*len(priors))
+            self.mixture_axes               = np.array([np.linspace(0,1,101)]*(_num_priors-1))
+        elif len(mixture_axes) != _num_priors-1:
+            self.mixture_axes               = np.array([mixture_axes]*_num_priors)
         else:
-            self.mixture_axes = np.array([*mixture_axes])
+            self.mixture_axes = np.asarray(mixture_axes)
 
         self.log_hyperparameter_likelihood  = log_hyperparameter_likelihood
         self.log_posterior                  = log_posterior
@@ -557,7 +564,7 @@ and number of prior components is {len(self.priors)}.""")
         packed_data['log_hyperparameter_likelihood']       = self.log_hyperparameter_likelihood
         packed_data['mixture_axes']                        = self.mixture_axes
 
-        packed_data['self.log_posterior']                  = self.log_posterior
+        packed_data['log_posterior']                        = self.log_posterior
                 
         return packed_data
     
