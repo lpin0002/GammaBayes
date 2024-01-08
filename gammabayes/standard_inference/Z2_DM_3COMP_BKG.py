@@ -13,7 +13,12 @@ from gammabayes.priors.astro_sources import (
 from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
 
 from gammabayes.utils.plotting import logdensity_matrix_plot
-from gammabayes.utils.config_utils import read_config_file, create_true_axes_from_config, create_recon_axes_from_config
+from gammabayes.utils.config_utils import (
+    read_config_file, 
+    create_true_axes_from_config, 
+    create_recon_axes_from_config, 
+    iterative_parameter_axis_construction
+)
 from gammabayes.utils import save_to_pickle, logspace_riemann, iterate_logspace_integration, bin_centres_to_edges, generate_unique_int_from_string
 
 
@@ -42,7 +47,7 @@ from datetime import datetime
 
 
 
-class Z2DM_3COMP_BKG(object):
+class Z2_DM_3COMP_BKG(object):
         
     def __init__(self, config_dict: dict = {}, config_file_path = None):
         try:
@@ -90,6 +95,12 @@ class Z2DM_3COMP_BKG(object):
             self.numjobs    = self.config_dict['numjobs']
         except:
             self.numjobs    = 1
+
+
+        try:
+            self.source_hyperparameter_input = iterative_parameter_axis_construction(self.config_dict['parameter_scan_specifications'])
+        except:
+            self.source_hyperparameter_input = None
 
 
         ########################################################################
@@ -379,10 +390,7 @@ class Z2DM_3COMP_BKG(object):
             priors                  = (self.DM_prior, self.ccr_bkg_prior, self.diffuse_astro_bkg_prior, self.point_astro_bkg_prior), 
             likelihood              = self.irf_loglike, 
             dependent_axes          = (self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue), 
-            hyperparameter_axes     = [
-                {'spectral_parameters'  : {'mass'   : self.massrange}, 
-                                            }, 
-                                            ], 
+            hyperparameter_axes     = self.source_hyperparameter_input, 
             numcores                = self.config_dict['numcores'], 
             likelihoodnormalisation = self.irf_norm_matrix)
 
@@ -507,6 +515,6 @@ if __name__=="__main__":
     config_dict = read_config_file(config_file_path)
     print("Does it start?")
     print(f"initial config_file_path: {config_file_path}")
-    Z2_DM_3COMP_BKG_instance = Z2DM_3COMP_BKG(config_dict=config_dict,)
+    Z2_DM_3COMP_BKG_instance = Z2_DM_3COMP_BKG(config_dict=config_dict,)
     Z2_DM_3COMP_BKG_instance.run()
     Z2_DM_3COMP_BKG_instance.save()
