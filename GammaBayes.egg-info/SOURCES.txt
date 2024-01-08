@@ -1,5 +1,4 @@
 LICENSE
-MANIFEST.in
 README.md
 setup.py
 GammaBayes.egg-info/PKG-INFO
@@ -138,6 +137,7 @@ gammabayes/utils/__init__.py
 gammabayes/utils/config_utils.py
 gammabayes/utils/event_axes.py
 gammabayes/utils/generate_sigmav_posterior.py
+gammabayes/utils/import_utilities.py
 gammabayes/utils/integration.py
 gammabayes/utils/plotting.py
 gammabayes/utils/utils.py

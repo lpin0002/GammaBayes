@@ -159,9 +159,9 @@ def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_in
             # print(loop_idx, axis_idx-loop_idx, axis.shape, logintegrandvalues.shape)
             try:
                 logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
-            except:
+            except Exception as excpt:
                 print(loop_idx, axis.shape, axis_idx, logintegrandvalues.shape)
-                raise Exception("Error occurred during integration.")
+                raise Exception(f"Error occurred during integration --> {excpt}")
 
 
 

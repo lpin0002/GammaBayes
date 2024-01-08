@@ -9,7 +9,7 @@ from gammabayes.dark_matter.channel_spectra import single_channel_spectral_data_
 import time
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
-class SS_Spectra(object):
+class Z2_ScalarSinglet(object):
     
     def __init__(self, ratios: bool = True):
 

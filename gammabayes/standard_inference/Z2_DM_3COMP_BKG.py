@@ -8,7 +8,7 @@ from gammabayes.priors.astro_sources import (
     construct_hess_source_map, 
     construct_fermi_gaggero_matrix, 
     construct_hess_source_map_interpolation, 
-    construct_log_fermi_gaggero_bkg
+    construct_log_fermi_gaggero_bkg,
 )
 from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
 
@@ -17,14 +17,22 @@ from gammabayes.utils.config_utils import (
     read_config_file, 
     create_true_axes_from_config, 
     create_recon_axes_from_config, 
+    construct_parameter_axes,
     iterative_parameter_axis_construction
 )
-from gammabayes.utils import save_to_pickle, logspace_riemann, iterate_logspace_integration, bin_centres_to_edges, generate_unique_int_from_string
+from gammabayes.utils import (
+    save_to_pickle, 
+    logspace_riemann, 
+    iterate_logspace_integration, 
+    bin_centres_to_edges, 
+    generate_unique_int_from_string, 
+    extract_axes,
+    dynamic_import
+)
 
 
 from gammabayes.samplers import discrete_hyperparameter_continuous_mix_post_process_sampler
 
-from gammabayes.dark_matter.models import SS_Spectra
 from gammabayes.dark_matter import combine_DM_models
 from gammabayes.dark_matter.density_profiles import Einasto_Profile
 
@@ -193,8 +201,17 @@ class Z2_DM_3COMP_BKG(object):
                                         self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
 
+
         print("Constructing dark matter prior...")
-        SS_DM_combine_instance = combine_DM_models(SS_Spectra, Einasto_Profile, self.irf_loglike, spectral_class_kwds={'ratios':True})
+
+
+        dark_matter_spectral_class = dynamic_import('gammabayes.dark_matter.models', self.config_dict['dark_matter_spectral_model'])
+
+
+
+        SS_DM_combine_instance = combine_DM_models(dark_matter_spectral_class, 
+                                                   Einasto_Profile, 
+                                                   self.irf_loglike, spectral_class_kwds={'ratios':True})
         self.logDMpriorfunc, self.logDMpriorfunc_mesh_efficient = SS_DM_combine_instance.DM_signal_dist, SS_DM_combine_instance.DM_signal_dist_mesh_efficient
 
         self.DM_prior = discrete_logprior(logfunction=self.logDMpriorfunc, 
@@ -377,20 +394,12 @@ class Z2_DM_3COMP_BKG(object):
         self.measured_latitude = list(self.sig_latitude_meas)+list(self.ccr_bkg_latitude_meas)+list(self.diffuse_bkg_latitude_meas)+list(self.point_astro_bkg_latitude_meas)
         
     def nuisance_marg(self):
-        logmass_lower_bd             = np.log10(self.config_dict['dark_matter_mass'])-4/np.sqrt(self.nsig*self.numjobs)
-        logmass_upper_bd             = np.log10(self.config_dict['dark_matter_mass'])+4/np.sqrt(self.nsig*self.numjobs)
-        if logmass_lower_bd<np.log10(self.energy_true_axis.min()):
-            logmass_lower_bd = np.log10(self.energy_true_axis.min())
-        if logmass_upper_bd>2:
-            logmass_upper_bd = 2
-
-        self.massrange            = np.logspace(logmass_lower_bd,logmass_upper_bd, self.config_dict['nbins_mass']) 
 
         self.hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
             priors                  = (self.DM_prior, self.ccr_bkg_prior, self.diffuse_astro_bkg_prior, self.point_astro_bkg_prior), 
             likelihood              = self.irf_loglike, 
             dependent_axes          = (self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue), 
-            hyperparameter_axes     = self.source_hyperparameter_input, 
+            hyperparameter_axes     = [*self.source_hyperparameter_input.values()], 
             numcores                = self.config_dict['numcores'], 
             likelihoodnormalisation = self.irf_norm_matrix)
 
@@ -400,35 +409,47 @@ class Z2_DM_3COMP_BKG(object):
 
 
     def generate_hyper_param_likelihood(self):
-        self.sigfrac_of_total_range         = np.linspace(self.config_dict['sigfrac_lower_bd'], self.config_dict['sigfrac_upper_bd'], self.config_dict['nbins_signalfraction']) 
-        self.ccrfrac_of_bkg_range           = np.linspace(self.config_dict['ccrfrac_lower_bd'], self.config_dict['ccrfrac_upper_bd'] , self.config_dict['nbins_ccrfraction'])
-        self.diffusefrac_of_astro_range     = np.linspace(self.config_dict['diffusefrac_lower_bd'], self.config_dict['diffusefrac_upper_bd'] , self.config_dict['nbins_diffusefraction'])
+        self.sigfrac_of_total_range         = construct_parameter_axes(self.config_dict['mixture_fraction_specifications']['sig/total'])
+        self.ccrfrac_of_bkg_range           = construct_parameter_axes(self.config_dict['mixture_fraction_specifications']['ccr/bkg'])
+        self.diffusefrac_of_astro_range     = construct_parameter_axes(self.config_dict['mixture_fraction_specifications']['diffuse/astro'])
 
         mixtureaxes = self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range
 
 
-        if self.config_dict['mixture_fraction_sampling']=='scan':
-            skipfactor          = 10
-            self.log_hyper_param_likelihood =  0
-            for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/skipfactor)))):
-                _temp_log_marg_reults = [self.margresults[_index][_skip_idx*skipfactor:_skip_idx*skipfactor+skipfactor, ...] for _index in range(len(self.margresults))]
-                self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
-                    mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
+        skipfactor          = 10
+        self.log_hyper_param_likelihood =  0
+        for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/skipfactor)))):
+            _temp_log_marg_reults = [self.margresults[_index][_skip_idx*skipfactor:_skip_idx*skipfactor+skipfactor, ...] for _index in range(len(self.margresults))]
+            self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+                mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
 
 
-            self.log_hyper_param_likelihood=np.squeeze(self.log_hyper_param_likelihood)
+        self.log_hyper_param_likelihood=np.squeeze(self.log_hyper_param_likelihood)
 
 
 
+        try:
+            plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
+
+            fig, ax = logdensity_matrix_plot([*mixtureaxes, *extract_axes(self.source_hyperparameter_input).values(), ], plot_log_hyper_param_likelihood, 
+                                            sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
+                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
+            fig.figure.dpi = 120
+            ax[3,3].set_xscale('log')
+            ax[3,0].set_yscale('log')
+            ax[3,1].set_yscale('log')
+            ax[3,2].set_yscale('log')
+            plt.tight_layout()
+            plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
+            plt.show()
+        except Exception as excpt:
             try:
+                print("An error occurred when trying to plot results: {excpt}")
+
                 plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
 
-                fig, ax = logdensity_matrix_plot([self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range, self.massrange, ], plot_log_hyper_param_likelihood, 
-                                                truevals=[self.config_dict['signalfraction'], 
-                                                        self.config_dict['ccr_of_bkg_fraction'], 
-                                                        self.config_dict['diffuse_of_astro_fraction'], 
-                                                        self.config_dict['dark_matter_mass'],],   
-                                                sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
+                fig, ax = logdensity_matrix_plot([*mixtureaxes, *extract_axes(self.source_hyperparameter_input).values(), ], plot_log_hyper_param_likelihood, 
+                                                sigmalines_1d=0, contours2d=0, plot_density=0, single_dim_yscales='linear',
                                                 axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
                 fig.figure.dpi = 120
                 ax[3,3].set_xscale('log')
@@ -438,35 +459,8 @@ class Z2_DM_3COMP_BKG(object):
                 plt.tight_layout()
                 plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
                 plt.show()
-            except Exception as excpt:
-                print("An error occurred when trying to plot results: {except}")
-        else:
-            from corner import corner
-            from gammabayes.utils.plotting import defaults_kwargs
-            discrete_hyperparameter_continuous_mix_sampler_instance = discrete_hyperparameter_continuous_mix_post_process_sampler(
-                hyper_param_ranges_tuple=((self.massrange,), (None,), (None,), (None,)), mixture_axes=mixtureaxes, margresultsarray  = self.margresultsarray,
-                nestedsampler_kwarg_dict ={'nlive':900}, numcores=10
-                )
-            
-            self.posterior_results = discrete_hyperparameter_continuous_mix_sampler_instance.generate_log_hyperlike(
-                run_nested_kwarg_dict = {'dlogz':0.5,}, 
-                )
-            
-
-
-
-            corner(np.asarray(self.posterior_results), 
-                labels=['sig/total', 'ccr/bkg', r'$m_\chi$ [TeV]'],
-                ranges=((0,1),(0,1),(0,1),(1e-1,1e2)),
-                show_titles=True, truths =(self.config_dict['signalfraction'], 
-                                           self.config_dict['ccr_of_bkg_fraction'], 
-                                           self.config_dict['diffuse_of_astro_fraction'], 
-                                           self.config_dict['dark_matter_mass']),  **defaults_kwargs)
-            plt.suptitle(f"Nevents: {self.config_dict['Nevents']}", size=24)
-
-            plt.tight_layout()
-            plt.show()
-            
+            except Exception as exct:
+                print("Could not plot results: {exct}")
             
 
     def run(self):
@@ -478,10 +472,8 @@ class Z2_DM_3COMP_BKG(object):
         self.nuisance_marg()
         self.generate_hyper_param_likelihood()
 
-        if self.config_dict['mixture_fraction_sampling']=='scan':
-            # self.apply_priors()
+        # self.apply_priors()
 
-            pass
 
     def save(self, filename=None, pack_kwargs = {}, save_kwargs={}):
         if filename is None:
@@ -494,7 +486,7 @@ class Z2_DM_3COMP_BKG(object):
                                           'diffuse': [self.diffuse_astro_bkg_energy_vals,self.diffuse_astro_bkglonvals,self.diffuse_astro_bkglatvals],
                                           'point':[self.point_bkg_energy_meas, self.point_astro_bkg_longitude_meas, self.point_astro_bkg_latitude_meas]}
         packed_data['config'] = self.config_dict
-        packed_data['massrange'] = self.massrange
+        packed_data['source_hyperparameter_input'] = self.source_hyperparameter_input
 
         try:
             save_to_pickle(object_to_save=packed_data, filename=filename)

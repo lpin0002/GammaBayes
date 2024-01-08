@@ -1,6 +1,6 @@
 import sys, os
 from gammabayes.utils.config_utils import read_config_file
-from gammabayes.utils import load_pickle
+from gammabayes.utils import load_pickle, extract_axes
 from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
 from scipy import special
 from gammabayes.utils.plotting import logdensity_matrix_plot
@@ -54,32 +54,57 @@ plot_log_hyper_param_likelihood = hyper_class_instance.log_hyperparameter_likeli
 
 try:
     print("Plotting corner density plot")
-    fig, ax = logdensity_matrix_plot([*hyper_class_instance.mixture_axes, initial_saved_data['massrange'], ], plot_log_hyper_param_likelihood, 
-                                    truevals=[saved_data['config']['signalfraction'], 
-                                                saved_data['config']['ccr_of_bkg_fraction'], 
-                                                saved_data['config']['diffuse_of_astro_fraction'], 
-                                                saved_data['config']['dark_matter_mass'],],   
+
+    fig, ax = logdensity_matrix_plot([*initial_saved_data['mixture_axes'], 
+                                      *list(extract_axes(initial_saved_data['source_hyperparameter_input']).values())[::-1], ], 
+                                      plot_log_hyper_param_likelihood, 
+                                    truevals=[initial_saved_data['config']['signalfraction'], 
+                                            initial_saved_data['config']['ccr_of_bkg_fraction'], 
+                                            initial_saved_data['config']['diffuse_of_astro_fraction'], 
+                                            initial_saved_data['config']['dark_matter_mass'],],   
                                     sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
-                                    axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], 
-                                    suptitle=float(saved_data['config']['numjobs'])*float(saved_data['config']['Nevents_per_job']), figsize=(10,10))
+                                    axis_names=[
+                                        *initial_saved_data['config']['mixture_fraction_specifications'].keys(), 
+                                        *list(extract_axes(initial_saved_data['source_hyperparameter_input']).keys())[::-1],], 
+                                    suptitle=initial_saved_data['config']['Nevents'],
+                                    figsize=(12,10))
+    fig.figure.dpi = 120
+    ax[3,3].set_xscale('log')
+    ax[3,0].set_yscale('log')
+    ax[3,1].set_yscale('log')
+    ax[3,2].set_yscale('log')
+    plt.tight_layout()
+    print(stemdirname+'/hyper_loglike_corner.pdf')
+    plt.savefig(stemdirname+'/hyper_loglike_corner.pdf')
+    plt.show()
 
 except:
     print("Failed plotting corner density plot")
     print("Plotting unnormalised corner plot")
 
-    fig, ax = logdensity_matrix_plot([*hyper_class_instance.mixture_axes, initial_saved_data['massrange'], ], plot_log_hyper_param_likelihood, 
-                                    truevals=[saved_data['config']['signalfraction'], 
-                                                saved_data['config']['ccr_of_bkg_fraction'], 
-                                                saved_data['config']['diffuse_of_astro_fraction'], 
-                                                saved_data['config']['dark_matter_mass'],],   
-                                    sigmalines_1d=0, contours2d=0, plot_density=0, single_dim_yscales='linear',
-                                    axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], 
-                                    suptitle=float(saved_data['config']['numjobs'])*float(saved_data['config']['Nevents_per_job']), figsize=(10,10))
-fig.figure.dpi = 120
-ax[3,3].set_xscale('log')
-ax[3,0].set_yscale('log')
-ax[3,1].set_yscale('log')
-ax[3,2].set_yscale('log')
-plt.tight_layout()
-plt.savefig(f"{stemdirname}/hyper_loglike_scan_corner.pdf")
-plt.show()
+    print(plot_log_hyper_param_likelihood.shape)
+    print([axis for axis in extract_axes(initial_saved_data['source_hyperparameter_input']).values()])
+
+    fig, ax = logdensity_matrix_plot([*initial_saved_data['mixture_axes'], 
+                                      *list(extract_axes(initial_saved_data['source_hyperparameter_input']).values())[::-1], ], 
+                                      plot_log_hyper_param_likelihood, 
+                                      truevals=[initial_saved_data['config']['signalfraction'], 
+                                                initial_saved_data['config']['ccr_of_bkg_fraction'], 
+                                                initial_saved_data['config']['diffuse_of_astro_fraction'], 
+                                                initial_saved_data['config']['dark_matter_mass'],
+                                                0.17],   
+                                                sigmalines_1d=0, contours2d=0, plot_density=1, single_dim_yscales='linear',
+                                                axis_names=[
+                                                    *initial_saved_data['config']['mixture_fraction_specifications'].keys(), 
+                                                    *list(extract_axes(initial_saved_data['source_hyperparameter_input']).keys())[::-1],], 
+                                                    suptitle=initial_saved_data['config']['Nevents'],
+                                    figsize=(12,10))
+    fig.figure.dpi = 120
+    ax[3,3].set_xscale('log')
+    ax[3,0].set_yscale('log')
+    ax[3,1].set_yscale('log')
+    ax[3,2].set_yscale('log')
+    plt.tight_layout()
+    print(stemdirname+'/hyper_loglike_corner.pdf')
+    plt.savefig(stemdirname+'/hyper_loglike_corner.pdf')
+    plt.show()

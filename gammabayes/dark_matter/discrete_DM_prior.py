@@ -1,11 +1,6 @@
-import numpy as np
-from gammabayes.dark_matter.density_profiles import DM_Profiles
-from gammabayes.dark_matter.models.Z2_ScalarSinglet import SS_Spectra
 from gammabayes.priors import discrete_logprior
 from os import path
-from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes.dark_matter.combine_DM_class import combine_DM_models
-from gammabayes.likelihoods.irfs import irf_loglikelihood
 
 import time
 

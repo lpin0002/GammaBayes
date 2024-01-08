@@ -153,6 +153,16 @@ def generate_unique_int_from_string(string):
     return integer
 
 
+def extract_axes(axes_config):
+    axes = {}
+
+    for prior_axes in axes_config.values():
+        for axes_for_input_type in prior_axes.values():
+            for axis in axes_for_input_type.items():
+                axes.update({axis[0]:axis[1]})
+
+    return axes
+
 
 
 

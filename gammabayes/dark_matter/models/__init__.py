@@ -1,1 +1,1 @@
-from .Z2_ScalarSinglet import SS_DM_dist, SS_Spectra
+from .Z2_ScalarSinglet import SS_DM_dist, Z2_ScalarSinglet

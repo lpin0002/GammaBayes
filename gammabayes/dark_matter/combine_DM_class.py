@@ -1,6 +1,6 @@
 import numpy as np
 from gammabayes.dark_matter.density_profiles import DM_Profiles
-from gammabayes.dark_matter.models.Z2_ScalarSinglet import SS_Spectra
+from gammabayes.dark_matter.models.Z2_ScalarSinglet import Z2_ScalarSinglet
 from os import path
 from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes.likelihoods.irfs import irf_loglikelihood
@@ -12,7 +12,7 @@ import time
 class combine_DM_models:
 
     def __init__(self, 
-                 spectral_gen_class: SS_Spectra, 
+                 spectral_gen_class: Z2_ScalarSinglet, 
                  spatial_profile_class: DM_Profile, 
                  irf_class: irf_loglikelihood,
                  spectral_class_kwds: dict = {},

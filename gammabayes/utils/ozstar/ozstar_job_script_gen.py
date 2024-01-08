@@ -68,7 +68,6 @@ def gen_scripts(config_inputs):
 
         if bool(config_inputs['immediate_run']):
             os.system(f"sbatch {jobscript_filename}")
-        time.sleep(1.0)
 
         
             
