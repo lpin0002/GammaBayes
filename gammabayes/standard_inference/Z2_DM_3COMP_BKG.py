@@ -97,12 +97,20 @@ class Z2_DM_3COMP_BKG(object):
         except Exception as excpt:
             print(f"""An error occurred when trying to extract the seed: {excpt}\n
             A seed will be generated based on the name of the job.""")
-            self.seed = generate_unique_int_from_string(self.jobname)
+            self.seed = int(generate_unique_int_from_string(self.jobname))
         
         try:
             self.numjobs    = self.config_dict['numjobs']
         except:
             self.numjobs    = 1
+
+        # The larger this bugger the more values are considered at once when vectorised
+            # This also leads to a subsequent increase in memory. Currently this must be
+            # chosen with a bit of trial and error
+        try:
+            self.mixture_scanning_buffer = self.config_dict['mixture_scanning_buffer']
+        except:
+            self.mixture_scanning_buffer = 10
 
 
         try:
@@ -223,6 +231,7 @@ class Z2_DM_3COMP_BKG(object):
                              axes_names=['energy', 'lon', 'lat'],
                              default_spectral_parameters={'mass':self.config_dict['dark_matter_mass']}, 
                               )
+        print("Finished Setup.")
         
 
         
@@ -416,10 +425,9 @@ class Z2_DM_3COMP_BKG(object):
         mixtureaxes = self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range
 
 
-        skipfactor          = 10
         self.log_hyper_param_likelihood =  0
-        for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/skipfactor)))):
-            _temp_log_marg_reults = [self.margresults[_index][_skip_idx*skipfactor:_skip_idx*skipfactor+skipfactor, ...] for _index in range(len(self.margresults))]
+        for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/self.mixture_scanning_buffer)))):
+            _temp_log_marg_reults = [self.margresults[_index][_skip_idx*self.mixture_scanning_buffer:_skip_idx*self.mixture_scanning_buffer+self.mixture_scanning_buffer, ...] for _index in range(len(self.margresults))]
             self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
                 mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
 
@@ -444,7 +452,7 @@ class Z2_DM_3COMP_BKG(object):
             plt.show()
         except Exception as excpt:
             try:
-                print("An error occurred when trying to plot results: {excpt}")
+                print(f"An error occurred when trying to plot results: {excpt}")
 
                 plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
 
@@ -460,7 +468,7 @@ class Z2_DM_3COMP_BKG(object):
                 plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
                 plt.show()
             except Exception as exct:
-                print("Could not plot results: {exct}")
+                print(f"Could not plot results: {exct}")
             
 
     def run(self):

@@ -1,19 +1,40 @@
 ##################################################################
 ##################################################################
-### RUN PARAMETERS
+### OZSTAR RESOURCE ALLOCATIONS
 ##################################################################
 ##################################################################
 
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
-# single_job:                       False
-# immediate_run:                    True
-jobname:                          '1'
+immediate_run:                    False
+# env_name:                         GammaBayesEnv
+jobname:                          'Z2_DM_3COMP_BKG_test'
 stem_identifier:                  'Z2_DM_3COMP_BKG_test'
+numjobs:                          10
+Nevents_per_job:                  1000
+Nevents:                          1000
+common_norm_matrices:             False
+mem_for_matrix_gen:               400 #in MB
+time_for_matrix_gen_hrs:          1
+time_for_matrix_gen_mins:         0
+
+# If using common log irf normalisations one must provide the 
+  # path to the numpy files containing them individually
+# log_psf_norm_matrix_path:       'path'
+# log_edisp_norm_matrix_path:     'path'
+
+
+# Time and memory here is completely random. 
+# Run small test job to figure out time and memory allocation
+mem_per_cpu:                      16000
 numcores:                         8 
-numjobs:                          1
-save_path:                        'data/Z2_DM_3COMP_BKG_test/rundata/1/'
+time_hrs:                         1
+time_mins:                        0
+mail_progress:                    True
+mail_address:                     progressemail1999@gmail.com
+dark_matter_spectral_model:       Z2_ScalarSinglet
 
 
+save_path:                        "data/Z2_DM_3COMP_BKG_test/rundata/1"
 
 ##################################################################
 ##################################################################
@@ -28,15 +49,13 @@ save_path:                        'data/Z2_DM_3COMP_BKG_test/rundata/1/'
 signalfraction:                   0.3
 ccr_of_bkg_fraction:              0.8
 diffuse_of_astro_fraction:        0.3
-Nevents_per_job:                  1000
-Nevents:                          1000
 dmdensity_profile:                'einasto'
 dark_matter_mass:                 1.0
 
 # Parameters for the 'true' value axes for gamma ray events
-true_energy_min:                  0.1
-true_energy_max:                  100
-true_energy_bins_per_decade:      50
+true_energy_min:                  0.2
+true_energy_max:                  90
+true_energy_bins_per_decade:      100
 true_spatial_res:                 0.2
 true_longitude_min:               -3.5
 true_longitude_max:               3.5
@@ -44,9 +63,9 @@ true_latitude_min:                -3
 true_latitude_max:                3
 
 # Parameters for the reconstructed value axes for gamma ray events
-recon_energy_min:                 0.1
-recon_energy_max:                 100
-recon_energy_bins_per_decade:     40
+recon_energy_min:                 0.2
+recon_energy_max:                 90
+recon_energy_bins_per_decade:     50
 recon_spatial_res:                0.4
 recon_longitude_min:              -3.5
 recon_longitude_max:              3.5
@@ -58,35 +77,49 @@ recon_latitude_max:               3
 ### Inference/Analysis Parameters
 
 
+# The larger this bugger the more values are considered at once when vectorised
+  # This also leads to a subsequent increase in memory. Currently this must be
+  # chosen with a bit of trial and error
+mixture_scanning_buffer:        50
+
 # Dark Matter Inference Parameters
-nbins_signalfraction:             31
-sigfrac_upper_bd:                 1.
-sigfrac_lower_bd:                 0.
-sigfrac_spacing:                  'linear'
-
-nbins_mass:                       51
-
-
-
-# Misidentified Cosmic Ray Background Inference Parameters
-nbins_ccrfraction:                31
-ccrfrac_upper_bd:                 1.
-ccrfrac_lower_bd:                 0.
-ccrfrac_spacing:                  'linear'
-
-# Diffuse Gamma Ray Background Inference Parameters
-nbins_diffusefraction:            31
-diffusefrac_upper_bd:             1.
-diffusefrac_lower_bd:             0.
-diffusefrac_spacing:              'linear'
-
-
-# Refers to the method for exploring the mixture hyperparameters
-mixture_fraction_sampling:        'scan' # Either 'stochastic' or 'scan'
+parameter_scan_specifications:
+  'Z2 dark matter':
+    spectral_parameters:
+      'mass':
+        spacing: 'logspace'
+        bounds: 'event_dynamic'
+        num_events: 3e4
+        true_val: 1.0
+        absolute_bounds: [1e-1,1e2]
+        dynamic_multiplier: 5
+        nbins: 4
+    spatial_parameters:
+      'alpha':
+        spacing: 'logspace'
+        bounds: 'event_dynamic'
+        num_events: 1e4
+        true_val: 0.17
+        absolute_bounds: [1e-2,1e1]
+        dynamic_multiplier: 7
+        nbins: 3
 
 
-# Parameters for stochastic sampling if chosen
-nestedsampler_kwarg_dict:         {'nlive': 900}
+mixture_fraction_specifications:
+  'sig/total':
+    spacing: 'linear'
+    bounds: [0., 0.5]
+    nbins: 41
+  'ccr/bkg':
+    spacing: 'linear'
+    bounds: [0.5, 1.0]
+    nbins: 41
+  'diffuse/astro':
+    spacing: 'linear'
+    bounds: [0.1, 0.6]
+    nbins: 41
+
+
 
 # Debugging and plotting arguments
 diagnostics:                      False

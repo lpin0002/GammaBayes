@@ -266,10 +266,14 @@ class discrete_logprior(object):
                                             )
     
         if normalise:
+            # Normalisation is done twice to reduce numerical instability issues
             normalisation = self.normalisation(log_prior_values = outputarray)
-            if not np.isneginf(normalisation):
-                outputarray = outputarray - normalisation
-                outputarray = outputarray - self.normalisation(log_prior_values = outputarray)
+            normalisation = np.where(np.isneginf(normalisation), 0, normalisation)
+            outputarray = outputarray - normalisation
+
+            normalisation = self.normalisation(log_prior_values = outputarray)
+            normalisation = np.where(np.isneginf(normalisation), 0, normalisation)
+            outputarray = outputarray - normalisation
 
              
         return outputarray

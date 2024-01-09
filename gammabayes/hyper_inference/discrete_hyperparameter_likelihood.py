@@ -185,12 +185,15 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
         for prior_matrices in prior_matrix_list:
             t5_1s.append(time.perf_counter())
-            logintegrandvalues = prior_matrices+likelihoodvalues
+
+            # Transpose is because of the convention I chose for which axes
+                # were the nuisance parameters
+            logintegrandvalues = (np.squeeze(prior_matrices).T+np.squeeze(likelihoodvalues).T).T
             
             t5_2s.append(time.perf_counter())
 
             single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
-                axes=self.dependent_axes, axisindices=[1,2,3])
+                axes=self.dependent_axes, axisindices=[0,1,2])
 
             t5_3s.append(time.perf_counter())
 
@@ -222,67 +225,96 @@ Assigning empty hyperparameter axes for remaining priors.""")
         if self.prior_matrix_list is None:
             print("prior_matrix_list does not exist. Constructing priors.")
             prior_matrix_list = []
+
             for _outer_idx, prior in tqdm(enumerate(self.priors), 
                                    total=len(self.priors), 
                                    desc='Setting up prior matrices'):
+                
 
-                parameter_dictionaries  = self.hyperparameter_axes[_outer_idx]
-                update_with_defaults(parameter_dictionaries, {'spectral_parameters':{}, 'spatial_parameters':{}})
+                parameter_dictionary  = self.hyperparameter_axes[_outer_idx]
+                update_with_defaults(parameter_dictionary, {'spectral_parameters':{}, 'spatial_parameters':{}})
 
-                prior_spectral_params   = parameter_dictionaries['spectral_parameters']
-                prior_spatial_params    = parameter_dictionaries['spatial_parameters']
+                prior_spectral_params   = parameter_dictionary['spectral_parameters']
+                prior_spatial_params    = parameter_dictionary['spatial_parameters']
 
                 num_spec_params         = len(prior_spectral_params)
 
-                hyper_parameter_coords  = np.asarray(
-                    np.meshgrid(*prior_spectral_params.values(),
-                                *prior_spatial_params.values(), indexing='ij'))
-
-                flattened_hyper_parameter_coords = np.asarray([mesh.flatten() for mesh in hyper_parameter_coords]).T
-
-                try:
-
-                    prior_matrices  = np.empty(shape = (
-                    flattened_hyper_parameter_coords.shape[0],
-                    *np.squeeze(self.likelihoodnormalisation).shape,)
-                    )
+                prior_marged_shapes[_outer_idx] = (len(axisvals[0]), 
+                                                   *[prior_axis.size for prior_axis in prior_spectral_params.values()],
+                                                   *[prior_axis.size for prior_axis in prior_spatial_params.values()])
 
 
-                    prior_marged_shapes[_outer_idx] = (len(axisvals[0]), *hyper_parameter_coords[0].shape)
-                
-                    for _inner_idx, hyperparametervalues in tqdm(enumerate(flattened_hyper_parameter_coords), 
-                                                        total=len(flattened_hyper_parameter_coords),
-                                                        position=1, miniters=1, mininterval=0.1):                        
-                        prior_matrix = np.squeeze(
-                            prior.construct_prior_array(
-                                spectral_parameters = {param_key: hyperparametervalues[param_idx] for param_idx, param_key in enumerate(prior_spectral_params.keys())},
-                                spatial_parameters = {param_key: hyperparametervalues[num_spec_params+ param_idx] for param_idx, param_key in enumerate(prior_spatial_params.keys())},
-                                normalise=True)
-                                )
+                if prior.efficient_exist:
+                    prior_matrices = np.squeeze(
+                        prior.construct_prior_array(
+                            spectral_parameters = prior_spectral_params,
+                            spatial_parameters = prior_spatial_params,
+                            normalise=True)
+                            )
+                    
+                    prior_matrices = prior_matrices.reshape(*self.likelihoodnormalisation.shape, -1)
+                    print(f"prior_matrices.shape: {prior_matrices.shape}")
+                    
+                    nans+=np.sum(np.isnan(prior_matrices))
+
+                else:
+
+                    hyper_parameter_coords  = np.asarray(
+                        np.meshgrid(*prior_spectral_params.values(),
+                                    *prior_spatial_params.values(), indexing='ij'))
+                                    
+
+                    flattened_hyper_parameter_coords = np.asarray([mesh.flatten() for mesh in hyper_parameter_coords]).T
+
+                    try:
+
+                        prior_matrices  = np.empty(shape = (
+                        flattened_hyper_parameter_coords.shape[0],
+                        *np.squeeze(self.likelihoodnormalisation).shape,)
+                        )
+
+
+                        prior_marged_shapes[_outer_idx] = (len(axisvals[0]), *hyper_parameter_coords[0].shape)
+
                         
-                        nans+=np.sum(np.isnan(prior_matrix))
-                        prior_matrices[_inner_idx,...] = prior_matrix
 
-                except IndexError:
+                        ##################
+                        ## Loop to get rid of
+                        for _inner_idx, hyperparametervalues in tqdm(enumerate(flattened_hyper_parameter_coords), 
+                                                            total=len(flattened_hyper_parameter_coords),
+                                                            position=1, miniters=1, mininterval=0.1):      
+                                                                            
+                            prior_matrix = np.squeeze(
+                                prior.construct_prior_array(
+                                    spectral_parameters = {param_key: hyperparametervalues[param_idx] for param_idx, param_key in enumerate(prior_spectral_params.keys())},
+                                    spatial_parameters = {param_key: hyperparametervalues[num_spec_params+ param_idx] for param_idx, param_key in enumerate(prior_spatial_params.keys())},
+                                    normalise=True)
+                                    )
+                            
+                            nans+=np.sum(np.isnan(prior_matrix))
+                            prior_matrices[_inner_idx,...] = prior_matrix
 
-                    prior_matrices  = np.empty(shape = (
-                    1,
-                    *np.squeeze(self.likelihoodnormalisation).shape,)
-                    )
+                        ###########################
 
-                    prior_marged_shapes[_outer_idx] = (len(axisvals[0]), )
+                    except IndexError as indxerr:
+                        warnings.warn(f'No hyperparameters axes specified for prior number {_outer_idx}.')
+                        print(f"An error occurred: {indxerr}")
 
+                        prior_matrices  = np.empty(shape = (
+                        1,
+                        *np.squeeze(self.likelihoodnormalisation).shape,)
+                        )
 
-                    warnings.warn(f'No hyperparameters axes specified for prior number {_outer_idx}.')
+                        prior_marged_shapes[_outer_idx] = (len(axisvals[0]), )
 
-                    prior_matrix = np.squeeze(
-                            prior.construct_prior_array(
-                                spectral_parameters = {},
-                                spatial_parameters = {},
-                                normalise=True)
-                                )
-        
-                    prior_matrices[0,...] = prior_matrix
+                        prior_matrix = np.squeeze(
+                                prior.construct_prior_array(
+                                    spectral_parameters = {},
+                                    spatial_parameters = {},
+                                    normalise=True)
+                                    )
+            
+                        prior_matrices[0,...] = prior_matrix
 
 
                 prior_matrices = np.asarray(prior_matrices, dtype=float)
