@@ -165,51 +165,51 @@ Assigning empty hyperparameter axes for remaining priors.""")
         meshvalues  = np.meshgrid(*axisvals, *self.dependent_axes, indexing='ij')
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        t2 = time.perf_counter()
+        # t2 = time.perf_counter()
 
         likelihoodvalues = np.squeeze(self.likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
         likelihoodvalues_ndim = likelihoodvalues.ndim
 
-        t3 = time.perf_counter()
+        # t3 = time.perf_counter()
 
         likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
 
-        t4 = time.perf_counter()
+        # t4 = time.perf_counter()
         
         all_log_marg_results = []
 
-        t5_1s = []
-        t5_2s = []
-        t5_3s = []
-        t5_4s = []
+        # t5_1s = []
+        # t5_2s = []
+        # t5_3s = []
+        # t5_4s = []
 
         for prior_matrices in prior_matrix_list:
-            t5_1s.append(time.perf_counter())
+            # t5_1s.append(time.perf_counter())
 
             # Transpose is because of the convention I chose for which axes
                 # were the nuisance parameters
             logintegrandvalues = (np.squeeze(prior_matrices).T+np.squeeze(likelihoodvalues).T).T
             
-            t5_2s.append(time.perf_counter())
+            # t5_2s.append(time.perf_counter())
 
             single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
                 axes=self.dependent_axes, axisindices=[0,1,2])
 
-            t5_3s.append(time.perf_counter())
+            # t5_3s.append(time.perf_counter())
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 
-            t5_4s.append(time.perf_counter())
+            # t5_4s.append(time.perf_counter())
 
 
-        t5 = time.perf_counter()
+        # t5 = time.perf_counter()
 
-        t5_1s = np.array(t5_1s)
-        t5_2s = np.array(t5_2s)
-        t5_3s = np.array(t5_3s)
+        # t5_1s = np.array(t5_1s)
+        # t5_2s = np.array(t5_2s)
+        # t5_3s = np.array(t5_3s)
 
 
-        print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}", end='\r')
+        # print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}", end='\r')
         
         return np.array(all_log_marg_results, dtype=object)
 
@@ -278,8 +278,6 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
                         
 
-                        ##################
-                        ## Loop to get rid of
                         for _inner_idx, hyperparametervalues in tqdm(enumerate(flattened_hyper_parameter_coords), 
                                                             total=len(flattened_hyper_parameter_coords),
                                                             position=1, miniters=1, mininterval=0.1):      
@@ -293,8 +291,6 @@ Assigning empty hyperparameter axes for remaining priors.""")
                             
                             nans+=np.sum(np.isnan(prior_matrix))
                             prior_matrices[_inner_idx,...] = prior_matrix
-
-                        ###########################
 
                     except IndexError as indxerr:
                         warnings.warn(f'No hyperparameters axes specified for prior number {_outer_idx}.')
