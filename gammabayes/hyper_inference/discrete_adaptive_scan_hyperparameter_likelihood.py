@@ -23,10 +23,10 @@ class discrete_adaptive_scan_hyperparameter_likelihood(object):
                  iterative_logspace_integrator: callable                        = iterate_logspace_integration,
                  logspace_integrator: callable                                  = logspace_riemann,
                  prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]        = None,
-                 edisp_bounding_percentile  = 100,
-                 psf_bounding_percentile    = 100,
-                 edisp_bounding_sigma_level = 6,
-                 psf_bounding_sigma_level   = 6):
+                 edisp_bounding_percentile  = 90,
+                 psf_bounding_percentile    = 90,
+                 edisp_bounding_sigma_level = 4,
+                 psf_bounding_sigma_level   = 4):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
