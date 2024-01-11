@@ -102,7 +102,7 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
 
     energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
-    log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten(), pointing_direction=[0,0]).reshape(energymesh.shape)
+    log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
     # log_aeff_table = 0
 
     log_point_hess_background_source_flux = np.log(full_hess_flux)

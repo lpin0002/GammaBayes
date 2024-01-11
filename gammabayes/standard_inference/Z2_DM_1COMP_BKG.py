@@ -5,7 +5,7 @@ from gammabayes.likelihoods.irfs import log_edisp, log_psf, single_loglikelihood
 from gammabayes.utils.plotting import logdensity_matrix_plot
 from gammabayes.utils.config_utils import read_config_file
 from gammabayes.utils import logspace_riemann, iterate_logspace_integration
-from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
+from gammabayes.hyper_inference import discrete_brute_scan_hyperparameter_likelihood as discrete_hyperparameter_likelihood
 from gammabayes.priors import discrete_logprior, log_bkg_CCR_dist
 from gammabayes.likelihoods import discrete_loglike
 from gammabayes.dark_matter import SS_DM_dist

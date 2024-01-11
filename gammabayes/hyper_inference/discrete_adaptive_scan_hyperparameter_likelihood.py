@@ -2,26 +2,31 @@ import numpy as np
 import functools
 from tqdm import tqdm
 from gammabayes.utils import iterate_logspace_integration, logspace_riemann, update_with_defaults
+from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
 from gammabayes.utils.config_utils import save_config_file
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings
 import time
 
-class discrete_hyperparameter_likelihood(object):
-    def __init__(self, priors = None, 
-                 likelihood: callable = None, 
-                 axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
-                 dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
-                 hyperparameter_axes: dict = {}, 
-                 numcores: int = 8, 
-                 likelihoodnormalisation: np.ndarray | float = 0., 
-                 log_margresults: np.ndarray | None = None, 
-                 mixture_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
-                 log_hyperparameter_likelihood: np.ndarray | float = 0., 
-                 log_posterior: np.ndarray | float = 0., 
-                 iterative_logspace_integrator: callable = iterate_logspace_integration,
-                 logspace_integrator: callable = logspace_riemann,
-                 prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None):
+class discrete_adaptive_scan_hyperparameter_likelihood(object):
+    def __init__(self, priors               = None, 
+                 likelihood: callable       = None, 
+                 axes: list[np.ndarray] | tuple[np.ndarray] | None              = None,
+                 dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None    = None,
+                 hyperparameter_axes: dict  = {}, 
+                 numcores: int              = 8, 
+                 likelihoodnormalisation: np.ndarray | float                    = 0., 
+                 log_margresults: np.ndarray | None                             = None, 
+                 mixture_axes: list[np.ndarray] | tuple[np.ndarray] | None      = None,
+                 log_hyperparameter_likelihood: np.ndarray | float              = 0., 
+                 log_posterior: np.ndarray | float                              = 0., 
+                 iterative_logspace_integrator: callable                        = iterate_logspace_integration,
+                 logspace_integrator: callable                                  = logspace_riemann,
+                 prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]        = None,
+                 edisp_bounding_percentile  = 100,
+                 psf_bounding_percentile    = 100,
+                 edisp_bounding_sigma_level = 6,
+                 psf_bounding_sigma_level   = 6):
         """Initialise a hyperparameter_likelihood class instance.
 
         Args:
@@ -132,103 +137,103 @@ Assigning empty hyperparameter axes for remaining priors.""")
         self.log_hyperparameter_likelihood  = log_hyperparameter_likelihood
         self.log_posterior                  = log_posterior
         self.prior_matrix_list              = prior_matrix_list
+
+
+        _, self.logeval_bound               = derive_edisp_bounds(irf_loglike=self.likelihood, percentile=edisp_bounding_percentile, sigmalevel=edisp_bounding_sigma_level)
+        self.lonlat_bound                   = derive_psf_bounds(irf_loglike=self.likelihood, percentile=psf_bounding_percentile, sigmalevel=psf_bounding_sigma_level, 
+                                                                axis_buffer=1, parameter_buffer = np.ptp(self.dependent_axes[1]))
+        
+        print(f"Log10E val bounding radii: {self.logeval_bound}")
+        print(f"Lon/Lat val bounding radii: {self.lonlat_bound}")
+        
+
+        print("\n\n\nAdaptive last update 11/01/2024\n\n\n")
         
     
-    def observation_nuisance_marg(self, 
-                                  axisvals: list | np.ndarray, 
-                                  prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray:
-        """Returns a list of the log marginalisation values for a single set of gamma-ray
-            event measurements for various log prior matrices.
+
+
+    def observation_nuisance_marg(self, axisvals, prior_matrix_list):
+
+        energy_indices = np.where(
+            (self.likelihood.dependent_axes[0]>np.power(10., np.log10(axisvals[0])-self.logeval_bound)) & (self.likelihood.dependent_axes[0]<np.power(10., np.log10(axisvals[0])+self.logeval_bound)))[0]
+        
+        lon_indices = np.where(
+            (self.likelihood.dependent_axes[1]>axisvals[1]-self.lonlat_bound) & (self.likelihood.dependent_axes[1]<axisvals[1]+self.lonlat_bound) )[0]
+
+        lat_indices = np.where(
+            (self.likelihood.dependent_axes[2]>axisvals[2]-self.lonlat_bound) & (self.likelihood.dependent_axes[2]<axisvals[2]+self.lonlat_bound) )[0]
 
         
-        
-        This function takes in a single set of observation values to create the
-            log of the marginalisation result over the nuisance parameters,
-            otherwise known as the dependent axes or true values, for a set of
-            signal log prior matrices and single background log prior matrix over
-            the dependent axes.
+        temp_energy_axis = self.likelihood.dependent_axes[0][energy_indices]
+        temp_lon_axis = self.likelihood.dependent_axes[1][lon_indices]
+        temp_lat_axis = self.likelihood.dependent_axes[1][lat_indices]
 
+        meshvalues  = np.meshgrid(*axisvals, temp_energy_axis, temp_lon_axis, temp_lat_axis, indexing='ij')
+        index_meshes = np.ix_(energy_indices, lon_indices, lat_indices)
 
-        Args:
-            axisvals (tuple): A tuple of the set of measurements for a single
-                gamma-ray event.
-
-            prior_matrix_list (list): A list of lists that contain the log prior 
-                matrices for the various values of the relevant hyperparameters 
-                for eeach prior.
-
-        Returns:
-            np.ndarray: A numpy array of the log marginalisation values for 
-                each of the priors.
-        """
-
-        meshvalues  = np.meshgrid(*axisvals, *self.dependent_axes, indexing='ij')
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        # t2 = time.perf_counter()
+        t2 = time.perf_counter()
 
         likelihoodvalues = np.squeeze(self.likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
-        likelihoodvalues_ndim = likelihoodvalues.ndim
+        # likelihoodvalues_ndim = likelihoodvalues.ndim
 
-        # t3 = time.perf_counter()
+        t3 = time.perf_counter()
+        likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation[*index_meshes]
 
-        likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
-
-        # t4 = time.perf_counter()
+        t4 = time.perf_counter()
         
         all_log_marg_results = []
 
-        # t5_1s = []
-        # t5_2s = []
-        # t5_3s = []
-        # t5_4s = []
+        t5_1s = []
+        t5_2s = []
+        t5_3s = []
+        t5_4s = []
 
         for prior_matrices in prior_matrix_list:
-            # t5_1s.append(time.perf_counter())
+            t5_1s.append(time.perf_counter())
 
             # Transpose is because of the convention I chose for which axes
                 # were the nuisance parameters
-            logintegrandvalues = (np.squeeze(prior_matrices).T+np.squeeze(likelihoodvalues).T).T
+            logintegrandvalues = (np.squeeze(prior_matrices).T[...,index_meshes[2].T,index_meshes[1].T,index_meshes[0].T]+np.squeeze(likelihoodvalues).T).T
             
-            # t5_2s.append(time.perf_counter())
+            t5_2s.append(time.perf_counter())
 
-            single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
-                axes=self.dependent_axes, axisindices=[0,1,2])
+            single_parameter_log_margvals = iterate_logspace_integration(logintegrandvalues,   
+                axes=(temp_energy_axis, temp_lon_axis, temp_lat_axis), axisindices=[0,1,2])
 
-            # t5_3s.append(time.perf_counter())
+            t5_3s.append(time.perf_counter())
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 
-            # t5_4s.append(time.perf_counter())
+            t5_4s.append(time.perf_counter())
 
 
-        # t5 = time.perf_counter()
+        t5 = time.perf_counter()
 
-        # t5_1s = np.array(t5_1s)
-        # t5_2s = np.array(t5_2s)
-        # t5_3s = np.array(t5_3s)
+        t5_1s = np.array(t5_1s)
+        t5_2s = np.array(t5_2s)
+        t5_3s = np.array(t5_3s)
 
 
-        # print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}", end='\r')
+        print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}")#, end='\r')
         
         return np.array(all_log_marg_results, dtype=object)
-
+    from multiprocessing import Pool
 
     def nuisance_log_marginalisation(self, axisvals: list | np.ndarray) -> list:
-
-        
+        # time1 = time.perf_counter()
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
         np.seterr(divide='ignore', invalid='ignore')
         # log10eaxistrue,  longitudeaxistrue, latitudeaxistrue = axes
         prior_marged_shapes = np.empty(shape=(len(self.priors),), dtype=object)
         nans = 0
-        if self.prior_matrix_list is None:
-            print("prior_matrix_list does not exist. Constructing priors.")
+        prior_matrix_list = None
+        if prior_matrix_list is None:
+            # print("prior_matrix_list does not exist. Constructing priors.")
             prior_matrix_list = []
 
-            for _outer_idx, prior in tqdm(enumerate(self.priors), 
-                                   total=len(self.priors), 
-                                   desc='Setting up prior matrices'):
+            for _outer_idx, prior in enumerate(self.priors):
                 
 
                 parameter_dictionary  = self.hyperparameter_axes[_outer_idx]
@@ -240,8 +245,8 @@ Assigning empty hyperparameter axes for remaining priors.""")
                 num_spec_params         = len(prior_spectral_params)
 
                 prior_marged_shapes[_outer_idx] = (len(axisvals[0]), 
-                                                   *[prior_axis.size for prior_axis in prior_spectral_params.values()],
-                                                   *[prior_axis.size for prior_axis in prior_spatial_params.values()])
+                                                    *[prior_axis.size for prior_axis in prior_spectral_params.values()],
+                                                    *[prior_axis.size for prior_axis in prior_spatial_params.values()])
 
 
                 if prior.efficient_exist:
@@ -253,7 +258,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
                             )
                     
                     prior_matrices = prior_matrices.reshape(*self.likelihoodnormalisation.shape, -1)
-                    print(f"prior_matrices.shape: {prior_matrices.shape}")
+                    # print(f"prior_matrices.shape: {prior_matrices.shape}")
                     
                     nans+=np.sum(np.isnan(prior_matrices))
 
@@ -281,7 +286,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
                         for _inner_idx, hyperparametervalues in tqdm(enumerate(flattened_hyper_parameter_coords), 
                                                             total=len(flattened_hyper_parameter_coords),
                                                             position=1, miniters=1, mininterval=0.1):      
-                                                                            
+                                                                        
                             prior_matrix = np.squeeze(
                                 prior.construct_prior_array(
                                     spectral_parameters = {param_key: hyperparametervalues[param_idx] for param_idx, param_key in enumerate(prior_spectral_params.keys())},
@@ -292,9 +297,10 @@ Assigning empty hyperparameter axes for remaining priors.""")
                             nans+=np.sum(np.isnan(prior_matrix))
                             prior_matrices[_inner_idx,...] = prior_matrix
 
+
                     except IndexError as indxerr:
-                        warnings.warn(f'No hyperparameters axes specified for prior number {_outer_idx}.')
-                        print(f"An error occurred: {indxerr}")
+                        # warnings.warn(f'No hyperparameters axes specified for prior number {_outer_idx}.')
+                        # print(f"An error occurred: {indxerr}")
 
                         prior_matrices  = np.empty(shape = (
                         1,
@@ -317,9 +323,13 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
                 prior_matrix_list.append(prior_matrices)
 
-            print(f"Total cumulative number of nan values within all prior matrices: {nans}")
+
+            # print(f"Total cumulative number of nan values within all prior matrices: {nans}")
                 
             self.prior_matrix_list = prior_matrix_list
+
+        # time2 = time.perf_counter()
+        # print(f"Prior Matrix Gen Time: {time2-time1}")
 
         marg_partial = functools.partial(
             self.observation_nuisance_marg, 
@@ -328,18 +338,25 @@ Assigning empty hyperparameter axes for remaining priors.""")
         with Pool(self.numcores) as pool:
             marg_results = pool.map(marg_partial, zip(*axisvals))
 
+
+        # time3 = time.perf_counter()
+        # print(f"Marg Time: {time3-time2}")
+
+
         marg_results = np.asarray(marg_results)
+
+        # print(marg_results.shape)
 
         reshaped_marg_results = []
         for _prior_idx in range(len(self.priors)):
             nice_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
-            print('\n')
-            print('nice shape: ', nice_marg_results.shape)
+            # print('\n')
+            # print('nice shape: ', nice_marg_results.shape)
             nice_marg_results = nice_marg_results.reshape(prior_marged_shapes[_prior_idx])
             reshaped_marg_results.append(nice_marg_results)
 
         return reshaped_marg_results
-    
+
     def apply_direchlet_stick_breaking_direct(self, 
                                               xi_axes: list | tuple, 
                                               depth: int) -> np.ndarray | float:

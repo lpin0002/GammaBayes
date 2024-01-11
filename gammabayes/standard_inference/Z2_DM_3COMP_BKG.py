@@ -2,7 +2,6 @@ import os, sys, time, warnings
 from tqdm import tqdm
 
 from gammabayes.likelihoods.irfs import irf_loglikelihood
-from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
 from gammabayes.likelihoods import discrete_loglike
 from gammabayes.priors.astro_sources import (
     construct_hess_source_map, 
@@ -214,8 +213,7 @@ class Z2_DM_3COMP_BKG(object):
 
 
         dark_matter_spectral_class = dynamic_import('gammabayes.dark_matter.models', self.config_dict['dark_matter_spectral_model'])
-
-
+        self.discrete_hyperparameter_likelihood = dynamic_import('gammabayes.hyper_inference', self.config_dict['hyper_parameter_scan_class'])
 
         SS_DM_combine_instance = combine_DM_models(dark_matter_spectral_class, 
                                                    Einasto_Profile, 
@@ -404,7 +402,7 @@ class Z2_DM_3COMP_BKG(object):
         
     def nuisance_marg(self):
 
-        self.hyperparameter_likelihood_instance = discrete_hyperparameter_likelihood(
+        self.hyperparameter_likelihood_instance = self.discrete_hyperparameter_likelihood(
             priors                  = (self.DM_prior, self.ccr_bkg_prior, self.diffuse_astro_bkg_prior, self.point_astro_bkg_prior), 
             likelihood              = self.irf_loglike, 
             dependent_axes          = (self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue), 
@@ -440,13 +438,26 @@ class Z2_DM_3COMP_BKG(object):
             plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
 
             fig, ax = logdensity_matrix_plot([*mixtureaxes, *extract_axes(self.source_hyperparameter_input).values(), ], plot_log_hyper_param_likelihood, 
+                                             truevals=[self.config_dict['signalfraction'], 
+                                                        self.config_dict['ccr_of_bkg_fraction'], 
+                                                        self.config_dict['diffuse_of_astro_fraction'],
+                                                        self.config_dict['dark_matter_mass'],
+                                                        0.17],
                                             sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
-                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
+                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]', 'alpha'], suptitle=self.config_dict['Nevents'])
             fig.figure.dpi = 120
-            ax[3,3].set_xscale('log')
             ax[3,0].set_yscale('log')
             ax[3,1].set_yscale('log')
             ax[3,2].set_yscale('log')
+
+            ax[3,3].set_xscale('log')
+
+            ax[4,0].set_yscale('log')
+            ax[4,1].set_yscale('log')
+            ax[4,2].set_yscale('log')
+            ax[4,3].set_yscale('log')
+            ax[4,3].set_xscale('log')
+            ax[4,4].set_xscale('log')
             plt.tight_layout()
             plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
             plt.show()
@@ -456,14 +467,29 @@ class Z2_DM_3COMP_BKG(object):
 
                 plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
 
-                fig, ax = logdensity_matrix_plot([*mixtureaxes, *extract_axes(self.source_hyperparameter_input).values(), ], plot_log_hyper_param_likelihood, 
+                fig, ax = logdensity_matrix_plot([*mixtureaxes, *extract_axes(self.source_hyperparameter_input).values(), ], 
+                                                 plot_log_hyper_param_likelihood, 
+                                                 truevals=[self.config_dict['signalfraction'], 
+                                                        self.config_dict['ccr_of_bkg_fraction'], 
+                                                        self.config_dict['diffuse_of_astro_fraction'],
+                                                        self.config_dict['dark_matter_mass'],
+                                                        0.17],
                                                 sigmalines_1d=0, contours2d=0, plot_density=0, single_dim_yscales='linear',
-                                                axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]',], suptitle=self.config_dict['Nevents'])
+                                                suptitle=self.config_dict['Nevents'])
                 fig.figure.dpi = 120
-                ax[3,3].set_xscale('log')
                 ax[3,0].set_yscale('log')
                 ax[3,1].set_yscale('log')
                 ax[3,2].set_yscale('log')
+
+                ax[3,3].set_xscale('log')
+
+                ax[4,0].set_yscale('log')
+                ax[4,1].set_yscale('log')
+                ax[4,2].set_yscale('log')
+                ax[4,3].set_yscale('log')
+                ax[4,3].set_xscale('log')
+                ax[4,4].set_xscale('log')
+
                 plt.tight_layout()
                 plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
                 plt.show()
