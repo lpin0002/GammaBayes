@@ -141,7 +141,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
         _, self.logeval_bound               = derive_edisp_bounds(irf_loglike=self.likelihood, percentile=edisp_bounding_percentile, sigmalevel=edisp_bounding_sigma_level)
         self.lonlat_bound                   = derive_psf_bounds(irf_loglike=self.likelihood, percentile=psf_bounding_percentile, sigmalevel=psf_bounding_sigma_level, 
-                                                                axis_buffer=1, parameter_buffer = np.ptp(self.dependent_axes[1]))
+                                                                axis_buffer=1, parameter_buffer = np.squeeze(np.ptp(self.dependent_axes[1]))/2)
         
         print(f"Log10E val bounding radii: {self.logeval_bound}")
         print(f"Lon/Lat val bounding radii: {self.lonlat_bound}")
@@ -166,7 +166,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
         
         temp_energy_axis = self.likelihood.dependent_axes[0][energy_indices]
         temp_lon_axis = self.likelihood.dependent_axes[1][lon_indices]
-        temp_lat_axis = self.likelihood.dependent_axes[1][lat_indices]
+        temp_lat_axis = self.likelihood.dependent_axes[2][lat_indices]
 
         meshvalues  = np.meshgrid(*axisvals, temp_energy_axis, temp_lon_axis, temp_lat_axis, indexing='ij')
         index_meshes = np.ix_(energy_indices, lon_indices, lat_indices)
