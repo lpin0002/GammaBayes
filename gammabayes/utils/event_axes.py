@@ -156,7 +156,10 @@ def derive_psf_bounds(irf_loglike,
 
             for idx, level in enumerate(contour_set.levels):
                 segments = contour_set.allsegs[idx]
-                segments = np.asarray(segments)
+                try:
+                    segments = np.asarray(segments)
+                except:
+                    segments = np.asarray(segments[0])
 
                 distances = np.sqrt((segments[:,0] - center_x) ** 2 + (segments[:,1] - center_y) ** 2)
 
