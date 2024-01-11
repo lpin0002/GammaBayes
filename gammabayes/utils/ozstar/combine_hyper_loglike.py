@@ -1,7 +1,8 @@
 import sys, os
-from gammabayes.utils.config_utils import read_config_file
+from gammabayes.utils.config_utils import read_config_file, create_true_axes_from_config, create_recon_axes_from_config
+from gammabayes.utils.import_utilities import dynamic_import
+from gammabayes.likelihoods.irfs import irf_loglikelihood
 from gammabayes.utils import load_pickle, extract_axes
-from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
 from scipy import special
 from gammabayes.utils.plotting import logdensity_matrix_plot
 import matplotlib.pyplot as plt
@@ -14,7 +15,14 @@ config_file_path = sys.argv[1]
 # Extracting base config dict
 
 config_dict = read_config_file(config_file_path)
+discrete_hyperparameter_likelihood = dynamic_import('gammabayes.hyper_inference', config_dict['hyper_parameter_scan_class'])
 
+energy_true_axis,  longitudeaxistrue, latitudeaxistrue       = create_true_axes_from_config(config_dict)
+energy_recon_axis, longitudeaxis,     latitudeaxis           = create_recon_axes_from_config(config_dict)
+
+
+irf_loglike = irf_loglikelihood(axes   =   [energy_recon_axis,    longitudeaxis,     latitudeaxis], 
+                                dependent_axes =   [energy_true_axis,     longitudeaxistrue, latitudeaxistrue])
 
 # Extracting relevant file paths
 
@@ -39,6 +47,7 @@ initial_saved_data = load_pickle(f"{initial_subdirectory}/run_data.pkl")
 
 hyper_class_instance = discrete_hyperparameter_likelihood(axes=initial_saved_data['axes'],
                  dependent_axes=initial_saved_data['dependent_axes'],
+                 likelihood=irf_loglike,
                  hyperparameter_axes=initial_saved_data['hyperparameter_axes'],
                  mixture_axes=initial_saved_data['mixture_axes'],
                  log_hyperparameter_likelihood=initial_saved_data['log_hyperparameter_likelihood'],)
@@ -61,7 +70,8 @@ try:
                                     truevals=[initial_saved_data['config']['signalfraction'], 
                                             initial_saved_data['config']['ccr_of_bkg_fraction'], 
                                             initial_saved_data['config']['diffuse_of_astro_fraction'], 
-                                            initial_saved_data['config']['dark_matter_mass'],],   
+                                            initial_saved_data['config']['dark_matter_mass'],
+                                            0.17],   
                                     sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
                                     axis_names=[
                                         *initial_saved_data['config']['mixture_fraction_specifications'].keys(), 

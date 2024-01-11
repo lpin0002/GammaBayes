@@ -10,7 +10,7 @@ import time
 
 class discrete_adaptive_scan_hyperparameter_likelihood(object):
     def __init__(self, priors               = None, 
-                 likelihood: callable       = None, 
+                 likelihood                 = None, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None              = None,
                  dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None    = None,
                  hyperparameter_axes: dict  = {}, 
