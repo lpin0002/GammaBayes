@@ -1,11 +1,7 @@
-import os, sys, time, warnings
-from tqdm import tqdm
+
 
 from gammabayes.likelihoods.irfs import irf_loglikelihood
-from gammabayes.likelihoods import discrete_loglike
 from gammabayes.priors.astro_sources import (
-    construct_hess_source_map, 
-    construct_fermi_gaggero_matrix, 
     construct_hess_source_map_interpolation, 
     construct_log_fermi_gaggero_bkg,
 )
@@ -29,32 +25,17 @@ from gammabayes.utils import (
     dynamic_import
 )
 
-
-from gammabayes.samplers import discrete_hyperparameter_continuous_mix_post_process_sampler
-
 from gammabayes.dark_matter import combine_DM_models
 from gammabayes.dark_matter.density_profiles import Einasto_Profile
 
-# from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-from matplotlib.colors import LogNorm
-from astropy import units as u
-from scipy import interpolate, special, integrate, stats
-from scipy.integrate import simps
-from matplotlib import cm
-from tqdm.autonotebook import tqdm as notebook_tqdm
 
-import functools, random
-from multiprocessing import Pool, freeze_support
-import multiprocessing
-import pandas as pd
-from datetime import datetime
+from scipy import special
+from tqdm import tqdm
+import os, sys, time, warnings, random, numpy as np, matplotlib.pyplot as plt
 
 
 
-class Z2_DM_3COMP_BKG(object):
+class standard_3COMP_BKG(object):
         
     def __init__(self, config_dict: dict = {}, config_file_path = None):
         try:
@@ -186,23 +167,30 @@ class Z2_DM_3COMP_BKG(object):
 
         print("Constructing background priors...")
 
-        self.astrophysicalbackground = construct_hess_source_map(energy_axis    = self.energy_true_axis,
-                                                                 longitudeaxis  = self.longitudeaxistrue,
-                                                                 latitudeaxis   = self.latitudeaxistrue)
         
         self.ccr_bkg_prior = discrete_logprior(logfunction=log_bkg_CCR_dist, name='CCR Mis-identification Background Prior',
                                axes=(   self.energy_true_axis, 
                                         self.longitudeaxistrue, 
                                         self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
-
-        self.diffuse_astro_bkg_prior = discrete_logprior(logfunction=construct_log_fermi_gaggero_bkg(), name='Diffuse Astrophysical Background Prior',
+        
+        log_fermi_gaggero_bkg_class_instance = construct_log_fermi_gaggero_bkg(energy_axis=self.energy_true_axis, 
+                                                                                   longitudeaxis=self.longitudeaxistrue, 
+                                                                                   latitudeaxis=self.latitudeaxistrue, 
+                                                                                   log_aeff=self.irf_loglike.log_aeff)
+        
+        self.diffuse_astro_bkg_prior = discrete_logprior(logfunction=log_fermi_gaggero_bkg_class_instance.log_fermi_diffuse_func, name='Diffuse Astrophysical Background Prior',
                                axes=(   self.energy_true_axis, 
                                         self.longitudeaxistrue, 
                                         self.latitudeaxistrue,), 
                                     axes_names=['energy', 'lon', 'lat'], )
         
-        self.point_astro_bkg_prior = discrete_logprior(logfunction=construct_hess_source_map_interpolation(), name='Point Source Astrophysical Background Prior',
+        log_hess_bkg_class_instance = construct_hess_source_map_interpolation(energy_axis=self.energy_true_axis, 
+                                                                                   longitudeaxis=self.longitudeaxistrue, 
+                                                                                   latitudeaxis=self.latitudeaxistrue, 
+                                                                                   log_aeff=self.irf_loglike.log_aeff)
+        
+        self.point_astro_bkg_prior = discrete_logprior(logfunction=log_hess_bkg_class_instance.log_astro_func, name='Point Source Astrophysical Background Prior',
                                axes=(   self.energy_true_axis, 
                                         self.longitudeaxistrue, 
                                         self.latitudeaxistrue,), 
@@ -413,6 +401,7 @@ class Z2_DM_3COMP_BKG(object):
         self.margresults = self.hyperparameter_likelihood_instance.nuisance_log_marginalisation(
             axisvals= (self.measured_energy, self.measured_longitude, self.measured_latitude)
             )
+        
 
 
     def generate_hyper_param_likelihood(self):
@@ -422,16 +411,16 @@ class Z2_DM_3COMP_BKG(object):
 
         mixtureaxes = self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range
 
-
         self.log_hyper_param_likelihood =  0
         for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/self.mixture_scanning_buffer)))):
             _temp_log_marg_reults = [self.margresults[_index][_skip_idx*self.mixture_scanning_buffer:_skip_idx*self.mixture_scanning_buffer+self.mixture_scanning_buffer, ...] for _index in range(len(self.margresults))]
             self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
                 mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
 
-
         self.log_hyper_param_likelihood=np.squeeze(self.log_hyper_param_likelihood)
 
+        print(self.log_hyper_param_likelihood)
+        print(self.log_hyper_param_likelihood.shape)
 
 
         try:
@@ -444,7 +433,8 @@ class Z2_DM_3COMP_BKG(object):
                                                         self.config_dict['dark_matter_mass'],
                                                         0.17],
                                             sigmalines_1d=1, contours2d=1, plot_density=1, single_dim_yscales='linear',
-                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]', 'alpha'], suptitle=self.config_dict['Nevents'])
+                                            axis_names=['sig/total', 'ccr/bkg', 'diffuse/astro', 'mass [TeV]', 'alpha'], 
+                                            suptitle=self.config_dict['Nevents'], figsize=(20,18))
             fig.figure.dpi = 120
             ax[3,0].set_yscale('log')
             ax[3,1].set_yscale('log')
@@ -475,7 +465,7 @@ class Z2_DM_3COMP_BKG(object):
                                                         self.config_dict['dark_matter_mass'],
                                                         0.17],
                                                 sigmalines_1d=0, contours2d=0, plot_density=0, single_dim_yscales='linear',
-                                                suptitle=self.config_dict['Nevents'])
+                                                suptitle=self.config_dict['Nevents'], figsize=(20,18))
                 fig.figure.dpi = 120
                 ax[3,0].set_yscale('log')
                 ax[3,1].set_yscale('log')
@@ -504,6 +494,7 @@ class Z2_DM_3COMP_BKG(object):
         self.simulate()
         
         self.nuisance_marg()
+
         self.generate_hyper_param_likelihood()
 
         # self.apply_priors()
@@ -531,16 +522,25 @@ class Z2_DM_3COMP_BKG(object):
             print("Error message: {fnfe}")
 
 
+################
+## For users you can copy paste the below into a stand-alone script to run this class
 
-if __name__=="__main__":
-    try:
-        config_file_path = sys.argv[1]
-    except:
-        warnings.warn('No configuration file given')
-        config_file_path = os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'
-    config_dict = read_config_file(config_file_path)
-    print("Does it start?")
-    print(f"initial config_file_path: {config_file_path}")
-    Z2_DM_3COMP_BKG_instance = Z2_DM_3COMP_BKG(config_dict=config_dict,)
-    Z2_DM_3COMP_BKG_instance.run()
-    Z2_DM_3COMP_BKG_instance.save()
+
+# if __name__=="__main__":
+    #  import sys, os, warnings
+
+    # from gammabayes.standard_inference import standard_3COMP_BKG
+    # from gammabayes.utils.config_utils import read_config_file
+
+    # try:
+    #     config_file_path = sys.argv[1]
+    # except:
+    #     warnings.warn('No configuration file given')
+    #     config_file_path = os.path.dirname(__file__)+'/Z2_DM_3COMP_BKG_config_default.yaml'
+    # config_dict = read_config_file(config_file_path)
+    # print(f"initial config_file_path: {config_file_path}")
+    # standard_3COMP_BKG_instance = standard_3COMP_BKG(config_dict=config_dict,)
+    # standard_3COMP_BKG_instance.run()
+    # print("\n\nRun Done. Now saving")
+    # standard_3COMP_BKG_instance.save()
+    # print("\n\nResults saved.")

@@ -65,36 +65,38 @@ def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis,
 
     return diffuse_background_observed_event_rate
 
-def construct_log_fermi_gaggero_bkg(energy_axis=energy_true_axis, 
+class construct_log_fermi_gaggero_bkg(object):
+
+    def __init__(self, energy_axis=energy_true_axis, 
     longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, 
     log_aeff=log_aeff, normalise=True, logspace_integrator=logspace_riemann):
+        
     
-    axes = [energy_axis, longitudeaxis, latitudeaxis]
-    log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(energy_axis=energy_axis, 
-    longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_aeff=log_aeff))
+        axes = [energy_axis, longitudeaxis, latitudeaxis]
+        log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(energy_axis=energy_axis, 
+        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_aeff=log_aeff))
 
-    if normalise:
-        log_fermi_diffuse = log_fermi_diffuse - logspace_integrator(
-            logy = logspace_integrator(
-                logy =logspace_integrator(
-                    logy=log_fermi_diffuse, 
-                    x=energy_axis, axis=0), 
-                x=longitudeaxis, axis=0), 
-            x=latitudeaxis, axis=0)
+        if normalise:
+            log_fermi_diffuse = log_fermi_diffuse - logspace_integrator(
+                logy = logspace_integrator(
+                    logy =logspace_integrator(
+                        logy=log_fermi_diffuse, 
+                        x=energy_axis, axis=0), 
+                    x=longitudeaxis, axis=0), 
+                x=latitudeaxis, axis=0)
 
-    # Have to interpolate actual probabilities as otherwise these maps include -inf
-    fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
-        (*axes,), 
-        np.exp(log_fermi_diffuse) 
-        )
+        # Have to interpolate actual probabilities as otherwise these maps include -inf
+        self.fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
+            (*axes,), 
+            np.exp(log_fermi_diffuse) 
+            )
 
     # Then we make a wrapper to put the result of the function in log space
-    def log_fermi_diffuse_func(energy, longitude, latitude, 
+    def log_fermi_diffuse_func(self, energy, longitude, latitude, 
                                spectral_parameters={}, spatial_parameters={}): 
         return np.log(
-        fermi_diffuse_interpolator(
+        self.fermi_diffuse_interpolator(
             (energy, longitude, latitude)
             ))
 
-    return log_fermi_diffuse_func
 

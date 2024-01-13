@@ -10,6 +10,9 @@ import time
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class Z2_ScalarSinglet(object):
+
+    def zero_output(self, inputval):
+        return inputval[0]*0
     
     def __init__(self, ratios: bool = True):
 
@@ -71,7 +74,7 @@ class Z2_ScalarSinglet(object):
                     np.sqrt(np.array(tempspectragrid)), 
                     method='cubic', bounds_error=False, fill_value=0)
             except:
-                sqrtchannelfuncdictionary[darkSUSYchannel] = lambda inputs: inputs[0]*0 # inputs should be a tuple or list of log_10(mass) in TeV and log_10(x)
+                sqrtchannelfuncdictionary[darkSUSYchannel] = self.zero_output # inputs should be a tuple or list of log_10(mass) in TeV and log_10(x)
 
 
         # Saving result to class

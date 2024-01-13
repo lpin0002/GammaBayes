@@ -113,27 +113,28 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
                 
 
 
-def construct_hess_source_map_interpolation(energy_axis=energy_true_axis, 
+class construct_hess_source_map_interpolation(object):
+    
+    def __init__(self, energy_axis=energy_true_axis, 
     longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
     log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_integration):
-    axes = [energy_axis, longitudeaxis, latitudeaxis]
+        axes = [energy_axis, longitudeaxis, latitudeaxis]
 
 
-    log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_axis, 
-        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis,
-        log_aeff=log_aeff))
+        log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_axis, 
+            longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis,
+            log_aeff=log_aeff))
 
-    if normalise:
-        log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_integrator(log_astro_sourcemap, axes=axes)
+        if normalise:
+            log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_integrator(log_astro_sourcemap, axes=axes)
 
-    # Have to interpolate actual probabilities as otherwise these maps include -inf
-    hess_grid_interpolator = interpolate.RegularGridInterpolator(
-        (*axes,), 
-        np.exp(log_astro_sourcemap))
+        # Have to interpolate actual probabilities as otherwise these maps include -inf
+        self.hess_grid_interpolator = interpolate.RegularGridInterpolator(
+            (*axes,), 
+            np.exp(log_astro_sourcemap))
 
     # Then we make a wrapper to put the result of the function in log space
-    def log_astro_func(energy, longitude, latitude, 
+    def log_astro_func(self, energy, longitude, latitude, 
                        spectral_parameters={}, spatial_parameters={}): 
-        return np.log(hess_grid_interpolator((energy, longitude, latitude)))
+        return np.log(self.hess_grid_interpolator((energy, longitude, latitude)))
 
-    return log_astro_func

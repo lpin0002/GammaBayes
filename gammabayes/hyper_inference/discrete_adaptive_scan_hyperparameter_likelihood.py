@@ -4,7 +4,7 @@ from tqdm import tqdm
 from gammabayes.utils import iterate_logspace_integration, logspace_riemann, update_with_defaults
 from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
 from gammabayes.utils.config_utils import save_config_file
-from multiprocessing.pool import ThreadPool as Pool
+from multiprocessing import Pool
 import os, warnings
 import time
 
@@ -173,53 +173,61 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        t2 = time.perf_counter()
+        # t2 = time.perf_counter()
 
         likelihoodvalues = np.squeeze(self.likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
         # likelihoodvalues_ndim = likelihoodvalues.ndim
 
-        t3 = time.perf_counter()
+        # t3 = time.perf_counter()
         likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation[*index_meshes]
 
-        t4 = time.perf_counter()
+        # t4 = time.perf_counter()
         
         all_log_marg_results = []
 
-        t5_1s = []
-        t5_2s = []
-        t5_3s = []
-        t5_4s = []
+        # t5_1s = []
+        # t5_2s = []
+        # t5_3s = []
+        # t5_4s = []
 
         for prior_matrices in prior_matrix_list:
-            t5_1s.append(time.perf_counter())
+            # t5_1s.append(time.perf_counter())
 
             # Transpose is because of the convention I chose for which axes
                 # were the nuisance parameters
             logintegrandvalues = (np.squeeze(prior_matrices).T[...,index_meshes[2].T,index_meshes[1].T,index_meshes[0].T]+np.squeeze(likelihoodvalues).T).T
             
-            t5_2s.append(time.perf_counter())
+            # t5_2s.append(time.perf_counter())
 
             single_parameter_log_margvals = iterate_logspace_integration(logintegrandvalues,   
                 axes=(temp_energy_axis, temp_lon_axis, temp_lat_axis), axisindices=[0,1,2])
 
-            t5_3s.append(time.perf_counter())
+            # t5_3s.append(time.perf_counter())
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 
-            t5_4s.append(time.perf_counter())
+            # t5_4s.append(time.perf_counter())
 
 
-        t5 = time.perf_counter()
+        # t5 = time.perf_counter()
 
-        t5_1s = np.array(t5_1s)
-        t5_2s = np.array(t5_2s)
-        t5_3s = np.array(t5_3s)
+        # t5_1s = np.array(t5_1s)
+        # t5_2s = np.array(t5_2s)
+        # t5_3s = np.array(t5_3s)
 
 
-        print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}")#, end='\r')
+        # print(f"Like calc {round(t3-t2,3)}, Whole Marg Calc {round(t5-t4,3)}, Integrand Calc {round(np.mean(t5_2s-t5_1s),3)}, Integration Calc {round(np.mean(t5_3s-t5_2s),3)}, Appending Result {round(np.mean(t5_4s-t5_3s),3)}")#, end='\r')
         
         return np.array(all_log_marg_results, dtype=object)
-    from multiprocessing import Pool
+
+
+    def process_batch(self, batch, prior_matrix_list):
+        # Adjust this function to process a batch of axisvals
+        results = []
+        for axisvals in batch:
+            result = self.observation_nuisance_marg(axisvals, prior_matrix_list)
+            results.append(result)
+        return results
 
     def nuisance_log_marginalisation(self, axisvals: list | np.ndarray) -> list:
         # time1 = time.perf_counter()

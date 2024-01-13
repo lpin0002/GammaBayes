@@ -170,5 +170,8 @@ def derive_psf_bounds(irf_loglike,
 
     plt.close()
 
+    radii = np.asarray(radii)
+    radii.sort()
+
     return np.percentile(radii, percentile)
 

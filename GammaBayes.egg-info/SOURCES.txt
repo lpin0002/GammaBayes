@@ -1,4 +1,5 @@
 LICENSE
+MANIFEST.in
 README.md
 setup.py
 GammaBayes.egg-info/PKG-INFO
@@ -129,9 +130,10 @@ gammabayes/standard_inference/Z2_DM_1COMP_BKG.py
 gammabayes/standard_inference/Z2_DM_1COMP_BKG_config_default.yaml
 gammabayes/standard_inference/Z2_DM_2COMP_BKG.py
 gammabayes/standard_inference/Z2_DM_2COMP_BKG_config_default.yaml
-gammabayes/standard_inference/Z2_DM_3COMP_BKG.py
 gammabayes/standard_inference/Z2_DM_3COMP_BKG_config_default.yaml
 gammabayes/standard_inference/__init__.py
+gammabayes/standard_inference/run_standard_inf.py
+gammabayes/standard_inference/standard_3comp_bkg.py
 gammabayes/utils/__init__.py
 gammabayes/utils/config_utils.py
 gammabayes/utils/event_axes.py

@@ -148,7 +148,11 @@ class irf_extractor(object):
         self.psf3d              = self.psf_default.to_psf3d()
         self.aeff_default       = extracted_default_irfs['aeff']
 
-        self.aefffunc = lambda energy, offset: self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
+
+
+    # Deprecated function that I need to get rid of eventually
+    def aefffunc(self, energy, offset):
+        return self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
     def log_aeff(self, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
         """Wrapper for the Gammapy interpretation of the log of 
