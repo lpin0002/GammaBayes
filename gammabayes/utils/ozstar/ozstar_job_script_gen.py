@@ -59,7 +59,7 @@ def gen_scripts(config_inputs):
         job_config_file_name = f"{run_data_folder}/config.yaml"
         save_config_file(job_config_inputs, job_config_file_name)
 
-        bash_file_body = makejobscripts(job_config_inputs, job_config_file_name, path_to_run_file='-m gammabayes.standard_inference.Z2_DM_3COMP_BKG')
+        bash_file_body = makejobscripts(job_config_inputs, job_config_file_name, path_to_run_file='-m gammabayes.standard_inference.run_standard_inf')
 
         jobscript_filename = f"{run_data_folder}/jobscript.sh"
 
