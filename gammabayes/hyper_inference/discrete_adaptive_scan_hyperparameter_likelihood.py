@@ -513,6 +513,7 @@ and number of prior components is {len(self.priors)}.""")
                                                      num_in_mixture_batch: int = 10,
                                                      mixture_buffer: int = 10):
         
+        self.mixture_axes = mixture_axes
         # batched_log_margresults = self.split_into_batches(log_margresults, num_in_mixture_batch)
         batched_log_margresults = [
             [log_margresults[_index][_skip_idx:_skip_idx+num_in_mixture_batch, ...] for _index in range(len(log_margresults))]
