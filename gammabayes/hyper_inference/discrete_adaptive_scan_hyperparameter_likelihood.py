@@ -399,7 +399,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
         """
         self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
-    def _batch_create_discrete_mixture_log_hyper_likelihood(self, 
+    def _vector_process_create_discrete_mixture_log_hyper_likelihood(self, 
                                                             log_margresults: list | tuple | np.ndarray = None,
                                                             mixture_axes: list | tuple | np.ndarray = None, 
                                                             
@@ -482,6 +482,30 @@ and number of prior components is {len(self.priors)}.""")
 
         return log_hyperparameter_likelihood
     
+    def _batch_create_discrete_mixture_log_hyper_likelihood(self, 
+                                                            batched_log_margresults: list | tuple | np.ndarray = None,
+                                                            mixture_axes: list | tuple | np.ndarray = None, 
+                                                            mixture_buffer: int = 10
+                                                            ):    
+        
+
+
+         # self.log_hyper_param_likelihood =  0
+        # for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/self.mixture_scanning_buffer)))):
+        #     _temp_log_marg_reults = [self.margresults[_index][_skip_idx*self.mixture_scanning_buffer:_skip_idx*self.mixture_scanning_buffer+self.mixture_scanning_buffer, ...] for _index in range(len(self.margresults))]
+        #     self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+        #         mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
+
+        batched_log_hyper_param_likelihood= 0
+        for _batch_idx in range(0, len(batched_log_margresults[0]), mixture_buffer):
+            batched_batched_log_margresults = [batched_log_margresults[_prior_index][_batch_idx:_batch_idx+mixture_buffer, ...] for _prior_index in range(len(batched_log_margresults))]
+            batched_log_hyper_param_likelihood += self._vector_process_create_discrete_mixture_log_hyper_likelihood(
+                                                            log_margresults=batched_batched_log_margresults,
+                                                            mixture_axes=mixture_axes,
+                                                            )
+            
+        return batched_log_hyper_param_likelihood
+            
 
     def create_discrete_mixture_log_hyper_likelihood(self, 
                                                      mixture_axes: list | tuple | np.ndarray = None, 
@@ -496,7 +520,7 @@ and number of prior components is {len(self.priors)}.""")
 
         create_mixture_partial = functools.partial(
             self._batch_create_discrete_mixture_log_hyper_likelihood, 
-            mixture_axes=mixture_axes)#, mixture_buffer = mixture_buffer) 
+            mixture_axes=mixture_axes, mixture_buffer = mixture_buffer) 
         
 
         log_hyper_param_likelihood = self.log_hyperparameter_likelihood
