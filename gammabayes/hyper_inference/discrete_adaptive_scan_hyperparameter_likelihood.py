@@ -221,13 +221,19 @@ Assigning empty hyperparameter axes for remaining priors.""")
         return np.array(all_log_marg_results, dtype=object)
 
 
-    def process_batch(self, batch, prior_matrix_list):
+    def process_batch(self, batch_of_event_measurements, prior_matrix_list):
         # Adjust this function to process a batch of axisvals
         results = []
-        for axisvals in batch:
-            result = self.observation_nuisance_marg(axisvals, prior_matrix_list)
+        for event_measurement in batch_of_event_measurements:
+            result = self.observation_nuisance_marg(event_measurement, prior_matrix_list)
             results.append(result)
         return results
+    
+
+    def split_into_batches(self, data, batch_size):
+        # Implement logic to split data into batches of batch_size
+        return [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
+
 
     def nuisance_log_marginalisation(self, axisvals: list | np.ndarray) -> list:
         # time1 = time.perf_counter()
@@ -340,16 +346,21 @@ Assigning empty hyperparameter axes for remaining priors.""")
         # print(f"Prior Matrix Gen Time: {time2-time1}")
 
         marg_partial = functools.partial(
-            self.observation_nuisance_marg, 
+            self.process_batch, 
             prior_matrix_list=self.prior_matrix_list)
+        
+        axisvals = list(zip(*axisvals))
+
+        batched_event_measurements = self.split_into_batches(axisvals, 10)
 
         with Pool(self.numcores) as pool:
-            marg_results = pool.map(marg_partial, zip(*axisvals))
+            marg_results = pool.map(marg_partial, batched_event_measurements)
 
+
+        marg_results = [item for sublist in marg_results for item in sublist]
 
         # time3 = time.perf_counter()
         # print(f"Marg Time: {time3-time2}")
-
 
         marg_results = np.asarray(marg_results)
 
@@ -388,9 +399,11 @@ Assigning empty hyperparameter axes for remaining priors.""")
         """
         self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
-    def create_discrete_mixture_log_hyper_likelihood(self, 
-                                                     mixture_axes: list | tuple | np.ndarray = None, 
-                                                     log_margresults: list | tuple | np.ndarray = None):
+    def _batch_create_discrete_mixture_log_hyper_likelihood(self, 
+                                                            log_margresults: list | tuple | np.ndarray = None,
+                                                            mixture_axes: list | tuple | np.ndarray = None, 
+                                                            
+                                                            ):
         if mixture_axes is None:
             mixture_axes = self.mixture_axes
             if mixture_axes is None:
@@ -468,6 +481,38 @@ and number of prior components is {len(self.priors)}.""")
         log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
 
         return log_hyperparameter_likelihood
+    
+
+    def create_discrete_mixture_log_hyper_likelihood(self, 
+                                                     mixture_axes: list | tuple | np.ndarray = None, 
+                                                     log_margresults: list | tuple | np.ndarray = None,
+                                                     num_in_mixture_batch: int = 10,
+                                                     mixture_buffer: int = 10):
+        
+        # batched_log_margresults = self.split_into_batches(log_margresults, num_in_mixture_batch)
+        batched_log_margresults = [
+            [log_margresults[_index][_skip_idx:_skip_idx+num_in_mixture_batch, ...] for _index in range(len(log_margresults))]
+            for _skip_idx in range(0, len(log_margresults[0]), num_in_mixture_batch)]
+
+        create_mixture_partial = functools.partial(
+            self._batch_create_discrete_mixture_log_hyper_likelihood, 
+            mixture_axes=mixture_axes)#, mixture_buffer = mixture_buffer) 
+        
+
+        log_hyper_param_likelihood = self.log_hyperparameter_likelihood
+
+        with Pool(self.numcores) as pool:
+            # We use map_async here as all the results will be multiplied (summed in logspace) in the end anyways
+                # and generally aynchronous process management is faster than synchronous
+            for result in pool.imap(create_mixture_partial, batched_log_margresults):
+                log_hyper_param_likelihood += result
+
+
+        # log_hyper_param_likelihood += np.sum(create_mixture_results, axis=0)
+
+        self.log_hyperparameter_likelihood = log_hyper_param_likelihood
+
+        return log_hyper_param_likelihood
         
 
     def update_hyperparameter_likelihood(self, 

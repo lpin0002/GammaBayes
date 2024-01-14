@@ -411,17 +411,17 @@ class standard_3COMP_BKG(object):
 
         mixtureaxes = self.sigfrac_of_total_range, self.ccrfrac_of_bkg_range, self.diffusefrac_of_astro_range
 
-        self.log_hyper_param_likelihood =  0
-        for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/self.mixture_scanning_buffer)))):
-            _temp_log_marg_reults = [self.margresults[_index][_skip_idx*self.mixture_scanning_buffer:_skip_idx*self.mixture_scanning_buffer+self.mixture_scanning_buffer, ...] for _index in range(len(self.margresults))]
-            self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
-                mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
+        # self.log_hyper_param_likelihood =  0
+        # for _skip_idx in tqdm(range(int(float(self.config_dict['Nevents']/self.mixture_scanning_buffer)))):
+        #     _temp_log_marg_reults = [self.margresults[_index][_skip_idx*self.mixture_scanning_buffer:_skip_idx*self.mixture_scanning_buffer+self.mixture_scanning_buffer, ...] for _index in range(len(self.margresults))]
+        #     self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.update_hyperparameter_likelihood(self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+        #         mixture_axes=mixtureaxes, log_margresults=_temp_log_marg_reults))
+            
+
+        self.log_hyper_param_likelihood = self.hyperparameter_likelihood_instance.create_discrete_mixture_log_hyper_likelihood(
+            mixture_axes=mixtureaxes, log_margresults=self.margresults, num_in_mixture_batch=self.mixture_scanning_buffer)
 
         self.log_hyper_param_likelihood=np.squeeze(self.log_hyper_param_likelihood)
-
-        print(self.log_hyper_param_likelihood)
-        print(self.log_hyper_param_likelihood.shape)
-
 
         try:
             plot_log_hyper_param_likelihood = self.log_hyper_param_likelihood-special.logsumexp(self.log_hyper_param_likelihood)
@@ -449,8 +449,9 @@ class standard_3COMP_BKG(object):
             ax[4,3].set_xscale('log')
             ax[4,4].set_xscale('log')
             plt.tight_layout()
-            plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
-            plt.show()
+            print(f"{self.save_path}hyper_loglike_corner.pdf")
+            plt.savefig(f"{self.save_path}hyper_loglike_corner.pdf")
+            plt.close()
         except Exception as excpt:
             try:
                 print(f"An error occurred when trying to plot results: {excpt}")
@@ -481,21 +482,35 @@ class standard_3COMP_BKG(object):
                 ax[4,4].set_xscale('log')
 
                 plt.tight_layout()
-                plt.savefig(self.save_path+'hyper_loglike_corner.pdf')
-                plt.show()
+                print(f"{self.save_path}hyper_loglike_corner.pdf")
+                plt.savefig(f"{self.save_path}hyper_loglike_corner.pdf")
+                plt.close()
             except Exception as exct:
                 print(f"Could not plot results: {exct}")
             
 
     def run(self):
+
         if self.diagnostics:
             self.test_priors()
 
+        _t1 = time.perf_counter()
+
         self.simulate()
-        
+
+        _t2 = time.perf_counter()
+
         self.nuisance_marg()
 
+        _t3 = time.perf_counter()
+
         self.generate_hyper_param_likelihood()
+
+        _t4 = time.perf_counter()
+
+        print(f"Time to simulate events: {round(_t2-_t1, 3)} seconds")
+        print(f"Time to marginalise over nuisance parameters: {round(_t3-_t2, 3)} seconds")
+        print(f"Time to generate hyper param log-likelihood: {round(_t4-_t3, 3)} seconds")
 
         # self.apply_priors()
 
