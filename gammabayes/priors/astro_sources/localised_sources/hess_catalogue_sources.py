@@ -134,7 +134,7 @@ class construct_hess_source_map_interpolation(object):
             np.exp(log_astro_sourcemap))
 
     # Then we make a wrapper to put the result of the function in log space
-    def log_astro_func(self, energy, longitude, latitude, 
+    def log_func(self, energy, longitude, latitude, 
                        spectral_parameters={}, spatial_parameters={}): 
         return np.log(self.hess_grid_interpolator((energy, longitude, latitude)))
 

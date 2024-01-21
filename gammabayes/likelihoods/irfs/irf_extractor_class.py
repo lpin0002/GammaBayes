@@ -266,7 +266,7 @@ class irf_extractor(object):
                                                         offset=offset*u.deg).value)
         return output.reshape(true_lon.shape)
 
-
+    # Made for the reverse convention of parameter order required by dynesty
     def dynesty_single_loglikelihood(self, true_vals, recon_energy, recon_lon, recon_lat, pointing_direction=[0,0]):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
@@ -287,4 +287,17 @@ class irf_extractor(object):
             float: natural log of the full CTA likelihood for the given gamma-ray 
                 event data
         """
-        return self.single_loglikelihood(recon_energy, recon_lon, recon_lat, *true_vals, pointing_direction=pointing_direction)
+        true_energy, true_lon, true_lat = true_vals
+        offset  = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1])
+
+        output = np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
+                                                        migra = recon_energy/true_energy, 
+                                                        offset=offset*u.deg).value)
+
+        rad = haversine(recon_lon, recon_lat, true_lon, true_lat)
+
+        output+=  np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
+                                                        rad = rad*u.deg, 
+                                                        offset=offset*u.deg).value)
+        
+        return output

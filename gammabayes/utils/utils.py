@@ -164,6 +164,17 @@ def extract_axes(axes_config):
     return axes
 
 
+def apply_direchlet_stick_breaking_direct(mixture_values: list | tuple, 
+                                          depth: int) -> np.ndarray | float:
+    direchlet_val = 1
+
+    for _dirichlet_i in range(depth):
+        direchlet_val*=(1-mixture_values[_dirichlet_i])
+    if depth!=len(mixture_values):
+        direchlet_val*=mixture_values[depth]
+
+    return direchlet_val
+
 
 
     

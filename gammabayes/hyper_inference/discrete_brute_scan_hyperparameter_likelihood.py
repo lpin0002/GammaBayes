@@ -344,6 +344,16 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
         return reshaped_marg_results
     
+
+    def add_log_nuisance_marg_results(self, new_log_marg_results: np.ndarray) -> None:
+        """Add log nuisance marginalisation results to those within the class.
+
+        Args:
+            new_log_marg_results (np.ndarray): The log likelihood values after 
+                marginalising over nuisance parameters.
+        """
+        self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
+    
     def apply_direchlet_stick_breaking_direct(self, 
                                               xi_axes: list | tuple, 
                                               depth: int) -> np.ndarray | float:
@@ -356,16 +366,6 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
         return direchletmesh
     
-    
-    
-    def add_log_nuisance_marg_results(self, new_log_marg_results: np.ndarray) -> None:
-        """Add log nuisance marginalisation results to those within the class.
-
-        Args:
-            new_log_marg_results (np.ndarray): The log likelihood values after 
-                marginalising over nuisance parameters.
-        """
-        self.log_margresults = np.append(self.log_margresults, new_log_marg_results, axis=0)
             
     def create_discrete_mixture_log_hyper_likelihood(self, 
                                                      mixture_axes: list | tuple | np.ndarray = None, 

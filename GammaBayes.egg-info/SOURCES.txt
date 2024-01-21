@@ -63,6 +63,8 @@ gammabayes/dark_matter/models/core/__init__.py
 gammabayes/hyper_inference/__init__.py
 gammabayes/hyper_inference/discrete_adaptive_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/discrete_brute_scan_hyperparameter_likelihood.py
+gammabayes/hyper_inference/mixture_weights_sampling.py
+gammabayes/hyper_inference/stochastic_hyperparameter_likelihood.py
 gammabayes/likelihoods/__init__.py
 gammabayes/likelihoods/core/__init__.py
 gammabayes/likelihoods/core/discrete_loglikelihood.py
@@ -121,15 +123,8 @@ gammabayes/priors/core/__init__.py
 gammabayes/priors/core/discrete_logprior.py
 gammabayes/samplers/__init__.py
 gammabayes/samplers/continuous_samplers.py
-gammabayes/samplers/discrete_samplers.py
 gammabayes/samplers/inverse_transform_sampling.py
 gammabayes/samplers/sampler_utils.py
-gammabayes/samplers/dynesty/__init__.py
-gammabayes/samplers/dynesty/discrete_continuous_mix_samplers.py
-gammabayes/standard_inference/Z2_DM_1COMP_BKG.py
-gammabayes/standard_inference/Z2_DM_1COMP_BKG_config_default.yaml
-gammabayes/standard_inference/Z2_DM_2COMP_BKG.py
-gammabayes/standard_inference/Z2_DM_2COMP_BKG_config_default.yaml
 gammabayes/standard_inference/Z2_DM_3COMP_BKG_config_default.yaml
 gammabayes/standard_inference/__init__.py
 gammabayes/standard_inference/run_standard_inf.py
