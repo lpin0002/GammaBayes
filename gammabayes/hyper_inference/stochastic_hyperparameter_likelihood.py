@@ -10,7 +10,7 @@ from gammabayes.samplers.sampler_utils import dynesty_restricted_proposal_marg_w
 
 
 
-class dynesty_reweighting_class(object):
+class dynesty_scan_reweighting_class(object):
 
     def __init__(self, measured_events, irf_loglike, proposal_prior, target_priors, 
                  nuisance_axes, mixture_axes=None,

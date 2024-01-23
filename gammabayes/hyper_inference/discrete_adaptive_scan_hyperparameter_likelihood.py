@@ -145,10 +145,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
         
         print(f"Log10E val bounding radii: {self.logeval_bound}")
         print(f"Lon/Lat val bounding radii: {self.lonlat_bound}")
-        
-
-        print("\n\n\nAdaptive last update 11/01/2024\n\n\n")
-        
+                
     
 
 
