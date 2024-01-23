@@ -92,7 +92,9 @@ class EventData(object):
         return [*zip(self.energy, self.glon, self.glat, self.pointing_dirs, self.event_times)]
     
 
-
+    def __getitem__(self, key):
+        return self.data[key]
+    
     def __iter__(self):
         self._current_datum_idx = 0  # Reset the index each time iter is called
         return self
@@ -107,46 +109,63 @@ class EventData(object):
         
 
     def __str__(self):
-        num_spaces = 30
+        num_spaces = 31
 
 
 
         strinfo = "\n"
-        strinfo += "="*num_spaces+"\n"
-        strinfo += f"Event ID: {self.obs_id}\n"
+        strinfo += "="*(num_spaces+20)+"\n"
+        strinfo += f"Event Data ID: {self.obs_id}\n"
         strinfo += ":"*num_spaces+"\n"
-        strinfo += f"Nevents:              {self.Nevents}\n"
-        strinfo += f"Hemisphere:           {self.hemisphere}\n"
-        strinfo += f"Zenith Angle:         {self.zenith_angle}\n"
+        strinfo += f"Nevents                |   {self.Nevents}\n"
+        strinfo += f"Hemisphere             |   {self.hemisphere}\n"
+        strinfo += f"Zenith Angle           |   {self.zenith_angle}\n"
         strinfo += "-"*num_spaces+"\n"
-        strinfo += f"Time Start:           {self.obs_start_time}\n"
-        strinfo += f"Time End:             {self.obs_end_time}\n"
+        strinfo += f"Obs Start Time         |   {self.obs_start_time}\n"
+        strinfo += f"Obs End Time           |   {self.obs_end_time}\n"
 
         try:
-            strinfo += f"Min Event Time:       {min(self.event_times)}\n"
-        except TypeError:
-            strinfo += f"Min Event Time:       NA\n"
+            strinfo += f"Total Obs Time         |   {self.obs_end_time-self.obs_start_time} s\n"
+        except:
+            strinfo += f"Total Obs Time         |   NA\n"
+
+        strinfo += "- "*int(round(num_spaces/2))+"\n"
 
         try:
-            strinfo += f"Max Event Time:       {max(self.event_times)}\n"
+            strinfo += f"Min Event Time         |   {min(self.event_times)}\n"
         except TypeError:
-            strinfo += f"Max Event Time:       NA\n"
+            strinfo += f"Min Event Time         |   NA\n"
+
+        try:
+            strinfo += f"Max Event Time         |   {max(self.event_times)}\n"
+        except TypeError:
+            strinfo += f"Max Event Time         |   NA\n"
 
 
         strinfo += "-"*num_spaces+"\n"
 
+        strinfo += f"Num Angular Bins       |   {self.angular_bins}\n"
 
-        strinfo += f"Min Energy:            {min(self.energy)}\n"
-        strinfo += f"Max Energy:            {max(self.energy)}\n"
+        try:
+            strinfo += f"Num Energy Bins        |   {len(self.energy_bins)}\n"
+        except TypeError:
+            strinfo += f"Num Energy Bins        |   {self.energy_bins}\n"
 
-        strinfo += "="*num_spaces+"\n"
+        strinfo += "- "*int(round(num_spaces/2))+"\n"
+
+        strinfo += f"Min Energy             |   {min(self.energy)} TeV\n"
+        strinfo += f"Max Energy             |   {max(self.energy)} TeV\n"
+
+        strinfo += "="*(num_spaces+20)+"\n"
 
         return strinfo
     
 
 
 
-    def update(self, energy=None, glon=None, glat=None, pointing_dirs=None, event_times=None, data=None):
+
+
+    def update_raw_data(self, energy=None, glon=None, glat=None, pointing_dirs=None, event_times=None, data=None):
 
         if not(energy is None) and (np.asarray(energy).ndim==1):
 
@@ -191,6 +210,12 @@ class EventData(object):
 
 
 
+    def append(self, new_data):
+        if type(new_data) is EventData:
+            self.update_raw_data(pointing_dirs=new_data.pointing_dirs, event_times=new_data.event_times, data=new_data.data)
+
+        else:
+            self.update_raw_data(new_data)
 
 
     
