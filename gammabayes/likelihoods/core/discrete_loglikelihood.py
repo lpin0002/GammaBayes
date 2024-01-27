@@ -2,7 +2,7 @@ from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
-
+from gammabayes.core import EventData
 
 class discrete_loglike(object):
     
@@ -115,7 +115,7 @@ class discrete_loglike(object):
     
     
     
-    def sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray, numsamples: int = 1) -> np.ndarray:
+    def raw_sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray, numsamples: int = 1) -> np.ndarray:
         """A method to sample the likelihood for given dependent values (e.g. true event data)
 
         Args:
@@ -138,9 +138,31 @@ class discrete_loglike(object):
 
         logdx = construct_log_dx_mesh(self.axes)
 
-        simvals = np.squeeze(integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples))
+        simvals = integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples)
             
-        return np.array(simvals).T
+        return EventData(data=np.asarray(simvals).T, 
+                             energy_axis=self.axes[0], 
+                             glongitude_axis=self.axes[1], 
+                             glatitude_axis=self.axes[2], 
+                             _likelihood_id=self.name,
+                             _true_vals = False
+                             )
+    
+
+    def sample(self,eventdata: EventData):
+        measured_event_data = EventData(energy=[], glon=[], glat=[], pointing_dirs=[], 
+                                        _source_ids=[], obs_id=eventdata.obs_id,
+                                        energy_axis=self.axes[0], glongitude_axis=self.axes[1],
+                                        glatitude_axis=self.axes[2], 
+                                        _true_vals=False)
+        for event_datum in eventdata:
+            measured_event_data.append(self.raw_sample(dependentvalues=event_datum))
+
+        measured_event_data._source_ids = eventdata._source_ids
+
+        return measured_event_data
+    
+
         
         
         

@@ -9,3 +9,4 @@ numpy>=1.23
 gammapy>=0.20.1
 pandas>=1.5.3
 pytest
+h5py

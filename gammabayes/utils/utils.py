@@ -80,8 +80,7 @@ def haversine(lon1, lat1, lon2, lat2):
 #     return angles * 180 / np.pi
 
 
-def bin_centres_to_edges(axis: np.ndarray) -> np.ndarray:
-    return np.append(axis-np.diff(axis)[0]/2, axis[-1]+np.diff(axis)[0]/2)
+
 
 
 def hdp_credible_interval_1d(y: np.ndarray, sigma: np.ndarray|list, x: np.ndarray) -> list[float, float]|list[float]:

@@ -2,6 +2,7 @@ from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
+from gammabayes.core import EventData
 import matplotlib.pyplot as plt
 import warnings
 
@@ -219,9 +220,19 @@ class discrete_logprior(object):
                                                 Nsamples=numsamples)
             
                 
-            return np.asarray(simvals)
+            return EventData(data=np.asarray(simvals).T, 
+                             energy_axis=self.axes[0], 
+                             glongitude_axis=self.axes[1], 
+                             glatitude_axis=self.axes[2], 
+                             _source_ids=[self.name]*numsamples,
+                             _true_vals = True
+                             )
         else:
-            return  np.asarray([np.asarray([]) for idx in range(self.num_axes)])
+            return  EventData(energy_axis=self.axes[0], 
+                             glongitude_axis=self.axes[1], 
+                             glatitude_axis=self.axes[2], 
+                             _true_vals = True
+                             )
     
     def construct_prior_array(self, 
                               spectral_parameters: dict = {}, 

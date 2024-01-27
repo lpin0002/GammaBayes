@@ -2,13 +2,11 @@ import warnings, numpy as np
 import copy
 
 class Parameter(dict):
-    def __init__(self, initial_data=None):
+    def __init__(self, initial_data=None, **kwargs):
         data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
+        data_copy.update(kwargs)
         
         super().__init__(data_copy)
-
-        if not('name' in self):
-            self['name'] = 'UnnamedParameter'
 
         if not('scaling' in self):
             self['scaling'] = 'linear'
@@ -89,14 +87,15 @@ class Parameter(dict):
                     self.transform = self.continuous_parameter_transform_log10_scaling
 
         if not('prior_id' in self):
-            self['prior_id'] = 0
+            self['prior_id'] = np.nan
 
 
         if not('likelihood_id' in self):
-            self['likelihood_id'] = 0
+            self['likelihood_id'] = np.nan
 
         if not('parameter_type' in self):
-            self['parameter_type'] = 'spectral_parameters'
+            self['parameter_type'] = 'None'
+
 
 
     def __getattr__(self, item):
@@ -108,6 +107,14 @@ class Parameter(dict):
     def __setattr__(self, key, value):
         self[key] = value
         super().__setattr__(key, value)
+
+    @property
+    def size(self):
+        return self.axis.size
+    
+    @property
+    def shape(self):
+        return self.axis.shape
 
 
     def discrete_parameter_transform(self, u):

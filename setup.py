@@ -26,7 +26,8 @@ setup(name='GammaBayes',
         "numpy>=1.23",
         "gammapy>=0.20.1",
         "pandas>=1.5.3",
-        "pytest"
+        "pytest",
+        "h5py",
     ],
       classifiers=[
           "License :: OSI Approved :: MIT License",
