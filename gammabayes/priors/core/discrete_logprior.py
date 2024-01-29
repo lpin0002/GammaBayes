@@ -4,7 +4,7 @@ from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
 from gammabayes.core import EventData
 import matplotlib.pyplot as plt
-import warnings
+import warnings, logging
 
 class discrete_logprior(object):
     
@@ -118,7 +118,8 @@ class discrete_logprior(object):
     
     def normalisation(self, log_prior_values: np.ndarray = None, 
                       spectral_parameters: dict = {}, 
-                      spatial_parameters: dict = {}) -> np.ndarray | float:
+                      spatial_parameters: dict = {},
+                      axisindices: list = [0,1,2]) -> np.ndarray | float:
         """Return the integrated value of the prior for a given hyperparameter 
         over the default axes
 
@@ -150,7 +151,7 @@ class discrete_logprior(object):
                                                 spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
                                                 spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
                                                 )    
-        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.axes)
+        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.axes, axisindices=axisindices)
 
         return log_prior_norms
     
@@ -237,6 +238,7 @@ class discrete_logprior(object):
     def construct_prior_array(self, 
                               spectral_parameters: dict = {}, 
                               spatial_parameters: dict = {}, 
+                              normalisation_axes: list | tuple = [0,1,2],
                               normalise: bool = False,)  -> np.ndarray:
         """Construct a matrix of log prior values for input hyperparameters.
 
@@ -278,13 +280,13 @@ class discrete_logprior(object):
     
         if normalise:
             # Normalisation is done twice to reduce numerical instability issues
-            normalisation = self.normalisation(log_prior_values = outputarray)
+            normalisation = self.normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
 
-            print(normalisation.shape)
+            logging.info(f"normalisation.shape: {normalisation.shape}")
             normalisation = np.where(np.isneginf(normalisation), 0, normalisation)
             outputarray = outputarray - normalisation
 
-            normalisation = self.normalisation(log_prior_values = outputarray)
+            normalisation = self.normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
             normalisation = np.where(np.isneginf(normalisation), 0, normalisation)
             outputarray = outputarray - normalisation
 

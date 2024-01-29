@@ -1,12 +1,13 @@
 from gammabayes.core import Parameter
 import warnings, logging
 import numpy as np
+import h5py
 
 class ParameterSet(object):
 
     def __init__(self, parameter_specifications: dict = None):
 
-        self.parameter_axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
+        self.axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_name = {}
 
 
@@ -120,11 +121,11 @@ class ParameterSet(object):
             type_key = parameter['parameter_type']
             param_name = parameter['name']
 
-            if type_key in self.parameter_axes_by_type:
+            if type_key in self.axes_by_type:
                 if 'axis' in parameter:
-                    self.parameter_axes_by_type[type_key][param_name] = parameter['axis']
+                    self.axes_by_type[type_key][param_name] = parameter['axis']
                 else:
-                    self.parameter_axes_by_type[type_key][param_name] = np.nan
+                    self.axes_by_type[type_key][param_name] = np.nan
 
             self.dict_of_parameters_by_name[param_name] = parameter
 
@@ -155,7 +156,7 @@ class ParameterSet(object):
 
     @property
     def scan_format(self):
-        return self.parameter_axes_by_type
+        return self.axes_by_type
     
 
     @property
@@ -177,4 +178,55 @@ class ParameterSet(object):
     
     def __iter__(self):
         return iter(self.dict_of_parameters_by_name)
+
+
+
+    def save_to_hdf5(self, filename):
+        if not filename.endswith(".h5"):
+            filename += ".h5"
+
+        with h5py.File(filename, 'w') as f:
+            # Create a group for dict_of_parameters_by_name
+            param_group = f.create_group('dict_of_parameters_by_name')
+
+            # Iterate through each Parameter and save its data
+            for param_name, parameter in self.dict_of_parameters_by_name.items():
+                param_subgroup = param_group.create_group(param_name)
+                for key, value in parameter.items():
+                    if isinstance(value, (np.ndarray, list)):
+                        param_subgroup.create_dataset(key, data=np.array(value))
+                    elif isinstance(value, (int, float, bool)):
+                        param_subgroup.create_dataset(key, data=value)
+                    else:
+                        # Convert other types to strings
+                        param_subgroup.create_dataset(key, data=np.string_(str(value)))
+
+    @classmethod
+    def load_from_hdf5(cls, filename):
+        if not filename.endswith(".h5"):
+            filename += ".h5"
+
+        parameter_set = cls()
+
+        with h5py.File(filename, 'r') as f:
+            # Access the group where parameters are stored
+            param_group = f['dict_of_parameters_by_name']
+
+            # Iterate over each parameter stored in the file
+            for param_name in param_group:
+                param_data = {}
+                param_subgroup = param_group[param_name]
+
+                # Reconstruct each parameter's dictionary
+                for key, dataset in param_subgroup.items():
+                    if isinstance(dataset[()], bytes):  # Handle string data
+                        param_data[key] = dataset[()].decode()
+                    else:
+                        param_data[key] = dataset[()]
+
+                # Create a Parameter instance from the dictionary
+                parameter = Parameter(param_data)
+                parameter_set.dict_of_parameters_by_name[param_name] = parameter
+
+        return parameter_set
 

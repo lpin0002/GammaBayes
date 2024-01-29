@@ -126,6 +126,10 @@ class EventData(object):
         return len(self.energy)
     
 
+    def __len__(self):
+        return self.Nevents
+    
+
     # Property to return the 'full' data set as a list of tuples
     @property
     def full_data(self):
@@ -135,6 +139,7 @@ class EventData(object):
     def __getitem__(self, key):
         return self.data[key]
     
+
 
     # Iterator support to enable looping over the dataset
     def __iter__(self):
@@ -356,6 +361,51 @@ class EventData(object):
         plt.ylabel("Events")
         plt.show()
 
+
+    def create_batches(self, num_batches: int = 10):
+        if num_batches <= 0 or not isinstance(num_batches, int):
+            raise ValueError("Number of batches must be a positive integer.")
+
+        # Calculate the size of each batch
+        batch_size = len(self.energy) // num_batches
+        if batch_size == 0:
+            raise ValueError("Number of batches is too large for the dataset size.")
+
+        batches = []
+
+        for i in range(num_batches):
+            # Determine the start and end indices for each batch
+            start_idx = i * batch_size
+            end_idx = start_idx + batch_size
+
+            # Adjust the last batch to include any remaining data
+            if i == num_batches - 1:
+                end_idx = len(self.energy)
+
+            # Create a new EventData object for each batch
+            batch = EventData(
+                energy=self.energy[start_idx:end_idx],
+                glon=self.glon[start_idx:end_idx],
+                glat=self.glat[start_idx:end_idx],
+                event_times=self.event_times[start_idx:end_idx],
+                pointing_dirs=self.pointing_dirs[start_idx:end_idx],
+                _source_ids=self._source_ids[start_idx:end_idx],
+                obs_id=self.obs_id,
+                hemisphere=self.hemisphere,
+                zenith_angle=self.zenith_angle,
+                obs_start_time=self.obs_start_time,
+                obs_end_time=self.obs_end_time,
+                energy_axis=self.energy_axis,
+                glongitude_axis=self.glongitude_axis,
+                glatitude_axis=self.glatitude_axis,
+                _likelihood_id=self._likelihood_id,
+                _true_vals=self._true_vals
+            )
+
+            batches.append(batch)
+
+        return batches
+
     
 
     # Method to save the current state of the object to an HDF5 file
@@ -364,7 +414,7 @@ class EventData(object):
             filename = time.strftime(
                 f"EventData_ID{self.obs_id}_Hem{self.hemisphere}_Zen{self.zenith_angle}_Events{self.Nevents}_%y_%m_%d_%H_%M_%S.h5")
 
-        if not(filename[-2:]!=".h5"):
+        if not(filename.endswith(".h5")):
             filename = filename + ".h5"
             
         with h5py.File(filename, 'w') as f:
@@ -373,7 +423,10 @@ class EventData(object):
             f.create_dataset('glat',            data=self.glat)
             f.create_dataset('event_times',     data=self.event_times)
             f.create_dataset('pointing_dirs',   data=self.pointing_dirs)
-            f.create_dataset('_source_ids',     data=self._source_ids)
+            
+            str_dtype = h5py.special_dtype(vlen=str)  # Define a variable-length string data type
+            source_ids_dataset = f.create_dataset('_source_ids', (len(self._source_ids),), dtype=str_dtype)
+            source_ids_dataset[:] = self._source_ids  # Assign the string data
             f.create_dataset('energy_axis',     data=self.energy_axis)
             f.create_dataset('glongitude_axis', data=self.glongitude_axis)
             f.create_dataset('glatitude_axis',  data=self.glatitude_axis)

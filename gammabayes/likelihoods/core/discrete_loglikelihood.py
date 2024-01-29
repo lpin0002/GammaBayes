@@ -132,7 +132,7 @@ class discrete_loglike(object):
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
 
         
-        loglikevals = np.squeeze(self.__call__(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))
+        loglikevals = np.squeeze(self(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))
 
         loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
 
