@@ -152,6 +152,15 @@ class ParameterSet(object):
             combined.append(parameter)  # This will overwrite if param_name already exists
 
         return combined
+    
+    def items(self):
+        return self.dict_of_parameters_by_name.items()
+    
+    def values(self):
+        return self.dict_of_parameters_by_name.values()
+    
+    def keys(self):
+        return self.dict_of_parameters_by_name.keys()
         
 
     @property

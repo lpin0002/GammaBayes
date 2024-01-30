@@ -151,10 +151,10 @@ class irf_extractor(object):
 
 
     # Deprecated function that I need to get rid of eventually
-    def aefffunc(self, energy, offset):
+    def aefffunc(self, energy, offset, parameters={}):
         return self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-    def log_aeff(self, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
+    def log_aeff(self, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the log of 
             the CTA effective area function.
 
@@ -172,7 +172,7 @@ class irf_extractor(object):
                                 offset=haversine(
                                     true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).to(u.cm**2).value)
         
-    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
+    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
         Args:
@@ -194,7 +194,7 @@ class irf_extractor(object):
                                     true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).value)
 
 
-    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
+    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
         Args:
@@ -221,7 +221,10 @@ class irf_extractor(object):
         return output
 
 
-    def single_loglikelihood(self, recon_energy, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0]):
+    def single_loglikelihood(self, 
+                             recon_energy, recon_lon, recon_lat, 
+                             true_energy, true_lon, true_lat, 
+                             pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
 
@@ -267,7 +270,10 @@ class irf_extractor(object):
         return output.reshape(true_lon.shape)
 
     # Made for the reverse convention of parameter order required by dynesty
-    def dynesty_single_loglikelihood(self, true_vals, recon_energy, recon_lon, recon_lat, pointing_direction=[0,0]):
+    def dynesty_single_loglikelihood(self, 
+                                     true_vals, 
+                                     recon_energy, recon_lon, recon_lat, 
+                                     pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
 

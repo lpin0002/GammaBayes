@@ -1,8 +1,9 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
-from gammabayes.core import EventData
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
+from gammabayes import EventData, Parameter, ParameterSet
+
 
 class discrete_loglike(object):
     
@@ -14,7 +15,8 @@ class discrete_loglike(object):
                  inputunit: str | list[str] | tuple[str]        = ['None'], 
                  axes_names: list[str] | tuple[str]             = ['None'], 
                  dependent_axes_names: list[str] | tuple[str]   = ['None'], 
-                 iterative_logspace_integrator: callable        = iterate_logspace_integration
+                 iterative_logspace_integrator: callable        = iterate_logspace_integration,
+                 parameters: dict | ParameterSet          = ParameterSet(),
                  ) -> None:
         """Initialise a discrete_loglikelihood class instance.
 
@@ -79,7 +81,11 @@ class discrete_loglike(object):
 
             self.dependent_axes_dim = len(self.dependent_axes)
 
-        self.iterative_logspace_integrator = iterative_logspace_integrator 
+        self.iterative_logspace_integrator  = iterative_logspace_integrator 
+        self.parameters               = parameters
+
+        if type(self.parameters)==dict:
+            self.parameters = ParameterSet(self.parameters)
         
     def __call__(self, *args, **kwargs) -> np.ndarray | float:
         """Dunder method to be able to use the class in the same method 
@@ -91,6 +97,7 @@ class discrete_loglike(object):
         Returns:
             float or np.ndarray: The log-likelihood values for the given inputs.
         """
+        update_with_defaults(kwargs, self.parameters)
         return self.logfunction(*args, **kwargs)
     
     
@@ -115,7 +122,7 @@ class discrete_loglike(object):
     
     
     
-    def raw_sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray, numsamples: int = 1) -> np.ndarray:
+    def raw_sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray,  parameters: dict | ParameterSet = {}, numsamples: int = 1) -> np.ndarray:
         """A method to sample the likelihood for given dependent values (e.g. true event data)
 
         Args:
@@ -128,11 +135,20 @@ class discrete_loglike(object):
             np.ndarray: The resultant samples of the given axes.
         """
 
+        update_with_defaults(parameters, self.parameters)
 
-        inputmesh = np.meshgrid(*self.axes, *dependentvalues, indexing='ij')        
+        num_non_axes = len(self.axes) + len(dependentvalues)
 
+
+        inputmesh = np.meshgrid(*self.axes, *dependentvalues, *parameters.values(), indexing='ij')        
+
+        flattened_meshes = [inputaxis.flatten() for inputaxis in inputmesh]
         
-        loglikevals = np.squeeze(self(*(inputaxis.flatten() for inputaxis in inputmesh)).reshape(inputmesh[0].shape))
+        loglikevals = np.squeeze(
+            self(
+                *flattened_meshes[:num_non_axes], 
+                parameters={key:flattened_meshes[num_non_axes+param_idx] for param_idx, key in enumerate(parameters.keys())}
+                ).reshape(inputmesh[0].shape))
 
         loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
 
@@ -149,14 +165,18 @@ class discrete_loglike(object):
                              )
     
 
-    def sample(self,eventdata: EventData):
+    def sample(self,eventdata: EventData, parameters: dict | ParameterSet = {}, Nevents_per: int =1):
         measured_event_data = EventData(energy=[], glon=[], glat=[], pointing_dirs=[], 
                                         _source_ids=[], obs_id=eventdata.obs_id,
                                         energy_axis=self.axes[0], glongitude_axis=self.axes[1],
                                         glatitude_axis=self.axes[2], 
                                         _true_vals=False)
         for event_datum in eventdata:
-            measured_event_data.append(self.raw_sample(dependentvalues=event_datum))
+            measured_event_data.append(
+                self.raw_sample(dependentvalues=event_datum, 
+                                parameters=parameters, 
+                                numsamples=Nevents_per)
+                )
 
         measured_event_data._source_ids = eventdata._source_ids
 

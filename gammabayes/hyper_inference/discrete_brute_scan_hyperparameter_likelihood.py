@@ -9,25 +9,25 @@ from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time
 
 class discrete_brute_scan_hyperparameter_likelihood(object):
-    def __init__(self, priors: list[discrete_logprior] | tuple[discrete_logprior] = None, 
-                 likelihood: callable = None, 
+    def __init__(self, log_priors: list[discrete_logprior] | tuple[discrete_logprior] = None, 
+                 log_likelihood: callable = None, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  dependent_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  parameter_specifications: dict = {}, 
-                 likelihoodnormalisation: np.ndarray | float = 0., 
+                 log_likelihoodnormalisation: np.ndarray | float = 0., 
                  log_margresults: np.ndarray | None = None, 
                  mixture_param_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  log_hyperparameter_likelihood: np.ndarray | float = 0., 
                  log_posterior: np.ndarray | float = 0., 
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
                  logspace_integrator: callable = logspace_riemann,
-                 prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None,
+                 log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None,
                  log_marginalisation_regularisation: float  = None):
 
         
-        self.priors             = priors
+        self.log_priors             = log_priors
 
-        self.likelihood         = likelihood
+        self.log_likelihood         = log_likelihood
 
         # Axes for the __reconstructed__ values
         self.axes               = axes
@@ -39,7 +39,7 @@ class discrete_brute_scan_hyperparameter_likelihood(object):
         self._handle_parameter_specification(parameter_specifications=parameter_specifications)
 
         # Currently required as the normalisation of the IRFs isn't natively consistent
-        self.likelihoodnormalisation            = np.asarray(likelihoodnormalisation)
+        self.log_likelihoodnormalisation            = np.asarray(log_likelihoodnormalisation)
 
         # Log-space integrator for multiple dimensions (kind of inefficient at the moment)
         self.iterative_logspace_integrator      = iterative_logspace_integrator
@@ -61,16 +61,16 @@ class discrete_brute_scan_hyperparameter_likelihood(object):
         self.log_margresults                    = log_margresults
         self.log_hyperparameter_likelihood      = log_hyperparameter_likelihood
         self.log_posterior                      = log_posterior
-        self.prior_matrix_list                  = prior_matrix_list
+        self.log_prior_matrix_list              = log_prior_matrix_list
 
 
     def _handle_dependent_axes(self, dependent_axes):
         if dependent_axes is None:
             try:
-                return self.likelihood.dependent_axes
+                return self.log_likelihood.dependent_axes
             except AttributeError:
                 try:
-                    return self.priors[0].axes
+                    return self.log_priors[0].axes
                 except AttributeError:
                     raise Exception("Dependent value axes used for calculations not given.")
         return dependent_axes
@@ -87,7 +87,7 @@ class discrete_brute_scan_hyperparameter_likelihood(object):
             formatted_parameter_specifications.append(parameter_set)
 
         try:
-            self._num_priors = len(self.priors)
+            self._num_priors = len(self.log_priors)
         except TypeError as excpt:
             logging.warn(f"An error occured when trying to calculate the number of priors: {excpt}")
             self._num_priors = _num_parameter_specifications
@@ -117,7 +117,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
     # Most import method in this whole class. If debugging be firmly aware of
         # - prior matrices normalisations
-        # - likelihood normalisation. 
+        # - log_likelihood normalisations. 
             # Must be normalised over __measured/reconstructed__ axes __not__
             # over the dependent axes
         # - numerical stability
@@ -132,7 +132,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
             # shape is what matters)
     def observation_nuisance_marg(self, 
                                   event_vals: list | np.ndarray, 
-                                  prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray:
+                                  log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray:
         """Returns a list of the log marginalisation values for a single set of gamma-ray
             event measurements for various log prior matrices.
 
@@ -149,7 +149,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
             event_vals (iterable): A tuple of the set of measurements for a single
                 gamma-ray event.
 
-            prior_matrix_list (list): A list of lists that contain the log prior 
+            log_prior_matrix_list (list): A list of lists that contain the log prior 
                 matrices for the various values of the relevant hyperparameters 
                 for eeach prior.
 
@@ -161,17 +161,17 @@ Assigning empty hyperparameter axes for remaining priors.""")
         meshvalues  = np.meshgrid(*event_vals, *self.dependent_axes, indexing='ij')
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        likelihoodvalues = np.squeeze(self.likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
+        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
 
-        likelihoodvalues = likelihoodvalues - self.likelihoodnormalisation
+        log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation
         
         all_log_marg_results = []
 
-        for prior_matrices in prior_matrix_list:
+        for log_prior_matrices in log_prior_matrix_list:
             # Transpose is because of the convention for where I place the 
                 # axes of the true values (i.e. first three indices of the prior matrices)
                 # and numpy doesn't support this kind of matrix addition nicely
-            logintegrandvalues = (np.squeeze(prior_matrices).T+np.squeeze(likelihoodvalues).T).T
+            logintegrandvalues = (np.squeeze(log_prior_matrices).T+np.squeeze(log_likelihoodvalues).T).T
             
             single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
                 axes=self.dependent_axes)
@@ -190,18 +190,18 @@ Assigning empty hyperparameter axes for remaining priors.""")
 
 
         # Array that contains the shapes of the non-flattened shapes of the prior matrices
-        prior_marged_shapes = np.empty(shape=(len(self.priors),), dtype=object)
+        prior_marged_shapes = np.empty(shape=(len(self.log_priors),), dtype=object)
 
         # Keeps track of the nan values that pop up in the prior matrices
             # Generally not great. Good thing to check when debugging.
         nans =  0
 
-        if self.prior_matrix_list is None:
-            logging.info("prior_matrix_list does not exist. Constructing priors.")
-            prior_matrix_list =     []
+        if self.log_prior_matrix_list is None:
+            logging.info("log_prior_matrix_list does not exist. Constructing priors.")
+            log_prior_matrix_list =     []
 
-            for _prior_idx, prior in tqdm(enumerate(self.priors), 
-                                   total=len(self.priors), 
+            for _prior_idx, log_prior in tqdm(enumerate(self.log_priors), 
+                                   total=len(self.log_priors), 
                                    desc='Setting up prior matrices'):
                 
 
@@ -216,9 +216,9 @@ Assigning empty hyperparameter axes for remaining priors.""")
                                                    *[parameter_specification.size for parameter_specification in prior_spatial_params.values()])
 
 
-                if prior.efficient_exist:
-                    prior_matrices = np.squeeze(
-                        prior.construct_prior_array(
+                if log_prior.efficient_exist:
+                    log_prior_matrices = np.squeeze(
+                        log_prior.construct_prior_array(
                             spectral_parameters = prior_spectral_params,
                             spatial_parameters =  prior_spatial_params,
                             normalise=True)
@@ -226,19 +226,19 @@ Assigning empty hyperparameter axes for remaining priors.""")
                     
                     # Computation is more efficient/faster of the arrays 
                         # are as flattened as possible. Also minimises memory
-                    prior_matrices = prior_matrices.reshape(*self.likelihoodnormalisation.shape, -1)
+                    log_prior_matrices = log_prior_matrices.reshape(*self.log_likelihoodnormalisation.shape, -1)
                     
                     # Each index of the matrices that is nan shows up as 1, otherwise 0
                         # To figure out how many nans there are, you can just add the 1's
-                    nans+=np.sum(np.isnan(prior_matrices))
+                    nans+=np.sum(np.isnan(log_prior_matrices))
 
                 else:
 
                     # If the prior does not have the mesh inefficient function, that allows
                         # Easy construction of the prior matrices, then each matrix for each 
                         # combination of the hyperparameter values is calculated one-by-one
-                    prior_matrices, nans = self._mesh_inefficient_prior_construction( 
-                                             prior=prior, prior_idx=_prior_idx,
+                    log_prior_matrices, nans = self._mesh_inefficient_prior_construction( 
+                                             log_prior=log_prior, prior_idx=_prior_idx,
                                              prior_spectral_params=prior_spectral_params, 
                                              prior_spatial_params=prior_spatial_params, 
                                              Nevents=Nevents, prior_marged_shapes=prior_marged_shapes,
@@ -246,15 +246,15 @@ Assigning empty hyperparameter axes for remaining priors.""")
                                              )
 
                 # Making sure the output is a numpy array
-                prior_matrices = np.asarray(prior_matrices, dtype=float)
+                log_prior_matrices = np.asarray(log_prior_matrices, dtype=float)
 
-                prior_matrix_list.append(prior_matrices)
+                log_prior_matrix_list.append(log_prior_matrices)
 
             logging.debug(f"Total cumulative number of nan values within all prior matrices: {nans}")
             
 
             # If 
-            self.prior_matrix_list = prior_matrix_list
+            self.log_prior_matrix_list = log_prior_matrix_list
             logging.debug(f"""If debugging, check how you are treating your 
 prior matrices. Generally they are saved as an attribute of the class, but this 
 can be problematic during multiprocessing, so I would advise using the output 
@@ -263,11 +263,11 @@ class before the multiprocessing or make sure that it isn't part of the actual
 'multi' in the processing.""")
 
 
-            return prior_marged_shapes, prior_matrix_list
+            return prior_marged_shapes, log_prior_matrix_list
         
 
     def _mesh_inefficient_prior_construction(self, 
-                                             prior: discrete_logprior, 
+                                             log_prior: discrete_logprior, 
                                              prior_idx: int,
                                              prior_spectral_params: dict, 
                                              prior_spatial_params: dict, 
@@ -298,9 +298,9 @@ class before the multiprocessing or make sure that it isn't part of the actual
             flattened_hyper_parameter_coords = [[]]
 
 
-        prior_matrices  = np.empty(shape = (
+        log_prior_matrices  = np.empty(shape = (
             num_prior_values,
-            *np.squeeze(self.likelihoodnormalisation).shape,
+            *np.squeeze(self.log_likelihoodnormalisation).shape,
             )
             )
 
@@ -312,7 +312,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         for _inner_idx, hyperparametervalues in enumerate(flattened_hyper_parameter_coords):
 
             prior_matrix = np.squeeze(
-                prior.construct_prior_array(
+                log_prior.construct_prior_array(
                     spectral_parameters = {
                         param_key: hyperparametervalues[param_idx] for param_idx, param_key in enumerate(prior_spectral_params.keys())
                         },
@@ -323,9 +323,9 @@ class before the multiprocessing or make sure that it isn't part of the actual
                     )
             
             nans +=     np.sum(np.isnan(prior_matrix))
-            prior_matrices[_inner_idx,...] =    prior_matrix
+            log_prior_matrices[_inner_idx,...] =    prior_matrix
 
-        return prior_matrices, nans
+        return log_prior_matrices, nans
 
         
 
@@ -335,7 +335,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         prior_marged_shapes, _ = self.prior_gen(Nevents=measured_event_data.Nevents)
 
         marg_results = [self.observation_nuisance_marg(
-            prior_matrix_list=self.prior_matrix_list, 
+            log_prior_matrix_list=self.log_prior_matrix_list, 
             event_vals=event_data) for event_data in measured_event_data.data]
                 
         marg_results = np.asarray(marg_results)
@@ -344,7 +344,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         # Making the output iterable around the priors, not the events.
             # Much easier to work with.
         reshaped_marg_results = []
-        for _prior_idx in range(len(self.priors)):
+        for _prior_idx in range(len(self.log_priors)):
             stacked_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
 
             logging.info('\nstacked_marg_results shape: ', stacked_marg_results.shape)
@@ -379,17 +379,18 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
     
     def apply_direchlet_stick_breaking_direct(self, 
-                                              xi_axes: list | tuple, 
+                                              mixtures_fraction_axes: list | tuple, 
                                               depth: int) -> np.ndarray | float:
 
         direchletmesh = 1
 
         for _dirichlet_i in range(depth):
-            direchletmesh*=(1-xi_axes[_dirichlet_i])
+            direchletmesh*=(1-mixtures_fraction_axes[_dirichlet_i])
 
-        not_max_depth = depth!=len(xi_axes)
+        not_max_depth = depth!=len(mixtures_fraction_axes)
+        
         if not_max_depth:
-            direchletmesh*=xi_axes[depth]
+            direchletmesh*=mixtures_fraction_axes[depth]
 
         return direchletmesh
     
@@ -404,11 +405,11 @@ class before the multiprocessing or make sure that it isn't part of the actual
         else:
             self.mixture_param_set = ParameterSet(mixture_param_set)
 
-        if not(self.priors is None):
-            if len(mixture_param_set)!=len(self.priors)-1:
+        if not(self.log_priors is None):
+            if len(mixture_param_set)!=len(self.log_priors)-1:
                 raise Exception(f""""Number of mixture axes does not match number of components (minus 1). Please check your inputs.
 Number of mixture axes is {len(mixture_param_set)}
-and number of prior components is {len(self.priors)}.""")
+and number of prior components is {len(self.log_priors)}.""")
             
         if log_margresults is None:
             log_margresults = self.log_margresults
@@ -420,26 +421,26 @@ and number of prior components is {len(self.priors)}.""")
                             log_margresults_for_idx:np.ndarray,
                             mix_axes_mesh:list[np.ndarray],
                             final_output_shape:list,
-                            prior_axes,
+                            prior_axes_indices,
                             hyper_idx):
         # Including 'event' and mixture axes for eventual __non__ expansion into
-        prior_axis_instance = list(range(1+len(mix_axes_mesh)))
+        single_prior_axes_indices_instance = list(range(1+len(mix_axes_mesh)))
 
         # First index of 'log_margresults_for_idx' should just be the number of events
         for length_of_axis in log_margresults_for_idx.shape[1:]:
 
             final_output_shape.append(length_of_axis)
 
-            prior_axis_instance.append(hyper_idx)
+            single_prior_axes_indices_instance.append(hyper_idx)
 
             # Keeping track of the indices in each prior for the final output
             hyper_idx+=1
 
-        prior_axes.append(prior_axis_instance)
+        prior_axes_indices.append(single_prior_axes_indices_instance)
 
 
         mixcomp = np.expand_dims(np.log(
-            self.apply_direchlet_stick_breaking_direct(xi_axes=mix_axes_mesh, depth=prior_idx)), 
+            self.apply_direchlet_stick_breaking_direct(mixtures_fraction_axes=mix_axes_mesh, depth=prior_idx)), 
             axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes_mesh)), 
                                 np.arange(len(mix_axes_mesh))+1),)) 
 
@@ -466,7 +467,7 @@ and number of prior components is {len(self.priors)}.""")
         final_output_shape = [len(log_margresults), *np.arange(len(mixture_parameter_set)), ]
 
         # Axes for each of the priors to __not__ expand in
-        prior_axes = []
+        prior_axes_indices = []
 
         # Counter for how many hyperparameter axes we have used
         hyper_idx = len(mixture_parameter_set)+1
@@ -481,7 +482,7 @@ and number of prior components is {len(self.priors)}.""")
                             log_margresults_for_idx = log_margresults_for_idx,
                             mix_axes_mesh=mix_axes_mesh,
                             final_output_shape=final_output_shape,
-                            prior_axes=prior_axes,
+                            prior_axes_indices=prior_axes_indices,
                             hyper_idx=hyper_idx)
             
             mixture_array_comp_list.append(mix_comp)
@@ -490,7 +491,7 @@ and number of prior components is {len(self.priors)}.""")
         for _prior_idx, mixture_array in enumerate(mixture_array_comp_list):
             axis = []
             for _axis_idx in range(len(final_output_shape)):
-                if not(_axis_idx in prior_axes[_prior_idx]):
+                if not(_axis_idx in prior_axes_indices[_prior_idx]):
                     axis.append(_axis_idx)
             axis = tuple(axis)
 
@@ -617,13 +618,13 @@ and number of prior components is {len(self.priors)}.""")
         
         packed_data['parameter_specifications']                 = self.parameter_specifications
         if not(reduce_mem_consumption):
-            packed_data['priors']                              = self.priors
-            packed_data['likelihood']                          = self.likelihood
+            packed_data['log_priors']                              = self.log_priors
+            packed_data['log_likelihood']                          = self.log_likelihood
             
-        packed_data['axes']                                = self.axes
-        packed_data['dependent_axes']                      = self.dependent_axes
-        packed_data['log_hyperparameter_likelihood']       = self.log_hyperparameter_likelihood
-        packed_data['mixture_param_set']                        = self.mixture_param_set
+        packed_data['axes']                                 = self.axes
+        packed_data['dependent_axes']                       = self.dependent_axes
+        packed_data['log_hyperparameter_likelihood']        = self.log_hyperparameter_likelihood
+        packed_data['mixture_param_set']                    = self.mixture_param_set
 
         packed_data['log_posterior']                        = self.log_posterior
                 
