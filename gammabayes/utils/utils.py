@@ -163,17 +163,36 @@ def extract_axes(axes_config):
     return axes
 
 
-def apply_direchlet_stick_breaking_direct(mixture_values: list | tuple, 
-                                          depth: int) -> np.ndarray | float:
-    direchlet_val = 1
+def apply_direchlet_stick_breaking_direct(mixtures_fractions: list | tuple, 
+                                            depth: int) -> np.ndarray | float:
+
+    direchletmesh = 1
 
     for _dirichlet_i in range(depth):
-        direchlet_val*=(1-mixture_values[_dirichlet_i])
-    if depth!=len(mixture_values):
-        direchlet_val*=mixture_values[depth]
+        direchletmesh*=(1-mixtures_fractions[_dirichlet_i])
 
-    return direchlet_val
-
-
-
+    not_max_depth = depth!=len(mixtures_fractions)
     
+    if not_max_depth:
+        direchletmesh*=mixtures_fractions[depth]
+
+    return direchletmesh
+
+
+
+def bound_axis(axis: np.ndarray, 
+                bound_type: str, 
+                bound_radii: float, 
+                estimated_val: float):
+
+    if bound_type=='linear':
+        axis_indices = np.where(
+        (axis>estimated_val-bound_radii) & (axis<estimated_val+bound_radii) )[0]
+
+    elif bound_type=='log10':
+        axis_indices = np.where(
+        (np.log10(axis)>np.log10(estimated_val)-bound_radii) & (np.log10(axis)<np.log10(estimated_val)+bound_radii) )[0]
+        
+    temp_axis = axis[axis_indices]
+
+    return temp_axis, axis_indices

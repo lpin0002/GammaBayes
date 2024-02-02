@@ -4,12 +4,92 @@ from gammabayes.core.core_utils import bin_centres_to_edges
 
 class EventData(object):
 
-    def __init__(self, energy=None, glon=None, glat=None, data=None, 
-                 event_times=None, pointing_dirs=None, 
-                 obs_start_time=None, obs_end_time=None,
-                 hemisphere=None, zenith_angle=None, obs_id='NoID',
-                 energy_axis=np.nan, glongitude_axis=np.nan, glatitude_axis=np.nan,
-                 _source_ids=None, _likelihood_id=np.nan, _true_vals=False):
+    def __init__(self, 
+                 energy: np.ndarray = None, 
+                 glon: np.ndarray = None, 
+                 glat: np.ndarray = None, 
+                 data: np.ndarray = None, 
+                 event_times: np.ndarray = None, 
+                 pointing_dirs: np.ndarray = None, 
+                 obs_start_time: float = None, 
+                 obs_end_time: float = None,
+                 hemisphere: str = None, 
+                 zenith_angle: int = None, 
+                 obs_id: any ='NoID',
+                 energy_axis: np.ndarray = np.nan, 
+                 glongitude_axis: np.ndarray = np.nan, 
+                 glatitude_axis: np.ndarray = np.nan,
+                 _source_ids: np.ndarray[str] = None, 
+                 _likelihood_id: np.ndarray[str] = np.nan, 
+                 _true_vals: bool = False):
+        """
+        Initializes an EventData object to manage and preprocess astronomical event data.
+        
+        This class is designed to handle event data for astronomical observations, 
+        including energy measurements, galactic longitude (glon), and galactic latitude (glat). 
+        It supports initializing data either from separate arrays of energy, glon, and glat, 
+        or a combined data array. Additional data regarding the observation can also be provided.
+        
+        Parameters:
+        - energy (array-like, optional): Array of energy measurements for the events.
+        
+        - glon (array-like, optional): Array of galactic longitude coordinates for the events.
+        
+        - glat (array-like, optional): Array of galactic latitude coordinates for the events.
+        
+        - data (array-like, optional): Combined array of the format [energy, glon, glat, ...] for the events.
+        
+        - event_times (array-like, optional): Array of observation times for the events.
+        
+        - pointing_dirs (array-like, optional): Array of pointing directions for the telescope during observations.
+        
+        - obs_start_time, obs_end_time (scalar, optional): Start and end times of the observation period.
+        
+        - hemisphere (str, optional): Hemisphere in which the observation was made.
+        
+        - zenith_angle (int, optional): Zenith angle of the observation.
+        
+        - obs_id (str, optional): Identifier for the observation, defaults to 'NoID'.
+        
+        - energy_axis, glongitude_axis, glatitude_axis (array-like, optional): Axes definitions for binning the data. Defaults to np.nan, indicating automatic binning.
+        
+        - _source_ids (array-like, optional): Private attribute for source IDs.
+        
+        - _likelihood_id (scalar, optional): Private attribute for likelihood ID, defaults to np.nan.
+        
+        - _true_vals (bool, optional): Flag to indicate if true values are being used, defaults to False.
+        
+        Attributes:
+        - energy, glon, glat: Arrays containing the energy, galactic longitude, and latitude of events.
+        
+        - data: Structured array containing the event data.
+        
+        - event_times: Array of event times.
+        
+        - pointing_dirs: Array of pointing directions.
+        
+        - obs_id: Observation ID.
+        
+        - hemisphere: Hemisphere of observation.
+        
+        - zenith_angle: Zenith angle of observation.
+        
+        - obs_start_time, obs_end_time: Observation start and end times.
+        
+        - energy_axis, glongitude_axis, glatitude_axis: Axes for data binning.
+        
+        - _source_ids: Source IDs (private).
+        
+        - _likelihood_id: Likelihood ID (private).
+        
+        - _true_vals: Indicates if true values are used (private).
+        
+        The constructor handles missing data by assigning NaNs and sets up array shapes appropriately. 
+        It defines axes and bins for energy and angular coordinates, falling back to default bins if not provided. 
+        Observation metadata such as ID, hemisphere, zenith angle, and start/end times are stored, along with 
+        private attributes for source and likelihood ID.
+        """
+
         
 
         # Initialize data arrays based on provided energy, glon, and glat, or from 'data' array
@@ -123,31 +203,75 @@ class EventData(object):
     # Property to return the number of events
     @property
     def Nevents(self):
+        """
+        Calculates the number of events by counting the elements in the energy array.
+
+        Returns:
+            int: The total number of events in the dataset.
+        """
         return len(self.energy)
     
 
     def __len__(self):
+        """
+        Enables the use of the len() function on an EventData instance to obtain the number of events.
+
+        Returns:
+            int: The total number of events in the dataset, equivalent to Nevents.
+        """
         return self.Nevents
     
 
     # Property to return the 'full' data set as a list of tuples
     @property
     def full_data(self):
+        """
+        Constructs the 'full' dataset as a list of tuples, each containing data for a single event,
+        including energy, galactic longitude, galactic latitude, pointing directions, and event times.
+
+        Returns:
+            list of tuples: The complete dataset with each tuple representing an event's data.
+        """
         return [*zip(self.energy, self.glon, self.glat, self.pointing_dirs, self.event_times)]
     
     # Support for indexing like a list or array
-    def __getitem__(self, key):
+    def __getitem__(self, key: int | slice):
+        """
+        Enables indexing into the EventData instance like a list or array, allowing direct access to 
+        the data array's elements.
+
+        Args:
+            key (int, slice): The index or slice of the data array to retrieve.
+
+        Returns:
+            ndarray: The data at the specified index or slice.
+        """
         return self.data[key]
     
 
 
     # Iterator support to enable looping over the dataset
     def __iter__(self):
+        """
+        Resets the internal counter and returns the iterator object (self) to enable looping over the dataset.
+
+        Returns:
+            self: The instance itself to be used as an iterator.
+        """
         self._current_datum_idx = 0  # Reset the index each time iter is called
         return self
 
     # Next method for iterator protocol
     def __next__(self):
+        """
+        Advances to the next item in the dataset. If the end of the dataset is reached, it raises a StopIteration.
+
+        Raises:
+            StopIteration: Indicates that there are no further items to return.
+
+        Returns:
+            ndarray: The next data item in the sequence.
+        """
         if self._current_datum_idx < len(self.data):
             current_data = self.data[self._current_datum_idx]
             self._current_datum_idx += 1
@@ -157,6 +281,17 @@ class EventData(object):
         
     # String representation for the EventData object
     def __str__(self):
+        """
+        Provides a string representation of the EventData object, summarizing its key attributes and statistics.
+
+        This method formats the observation data and statistics into a human-readable summary, 
+        including the number of events, observation ID, hemisphere, zenith angle, observation start and end times, 
+        total observation time, minimum and maximum event times, number of angular and energy bins, 
+        minimum and maximum energy, and information on source and likelihood IDs.
+
+        Returns:
+            str: A formatted string summarizing the EventData object's key attributes and statistics.
+        """
         num_spaces = 31
         strinfo = "\n"
         strinfo += "="*(num_spaces+20)+"\n"
@@ -215,9 +350,38 @@ class EventData(object):
 
 
     # Method to update raw data arrays with new data
-    def update_raw_data(self, energy=None, glon=None, glat=None, 
-                        pointing_dirs=None, event_times=None, _source_ids=None, 
-                        data=None):
+    def update_raw_data(self, 
+                        energy: np.ndarray = None, 
+                        glon: np.ndarray = None, 
+                        glat: np.ndarray = None, 
+                        pointing_dirs=None, 
+                        event_times: np.ndarray = None, 
+                        _source_ids: np.ndarray = None, 
+                        data: np.ndarray = None):
+        """
+        Updates the raw data arrays of the EventData object with new data. 
+
+        This method allows for the addition of new event data either through individual parameter arrays 
+        or a unified data array. It appends new data to existing arrays, updating the EventData object.
+        Other parameters besides the energy, glon, glat, pointing_dirs, event_times, _source_ids and data,
+        are not expected to be updated as the class is typically for a single observation, and the other
+        parameters describe this observation thus should not need be updated.
+
+        Args:
+            energy (array-like, optional): New energy measurements to be added.
+            
+            glon (array-like, optional): New galactic longitude measurements to be added.
+            
+            glat (array-like, optional): New galactic latitude measurements to be added.
+            
+            pointing_dirs (array-like, optional): New pointing directions to be added.
+            
+            event_times (array-like, optional): New event times to be added.
+            
+            _source_ids (array-like, optional): New source IDs to be added.
+            
+            data (array-like, optional): Unified array containing new data in the format [energy, glon, glat, ...].
+        """
 
         # Checks to see if energy is given and if the first argument is actually data
         if not(energy is None) and (np.asarray(energy).ndim==1):
@@ -276,7 +440,15 @@ class EventData(object):
 
 
     # Method to append new data to the existing dataset
-    def append(self, new_data):
+    def append(self, new_data: np.ndarray):
+        """
+        Appends new data to the existing dataset.
+
+        This method allows for the addition of new data from another EventData instance or a structured data array.
+
+        Args:
+            new_data (EventData or array-like): The new data to be appended. If new_data is an EventData instance, its data is extracted and appended; otherwise, the method assumes new_data is a structured array compatible with the EventData format.
+        """
         if type(new_data) is EventData:
             self.update_raw_data(pointing_dirs=new_data.pointing_dirs, event_times=new_data.event_times, data=new_data.data)
 
@@ -285,6 +457,18 @@ class EventData(object):
 
 
     def __add__(self, other):
+        """
+        Enables the addition of two EventData objects using the '+' operator, concatenating their data arrays.
+
+        Args:
+            other (EventData): Another EventData object to be added to this one.
+
+        Returns:
+            EventData: A new EventData instance containing the combined data of both operands.
+
+        Raises:
+            NotImplemented: If 'other' is not an instance of EventData.
+        """
         if not isinstance(other, EventData):
             return NotImplemented
 
@@ -315,16 +499,45 @@ class EventData(object):
 
     # Extract raw data lists for external use
     def extract_lists(self):
+        """
+        Extracts raw data arrays as lists for external use.
+
+        Returns:
+            tuple: Contains arrays of energy, galactic longitude, galactic latitude, pointing directions, and event times.
+        """
         return self.energy, self.glon, self.glat, self.pointing_dirs, self.event_times
     
 
     # Extract axes information for energy and angular coordinates
     def extract_event_axes(self):
+        """
+        Extracts the axes information for energy and angular coordinates.
+
+        Returns:
+            tuple: Contains arrays for energy axis, galactic longitude axis, and galactic latitude axis.
+        """
         return self.energy_axis, self.glongitude_axis, self.glatitude_axis
 
 
     # Visualization method to peek at the data distributions
-    def peek(self, figsize=(10,4), colorscale='log', *args, **kwargs):
+    def peek(self, 
+             figsize: tuple[int] = (10,4), 
+             colorscale:str = 'log', 
+             *args, 
+             **kwargs):
+        """
+        Generates a visualization of the data distributions for energy and angular coordinates.
+        It expects a non-zero number of events. Any arguments or keywords outside figsize and 
+        colorscale are passed into 'plt.subplots'.
+
+        Args:
+            figsize (tuple, optional): Size of the figure.
+            
+            colorscale (str, optional): Color scale to use for the histogram. Defaults to 'log' for logarithmic color scaling.
+
+        Returns:
+            matplotlib.figure.Figure, matplotlib.axes.Axes: The figure and axes objects of the plot.
+        """
         if colorscale == 'log':
             colorscale = colors.LogNorm()
         else:
@@ -346,8 +559,18 @@ class EventData(object):
 
         return fig, ax
     
-    def hist_sources(self, figsize=(6,6), *args, **kwargs):
-        fig = plt.figure(figsize=(6,6), *args, **kwargs)
+    def hist_sources(self, 
+                     figsize: tuple[int] = (6,6), 
+                     *args, 
+                     **kwargs):
+        """
+        Creates a histogram of the source IDs to visualize the distribution of events across sources.
+        Everything else besides figsize is passed into 'plt.figure'.
+
+        Args:
+            figsize (tuple, optional): Size of the figure.
+        """
+        fig = plt.figure(figsize=figsize, *args, **kwargs)
         _, bins, _ = plt.hist(self._source_ids, bins=len(np.unique(self._source_ids)))
         ax = plt.gca()
         labels = [item.get_text() for item in ax.get_xticklabels()]
@@ -363,6 +586,18 @@ class EventData(object):
 
 
     def create_batches(self, num_batches: int = 10):
+        """
+        Splits the data into a specified number of batches, each as a separate EventData object.
+
+        Args:
+            num_batches (int, optional): The number of batches to create.
+
+        Raises:
+            ValueError: If num_batches is not a positive integer or is too large for the dataset size.
+
+        Returns:
+            list of EventData: A list containing the split EventData objects.
+        """
         if num_batches <= 0 or not isinstance(num_batches, int):
             raise ValueError("Number of batches must be a positive integer.")
 
@@ -409,7 +644,13 @@ class EventData(object):
     
 
     # Method to save the current state of the object to an HDF5 file
-    def save(self, filename=None):
+    def save(self, filename: str = None):
+        """
+        Saves the current state of the EventData object to an HDF5 file.
+
+        Args:
+            filename (str, optional but advised): Name of the file to save the data to. If not provided, a filename is generated based on the observation ID, hemisphere, zenith angle, and current time.
+        """
         if filename is None:
             filename = time.strftime(
                 f"EventData_ID{self.obs_id}_Hem{self.hemisphere}_Zen{self.zenith_angle}_Events{self.Nevents}_%y_%m_%d_%H_%M_%S.h5")
@@ -423,7 +664,7 @@ class EventData(object):
             f.create_dataset('glat',            data=self.glat)
             f.create_dataset('event_times',     data=self.event_times)
             f.create_dataset('pointing_dirs',   data=self.pointing_dirs)
-            
+
             str_dtype = h5py.special_dtype(vlen=str)  # Define a variable-length string data type
             source_ids_dataset = f.create_dataset('_source_ids', (len(self._source_ids),), dtype=str_dtype)
             source_ids_dataset[:] = self._source_ids  # Assign the string data
@@ -442,7 +683,16 @@ class EventData(object):
 
     # Class method to load an EventData object from an HDF5 file
     @classmethod
-    def load_from_hdf5(cls, filename):
+    def load_from_hdf5(cls, filename: str):
+        """
+        Loads an EventData object from an HDF5 file.
+
+        Args:
+            filename (str): The path to the HDF5 file from which to load the data.
+
+        Returns:
+            EventData: An instance of EventData initialized with the data loaded from the specified file.
+        """
         with h5py.File(filename, 'r') as f:
             # Access the datasets
             energy          = np.array(f['energy'])
@@ -451,6 +701,11 @@ class EventData(object):
             event_times     = np.array(f['event_times'])
             pointing_dirs   = np.array(f['pointing_dirs'])
             _source_ids     = np.array(f['_source_ids'])
+            # Decode each string from bytes to str if they are bytes
+            if _source_ids.dtype == object:  # Checks if the dtype is object, indicating bytes
+                _source_ids_decoded = np.array([s.decode('utf-8') if isinstance(s, bytes) else s for s in _source_ids])
+            else:
+                _source_ids_decoded = _source_ids  # If already strings, no need to decode
             energy_axis     = np.array(f['energy_axis'])
             glongitude_axis = np.array(f['glongitude_axis'])
             glatitude_axis  = np.array(f['glatitude_axis'])
@@ -464,12 +719,13 @@ class EventData(object):
             _likelihood_id  = f.attrs['_likelihood_id']
             _true_vals      = f.attrs['_true_vals']
 
+
         return EventData(energy=energy, glon=glon, glat=glat, pointing_dirs=pointing_dirs,
                          energy_axis=energy_axis, glongitude_axis=glongitude_axis, glatitude_axis=glatitude_axis,
                          obs_id=obs_id, hemisphere=hemisphere, zenith_angle=zenith_angle,
                          event_times=event_times,
                          obs_start_time=obs_start_time, obs_end_time=obs_end_time,
-                         _source_ids=_source_ids, _likelihood_id=_likelihood_id, _true_vals=_true_vals)
+                         _source_ids=_source_ids_decoded, _likelihood_id=_likelihood_id, _true_vals=_true_vals)
 
 
 

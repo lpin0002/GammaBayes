@@ -17,6 +17,8 @@ from scipy.special import logsumexp
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
+from gammabayes.priors.core import discrete_logprior
+
 
 def construct_fermi_gaggero_matrix(energy_axis=energy_true_axis, 
     longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue, log_aeff=log_aeff, logspace_integrator=logspace_riemann):
@@ -98,5 +100,9 @@ class construct_log_fermi_gaggero_bkg(object):
         self.fermi_diffuse_interpolator(
             (energy, longitude, latitude)
             ))
+    
+
+class fermi_gaggero_diffuse_bkg(discrete_logprior):
+    pass
 
 

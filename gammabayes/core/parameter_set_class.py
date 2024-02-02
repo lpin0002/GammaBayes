@@ -4,19 +4,32 @@ import numpy as np
 import h5py
 
 class ParameterSet(object):
+    """
+    A collection of Parameter objects, organized for efficient manipulation, retrieval,
+    and storage. Supports various input formats for initializing the set, including
+    dictionaries, lists, and other ParameterSet instances.
+    """
 
-    def __init__(self, parameter_specifications: dict = None):
+    def __init__(self, parameter_specifications: dict | list | tuple = None):
+        """
+        Initializes a ParameterSet with the given parameter specifications.
+
+        Args:
+            parameter_specifications (dict | list | ParameterSet | tuple, optional): A dictionary, list, tuple, or another
+                ParameterSet instance containing the specifications for initializing the parameter set.
+                This can include parameter names, types, prior names, and their specifications or instances.
+        """
 
         self.axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_name = {}
 
 
 
-        if (type(parameter_specifications) is dict):
+        if (type(parameter_specifications) == dict):
             try:
                 initial_type = type(list(parameter_specifications.values())[0])
             except IndexError as indexerr:
-                print(f"An error occurred: {indexerr}")
+                logging.warning(f"An error occurred: {indexerr}")
                 initial_type = None
 
 
@@ -26,7 +39,7 @@ class ParameterSet(object):
                 try:
                     secondary_type_is_dict = type(list(list(parameter_specifications.values())[0].values())[0]) == dict
                 except IndexError as indexerr:
-                    print(f"An error occurred: {indexerr}")
+                    logging.warning(f"An error occurred: {indexerr}")
                     secondary_type_is_dict = False 
 
 
@@ -44,14 +57,14 @@ class ParameterSet(object):
             else:
                 warnings.warn("Something went wrong when tring to access dictionary values.")
 
-        elif (type(parameter_specifications) is tuple):
+        elif (type(parameter_specifications) == tuple):
             unformatted_parameter_specifications = list(parameter_specifications)
             parameter_specifications = {unformatted_parameter_specifications[0]: unformatted_parameter_specifications[1]}
             
-            if type(unformatted_parameter_specifications[1]) is dict:
+            if type(unformatted_parameter_specifications[1]) == dict:
                 self.handle_plain_dict_input(parameter_specifications)
 
-            elif type(unformatted_parameter_specifications[1]) is Parameter:
+            elif type(unformatted_parameter_specifications[1]) == Parameter:
                 self.handle_dict_of_param_input(parameter_specifications)
 
         elif (type(parameter_specifications)==list):
@@ -67,8 +80,19 @@ class ParameterSet(object):
             self.append(parameter_specifications)            
 
 
+    # This method presumes that you have given the specifications in the form of 
+            # nested dictionaries of the form
+            # prior_name > parameter type > parameter name > parameter specifications
+    def handle_plain_dict_input(self, dict_input: dict[dict[dict[dict]]]):
+        """
+        Handles input in the form of a nested dictionary specifying parameter types, names,
+        and specifications, structured by prior name.
 
-    def handle_plain_dict_input(self, dict_input):
+        Args:
+            dict_input (dict): The input dictionary containing parameter specifications.
+        """
+
+        
         for prior_name, single_prior_parameter_specifications in dict_input.items():
             for type_key, type_value in single_prior_parameter_specifications.items():
                 for param_name, param_specification in type_value.items():
@@ -78,31 +102,87 @@ class ParameterSet(object):
                                                       prior_name=prior_name)
                     self.append(parameter)
 
+    # This method presumes that you have given the specifications in the form of 
+            # nested dictionaries of the form
+            # parameter name > parameter specifications
+    def handle_name_dict_input(self, dict_input: dict[dict]):
+        """
+        Handles input where specifications are given in the form of a dictionary keyed
+        by parameter name.
 
-    def handle_name_dict_input(self, dict_input):
+        Args:
+            dict_input (dict): The input dictionary containing parameter specifications.
+        """
         for param_name, single_parameter_specifications in dict_input.items():
 
             parameter = self.create_parameter(param_specification=single_parameter_specifications, 
                                               param_name=param_name)
             self.append(parameter)
 
-    def handle_dict_of_param_input(self, dict_input):
+
+    # This method presumes that you have given the specifications in the form of 
+            # nested dictionaries of the form
+            # parameter name > parameter class instances
+    def handle_dict_of_param_input(self, dict_input: dict[Parameter]):
+        """
+        Processes input given as a dictionary of Parameter instances keyed by parameter name.
+
+        Args:
+            dict_input (dict): The input dictionary of Parameter instances.
+        """
         for param_name, parameter_object in dict_input.items():
             self.append(parameter_object)
 
+    # This method presumes that you have given the specifications in the form of 
+            # a list of parameter objects
+    def handle_list_param_input(self, list_input : list[Parameter]):
+        """
+        Accepts a list of Parameter objects and appends them to the set.
 
-    def handle_list_param_input(self, list_input):
+        Args:
+            list_input (list): The list of Parameter objects.
+        """
         for parameter_object in list_input:
             self.append(parameter_object)
 
-    def handle_list_specification_input(self, list_input):
+
+    # This method presumes that you have given the specifications in the form of 
+            # a list of dictionaries containing the specifications for the parameters
+    def handle_list_specification_input(self, list_input: list[Parameter]):
+        """
+        Handles input given as a list of dictionaries, each containing specifications
+        for a parameter.
+
+        Args:
+            list_input (list): The list of dictionaries with parameter specifications.
+        """
         for parameter_specification in list_input:
             parameter_object = Parameter(parameter_specification)
             self.append(parameter_object)
 
 
+    # A kind of filter class for creating parameters for use within the Set
+    def create_parameter(self, 
+                         param_specification: dict, 
+                         param_name: str = None, 
+                         type_key: str = None, 
+                         prior_name: str = None):
+        """
+        Creates a Parameter object from given specifications, optionally setting its
+        type, name, and associated prior name.
 
-    def create_parameter(self, param_specification, param_name=None, type_key=None, prior_name=None):
+        Args:
+            param_specification (dict): Specifications for the parameter.
+            
+            param_name (str, optional): Name of the parameter.
+            
+            type_key (str, optional): Type of the parameter (e.g., 'spectral_parameters').
+            
+            prior_name (str, optional): Name of the prior associated with the parameter.
+
+        Returns:
+            Parameter: The created Parameter object.
+        """
         parameter = Parameter(param_specification)
 
         if type_key is not None:
@@ -115,10 +195,19 @@ class ParameterSet(object):
             parameter['prior_id'] = prior_name
 
         return parameter
+    
 
-    def append(self, parameter):
+
+    def append(self, parameter: Parameter):
+        """
+        Appends a Parameter object or another ParameterSet to this set.
+
+        Args:
+            parameter (Parameter or ParameterSet): The parameter or parameter set to append.
+        """
         if isinstance(parameter, Parameter):
             type_key = parameter['parameter_type']
+
             param_name = parameter['name']
 
             if type_key in self.axes_by_type:
@@ -136,11 +225,29 @@ class ParameterSet(object):
 
 
     def __len__(self):
+        """
+        Returns the number of parameters in the set.
+
+        Returns:
+            int: The number of parameters.
+        """
         return len(self.dict_of_parameters_by_name)
 
 
-
+    # Allows the behaviour of set1 + set2 = new combined set
     def __add__(self, other):
+        """
+        Allows the addition of two ParameterSets, combining their parameters into a new set.
+
+        Args:
+            other (ParameterSet): The other ParameterSet to add.
+
+        Returns:
+            ParameterSet: A new ParameterSet instance containing parameters from both sets.
+
+        Raises:
+            TypeError: If 'other' is not an instance of ParameterSet.
+        """
         if not isinstance(other, ParameterSet):
             raise TypeError("Can only add another ParameterSet")
 
@@ -153,89 +260,182 @@ class ParameterSet(object):
 
         return combined
     
+
+    # Below three methods are toreplicate straight dictionary behaviour
     def items(self):
+        """
+        Returns a view of the parameter set's items (parameter name, Parameter object pairs).
+
+        Returns:
+            ItemsView: A view of the parameter set's items.
+        """
         return self.dict_of_parameters_by_name.items()
     
     def values(self):
+        """
+        Returns a view of the parameters in the set.
+
+        Returns:
+            ValuesView: A view of the Parameter objects in the set.
+        """
         return self.dict_of_parameters_by_name.values()
     
     def keys(self):
+        """
+        Returns a view of the parameter names in the set.
+
+        Returns:
+            KeysView: A view of the parameter names.
+        """
         return self.dict_of_parameters_by_name.keys()
         
 
+    # Outputs the dictionary of the form used for analysis classes that explore 
+        # parameter spaces via scan
     @property
     def scan_format(self):
+        """
+        Returns a representation of the parameter set formatted for scanning analysis classes.
+
+        Returns:
+            dict: A dictionary representation of the parameter set suitable for scanning.
+        """
         return self.axes_by_type
     
-
+    # Outputs the dictionary of the form used for analysis classes that explore 
+        # parameter spaces via stochastic samplers
     @property
     def stochastic_format(self):
+        """
+        Returns a representation of the parameter set formatted for stochastic sampling analysis classes.
+
+        Returns:
+            dict: A dictionary representation of the parameter set suitable for stochastic sampling.
+        """
         return self.dict_of_parameters_by_name
     
-
+    # Method specifically when all parameters are discrete and have a defined 'axis' method
     @property
     def axes(self):
+        """
+        Returns the axes for all parameters in the set, applicable for discrete parameters.
+
+        Returns:
+            list: A list of axes for the parameters.
+        """
         return [param['axis'] for param in self.dict_of_parameters_by_name.values()]
     
+    # Ex
     @property
     def defaults(self):
-        try:
-            return [param['default_value'] for param in self.dict_of_parameters_by_name.values()]
-        except KeyError:
-            logging.warn("One or more parameters have not been given a default value")
-            return [np.nan]*len(self)
+        """
+        Retrieves the default values for all parameters in the set.
+
+        Returns:
+            list: A list of default values for the parameters.
+        """
+        default_values = []
+        for parameter in self.dict_of_parameters_by_name.values():
+
+            try:
+                default_values.append(parameter['default_value'])
+            except KeyError:
+                logging.warn("""One or more parameters have not been given a 
+default value. Place nan in position of default""")
+                default_values.append(np.nan)
+        return default_values
     
+    # When some sort of iterable behaviour is expected of the class it
+        # defaults to using the behaviour of the dict_of_parameters_by_name dict
     def __iter__(self):
+        """
+        Allows iteration over the ParameterSet, yielding parameter names.
+
+        This method facilitates direct iteration over the parameter set, providing an easy way
+        to loop through all parameter names contained within it.
+
+        Returns:
+            iterator: An iterator over the names of parameters in the set.
+        """
         return iter(self.dict_of_parameters_by_name)
 
 
 
-    def save_to_hdf5(self, filename):
-        if not filename.endswith(".h5"):
-            filename += ".h5"
+    def pack(self, h5f):
+        """
+        Packs the ParameterSet data into an HDF5 format.
 
-        with h5py.File(filename, 'w') as f:
-            # Create a group for dict_of_parameters_by_name
-            param_group = f.create_group('dict_of_parameters_by_name')
-
-            # Iterate through each Parameter and save its data
-            for param_name, parameter in self.dict_of_parameters_by_name.items():
-                param_subgroup = param_group.create_group(param_name)
-                for key, value in parameter.items():
+        Returns:
+        h5py.File: An HDF5 file object containing the packed data.
+        """
+        if h5f is None:
+            h5f = h5py.File(None, 'w')  # 'None' creates an in-memory HDF5 file object
+            
+        for param_name, parameter in self.dict_of_parameters_by_name.items():
+            group = h5f.create_group(param_name)
+            for key, value in parameter.items():
+                
+                if key != 'transform' and key != 'custom_parameter_transform':
+                    # Convert arrays to a format that can be saved in h5py
                     if isinstance(value, (np.ndarray, list)):
-                        param_subgroup.create_dataset(key, data=np.array(value))
-                    elif isinstance(value, (int, float, bool)):
-                        param_subgroup.create_dataset(key, data=value)
+                        group.create_dataset(key, data=value)
+                    elif isinstance(value, (int, float, str, bool)):
+                        group.attrs[key] = value
                     else:
-                        # Convert other types to strings
-                        param_subgroup.create_dataset(key, data=np.string_(str(value)))
+                        group.attrs[key] = str(value)
+                elif 'custom_parameter_transform' in parameter and hasattr(parameter['custom_parameter_transform'], '__call__'):
+                    func_name = parameter['custom_parameter_transform'].__name__
+                    group.attrs['custom_scaling_function_name'] = func_name
+        return h5f
+    
+    def save(self, file_name):
+        """
+        Saves the ParameterSet data to an HDF5 file.
+
+        Args:
+        file_name (str): The name of the file to save the data to.
+        """
+        h5f = self.pack()
+        with open(file_name, 'wb') as file:  # Open the file in binary write mode
+            file.write(h5f.file.get_file_image())  # Write the in-memory HDF5 file to disk
+
 
     @classmethod
-    def load_from_hdf5(cls, filename):
-        if not filename.endswith(".h5"):
-            filename += ".h5"
+    def load(cls, h5f, file_name: str = None):
+        """
+        Loads the ParameterSet data from an HDF5 file and returns a ParameterSet instance.
 
-        parameter_set = cls()
+        Args:
+            file_name (str): The name of the file to load the data from.
 
-        with h5py.File(filename, 'r') as f:
-            # Access the group where parameters are stored
-            param_group = f['dict_of_parameters_by_name']
+        Returns:
+            ParameterSet: An instance of the ParameterSet class with the loaded data.
+        """
+        have_to_close = False
 
-            # Iterate over each parameter stored in the file
-            for param_name in param_group:
-                param_data = {}
-                param_subgroup = param_group[param_name]
+        
+        parameter_list  = []
+        if h5f is None:
+            have_to_close = True
+            h5f = h5py.File(file_name, 'r') 
+            
+        for param_name in h5f.keys():
+            group = h5f[param_name]
+            param_data = {key: group.attrs[key] for key in group.attrs.keys()}
 
-                # Reconstruct each parameter's dictionary
-                for key, dataset in param_subgroup.items():
-                    if isinstance(dataset[()], bytes):  # Handle string data
-                        param_data[key] = dataset[()].decode()
-                    else:
-                        param_data[key] = dataset[()]
-
-                # Create a Parameter instance from the dictionary
+            for key in group.keys():
+                param_data[key] = np.array(group[key])
+            
+            # Reconstruct the Parameter instance
+            if param_data != {}:
                 parameter = Parameter(param_data)
-                parameter_set.dict_of_parameters_by_name[param_name] = parameter
 
-        return parameter_set
+                parameter_list.append(parameter)
 
+        if have_to_close:
+            h5f.close()
+        if parameter_list != []:
+            return ParameterSet(parameter_list)
+        else:
+            return ParameterSet()
+    
