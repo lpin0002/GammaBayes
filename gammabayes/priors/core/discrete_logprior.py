@@ -6,7 +6,7 @@ from gammabayes.core import EventData
 import matplotlib.pyplot as plt
 import warnings, logging
 
-class discrete_logprior(object):
+class DiscreteLogPrior(object):
     
     def __init__(self, name: str='[None]', 
                  inputunit: str=None, 

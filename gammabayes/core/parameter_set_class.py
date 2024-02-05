@@ -302,6 +302,15 @@ class ParameterSet(object):
         """
         return self.axes_by_type
     
+
+    @property
+    def bounds(self):
+        bounds = []
+        for param in self.dict_of_parameters_by_name.values():
+            bounds.append(param['bounds'])
+
+        return bounds
+    
     # Outputs the dictionary of the form used for analysis classes that explore 
         # parameter spaces via stochastic samplers
     @property

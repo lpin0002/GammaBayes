@@ -112,6 +112,8 @@ class Parameter(dict):
                                                    np.log10(self['bounds'][1]), 
                                                    self['bins'])
                         
+            self['axis'] = np.asarray(self['axis'])
+                        
             
             self['transform_scale'] = self['bins']
             if 'custom_parameter_transform' in self:

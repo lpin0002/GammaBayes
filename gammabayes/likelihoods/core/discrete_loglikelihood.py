@@ -5,7 +5,7 @@ from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import EventData, Parameter, ParameterSet
 
 
-class discrete_loglike(object):
+class DiscreteLogLikelihood(object):
     
     def __init__(self, 
                  logfunction: callable,

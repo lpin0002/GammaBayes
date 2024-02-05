@@ -118,7 +118,7 @@ def find_irf_file_path(zenith_angle=20, hemisphere='South', prod_vers=5, subarra
 
 
 
-class irf_extractor(object):
+class IRFExtractor(object):
     def __init__(self, zenith_angle, hemisphere, prod_vers=5, file_path=None):
         self.file_path = file_path
         if self.file_path is None:

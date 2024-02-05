@@ -1,1 +1,1 @@
-from .core import discrete_loglike
+from .core import DiscreteLogLikelihood

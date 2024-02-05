@@ -2,7 +2,7 @@ import numpy as np, warnings, dynesty
 from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 
 
-class mixture_sampling_scan_output(object):
+class ScanOutput_StochasticMixtureFracPosterior(object):
 
     def __init__(self, mixture_bounds, # e.g. mixture_bounds = [[mix1_min, mix1_max], [mix2_min, mix2_max],...]
                  hyperparameter_axes,

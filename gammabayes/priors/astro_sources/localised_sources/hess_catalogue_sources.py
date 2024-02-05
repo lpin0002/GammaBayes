@@ -14,7 +14,7 @@ from gammapy.modeling.models import (
     TemplateSpatialModel,
 )
 from gammapy.catalog import SourceCatalogHGPS
-from gammabayes.priors.core import discrete_logprior
+from gammabayes.priors.core import DiscreteLogPrior
 
 
 def construct_hess_source_map(energy_axis=energy_true_axis, 
@@ -140,5 +140,5 @@ class construct_hess_source_map_interpolation(object):
         return np.log(self.hess_grid_interpolator((energy, longitude, latitude)))
 
 
-class hess_catalogue_sources_prior(discrete_logprior):
+class hess_catalogue_sources_prior(DiscreteLogPrior):
     pass

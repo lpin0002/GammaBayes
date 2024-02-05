@@ -1,4 +1,4 @@
-from gammabayes.hyper_inference.discrete_brute_scan_hyperparameter_likelihood import discrete_brute_scan_hyperparameter_likelihood
+from gammabayes.hyper_inference.discrete_brute_scan_hyperparameter_likelihood import DiscreteBruteScan
 from gammabayes.utils import (
     iterate_logspace_integration, 
     logspace_riemann, 
@@ -15,7 +15,7 @@ from multiprocessing import Pool
 import os, warnings, logging, time, functools, numpy as np, h5py
 
 
-class discrete_adaptive_scan_hyperparameter_likelihood(discrete_brute_scan_hyperparameter_likelihood):
+class DiscreteAdaptiveScan(DiscreteBruteScan):
     def __init__(self, *args, 
                  bounds: list[ str, float] = None,
                  bounding_percentiles: list[float]      = [95 ,95],
@@ -25,7 +25,7 @@ class discrete_adaptive_scan_hyperparameter_likelihood(discrete_brute_scan_hyper
         Initializes a discrete brute scan hyperparameter likelihood object.
 
         Args:
-            log_priors (list[discrete_logprior] | tuple[discrete_logprior], optional): 
+            log_priors (list[DiscreteLogPrior] | tuple[DiscreteLogPrior], optional): 
                 Priors for the log probabilities of discrete input values. Defaults to None.
             
             log_likelihood (callable, optional): A callable object to compute 

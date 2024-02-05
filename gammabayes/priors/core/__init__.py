@@ -1,1 +1,1 @@
-from .discrete_logprior import discrete_logprior
+from .discrete_logprior import DiscreteLogPrior

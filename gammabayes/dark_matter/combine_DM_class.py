@@ -3,18 +3,18 @@ from gammabayes.dark_matter.density_profiles import DM_Profiles
 from gammabayes.dark_matter.models.Z2_ScalarSinglet import Z2_ScalarSinglet
 from os import path
 from gammabayes.dark_matter.density_profiles import DM_Profile
-from gammabayes.likelihoods.irfs import irf_loglikelihood
+from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
 import time
 
 
 
-class combine_DM_models:
+class CombineDMComps:
 
     def __init__(self, 
                  spectral_gen_class: Z2_ScalarSinglet, 
                  spatial_profile_class: DM_Profile, 
-                 irf_class: irf_loglikelihood,
+                 irf_class: IRF_LogLikelihood,
                  spectral_class_kwds: dict = {},
                  spatial_class_kwds: dict = {},
                  ):

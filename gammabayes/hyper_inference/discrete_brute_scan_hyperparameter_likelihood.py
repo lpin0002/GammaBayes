@@ -10,12 +10,12 @@ from gammabayes.utils import (
 
 from gammabayes.utils.config_utils import save_config_file
 from gammabayes import EventData, Parameter, ParameterSet
-from gammabayes.priors import discrete_logprior
+from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py
 
-class discrete_brute_scan_hyperparameter_likelihood(object):
-    def __init__(self, log_priors: list[discrete_logprior] | tuple[discrete_logprior] = None, 
+class DiscreteBruteScan(object):
+    def __init__(self, log_priors: list[DiscreteLogPrior] | tuple[DiscreteLogPrior] = None, 
                  log_likelihood: callable = None, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  nuisance_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
@@ -36,7 +36,7 @@ class discrete_brute_scan_hyperparameter_likelihood(object):
         Initializes a discrete brute scan hyperparameter likelihood object.
 
         Args:
-            log_priors (list[discrete_logprior] | tuple[discrete_logprior], optional): 
+            log_priors (list[DiscreteLogPrior] | tuple[DiscreteLogPrior], optional): 
                 Priors for the log probabilities of discrete input values. Defaults to None.
             
             log_likelihood (callable, optional): A callable object to compute 
@@ -400,7 +400,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         
 
     def _mesh_inefficient_prior_construction(self, 
-                                             log_prior: discrete_logprior, 
+                                             log_prior: DiscreteLogPrior, 
                                              prior_idx: int,
                                              prior_spectral_params: dict, 
                                              prior_spatial_params: dict, 

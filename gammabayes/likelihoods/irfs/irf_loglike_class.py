@@ -1,11 +1,11 @@
-from gammabayes.likelihoods.core import discrete_loglike
-from gammabayes.likelihoods.irfs.irf_extractor_class import irf_extractor
+from gammabayes.likelihoods.core import DiscreteLogLikelihood
+from gammabayes.likelihoods.irfs.irf_extractor_class import IRFExtractor
 from gammabayes.likelihoods.irfs.irf_normalisation_setup import irf_norm_setup
 import numpy as np
-class irf_loglikelihood(discrete_loglike):
+class IRF_LogLikelihood(DiscreteLogLikelihood):
 
     def __init__(self,pointing_direction=[0,0], zenith=20, hemisphere='South', prod_vers=5, *args, **kwargs):
-        self.irf_loglikelihood = irf_extractor(zenith_angle=zenith, hemisphere=hemisphere, prod_vers=prod_vers)
+        self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, prod_vers=prod_vers)
         super().__init__(
             logfunction=self.irf_loglikelihood.single_loglikelihood, 
             *args, **kwargs
