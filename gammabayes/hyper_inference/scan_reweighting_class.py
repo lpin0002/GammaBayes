@@ -15,6 +15,7 @@ import logging
 from gammabayes.priors import DiscreteLogPrior
 from gammabayes.likelihoods import DiscreteLogLikelihood
 from gammabayes import EventData, Parameter, ParameterSet
+from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
 
 
 
@@ -184,12 +185,20 @@ class DynestyScanReweighting(object):
         self.log_target_priors = log_target_priors
         self.no_priors_on_init = no_priors_on_init
 
-        self.nuisance_axes = self._handle_nuisance_axes(nuisance_axes)
+        self.nuisance_axes = _handle_nuisance_axes(nuisance_axes, 
+                                                   log_likelihood=self.log_likelihood,
+                                                   log_prior=self.log_target_priors[0])
         self.mixture_param_specifications = mixture_param_specifications
         self.logspace_integrator = logspace_integrator
 
-        self.prior_parameter_sets = self._handle_parameter_specification(prior_parameter_sets)
-        
+        if not self.no_priors_on_init:
+            self.prior_parameter_sets = _handle_parameter_specification(
+                    parameter_specifications=len(log_target_priors),
+                    _no_required_num=self.no_priors_on_init)
+        else:
+            self.prior_parameter_sets = _handle_parameter_specification(
+                    _no_required_num=self.no_priors_on_init)        
+            
         self._num_parameter_specifications = len(self.prior_parameter_sets)
 
         self.reweight_batch_size = reweight_batch_size
@@ -206,98 +215,7 @@ class DynestyScanReweighting(object):
         logging.info(f"Bounds: {self.bounds}")
 
 
-    def _handle_parameter_specification(self, 
-                                        parameter_specifications: dict | ParameterSet,
-                                        log_target_priors: list[ParameterSet] | dict[dict] =None):
-        """
-        Processes and validates parameter specifications against the target priors.
-
-        Parameters:
-            parameter_specifications (dict | ParameterSet): Parameter specifications.
-            
-            log_target_priors (list[ParameterSet] | dict[dict], optional): Target priors.
-
-        Raises:
-            ValueError: If the number of hyperparameter axes specified exceeds the number of priors unless
-            'self.no_priors_on_init' is True.
-        """
-        _num_parameter_specifications = len(parameter_specifications)
-        formatted_parameter_specifications = []*_num_parameter_specifications
-
-        if log_target_priors is None:
-            log_target_priors = self.log_target_priors
-
-        if _num_parameter_specifications>0:
-
-            if type(parameter_specifications)==dict:
-
-                for single_prior_parameter_specifications in parameter_specifications.items():
-
-                    parameter_set = ParameterSet(single_prior_parameter_specifications)
-
-                    formatted_parameter_specifications.append(parameter_set)
-
-            elif type(parameter_specifications)==list:
-                formatted_parameter_specifications = [ParameterSet(parameter_specification) for parameter_specification in parameter_specifications]
-
-        try:
-            self._num_priors = len(log_target_priors)
-        except TypeError as excpt:
-            logging.warning(f"An error occured when trying to calculate the number of priors: {excpt}")
-            self._num_priors = _num_parameter_specifications
-
-        if not self.no_priors_on_init or (log_target_priors is not None):
-
-            diff_in_num_hyperaxes_vs_priors = self._num_priors-_num_parameter_specifications
-
-            if diff_in_num_hyperaxes_vs_priors<0:
-                raise ValueError(f'''
-You have specifed {np.abs(diff_in_num_hyperaxes_vs_priors)} more hyperparameter axes than priors.''')
-            
-            elif diff_in_num_hyperaxes_vs_priors>0:
-                warnings.warn(f"""
-You have specifed {diff_in_num_hyperaxes_vs_priors} less hyperparameter axes than priors. 
-Assigning empty hyperparameter axes for remaining priors.""")
-                
-                _num_parameter_specifications = len(formatted_parameter_specifications)
-                
-                for __idx in range(_num_parameter_specifications, self._num_priors):
-                    formatted_parameter_specifications.append(ParameterSet())
-
-
-        return formatted_parameter_specifications
-
-        
-    def _handle_nuisance_axes(self, nuisance_axes: list[np.ndarray]):
-        """
-        Handles the assignment and retrieval of nuisance axes. 
-        This method first checks if `nuisance_axes` is provided. If not, it attempts to retrieve nuisance axes 
-        from `log_likelihood` or `log_priors`. If neither is available, it raises an exception.
-
-        Args:
-            nuisance_axes (list[np.ndarray]): A list of numpy arrays representing the nuisance axes.
-
-        Raises:
-            Exception: Raised if `nuisance_axes` is not provided and cannot be retrieved from either 
-                    `log_likelihood` or `log_proposal_prior` OR `log_target_priors`.
-
-        Returns:
-            list[np.ndarray]: The list of numpy arrays representing the nuisance axes. This can be either the 
-                            provided `nuisance_axes`, or retrieved from `log_likelihood` or `log_priors`.
-        """
-        if nuisance_axes is None:
-            try:
-                return self.log_likelihood.nuisance_axes
-            except AttributeError:
-                try:
-                    return self.log_proposal_prior.axes
-                except AttributeError:
-                    try:
-                        return self.log_target_priors[0].axes
-                    except AttributeError:
-                        raise Exception("Dependent value axes used for calculations not given.")
-                    
-        return nuisance_axes
+    
             
 
 

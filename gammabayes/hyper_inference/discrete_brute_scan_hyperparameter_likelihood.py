@@ -9,6 +9,7 @@ from gammabayes.utils import (
 )
 
 from gammabayes.utils.config_utils import save_config_file
+from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
 from gammabayes import EventData, Parameter, ParameterSet
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
@@ -103,10 +104,23 @@ class DiscreteBruteScan(object):
         self.axes               = axes
 
         # Axes for the "true" values
-        self.nuisance_axes     = self._handle_nuisance_axes(nuisance_axes)
+        if not self.no_priors_on_init:
+            self.nuisance_axes     = _handle_nuisance_axes(nuisance_axes,
+                                                        log_likelihood=self.log_likelihood,
+                                                        log_prior=self.log_priors[0])
+            self.parameter_specifications = _handle_parameter_specification(
+                parameter_specifications=parameter_specifications,
+                num_required_sets=len(self.log_priors),
+                _no_required_num=self.no_priors_on_init)
+        else:
+            self.nuisance_axes     = _handle_nuisance_axes(nuisance_axes,
+                                                        log_likelihood=self.log_likelihood)
+            self.parameter_specifications = _handle_parameter_specification(
+                parameter_specifications=parameter_specifications,
+                _no_required_num=self.no_priors_on_init)
 
 
-        self._handle_parameter_specification(parameter_specifications=parameter_specifications)
+
 
         # Currently required as the normalisation of the IRFs isn't natively consistent
         self.log_likelihoodnormalisation            = np.asarray(log_likelihoodnormalisation)
@@ -133,99 +147,6 @@ class DiscreteBruteScan(object):
         self.log_posterior                      = log_posterior
         self.log_prior_matrix_list              = log_prior_matrix_list
 
-
-    def _handle_nuisance_axes(self, nuisance_axes: list[np.ndarray]):
-        """
-        Handles the assignment or retrieval of nuisance axes. 
-        This method first checks if `nuisance_axes` is provided. If not, it attempts to retrieve nuisance axes 
-        from `log_likelihood` or `log_priors`. If neither is available, it raises an exception.
-
-        Args:
-            nuisance_axes (list[np.ndarray]): A list of numpy arrays representing the nuisance axes.
-
-        Raises:
-            Exception: Raised if `nuisance_axes` is not provided and cannot be retrieved from either 
-                    `log_likelihood` or `log_priors`.
-
-        Returns:
-            list[np.ndarray]: The list of numpy arrays representing the nuisance axes. This can be either the 
-                            provided `nuisance_axes`, or retrieved from `log_likelihood` or `log_priors`.
-        """
-        if nuisance_axes is None:
-            try:
-                return self.log_likelihood.nuisance_axes
-            except AttributeError:
-                try:
-                    return self.log_priors[0].axes
-                except AttributeError:
-                    raise Exception("Dependent value axes used for calculations not given.")
-        return nuisance_axes
-
-
-    def _handle_parameter_specification(self, 
-                                        parameter_specifications: dict | ParameterSet):
-        """
-        Processes and validates the parameter specifications provided. This method formats the input 
-        parameter specifications and ensures consistency between the number of parameter specifications and the 
-        number of priors.
-
-        Args:
-            parameter_specifications (dict | ParameterSet): The parameter specifications to be processed. This 
-                                                            can be either a dictionary or a ParameterSet object.
-
-        Raises:
-            Exception: If the number of hyperparameter axes specified exceeds the number of priors.
-
-        Notes:
-            - A warning is issued if the number of hyperparameter axes is fewer than the number of priors. In this 
-            case, empty hyperparameter axes are assigned for the missing priors.
-            - If there is an issue with accessing `log_priors`, a warning is logged, and the number of priors is set 
-            equal to the number of parameter specifications provided.
-        """
-        _num_parameter_specifications = len(parameter_specifications)
-        formatted_parameter_specifications = []*_num_parameter_specifications
-
-        if _num_parameter_specifications>0:
-
-            if type(parameter_specifications)==dict:
-
-                for single_prior_parameter_specifications in parameter_specifications.items():
-
-                    parameter_set = ParameterSet(single_prior_parameter_specifications)
-
-                    formatted_parameter_specifications.append(parameter_set)
-
-            elif type(parameter_specifications)==list:
-                formatted_parameter_specifications = parameter_specifications
-
-        try:
-            self._num_priors = len(self.log_priors)
-        except TypeError as excpt:
-            logging.warning(f"An error occured when trying to calculate the number of priors: {excpt}")
-            self._num_priors = _num_parameter_specifications
-
-        if not self.no_priors_on_init or (self.log_priors is not None):
-
-            diff_in_num_hyperaxes_vs_priors = self._num_priors-_num_parameter_specifications
-
-            if diff_in_num_hyperaxes_vs_priors<0:
-                raise Exception(f'''
-You have specifed {np.abs(diff_in_num_hyperaxes_vs_priors)} more hyperparameter axes than priors.''')
-            
-            elif diff_in_num_hyperaxes_vs_priors>0:
-                warnings.warn(f"""
-You have specifed {diff_in_num_hyperaxes_vs_priors} less hyperparameter axes than priors. 
-Assigning empty hyperparameter axes for remaining priors.""")
-                
-                _num_parameter_specifications = len(formatted_parameter_specifications)
-                
-                for __idx in range(_num_parameter_specifications, self._num_priors):
-                    formatted_parameter_specifications.append(ParameterSet())
-
-
-            self._num_parameter_specifications  = len(formatted_parameter_specifications)
-            self.parameter_specifications       = formatted_parameter_specifications
-        
 
 
 
@@ -513,7 +434,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
         # Adaptively set the regularisation based on the range of values in the
         # log marginalisation results. Trying to keep them away from ~-600 or ~600
         # generally precision goes down to ~1e-300 (base 10)
-        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(np.diff(log_marg_maxs-log_marg_mins)))
+        diffs = log_marg_maxs-log_marg_mins
+        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(np.mean(diffs, axis=tuple(range(1, diffs.ndim)))))
 
 
         return reshaped_marg_results

@@ -1,33 +1,42 @@
-import numpy as np, warnings, dynesty
+import numpy as np, warnings, dynesty, logging
 from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
+from gammabayes.hyper_inference.utils import _handle_parameter_specification
+from gammabayes import ParameterSet
 
 
 class ScanOutput_StochasticMixtureFracPosterior(object):
 
-    def __init__(self, mixture_bounds, # e.g. mixture_bounds = [[mix1_min, mix1_max], [mix2_min, mix2_max],...]
-                 hyperparameter_axes,
+    def __init__(self, mixture_parameter_specifications, # e.g. mixture_bounds = [[mix1_min, mix1_max], [mix2_min, mix2_max],...]
+                 prior_parameter_specifications,
                  log_margresults = []):
-        self.mixture_bounds         = mixture_bounds
+        
+        self.prior_parameter_specifications = _handle_parameter_specification(
+            prior_parameter_specifications,
+            _no_required_num=True
+        )
+        self.hyperparameter_axes    = [param_set.axes_by_type for param_set in self.prior_parameter_specifications]
 
 
-        self.hyperparameter_axes    = hyperparameter_axes
+        self.mixture_parameter_specifications = ParameterSet(mixture_parameter_specifications)
+        self.mixture_bounds         = self.mixture_parameter_specifications.bounds
 
 
-        self.log_margresults        = log_margresults
-        self.num_events             = log_margresults[0].shape[0]
+        self.log_margresults = log_margresults
+        self.num_priors     = len(self.log_margresults)
+        self.num_events     = log_margresults[0].shape[0]
 
-        if not(len(mixture_bounds) +1 != len(log_margresults)):
+
+        if not(len(self.mixture_bounds) +1 != len(log_margresults)):
             warnings.warn("""Number of mixtures +1 does not match number of 
 priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mixtures.""")
             
-            assert len(log_margresults[0])>len(mixture_bounds) +1
+            assert len(log_margresults[0])>len(self.mixture_bounds) +1
 
-            for missing_mix_idx in range(len(log_margresults)-(len(mixture_bounds) +1)):
-                mixture_bounds.append([0., 1.])
+            for missing_mix_idx in range(len(log_margresults)-(len(self.mixture_bounds) +1)):
+                self.mixture_bounds.append([0., 1.])
 
         
-        self.num_mixes              = len(mixture_bounds)
-        self.num_priors             = self.num_mixes+1
+        self.num_mixes              = len(self.mixture_bounds)
 
 
         # Counter for hyperparameter axes, mostly for 'index_to_hyper_parameter_info'
@@ -104,7 +113,7 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
         return np.sum(ln_like)
 
 
-
+    # Note: When allocating live points it's lower than the norm due to the discrete nature of the prior parameters
     def initiate_sampler(self, **kwargs):
 
         self.sampler = dynesty.NestedSampler(loglikelihood=self.ln_likelihood, 
