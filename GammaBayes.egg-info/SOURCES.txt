@@ -69,7 +69,8 @@ gammabayes/hyper_inference/__init__.py
 gammabayes/hyper_inference/discrete_adaptive_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/discrete_brute_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/full_stochastic_reweighting.py
-gammabayes/hyper_inference/mixture_sampling_scan_output.py
+gammabayes/hyper_inference/mixture_sampling_nuisance_scan_output.py
+gammabayes/hyper_inference/mixture_scan_nuisance_scan_output.py
 gammabayes/hyper_inference/scan_reweighting_class.py
 gammabayes/hyper_inference/utils.py
 gammabayes/likelihoods/__init__.py

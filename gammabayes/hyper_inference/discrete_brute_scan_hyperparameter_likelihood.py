@@ -10,6 +10,8 @@ from gammabayes.utils import (
 
 from gammabayes.utils.config_utils import save_config_file
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
+from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
+from gammabayes.hyper_inference.mixture_sampling_nuisance_scan_output import ScanOutput_StochasticMixtureFracPosterior
 from gammabayes import EventData, Parameter, ParameterSet
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
@@ -31,7 +33,8 @@ class DiscreteBruteScan(object):
                  log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None,
                  log_marginalisation_regularisation: float  = None,
                  no_priors_on_init: bool = False,
-                 no_likelihood_on_init: bool = False
+                 no_likelihood_on_init: bool = False,
+                 mixture_fraction_exploration_type='scan',
                  ):
         """
         Initializes a discrete brute scan hyperparameter likelihood object.
@@ -146,6 +149,7 @@ class DiscreteBruteScan(object):
         self.log_hyperparameter_likelihood      = log_hyperparameter_likelihood
         self.log_posterior                      = log_posterior
         self.log_prior_matrix_list              = log_prior_matrix_list
+        self.mixture_fraction_exploration_type  = mixture_fraction_exploration_type
 
 
 
@@ -156,8 +160,8 @@ class DiscreteBruteScan(object):
             # Must be normalised over __measured/reconstructed__ axes __not__
             # over the dependent axes
         # - numerical stability
-            # Tried my best to avoid this, but if input values are close to
-            # numerical precision, watch out
+            # Tried my best to avoid this, but if input values imply real values 
+            # below numerical precision, watch out
         # - Event Values
             # Garbage In - Garbage Out.
             # If you are simulating your events in particular, make sure that
@@ -461,292 +465,60 @@ class before the multiprocessing or make sure that it isn't part of the actual
         """
         self.log_margresults = [log_margresult.extend(new_log_marg_result) for log_margresult, new_log_marg_result in zip(self.log_margresults, new_log_marg_results)]
 
-    
-    def _mixture_input_filtering(self, 
-                                 mixture_param_specifications: list | dict | ParameterSet = None, 
-                                 log_margresults: list | tuple | np.ndarray = None):
-        """
-        Filters and validates the input for mixture parameters and log marginalisation results. 
-        This method ensures that the provided mixture parameters and log marginalisation results 
-        are consistent with the expected format and the current state of the object.
 
-        Args:
-            mixture_param_specifications (list | dict | ParameterSet, optional): The set of parameters for 
-                                                                    the mixture model. Can be a list, 
-                                                                    a dictionary, or a ParameterSet object. 
-                                                                    Defaults to None.
-            log_margresults (list | tuple | np.ndarray, optional): Log marginalisation results. 
-                                                                Can be a list, tuple, or numpy ndarray. 
-                                                                Defaults to None.
+    def select_scan_output_posterior_exploration_class(self, 
+                                                       mixture_parameter_specifications,
+                                                       mixture_fraction_exploration_type: str = None, 
+                                                       log_margresults = None,
+                                                       parameter_specifications=None,
+                                                       *args, **kwargs):
+        if mixture_fraction_exploration_type is None:
+            mixture_fraction_exploration_type = self.mixture_fraction_exploration_type
 
-        Returns:
-            tuple: A tuple containing the validated mixture_param_specifications and log_margresults.
+        if parameter_specifications is None:
+            parameter_specifications = self.parameter_specifications
 
-        Raises:
-            Exception: Raised if mixture_param_specifications is not specified or if the number of mixture 
-                    axes does not match the number of components (minus 1) in the log priors.
-
-        Notes:
-            - If `mixture_param_specifications` is not provided, it defaults to `self.mixture_param_specifications`.
-            - An exception is raised if no mixture axes are specified.
-            - If `log_margresults` is not provided, it defaults to `self.log_margresults`.
-            - The method checks the consistency between the number of mixture axes and the number 
-            of prior components.
-        """
-
-        
-        if mixture_param_specifications is None:
-            mixture_param_specifications = self.mixture_param_specifications
-            if self.mixture_param_specifications is None:
-                raise Exception("Mixture axes not specified")
-        else:
-            self.mixture_param_specifications = ParameterSet(mixture_param_specifications)
-
-        if not(self.log_priors is None):
-            if len(mixture_param_specifications)!=len(self.log_priors)-1:
-                raise Exception(f""""Number of mixture axes does not match number of components (minus 1). Please check your inputs.
-Number of mixture axes is {len(mixture_param_specifications)}
-and number of prior components is {len(self.log_priors)}.""")
-            
         if log_margresults is None:
             log_margresults = self.log_margresults
 
-        return mixture_param_specifications, log_margresults
-    
-    def create_mixture_comp(self, 
-                            prior_idx: int, 
-                            log_margresults_for_idx:np.ndarray,
-                            mix_axes_mesh:list[np.ndarray],
-                            final_output_shape:list,
-                            prior_axes_indices: list[list],
-                            hyper_idx: int):
-        """
-        Creates a single component (i.e. the component for __a__ prior) of the mixture model. 
-        This method combines log marginalisation results for a given prior index with the 
-        mixture axis information to form a component of the mixture model. 
+        if mixture_fraction_exploration_type.lower() == 'scan':
+            scan_output_exploration_class = ScanOutput_ScanMixtureFracPosterior
 
-        Args:
-            prior_idx (int): The index of the prior for which the mixture component is being created.
+        elif mixture_fraction_exploration_type.lower() == 'sample':
+            scan_output_exploration_class = ScanOutput_StochasticMixtureFracPosterior
 
-            log_margresults_for_idx (np.ndarray): The log marginalisation results corresponding to the given prior index.
-
-            mix_axes_mesh (list[np.ndarray]): A list of numpy arrays representing the meshgrid of mixture axes.
-
-            final_output_shape (list): A list to store the final shape of the output mixture component.
-
-            prior_axes_indices (list[list]): A list to keep track of the indices in each prior for the final output.
-
-            hyper_idx (int): The current index in the hyperparameter space.
-
-        Returns:
-            tuple: A tuple containing the created mixture component (numpy array) and the updated hyperparameter index (int).
-
-        Notes:
-            - The method calculates the log mixture component using the Dirichlet stick breaking process.
-            - It expands and combines the calculated mixture component with the log marginalisation results.
-            - Updates `final_output_shape` and `prior_axes_indices` to reflect the new dimensions and indices after 
-            combining the mixture component with the log marginalisation results.
-            - The method returns the new mixture component and the updated hyperparameter index.
-        """
-        # Including 'event' and mixture axes for eventual __non__ expansion into
-        single_prior_axes_indices_instance = list(range(1+len(mix_axes_mesh)))
-
-        # First index of 'log_margresults_for_idx' should just be the number of events
-        for length_of_axis in log_margresults_for_idx.shape[1:]:
-
-            final_output_shape.append(length_of_axis)
-
-            single_prior_axes_indices_instance.append(hyper_idx)
-
-            # Keeping track of the indices in each prior for the final output
-            hyper_idx+=1
-
-        prior_axes_indices.append(single_prior_axes_indices_instance)
-
-
-        mixcomp = np.expand_dims(np.log(
-            apply_direchlet_stick_breaking_direct(mixtures_fractions=mix_axes_mesh, depth=prior_idx)), 
-            axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes_mesh)), 
-                                np.arange(len(mix_axes_mesh))+1),)) 
-
-
-        mixcomp=mixcomp+np.expand_dims(log_margresults_for_idx, 
-                                    axis=(*(np.arange(len(mix_axes_mesh))+1),)
-                                )
-        return mixcomp, hyper_idx
+        else:
+           raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
         
-    
-            
-    def create_discrete_mixture_log_hyper_likelihood(self, 
-                                                     log_margresults: list | tuple | np.ndarray = None,
-                                                     mixture_parameter_set: list | ParameterSet = None, 
-                                                     ) -> np.ndarray:
-        """
-        Constructs the logarithmic hyperparameter likelihood of a discrete mixture model. This method processes log 
-        marginalisation results and mixture parameter sets to compute the log likelihood of hyperparameters in a 
-        discrete mixture model.
+        self.scan_output_exploration_class_instance = scan_output_exploration_class(
+                log_margresults = log_margresults,
+                log_nuisance_marg_regularisation = self.log_marginalisation_regularisation,
+                mixture_parameter_specifications=mixture_parameter_specifications,
+                prior_parameter_specifications=parameter_specifications,
+                *args, **kwargs)
 
-        Args:
-            log_margresults (list | tuple | np.ndarray, optional): Log marginalisation results for each prior. 
-                                                                Defaults to None.
-            mixture_parameter_set (list | ParameterSet, optional): Parameters for the mixture model, either as a 
-                                                                    list or a ParameterSet object. Defaults to None.
-
-        Returns:
-            np.ndarray: The logarithmic likelihood of hyperparameters for the discrete mixture model.
-
-        Notes:
-            - Regularises log marginalisation results by adding `log_marginalisation_regularisation`.
-            - Filters and validates the mixture parameter set and log marginalisation results using `_mixture_input_filtering`.
-            - Creates a meshgrid for the mixture axes.
-            - Initializes the final output shape and prior axes indices for the mixture components.
-            - Iteratively constructs mixture components for each prior using `create_mixture_comp`.
-            - Ensures all mixture components have compatible shapes for combination.
-            - Combines all mixture components into a single array to represent the combined mixture.
-            - Calculates the log hyperparameter likelihood by summing over the combined mixture components.
-            - Adjusts the final likelihood by undoing the regularisation applied initially.
-        """
-        logging.debug(f"log_marginalisation_regularisation: {self.log_marginalisation_regularisation}")
-        log_margresults = [log_margresult + self.log_marginalisation_regularisation for log_margresult in log_margresults]
-        
-        mixture_parameter_set, log_margresults = self._mixture_input_filtering(mixture_parameter_set, log_margresults)
-
-        mix_axes_mesh = np.meshgrid(*mixture_parameter_set.axes, indexing='ij')
-
-        # To get around the fact that every component of the mixture can be a different shape
-        final_output_shape = [len(log_margresults), *np.arange(len(mixture_parameter_set)), ]
-
-        # Axes for each of the priors to __not__ expand in
-        prior_axes_indices = []
-
-        # Counter for how many hyperparameter axes we have used
-        hyper_idx = len(mixture_parameter_set)+1
-
-
-        # Creating components of mixture for each prior
-        mixture_array_comp_list = []
-        for prior_idx, log_margresults_for_idx in enumerate(log_margresults):
-
-            mix_comp, hyper_idx  = self.create_mixture_comp( 
-                            prior_idx = prior_idx, 
-                            log_margresults_for_idx = log_margresults_for_idx,
-                            mix_axes_mesh=mix_axes_mesh,
-                            final_output_shape=final_output_shape,
-                            prior_axes_indices=prior_axes_indices,
-                            hyper_idx=hyper_idx)
-            
-            mixture_array_comp_list.append(mix_comp)
-            
-        # Making all the mixture components the same shape that is compatible for adding together (in logspace)
-        for _prior_idx, mixture_array in enumerate(mixture_array_comp_list):
-            axis = []
-            for _axis_idx in range(len(final_output_shape)):
-                if not(_axis_idx in prior_axes_indices[_prior_idx]):
-                    axis.append(_axis_idx)
-            axis = tuple(axis)
-
-            mixture_array   = np.expand_dims(mixture_array, axis=axis)
-
-            mixture_array_comp_list[_prior_idx] = mixture_array
-
-        # Now to combine the results for all the data and to 
-        combined_mixture = -np.inf
-        for mixture_component in mixture_array_comp_list:
-            mixture_component = mixture_component - self.log_marginalisation_regularisation
-            combined_mixture = np.logaddexp(combined_mixture, mixture_component)
-
-
-        # Multiplying the likelihoods of all the events together
-        log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
-
-        # Undoing the regularisation for proper output
-        log_hyperparameter_likelihood = log_hyperparameter_likelihood - self.log_marginalisation_regularisation
-
-        return log_hyperparameter_likelihood
-    
-
-    def split_into_batches(self, 
-                           log_margresults: list, 
-                           num_in_batches: int) -> list:
-        """
-        Splits the log marginalisation results into batches. This method divides the provided log marginalisation 
-        results into smaller batches, each containing a specified number of elements.
-
-        Args:
-            log_margresults (list): A list containing log marginalisation results. Each element in the list 
-                                    corresponds to a different prior and is assumed to be an array.
-            num_in_batches (int): The number of elements to include in each batch.
-
-        Returns:
-            list: A list of batched log marginalisation results. Each batch is a list of arrays, one for each 
-                prior, with each array containing a subset of the original log marginalisation results.
-
-        Notes:
-            - The method iterates over the log marginalisation results, creating batches that contain a segment 
-            of the results from each prior.
-            - Each batch includes results from the same index range across all priors.
-            - The size of each batch is determined by `num_in_batches`, with the last batch possibly being smaller 
-            if the total number of results is not a multiple of `num_in_batches`.
-        """
-        batched_log_margresults = []
-        for batch_idx in range(0, len(log_margresults[0]), num_in_batches):
-            batched_log_margresults.append(
-                [single_prior_log_margresults[batch_idx:batch_idx+num_in_batches, ...] for single_prior_log_margresults in log_margresults])
-            
-        return batched_log_margresults
-
-
-    
-    # The above 'create_discrete_mixture_log_hyper_likelihood' method is 
-        # vectorised. This means computation is pretty well optimised, 
-        # but can lead to memory problems as the entire matrix of shape
-            # (Nevents, 
-            # *[mixture_parameters], 
-            # *[all spectral parameters], 
-            # *[all spatial parameters])
-        # has to be loaded in all at once. So the 'batch processing' method
-        # was implemented to reduce the number of elements in the first dimension
-        # (i.e. the number of events) which is what 'num_in_mixture_batch' is 
-        # referring to
-    def batch_process_create_discrete_mixture(self, 
-                                              log_margresults,
-                                              mixture_parameter_set, 
-                                              num_in_mixture_batch: int = 10) -> np.ndarray:
-        """
-        Processes the creation of a discrete mixture model in batches. This method is designed to handle memory 
-        constraints by dividing the computation into smaller batches, each containing a subset of event data.
-
-        Args:
-            log_margresults: The log marginalisation results to be processed. These results are used to create 
-                            the discrete mixture model.
-            mixture_parameter_set: The set of parameters for the mixture model. This set defines the axes over 
-                                which the mixture model is computed.
-            num_in_mixture_batch (int, optional): The number of events to include in each batch. Defaults to 10.
-
-        Returns:
-            np.ndarray: The logarithmic hyperparameter likelihood for the entire dataset, obtained by summing 
-                        over the log results of the batches.
-
-        Notes:
-            - The method uses `split_into_batches` to divide the log marginalisation results into smaller batches 
-            based on `num_in_mixture_batch`.
-            - It then processes each batch independently using the `create_discrete_mixture_log_hyper_likelihood` method.
-            - The results from all batches are summed to get the final log hyperparameter likelihood.
-            - This batching approach helps manage memory usage by reducing the number of events processed at one time.
-        """
-        
-        batched_log_margresults = self.split_into_batches(log_margresults=log_margresults, 
-                                                          num_in_batches=num_in_mixture_batch)
         
 
-        log_hyperparameter_likelihood_batches = [self.create_discrete_mixture_log_hyper_likelihood(
-            log_margresults=batch_of_log_margresults,
-            mixture_parameter_set=mixture_parameter_set,
-        ) for batch_of_log_margresults in batched_log_margresults]
+    def init_posterior_exploration(self, *args, **kwargs):
+        self.scan_output_exploration_class_instance.initiate_exploration(*args, **kwargs)
 
-        log_hyperparameter_likelihood = np.sum(log_hyperparameter_likelihood_batches, axis=0)
+    def run_posterior_exploration(self, *args, **kwargs):
+        self._posterior_exploration_output = self.scan_output_exploration_class_instance.run_exploration(*args, **kwargs)
 
-        return log_hyperparameter_likelihood
+        return self._posterior_exploration_output
+
+
+    @property
+    def posterior_exploration_results(self):
+        if self.mixture_fraction_exploration_type =='scan':
+            return self._posterior_exploration_output
+        else:
+            return self.scan_output_exploration_class_instance.sampler.results
+        
+
+
+
+
         
         
     

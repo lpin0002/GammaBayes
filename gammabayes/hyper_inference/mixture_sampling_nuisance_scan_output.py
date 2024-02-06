@@ -6,9 +6,11 @@ from gammabayes import ParameterSet
 
 class ScanOutput_StochasticMixtureFracPosterior(object):
 
-    def __init__(self, mixture_parameter_specifications, # e.g. mixture_bounds = [[mix1_min, mix1_max], [mix2_min, mix2_max],...]
-                 prior_parameter_specifications,
-                 log_margresults = []):
+    def __init__(self, 
+                 log_margresults,
+                 mixture_parameter_specifications:list | dict | ParameterSet,
+                 log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
+                 prior_parameter_specifications: list | dict | ParameterSet = None):
         
         self.prior_parameter_specifications = _handle_parameter_specification(
             prior_parameter_specifications,
@@ -114,7 +116,7 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
 
 
     # Note: When allocating live points it's lower than the norm due to the discrete nature of the prior parameters
-    def initiate_sampler(self, **kwargs):
+    def initiate_exploration(self, **kwargs):
 
         self.sampler = dynesty.NestedSampler(loglikelihood=self.ln_likelihood, 
                                                prior_transform=self.prior_transform, 
@@ -123,7 +125,8 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
         
         return self.sampler
     
-    def run_nested(self,*args, **kwargs):
+    def run_exploration(self,*args, **kwargs):
         self.run_nested_output = self.sampler.run_nested(*args, **kwargs)
         return self.run_nested_output
+    
         

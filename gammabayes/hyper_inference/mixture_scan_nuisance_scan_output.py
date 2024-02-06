@@ -1,18 +1,25 @@
 import numpy as np, warnings, dynesty, logging
 from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 from gammabayes.hyper_inference.utils import _handle_parameter_specification
-from gammabayes import ParameterSet
+from gammabayes import ParameterSet, Parameter
 
 
 class ScanOutput_ScanMixtureFracPosterior(object):
 
-    def __init__(self, ):
-        pass
+    def __init__(self, 
+                 log_margresults, 
+                 mixture_parameter_specifications: list | ParameterSet = None, 
+                 log_nuisance_marg_regularisation = 0., 
+                 prior_parameter_specifications = None # Argument is for consistent input to this class and "ScanOutput_StochasticMixtureFracPosterior"
+                 ):
+        
+        self.log_nuisance_marg_results = log_margresults
+        self.log_nuisance_marg_regularisation = log_nuisance_marg_regularisation
+        self.mixture_parameter_specifications = self._handle_mixture_input(mixture_parameter_specifications)
 
 
 
-
-    def _mixture_input_filtering(self, 
+    def _handle_mixture_input(self, 
                                  mixture_param_specifications: list | dict | ParameterSet = None, 
                                  log_margresults: list | tuple | np.ndarray = None):
         """
@@ -52,16 +59,24 @@ class ScanOutput_ScanMixtureFracPosterior(object):
         else:
             self.mixture_param_specifications = ParameterSet(mixture_param_specifications)
 
-        if not(self.log_priors is None):
-            if len(mixture_param_specifications)!=len(self.log_priors)-1:
-                raise Exception(f""""Number of mixture axes does not match number of components (minus 1). Please check your inputs.
+        if not(log_margresults is None):
+            if len(mixture_param_specifications)>len(log_margresults)-1:
+                raise Exception(f""""There are more mixtures than would be implied by the log marginalisation results. Please check your inputs.
 Number of mixture axes is {len(mixture_param_specifications)}
-and number of prior components is {len(self.log_priors)}.""")
+and number of prior components is {len(log_margresults)}.""")
+            elif len(mixture_param_specifications)<len(log_margresults)-1:
+                warnings.warn("""There are less mixtures than would be implied by the log marginalisatio results.
+                              Assigning remaining mixtures as linearly uniform from 0 to 1 with 21 bins.""")
+                for missing_mix in range(len(mixture_param_specifications), len(log_margresults)-1):
+                    mixture_param_specifications.append(Parameter(
+                        name=f'UnknownMix{missing_mix}',
+                        bounds=[0., 1.],
+                        discrete=True,
+                        bins=21,
+                    ))
             
-        if log_margresults is None:
-            log_margresults = self.log_margresults
 
-        return mixture_param_specifications, log_margresults
+        return mixture_param_specifications
     
     def create_mixture_comp(self, 
                             prior_idx: int, 
@@ -128,54 +143,27 @@ and number of prior components is {len(self.log_priors)}.""")
     
             
     def create_discrete_mixture_log_hyper_likelihood(self, 
-                                                     log_margresults: list | tuple | np.ndarray = None,
-                                                     mixture_parameter_set: list | ParameterSet = None, 
+                                                     batch_of_log_margresults: list | tuple | np.ndarray = None,
                                                      ) -> np.ndarray:
-        """
-        Constructs the logarithmic hyperparameter likelihood of a discrete mixture model. This method processes log 
-        marginalisation results and mixture parameter sets to compute the log likelihood of hyperparameters in a 
-        discrete mixture model.
 
-        Args:
-            log_margresults (list | tuple | np.ndarray, optional): Log marginalisation results for each prior. 
-                                                                Defaults to None.
-            mixture_parameter_set (list | ParameterSet, optional): Parameters for the mixture model, either as a 
-                                                                    list or a ParameterSet object. Defaults to None.
-
-        Returns:
-            np.ndarray: The logarithmic likelihood of hyperparameters for the discrete mixture model.
-
-        Notes:
-            - Regularises log marginalisation results by adding `log_marginalisation_regularisation`.
-            - Filters and validates the mixture parameter set and log marginalisation results using `_mixture_input_filtering`.
-            - Creates a meshgrid for the mixture axes.
-            - Initializes the final output shape and prior axes indices for the mixture components.
-            - Iteratively constructs mixture components for each prior using `create_mixture_comp`.
-            - Ensures all mixture components have compatible shapes for combination.
-            - Combines all mixture components into a single array to represent the combined mixture.
-            - Calculates the log hyperparameter likelihood by summing over the combined mixture components.
-            - Adjusts the final likelihood by undoing the regularisation applied initially.
-        """
-        logging.debug(f"log_marginalisation_regularisation: {self.log_marginalisation_regularisation}")
-        log_margresults = [log_margresult + self.log_marginalisation_regularisation for log_margresult in log_margresults]
+        batch_of_log_margresults = [log_margresult + self.log_nuisance_marg_regularisation for log_margresult in batch_of_log_margresults]
         
-        mixture_parameter_set, log_margresults = self._mixture_input_filtering(mixture_parameter_set, log_margresults)
 
-        mix_axes_mesh = np.meshgrid(*mixture_parameter_set.axes, indexing='ij')
+        mix_axes_mesh = np.meshgrid(*self.mixture_parameter_specifications.axes, indexing='ij')
 
         # To get around the fact that every component of the mixture can be a different shape
-        final_output_shape = [len(log_margresults), *np.arange(len(mixture_parameter_set)), ]
+        final_output_shape = [len(batch_of_log_margresults), *np.arange(len(self.mixture_parameter_specifications)), ]
 
         # Axes for each of the priors to __not__ expand in
         prior_axes_indices = []
 
         # Counter for how many hyperparameter axes we have used
-        hyper_idx = len(mixture_parameter_set)+1
+        hyper_idx = len(self.mixture_parameter_specifications)+1
 
 
         # Creating components of mixture for each prior
         mixture_array_comp_list = []
-        for prior_idx, log_margresults_for_idx in enumerate(log_margresults):
+        for prior_idx, log_margresults_for_idx in enumerate(batch_of_log_margresults):
 
             mix_comp, hyper_idx  = self.create_mixture_comp( 
                             prior_idx = prior_idx, 
@@ -202,7 +190,7 @@ and number of prior components is {len(self.log_priors)}.""")
         # Now to combine the results for all the data and to 
         combined_mixture = -np.inf
         for mixture_component in mixture_array_comp_list:
-            mixture_component = mixture_component - self.log_marginalisation_regularisation
+            mixture_component = mixture_component - self.log_nuisance_marg_regularisation
             combined_mixture = np.logaddexp(combined_mixture, mixture_component)
 
 
@@ -210,7 +198,27 @@ and number of prior components is {len(self.log_priors)}.""")
         log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
 
         # Undoing the regularisation for proper output
-        log_hyperparameter_likelihood = log_hyperparameter_likelihood - self.log_marginalisation_regularisation
+        log_hyperparameter_likelihood = log_hyperparameter_likelihood
 
         return log_hyperparameter_likelihood
+    
+    def initiate_exploration(self, 
+                           num_in_batches: int) -> list:
+        batched_log_margresults = []
+        for batch_idx in range(0, len(self.log_nuisance_marg_results[0]), num_in_batches):
+            batched_log_margresults.append(
+                [single_prior_log_margresults[batch_idx:batch_idx+num_in_batches, ...] for single_prior_log_margresults in self.log_nuisance_marg_results])
+
+        self.batched_log_nuisance_marg_results =  batched_log_margresults
+
+
+    def run_exploration(self) -> np.ndarray:
+
         
+        log_hyperparameter_likelihood_batches = [self.create_discrete_mixture_log_hyper_likelihood(
+            batch_of_log_margresults=batch_of_log_margresults,
+        ) for batch_of_log_margresults in self.batched_log_nuisance_marg_results]
+
+        log_hyperparameter_likelihood = np.sum(log_hyperparameter_likelihood_batches, axis=0)
+
+        return log_hyperparameter_likelihood
