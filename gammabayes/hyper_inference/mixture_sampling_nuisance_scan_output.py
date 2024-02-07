@@ -5,13 +5,51 @@ from gammabayes import ParameterSet
 
 
 class ScanOutput_StochasticMixtureFracPosterior(object):
+    """
+    A class designed to handle stochastic exploration of posterior distributions for mixture fractions using the Dynesty sampler.
 
+    Attributes:
+        prior_parameter_specifications (list | dict | ParameterSet): Specifications for prior parameters.
+        
+        mixture_parameter_specifications (ParameterSet): Specifications for mixture parameters.
+        
+        log_margresults (np.array): Logarithm of marginal results for the parameters.
+        
+        log_nuisance_marg_regularisation (float): Regularisation parameter for nuisance marginalisation.
+        
+        num_priors (int): The number of prior distributions provided.
+        
+        num_events (int): The number of events in the log marginal results.
+        
+        mixture_bounds (list): Bounds for the mixture parameters.
+        
+        num_mixes (int): The number of mixture components.
+        
+        hyperparameter_axes (list): Axes for hyperparameters, derived from prior parameter specifications.
+        
+        index_to_hyper_parameter_info (dict): Mapping of hyperparameter indices to their specifications.
+        
+        ndim (int): The number of dimensions for the sampler, including mixture components and hyperparameters.
+        
+        sampler (dynesty.NestedSampler): The Dynesty sampler object used for exploration.
+    """
     def __init__(self, 
                  log_margresults,
                  mixture_parameter_specifications:list | dict | ParameterSet,
                  log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
                  prior_parameter_specifications: list | dict | ParameterSet = None):
-        
+        """
+        Initializes the ScanOutput_StochasticMixtureFracPosterior class with necessary parameters and configurations.
+
+        Args:
+            log_margresults (np.array): Logarithm of marginal results for the parameters.
+            
+            mixture_parameter_specifications (list | dict | ParameterSet): Specifications for mixture parameters.
+            
+            log_nuisance_marg_regularisation (float, optional): Regularisation parameter for nuisance marginalisation.
+            
+            prior_parameter_specifications (list | dict | ParameterSet, optional): Specifications for prior parameters.
+        """
         self.prior_parameter_specifications = _handle_parameter_specification(
             prior_parameter_specifications,
             _no_required_num=True
@@ -76,6 +114,15 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
 
 
     def prior_transform(self, u):
+        """
+        Transforms uniform samples `u` from the unit cube to the parameter space defined by mixture and hyperparameter axes.
+
+        Args:
+            u (np.array): An array of uniform samples to be transformed.
+
+        Returns:
+            np.array: Transformed samples in the parameter space.
+        """
 
         for _mix_idx in range(self.num_mixes):
             u[_mix_idx] = self.mixture_bounds[_mix_idx][0]+u[_mix_idx]*(self.mixture_bounds[_mix_idx][1]- self.mixture_bounds[_mix_idx][0])
@@ -91,6 +138,16 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
         return u
     
     def ln_likelihood(self, inputs):
+        """
+        Calculates the logarithm of the likelihood for a given set of input parameters.
+
+        Args:
+            inputs (np.array): Array of input parameters, including mixture weights and hyperparameter values.
+
+        Returns:
+            float: The logarithm of the likelihood for the given inputs.
+        """
+        
         mixture_weights = inputs[:self.num_mixes]
         hyper_values    = inputs[self.num_mixes:]
 
@@ -118,6 +175,16 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
     # Note: When allocating live points it's lower than the norm due to the discrete nature of the prior parameters
     def initiate_exploration(self, **kwargs):
 
+        """
+        Initiates the exploration process by setting up the Dynesty sampler with the class's likelihood and prior transform functions.
+
+        Args:
+            **kwargs: Keyword arguments to be passed to the Dynesty sampler.
+
+        Returns:
+            dynesty.NestedSampler: The configured Dynesty sampler object.
+        """
+
         self.sampler = dynesty.NestedSampler(loglikelihood=self.ln_likelihood, 
                                                prior_transform=self.prior_transform, 
                                                ndim=self.ndim, 
@@ -126,6 +193,16 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
         return self.sampler
     
     def run_exploration(self,*args, **kwargs):
+        """
+        Runs the nested sampling exploration process using the initialized Dynesty sampler.
+
+        Args:
+            *args: Positional arguments to be passed to the `run_nested` method of Dynesty sampler.
+            **kwargs: Keyword arguments to be passed to the `run_nested` method of Dynesty sampler.
+
+        Returns:
+            dict: A dictionary containing the results of the nested sampling run.
+        """
         self.run_nested_output = self.sampler.run_nested(*args, **kwargs)
         return self.run_nested_output
     

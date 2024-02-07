@@ -1,3 +1,3 @@
-from .models import SS_DM_dist
-from .combine_DM_class import CombineDMComps
+from .spectral_models import SS_DM_dist, DM_ContinuousEmission_Spectrum
+from .combined_DM_class import CombineDMComps
 

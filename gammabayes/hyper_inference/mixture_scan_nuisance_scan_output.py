@@ -5,6 +5,28 @@ from gammabayes import ParameterSet, Parameter
 
 
 class ScanOutput_ScanMixtureFracPosterior(object):
+    """
+    This class processes the scan output for analyzing mixture fraction posteriors within a Bayesian framework.
+    It calculates the posterior distributions of mixture fractions by integrating over nuisance parameters,
+    using a specified mixture model. This class supports handling of log marginal results from the scan,
+    application of Dirichlet stick breaking for mixture models, and calculation of discrete mixture
+    log hyper-likelihoods.
+
+    Attributes:
+        log_nuisance_marg_results (np.ndarray): Log marginal results for nuisance parameters from the scan.
+        log_nuisance_marg_regularisation (float): Regularization term added to the log marginal results to stabilize
+                                                  the numerical computations.
+        mixture_parameter_specifications (ParameterSet): Specifications for the mixture model parameters, which
+                                                         includes parameter names, bounds, and discretization.
+    
+    Args:
+        log_margresults (np.ndarray): The log marginal results from the scanning process.
+        mixture_parameter_specifications (list | ParameterSet, optional): Specifications for the mixture model parameters.
+                                                                          If not provided, a default set is used.
+        log_nuisance_marg_regularisation (float, optional): Regularization term for log marginal results to help
+                                                            stabilize computations. Defaults to 0.
+        prior_parameter_specifications (None, optional): Unused. Present for API consistency with other classes.
+    """
 
     def __init__(self, 
                  log_margresults, 
@@ -12,6 +34,24 @@ class ScanOutput_ScanMixtureFracPosterior(object):
                  log_nuisance_marg_regularisation = 0., 
                  prior_parameter_specifications = None # Argument is for consistent input to this class and "ScanOutput_StochasticMixtureFracPosterior"
                  ):
+        """
+        Initializes the ScanOutput_ScanMixtureFracPosterior object with scan results and model specifications.
+
+        Attributes:
+            log_nuisance_marg_results (np.ndarray): Log marginal results for nuisance parameters from the scan.
+            log_nuisance_marg_regularisation (float): Regularization term added to the log marginal results to stabilize
+                                                    the numerical computations.
+            mixture_parameter_specifications (ParameterSet): Specifications for the mixture model parameters, which
+                                                            includes parameter names, bounds, and discretization.
+        
+        Args:
+            log_margresults (np.ndarray): The log marginal results from the scanning process.
+            mixture_parameter_specifications (list | ParameterSet, optional): Specifications for the mixture model parameters.
+                                                                            If not provided, a default set is used.
+            log_nuisance_marg_regularisation (float, optional): Regularization term for log marginal results to help
+                                                                stabilize computations. Defaults to 0.
+            prior_parameter_specifications (None, optional): Unused. Present for API consistency with other classes.
+        """
         
         self.log_nuisance_marg_results = log_margresults
         self.log_nuisance_marg_regularisation = log_nuisance_marg_regularisation
@@ -23,32 +63,27 @@ class ScanOutput_ScanMixtureFracPosterior(object):
                                  mixture_param_specifications: list | dict | ParameterSet = None, 
                                  log_margresults: list | tuple | np.ndarray = None):
         """
-        Filters and validates the input for mixture parameters and log marginalisation results. 
-        This method ensures that the provided mixture parameters and log marginalisation results 
-        are consistent with the expected format and the current state of the object.
+        Validates and processes the input for mixture model specifications and log marginal results, ensuring they
+        are in the correct format and consistent with each other. This method also handles default parameters and
+        initializes the mixture parameter specifications if not provided.
 
         Args:
-            mixture_param_specifications (list | dict | ParameterSet, optional): The set of parameters for 
-                                                                    the mixture model. Can be a list, 
-                                                                    a dictionary, or a ParameterSet object. 
-                                                                    Defaults to None.
-            log_margresults (list | tuple | np.ndarray, optional): Log marginalisation results. 
-                                                                Can be a list, tuple, or numpy ndarray. 
-                                                                Defaults to None.
+            mixture_param_specifications (list | dict | ParameterSet, optional): The specifications for the mixture
+                model parameters. Can include parameter names, bounds, and discretization settings. If None, uses
+                the object's existing specifications.
+            log_margresults (list | tuple | np.ndarray, optional): Log marginal results for validating against the
+                mixture parameter specifications. Not directly used here but ensures consistency.
 
         Returns:
-            tuple: A tuple containing the validated mixture_param_specifications and log_margresults.
+            tuple: A tuple containing the processed and validated mixture_param_specifications and log_margresults.
 
         Raises:
-            Exception: Raised if mixture_param_specifications is not specified or if the number of mixture 
-                    axes does not match the number of components (minus 1) in the log priors.
+            Exception: If the mixture parameter specifications are not provided or are inconsistent with the log
+                marginal results.
 
         Notes:
-            - If `mixture_param_specifications` is not provided, it defaults to `self.mixture_param_specifications`.
-            - An exception is raised if no mixture axes are specified.
-            - If `log_margresults` is not provided, it defaults to `self.log_margresults`.
-            - The method checks the consistency between the number of mixture axes and the number 
-            of prior components.
+            This method is primarily used internally to ensure the consistency and validity of input parameters
+            for the mixture model.
         """
 
         
@@ -86,32 +121,28 @@ and number of prior components is {len(log_margresults)}.""")
                             prior_axes_indices: list[list],
                             hyper_idx: int):
         """
-        Creates a single component (i.e. the component for __a__ prior) of the mixture model. 
-        This method combines log marginalisation results for a given prior index with the 
-        mixture axis information to form a component of the mixture model. 
+        Constructs a single component of the mixture model for a given prior. This involves combining the log
+        marginal results with mixture axis information to form the component, using Dirichlet stick breaking.
 
         Args:
-            prior_idx (int): The index of the prior for which the mixture component is being created.
-
-            log_margresults_for_idx (np.ndarray): The log marginalisation results corresponding to the given prior index.
-
-            mix_axes_mesh (list[np.ndarray]): A list of numpy arrays representing the meshgrid of mixture axes.
-
-            final_output_shape (list): A list to store the final shape of the output mixture component.
-
-            prior_axes_indices (list[list]): A list to keep track of the indices in each prior for the final output.
-
-            hyper_idx (int): The current index in the hyperparameter space.
+            prior_idx (int): Index of the prior for which the component is being created.
+            
+            log_margresults_for_idx (np.ndarray): Log marginal results corresponding to the prior index.
+            
+            mix_axes_mesh (list[np.ndarray]): Meshgrid of mixture axes, providing the basis for the mixture component.
+            
+            final_output_shape (list): List to store the shape of the output mixture component.
+            
+            prior_axes_indices (list[list]): List of indices for each prior in the final output.
+            
+            hyper_idx (int): Index in the hyperparameter space, used for tracking the dimensionality.
 
         Returns:
-            tuple: A tuple containing the created mixture component (numpy array) and the updated hyperparameter index (int).
+            tuple: A tuple containing the mixture component (as a numpy array) and the updated hyperparameter index.
 
         Notes:
-            - The method calculates the log mixture component using the Dirichlet stick breaking process.
-            - It expands and combines the calculated mixture component with the log marginalisation results.
-            - Updates `final_output_shape` and `prior_axes_indices` to reflect the new dimensions and indices after 
-            combining the mixture component with the log marginalisation results.
-            - The method returns the new mixture component and the updated hyperparameter index.
+            This method applies the Dirichlet stick breaking process to create a log mixture component and updates
+            tracking lists for output shape and hyperparameter indices.
         """
         # Including 'event' and mixture axes for eventual __non__ expansion into
         single_prior_axes_indices_instance = list(range(1+len(mix_axes_mesh)))
@@ -145,6 +176,22 @@ and number of prior components is {len(log_margresults)}.""")
     def create_discrete_mixture_log_hyper_likelihood(self, 
                                                      batch_of_log_margresults: list | tuple | np.ndarray = None,
                                                      ) -> np.ndarray:
+        """
+        Calculates the log hyper-likelihood of the discrete mixture model based on batched log marginal results.
+        This method adjusts the marginal results with regularization, constructs mixture components, and combines
+        them to compute the overall log hyper-likelihood.
+
+        Args:
+            batch_of_log_margresults (list | tuple | np.ndarray, optional): Batched log marginal results for each
+                prior. If None, uses the object's log_nuisance_marg_results.
+
+        Returns:
+            np.ndarray: The log hyper-likelihood of the hyperparameters given the batch of log marginal results.
+
+        Notes:
+            This method orchestrates the creation of mixture components for each prior and combines them to compute
+            the log hyper-likelihood, taking regularization into account.
+        """
 
         batch_of_log_margresults = [log_margresult + self.log_nuisance_marg_regularisation for log_margresult in batch_of_log_margresults]
         
@@ -204,6 +251,20 @@ and number of prior components is {len(log_margresults)}.""")
     
     def initiate_exploration(self, 
                            num_in_batches: int) -> list:
+        """
+        Prepares the exploration process by batching the log marginal results. This method divides the log marginal
+        results into smaller batches for processing, facilitating efficient computation of the hyper-likelihood.
+
+        Args:
+            num_in_batches (int): The number of log marginal results to include in each batch.
+
+        Returns:
+            list: A list of batched log marginal results ready for exploration.
+        
+        Notes:
+            This method is used to setup the exploration process by organizing the log marginal results into
+            manageable batches.
+        """
         batched_log_margresults = []
         for batch_idx in range(0, len(self.log_nuisance_marg_results[0]), num_in_batches):
             batched_log_margresults.append(
@@ -213,7 +274,18 @@ and number of prior components is {len(log_margresults)}.""")
 
 
     def run_exploration(self) -> np.ndarray:
+        """
+        Executes the exploration process, computing the log hyperparameter likelihood for each batch of log
+        marginal results. This method iterates over all batches, calculates their log hyper-likelihood, and
+        aggregates the results.
 
+        Returns:
+            np.ndarray: The combined log hyperparameter likelihood from all batches of log marginal results.
+
+        Notes:
+            This method leverages `create_discrete_mixture_log_hyper_likelihood` to calculate the log
+            hyper-likelihood for each batch and sums the log results to get the overall likelihood.
+        """
         
         log_hyperparameter_likelihood_batches = [self.create_discrete_mixture_log_hyper_likelihood(
             batch_of_log_margresults=batch_of_log_margresults,

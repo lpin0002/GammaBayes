@@ -71,13 +71,23 @@ class Parameter(dict):
                     # widen/constrict the bounds that pop out
                 self['dynamic_multiplier'] = float(self['dynamic_multiplier'])
 
-                if self['scaling']=='linear':
-                    self['bounds'] = [self['default_value']-self['dynamic_multiplier']/np.sqrt(self['num_events']), 
-                                    self['default_value']+self['dynamic_multiplier']/np.sqrt(self['num_events'])]
+                if 'absolute_bounds' in self:
+
+                    self['absolute_bounds'] = [float(abs_bound) for abs_bound in self['absolute_bounds']]
+                    self['bounds'] = self.construct_dynamic_bounds(
+                        centre=self['default_value'], 
+                        scaling=self['scaling'], 
+                        dynamic_multiplier=self['dynamic_multiplier'], 
+                        num_events=self['num_events'], 
+                        absolute_bounds=self['absolute_bounds'])
                 else:
-                    self['bounds'] = [10**(np.log10(self['default_value'])-np.log10(self['dynamic_multiplier'])/np.sqrt(self['num_events'])), 
-                                    10**(np.log10(self['default_value'])+np.log10(self['dynamic_multiplier'])/np.sqrt(self['num_events']))]
-        
+                    self['bounds'] = self.construct_dynamic_bounds(
+                        centre=self['default_value'], 
+                        scaling=self['scaling'], 
+                        dynamic_multiplier=self['dynamic_multiplier'], 
+                        num_events=self['num_events'],)
+                    
+
         for idx, bound in enumerate(self['bounds']):
             self['bounds'][idx] = float(bound)
 
@@ -146,6 +156,30 @@ class Parameter(dict):
             # atm (31/01/24) this is either 'spectral_parameters' or 'spatial_parameters'
         if not('parameter_type' in self):
             self['parameter_type'] = 'None'
+
+
+
+    def construct_dynamic_bounds(self, centre, scaling, dynamic_multiplier, num_events, absolute_bounds=None):
+        if scaling=='linear':
+            bounds = [centre-dynamic_multiplier/np.sqrt(num_events), 
+                            centre+dynamic_multiplier/np.sqrt(num_events)]
+        else:
+            bounds = [10**(np.log10(centre)-dynamic_multiplier/np.sqrt(num_events)), 
+                            10**(np.log10(centre)+dynamic_multiplier/np.sqrt(num_events))]
+            
+
+        if not(absolute_bounds is None):
+            if bounds[0]<absolute_bounds[0]:
+                bounds[0] = absolute_bounds[0]
+
+            if bounds[1]>absolute_bounds[1]:
+                bounds[1] = absolute_bounds[1]
+
+        return bounds
+            
+        
+
+        
 
 
     # Below two methods allows one to access attributes like dictionary keys

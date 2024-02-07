@@ -1,7 +1,6 @@
-
-from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
+# Necessary imports for the script functionality
 from gammabayes.utils import resources_dir, iterate_logspace_integration, haversine
-from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_aeff
+from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 import numpy as np
 from scipy import interpolate
 from scipy.special import logsumexp
@@ -17,9 +16,23 @@ from gammapy.catalog import SourceCatalogHGPS
 from gammabayes.priors.core import DiscreteLogPrior
 
 
-def construct_hess_source_map(energy_axis=energy_true_axis, 
-    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
-    log_aeff=log_aeff):
+def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
+    log_aeff: callable):
+    """Constructs a map of HESS source fluxes based on the HGPS catalog.
+
+    Args:
+        energy_axis (np.ndarray): Energy axis for the map (TeV).
+        
+        longitudeaxis (np.ndarray): Longitude axis for the map (degrees).
+        
+        latitudeaxis (np.ndarray): Latitude axis for the map (degrees).
+        
+        log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
+
+    Returns:
+        np.ndarray: A 3D array representing the event rate from HESS catalog sources over the specified energy,
+                    longitude, and latitude axes.
+    """
 
     hess_catalog = SourceCatalogHGPS(resources_dir+"/hgps_catalog_v1.fits.gz")
 
@@ -40,9 +53,6 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
 
     HESSmap = Map.from_geom(HESSgeom)
 
-    
-    
-    
     
     count=0 # To keep track of the number of sources satisfying the conditions
 
@@ -116,9 +126,27 @@ def construct_hess_source_map(energy_axis=energy_true_axis,
 
 class construct_hess_source_map_interpolation(object):
     
-    def __init__(self, energy_axis=energy_true_axis, 
-    longitudeaxis=longitudeaxistrue, latitudeaxis=latitudeaxistrue,
-    log_aeff=log_aeff, normalise=True, iterate_logspace_integrator=iterate_logspace_integration):
+    def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
+                 log_aeff: callable, normalise: bool = True, iterate_logspace_integrator: callable =iterate_logspace_integration):
+        """Provides interpolated values from the HESS source map for given energy, longitude, and latitude points.
+
+        Args:
+            energy_axis (np.ndarray): Energy axis for the interpolation (TeV).
+            
+            longitudeaxis (np.ndarray): Longitude axis for the interpolation (degrees).
+            
+            latitudeaxis (np.ndarray): Latitude axis for the interpolation (degrees).
+            
+            log_aeff (callable): Function to calculate the log of the effective area.
+            
+            normalise (bool, optional): Whether to normalise the source map. Defaults to True.
+            
+            iterate_logspace_integrator (callable, optional): Integrator function for normalisation in log space. Defaults to iterate_logspace_integration.
+
+        This class constructs an interpolation function for the HESS source map, allowing for the evaluation of the
+        map at arbitrary points within the defined axes.
+        """
+        
         axes = [energy_axis, longitudeaxis, latitudeaxis]
 
 
@@ -136,9 +164,62 @@ class construct_hess_source_map_interpolation(object):
 
     # Then we make a wrapper to put the result of the function in log space
     def log_func(self, energy, longitude, latitude, 
-                       spectral_parameters={}, spatial_parameters={}): 
+                       spectral_parameters={}, spatial_parameters={}):
+        """Computes the log of interpolated values from the HESS source map at given points.
+
+        Args:
+            energy (float): Energy value for the interpolation (TeV).
+            
+            longitude (float): Longitude value for the interpolation (degrees).
+            
+            latitude (float): Latitude value for the interpolation (degrees).
+            
+            spectral_parameters (dict, optional): Spectral parameters for the model. Defaults to an empty dict.
+            
+            spatial_parameters (dict, optional): Spatial parameters for the model. Defaults to an empty dict.
+
+        Returns:
+            float: Log of the interpolated value from the HESS source map at the specified point.
+        """
         return np.log(self.hess_grid_interpolator((energy, longitude, latitude)))
 
 
-class hess_catalogue_sources_prior(DiscreteLogPrior):
-    pass
+class HESSCatalogueSources_Prior(DiscreteLogPrior):
+    
+    def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
+                 irf: IRF_LogLikelihood, 
+                 normalise: bool = True, iterate_logspace_integrator: callable =iterate_logspace_integration,
+                 *args, **kwargs):
+        """Defines a prior based on HESS catalogue sources over specified energy, longitude, and latitude axes.
+
+        Args:
+            energy_axis (np.ndarray): Energy axis for the prior (TeV).
+            
+            longitudeaxis (np.ndarray): Longitude axis for the prior (degrees).
+            
+            latitudeaxis (np.ndarray): Latitude axis for the prior (degrees).
+            
+            irf (IRF_LogLikelihood): Instrument Response Function log likelihood instance.
+            
+            normalise (bool, optional): Whether to normalise the prior. Defaults to True.
+            
+            iterate_logspace_integrator (callable, optional): Function for integration over log space for normalisation. Defaults to iterate_logspace_integration.
+        
+        This class utilizes an interpolation of the HESS source map to define a prior distribution for Bayesian analysis,
+        integrating the map's flux values with the instrument's effective area.
+        """
+        
+
+        self.log_hess_class_instance = construct_hess_source_map_interpolation(energy_axis=energy_axis, 
+                                                                            longitudeaxis=longitudeaxis, 
+                                                                            latitudeaxis=latitudeaxis, 
+                                                                            log_aeff=irf.log_aeff,)
+        
+        super().__init__(
+            name='HESS Catalogue Sources Prior',
+            axes_names=['energy', 'lon', 'lat'],
+            axes=(energy_axis, longitudeaxis, latitudeaxis),
+            logfunction=self.log_hess_class_instance.log_func, 
+            *args, **kwargs
+        )
+

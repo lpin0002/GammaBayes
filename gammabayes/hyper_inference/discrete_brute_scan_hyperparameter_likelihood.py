@@ -467,11 +467,36 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
 
     def select_scan_output_posterior_exploration_class(self, 
-                                                       mixture_parameter_specifications,
+                                                       mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
                                                        mixture_fraction_exploration_type: str = None, 
-                                                       log_margresults = None,
-                                                       parameter_specifications=None,
+                                                       log_margresults: list | np.ndarray = None,
+                                                       parameter_specifications: dict | list[ParameterSet] | list[dict] =None,
                                                        *args, **kwargs):
+        """
+        Selects and initializes (the class, not the process it contains) the appropriate exploration class based on the 
+        specified mixture fraction exploration type.
+        
+        This method dynamically selects and initializes a class for exploring the posterior of mixture fractions. It supports
+        either deterministic scanning ('scan') or stochastic sampling ('sample') methods for posterior exploration.
+        
+        Args:
+            mixture_parameter_specifications (ParameterSet, list[Parameter], dict): Specifications for the mixture parameters involved in the exploration.
+            
+            mixture_fraction_exploration_type (str, optional): The type of exploration to perform. Can be 'scan' for a 
+                deterministic scan or 'sample' for stochastic sampling. If not provided, defaults to the class attribute 
+                `mixture_fraction_exploration_type`.
+            
+            log_margresults (list, array like, optional): The logarithm of marginal results to be used in the exploration. If not provided, 
+                defaults to the class attribute `log_margresults`.
+            
+            parameter_specifications (dict, list[ParameterSet], list[dict], optional): Specifications for prior 
+            parameters involved in the exploration. If not provided, defaults to the class attribute `parameter_specifications`.
+            
+            *args, **kwargs: Additional arguments and keyword arguments passed to the exploration class constructor.
+            
+        Raises:
+            ValueError: If `mixture_fraction_exploration_type` is neither 'scan' nor 'sample'.
+        """
         if mixture_fraction_exploration_type is None:
             mixture_fraction_exploration_type = self.mixture_fraction_exploration_type
 
@@ -500,9 +525,29 @@ class before the multiprocessing or make sure that it isn't part of the actual
         
 
     def init_posterior_exploration(self, *args, **kwargs):
+        """
+        Initiates the posterior exploration process.
+        
+        This method delegates the initiation of exploration to the instance of the exploration class selected by the 
+        `select_scan_output_posterior_exploration_class` method. It prepares the exploration environment and parameters 
+        based on the class instance's configuration.
+        
+        *args, **kwargs: Arguments and keyword arguments to be passed to the initiation method of the exploration class.
+        """
         self.scan_output_exploration_class_instance.initiate_exploration(*args, **kwargs)
 
     def run_posterior_exploration(self, *args, **kwargs):
+        """
+        Runs the posterior exploration process and returns the results.
+        
+        This method triggers the actual exploration process using the selected and initialized exploration class instance. 
+        It runs the exploration based on the configured parameters and returns the exploration results.
+        
+        *args, **kwargs: Arguments and keyword arguments to be passed to the run method of the exploration class.
+        
+        Returns:
+            The results of the posterior exploration, the format and content of which depend on the exploration method used.
+        """
         self._posterior_exploration_output = self.scan_output_exploration_class_instance.run_exploration(*args, **kwargs)
 
         return self._posterior_exploration_output
@@ -510,6 +555,17 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
     @property
     def posterior_exploration_results(self):
+        """
+        Returns the results of the posterior exploration.
+        
+        This property provides access to the results of the posterior exploration. The nature of the results depends on the 
+        mixture fraction exploration type. For 'scan', it directly returns the exploration output, while for other types, 
+        it accesses the results through the sampler's `results` attribute of the exploration class instance.
+        
+        Returns:
+            The results of the posterior exploration, which may include posterior distributions, samples, or other statistics,
+            depending on the exploration type.
+        """
         if self.mixture_fraction_exploration_type =='scan':
             return self._posterior_exploration_output
         else:
@@ -551,6 +607,28 @@ class before the multiprocessing or make sure that it isn't part of the actual
                                             hyper_param_axes: list[np.ndarray] | tuple[np.ndarray] | None = None, 
                                             log_hyper_priormesh: np.ndarray = None, 
                                             integrator: callable = None):
+        """
+        Applies uniform priors to hyperparameters and calculates the posterior using the updated likelihood and prior mesh.
+
+        This method is designed to compute the posterior distribution of hyperparameters by applying uniform priors, 
+        generating a meshgrid of log prior values, and combining it with the log hyperparameter likelihood.
+
+        Args:
+            priorinfos (list[dict] | tuple[dict]): Information about the priors, such as range and resolution.
+            hyper_param_axes (list[np.ndarray] | tuple[np.ndarray], optional): Axes for the hyperparameters, used to 
+                generate the meshgrid for priors. If None, it must be computed from `priorinfos`.
+            log_hyper_priormesh (np.ndarray, optional): Pre-computed log prior meshgrid. If None, it is computed from 
+                `priorinfos` and `hyper_param_axes`.
+            integrator (callable, optional): Integrator function to be used for calculating the posterior. Defaults to 
+                `self.logspace_integrator` if None.
+
+        Returns:
+            tuple: Contains the log posterior, list of log prior values, and the hyperparameter values lists. Specifically,
+            (log_posterior, log_prior_val_list, hyper_val_list).
+
+        Notes:
+            - This method currently has a "TODO" comment indicating it is not fully implemented.
+        """
 
         if integrator is None:
             integrator = self.logspace_integrator
@@ -570,6 +648,25 @@ class before the multiprocessing or make sure that it isn't part of the actual
     # Private method for classes that inherit this classes behaviour åto use
         # and don't have to re-write many of the same lines again
     def _pack_data(self, reduce_mem_consumption: bool = True, h5f=None, file_name='temporary_file.h5') -> dict:
+        """
+        Packs class data into an HDF5 file format for efficient storage and retrieval.
+
+        This private method is designed for internal use by classes inheriting this behavior to avoid rewriting common 
+        functionality. It efficiently stores attributes, numpy arrays, and ParameterSet objects into an HDF5 file.
+
+        Args:
+            reduce_mem_consumption (bool): If True, reduces memory consumption by not storing certain large data structures.
+            
+            h5f (h5py.File, optional): An open h5py.File object. If None, a new file is created using `file_name`.
+            
+            file_name (str): Name of the HDF5 file to create or write to if `h5f` is None.
+
+        Returns:
+            dict: The h5py.File object, which acts as a dictionary, containing all the stored data.
+        
+        Notes:
+            - Users should ensure that `h5f` is properly closed after use to prevent data corruption.
+        """
         if h5f is None:
             h5f = h5py.File(file_name, 'w')  # Replace 'temporary_file.h5' with desired file name
         
@@ -635,7 +732,17 @@ class before the multiprocessing or make sure that it isn't part of the actual
     
 
     # Wrapper for the _pack_data method for this specific class
-    def pack_data(self, file_name, reduce_mem_consumption: bool = True) -> dict:
+    def pack_data(self, file_name:str, reduce_mem_consumption: bool = True) -> dict:
+        """
+        Public wrapper for the `_pack_data` method, facilitating data packing into an HDF5 file.
+
+        Args:
+            file_name (str): The name of the file where data should be packed.
+            reduce_mem_consumption (bool, optional): If True, optimizes the packing process to consume less memory.
+
+        Returns:
+            dict: A reference to the HDF5 file object containing the packed data.
+        """
 
         return self._pack_data(reduce_mem_consumption, file_name=file_name)
 
@@ -654,13 +761,13 @@ class before the multiprocessing or make sure that it isn't part of the actual
     @classmethod
     def unpack(cls, file_name):
         """
-        Loads class data from an HDF5 file and returns a class instance.
+        Class method that loads class data from an HDF5 file, creating a class instance with the loaded data.
 
         Args:
-            file_name (str): The name of the file to load the data from.
+            file_name (str): The name of the HDF5 file from which to load the data.
 
         Returns:
-            discrete_brute_scan_hyperparameter_likelihood: An instance of the class with the loaded data.
+            An instance of the class populated with the data loaded from the specified HDF5 file.
         """
         with h5py.File(file_name, 'r') as h5f:
             # Create a new instance of the class
@@ -703,7 +810,20 @@ class before the multiprocessing or make sure that it isn't part of the actual
             return class_input_dict
         
     @classmethod
-    def load(cls, file_name, *args, **kwargs):
+    def load(cls, file_name:str, *args, **kwargs):
+        """
+        Class method that creates an instance of the class with data loaded from an HDF5 file.
+
+        This method uses `unpack` to load data from the file and then initializes a class instance with the loaded data.
+
+        Args:
+            file_name (str): The name of the HDF5 file from which to load the data.
+            *args: Additional positional arguments passed to the class constructor.
+            **kwargs: Additional keyword arguments passed to the class constructor.
+
+        Returns:
+            An instance of the class with data initialized from the specified HDF5 file.
+        """
         class_input_dict = cls.unpack(file_name)
         instance = cls(*args, **class_input_dict, **kwargs)
 

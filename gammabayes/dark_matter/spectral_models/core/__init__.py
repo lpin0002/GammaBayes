@@ -1,0 +1,1 @@
+from .base_spectral_class import DM_ContinuousEmission_Spectrum

@@ -18,38 +18,33 @@ class DiscreteLogLikelihood(object):
                  iterative_logspace_integrator: callable        = iterate_logspace_integration,
                  parameters: dict | ParameterSet          = ParameterSet(),
                  ) -> None:
-        """Initialise a discrete_loglikelihood class instance.
-
-        Args:
-            logfunction (func): A function that outputs the log 
-                likelihood values for the relevant axes and dependent axes. 
-
-            axes (tuple, optional): A tuple of the discrete value axes on which
-            the likelihood can/will be evaluated that the likelihood is/would 
-            be normalised with respect to. Defaults to None.
-
-            dependent_axes (tuple, optional): A tuple of the discrete value 
-            axes on which the likelihood is dependent on that the likelihood is
-            not normalised with respect to. Defaults to None.
-
-            name (str, optional): Name given to an instance of the class. 
-                Defaults to '[None]'.
-
-            inputunit (list or tuple, optional): A list or tuple containing 
-                representations of the units of the 'axes' arguments. 
-                Defaults to None.
-
-            axes_names (list, optional): A list of the names of the axes within
-            the axes argument. 
-            Defaults to ['None'].
-
-            dependent_axes_names (list, optional): A list of the names of the 
-            axes within the dependent axesaxes argument. 
-            Defaults to ['None'].
-
-            iterative_logspace_integrator (callable, optional): Integration
-            method used for normalisation. Defaults to iterate_logspace_integration.
         """
+        Initializes a DiscreteLogLikelihood object that computes log likelihood values
+        for given sets of independent (axes) and dependent (dependent_axes) variables.
+
+        Parameters:
+            logfunction (callable): Function that computes log likelihood values.
+            
+            axes (list[np.ndarray] | tuple[np.ndarray]): Arrays defining the independent variable axes.
+            
+            dependent_axes (list[np.ndarray]): Arrays defining the dependent variable axes.
+            
+            name (list[str] | tuple[str], optional): Identifier name(s) for the likelihood instance.
+            
+            inputunit (str | list[str] | tuple[str], optional): Unit(s) of the input axes.
+            
+            axes_names (list[str] | tuple[str], optional): Names of the independent variable axes.
+            
+            dependent_axes_names (list[str] | tuple[str], optional): Names of the dependent variable axes.
+            
+            iterative_logspace_integrator (callable, optional): Integration method used for normalization.
+            
+            parameters (dict | ParameterSet, optional): Parameters for the log likelihood function.
+
+        This class facilitates the calculation of log likelihood over discrete spaces, suitable for
+        models where likelihood evaluations are essential for parameter inference.
+        """
+
         self.name = name
         self.inputunit = inputunit
         self.logfunction = logfunction
@@ -58,44 +53,61 @@ class DiscreteLogLikelihood(object):
         print(f'Number of input dimensions {len(self.axes)}')
         self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
-        if len(self.axes)==1 or len(self.dependent_axes)==1:
-            if len(self.axes)==1 and len(self.dependent_axes)==1:
-                self.axes_dim = 1
-                self.dependent_axes_dim = 1
-                self.axes_shape = self.axes[0].shape
-            elif len(self.axes)==1:
-                self.axes_shape = self.axes[0].shape
-                self.axes_dim = 1
 
-            else:
-                self.axes_dim = len(axes)
-                # If it is not done this way self.axes_shape gives out a generator object location instead :(
-                self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
-                
-                self.dependent_axes_dim = 1
-        else:
-            self.axes_dim = len(axes)
-            
-            # If it is not done this way self.axes_shape gives out a generator object location instead :(
-            self.axes_shape = (*(axis.shape[0] for axis in self.axes),)
-
-            self.dependent_axes_dim = len(self.dependent_axes)
+        self.axes_dim, self.axes_shape, self.dependent_axes_dim = self._get_axis_dims(self.axes, self.dependent_axes)
 
         self.iterative_logspace_integrator  = iterative_logspace_integrator 
         self.parameters               = parameters
 
-        if type(self.parameters)==dict:
-            self.parameters = ParameterSet(self.parameters)
-        
-    def __call__(self, *args, **kwargs) -> np.ndarray | float:
-        """Dunder method to be able to use the class in the same method 
-        as the logfunction input.
-        Args:
-            input: Inputs in the same format as would be used for the 
-                logfunction used in the class.
+        self.parameters = ParameterSet(self.parameters)
+
+
+    def _get_axis_dims(self, axes, dependent_axes):
+        """
+        Determines the dimensions and shapes of the axes and dependent_axes.
+
+        Parameters:
+            axes: Independent variable axes.
+            dependent_axes: Dependent variable axes.
 
         Returns:
-            float or np.ndarray: The log-likelihood values for the given inputs.
+            A tuple containing axes dimensions, axes shapes, and dependent axes dimensions.
+        """
+
+        if len(axes)==1 or len(dependent_axes)==1:
+            if len(axes)==1 and len(dependent_axes)==1:
+                axes_dim = 1
+                dependent_axes_dim = 1
+                axes_shape =  axes[0].shape
+            elif len(axes)==1:
+                axes_shape = axes[0].shape
+                axes_dim = 1
+
+            else:
+                axes_dim = len(axes)
+                # If it is not done this way axes_shape gives out a generator object location instead :(
+                axes_shape = (*(axis.shape[0] for axis in axes),)
+                
+                dependent_axes_dim = 1
+        else:
+            axes_dim = len(axes)
+            
+            # If it is not done this way axes_shape gives out a generator object location instead :(
+            axes_shape = (*(axis.shape[0] for axis in axes),)
+
+            dependent_axes_dim = len(dependent_axes)
+
+        return axes_dim, axes_shape, dependent_axes_dim
+    
+
+        
+    def __call__(self, *args, **kwargs) -> np.ndarray | float:
+        """
+        Enables using the DiscreteLogLikelihood instance as a callable, passing
+        arguments directly to the logfunction.
+
+        Returns:
+            The log likelihood values as computed by the logfunction for the given inputs.
         """
         update_with_defaults(kwargs, self.parameters)
         return self.logfunction(*args, **kwargs)
@@ -103,11 +115,11 @@ class DiscreteLogLikelihood(object):
     
     
     def __repr__(self) -> str:
-        """Dunder method for what is the output when `print` is used on a class 
-            instance.
+        """
+        String representation of the DiscreteLogLikelihood instance, providing a summary.
 
         Returns:
-            str: A string containing a rough description of the class instance.
+            A descriptive string of the instance including its configuration.
         """
         string_text = 'discrete log likelihood class\n'
         string_text = string_text+'-'*(len(string_text)+3)+'\n'
@@ -123,18 +135,17 @@ class DiscreteLogLikelihood(object):
     
     
     def raw_sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray,  parameters: dict | ParameterSet = {}, numsamples: int = 1) -> np.ndarray:
-        """A method to sample the likelihood for given dependent values (e.g. true event data)
+        """
+        Samples from the likelihood for given dependent values.
 
-        Args:
-            dependentvalues (tuple[float] | list[float] | np.ndarray): Dependent values
-            to generate a probability distribution.
-
-            numsamples (int, optional): self-explanatory. Defaults to 1.
+        Parameters:
+            dependentvalues: Dependent values for generating a probability distribution.
+            parameters (dict | ParameterSet, optional): Parameters for the likelihood function.
+            numsamples (int, optional): Number of samples to generate.
 
         Returns:
-            np.ndarray: The resultant samples of the given axes.
+            An ndarray of samples from the likelihood distribution.
         """
-
         update_with_defaults(parameters, self.parameters)
 
         num_non_axes = len(self.axes) + len(dependentvalues)
@@ -152,6 +163,8 @@ class DiscreteLogLikelihood(object):
 
         loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
 
+
+        # Used for pseudo-riemann summing
         logdx = construct_log_dx_mesh(self.axes)
 
         simvals = integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples)
@@ -166,6 +179,20 @@ class DiscreteLogLikelihood(object):
     
 
     def sample(self,eventdata: EventData, parameters: dict | ParameterSet = {}, Nevents_per: int =1):
+        """
+        Generates samples from the likelihood based on observed event data.
+
+        Parameters:
+            eventdata (EventData): Observed event data to base the sampling on.
+
+            parameters (dict | ParameterSet, optional): Parameters for the likelihood function.
+
+            Nevents_per (int, optional): Number of measured events to sample per true event. 
+            (unless you really want to, leave it at 1)
+
+        Returns:
+            An EventData instance containing the sampled data.
+        """
         measured_event_data = EventData(energy=[], glon=[], glat=[], pointing_dirs=[], 
                                         _source_ids=[], obs_id=eventdata.obs_id,
                                         energy_axis=self.axes[0], glongitude_axis=self.axes[1],
