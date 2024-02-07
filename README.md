@@ -5,6 +5,19 @@ __Supervisor(s)__: Csaba Balazs, Eric Thrane
 
 __Documentation__: [ReadtheDocs](https://gammabayes.readthedocs.io/en/latest/index.html)
 
+__Referencing__:
+
+To reference this code please reference the following paper [2401.13876](https://arxiv.org/abs/2401.13876) or use the following bibtex.
+
+@article{pinchbeck2024gammabayes,
+      title={GammaBayes: a Bayesian pipeline for dark matter detection with CTA}, 
+      author={Liam Pinchbeck and Eric Thrane and Csaba Balazs},
+      year={2024},
+      eprint={2401.13876},
+      archivePrefix={arXiv},
+      primaryClass={astro-ph.HE}
+}
+
 ## Warning
 
 Within the analysis we slice into matrices for the normalisation values of likelihood functions to enforce a normalisation on the interpolation done.
