@@ -95,13 +95,13 @@ priors indicated in log_margresults. Assigning min=0 and max=1 for remaining mix
             self.num_hyper_axes+=len(prior_hyper_axes['spatial_parameters'])
 
             for hyp_name, hyp_axis in prior_hyper_axes['spectral_parameters'].items():
-                print('hyper_idx: ', prior_idx, 'spectral_parameters', hyp_name, hyper_idx, idx_for_prior)
+                # print('hyper_idx: ', prior_idx, 'spectral_parameters', hyp_name, hyper_idx, idx_for_prior)
                 index_to_hyper_parameter_info[hyper_idx] = [prior_idx, 'spectral_parameters', hyp_name, hyp_axis, idx_for_prior]
                 idx_for_prior+1
                 hyper_idx+=1
 
             for hyp_name, hyp_axis in prior_hyper_axes['spatial_parameters'].items():
-                print('hyper_idx: ', prior_idx, 'spatial_parameters', hyp_name, hyper_idx, idx_for_prior)
+                # print('hyper_idx: ', prior_idx, 'spatial_parameters', hyp_name, hyper_idx, idx_for_prior)
                 index_to_hyper_parameter_info[hyper_idx] = [prior_idx, 'spatial_parameters', hyp_name, hyp_axis, idx_for_prior]
                 idx_for_prior+1
                 hyper_idx+=1

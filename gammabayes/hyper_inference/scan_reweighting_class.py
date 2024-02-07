@@ -16,6 +16,8 @@ from gammabayes.priors import DiscreteLogPrior
 from gammabayes.likelihoods import DiscreteLogLikelihood
 from gammabayes import EventData, Parameter, ParameterSet
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
+from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
+from gammabayes.hyper_inference.mixture_sampling_nuisance_scan_output import ScanOutput_StochasticMixtureFracPosterior
 
 
 
@@ -138,10 +140,12 @@ class DynestyScanReweighting(object):
                  bounding_percentiles: list[float] = [90, 90],
                  bounding_sigmas: list[float] = [4,4],
                  logspace_integrator: callable = iterate_logspace_integration,
-                 prior_parameter_sets: dict | list[ParameterSet] = {}, 
+                 prior_parameter_specifications: dict | list[ParameterSet] = {}, 
                  reweight_batch_size: int = 1000,
                  no_priors_on_init: bool = False,
-                 log_prior_normalisations:np.ndarray = None):
+                 log_prior_normalisations:np.ndarray = None,
+                 mixture_fraction_exploration_type='scan',
+                 ):
         """
         Initializes an object to reweight nested sampling results based on a set of target priors.
 
@@ -168,7 +172,7 @@ class DynestyScanReweighting(object):
             
             logspace_integrator (callable, optional): A callable for log-space integration (multi dimensions).
             
-            prior_parameter_sets (dict | list[ParameterSet], optional): Parameter sets for the priors.
+            prior_parameter_specifications (dict | list[ParameterSet], optional): Parameter sets for the priors.
             
             reweight_batch_size (int, optional): Batch size for reweighting operation.
             
@@ -192,18 +196,21 @@ class DynestyScanReweighting(object):
         self.logspace_integrator = logspace_integrator
 
         if not self.no_priors_on_init:
-            self.prior_parameter_sets = _handle_parameter_specification(
-                    parameter_specifications=len(log_target_priors),
+            self.prior_parameter_specifications = _handle_parameter_specification(
+                    parameter_specifications=prior_parameter_specifications,
+                    num_required_sets=len(self.log_target_priors),
                     _no_required_num=self.no_priors_on_init)
         else:
-            self.prior_parameter_sets = _handle_parameter_specification(
+            self.prior_parameter_specifications = _handle_parameter_specification(
+                    prior_parameter_sets=prior_parameter_specifications,
                     _no_required_num=self.no_priors_on_init)        
             
-        self._num_parameter_specifications = len(self.prior_parameter_sets)
+        self._num_parameter_specifications = len(self.prior_parameter_specifications)
 
         self.reweight_batch_size = reweight_batch_size
         self.bounds = marginalisation_bounds
         self.log_prior_normalisations = log_prior_normalisations
+        self.mixture_fraction_exploration_type = mixture_fraction_exploration_type
 
 
         if self.bounds is None:
@@ -495,7 +502,7 @@ class DynestyScanReweighting(object):
                       log_evidence_values: list | np.ndarray, 
                       nested_sampling_results_samples: list | np.ndarray, 
                       log_target_priors: list[DiscreteLogPrior] = None,
-                      prior_parameter_sets: dict | list[ParameterSet] = None):
+                      prior_parameter_specifications: dict | list[ParameterSet] = None):
         """
         Scans and reweights log evidence values against multiple target priors by applying a reweighting procedure 
         for each target prior and parameter set combination.
@@ -509,8 +516,8 @@ class DynestyScanReweighting(object):
             log_target_priors (list[DiscreteLogPrior], optional): A list of target priors. If None, uses 
             `self.log_target_priors`.
             
-            prior_parameter_sets (dict | list[ParameterSet], optional): Parameter sets for each prior. 
-            If None, uses `self.prior_parameter_sets`.
+            prior_parameter_specifications (dict | list[ParameterSet], optional): Parameter sets for each prior. 
+            If None, uses `self.prior_parameter_specifications`.
 
         Returns:
             list[np.ndarray]: A list of reweighted log marginal results for each target prior and parameter set combination.
@@ -519,10 +526,12 @@ class DynestyScanReweighting(object):
             log_target_priors = self.log_target_priors
 
 
-        if prior_parameter_sets is None:
-            prior_parameter_sets = self.prior_parameter_sets
+        if prior_parameter_specifications is None:
+            prior_parameter_specifications = self.prior_parameter_specifications
         else:
-            prior_parameter_sets = self._handle_parameter_specification(prior_parameter_sets)
+            prior_parameter_specifications = _handle_parameter_specification(
+                parameter_specifications = prior_parameter_specifications,
+                num_required_sets=len(log_target_priors),)
 
 
         normalisation_mesh = np.meshgrid(*self.nuisance_axes, indexing='ij')
@@ -544,7 +553,7 @@ class DynestyScanReweighting(object):
 
 
         for log_target_prior, prior_parameter_set in tqdm(
-            zip(log_target_priors, prior_parameter_sets), 
+            zip(log_target_priors, prior_parameter_specifications), 
             total=len(log_target_priors)):
             
 
@@ -571,139 +580,108 @@ class DynestyScanReweighting(object):
 
         return nuisance_log_marg_results
     
-    def create_mixture_comp(self, 
-                            prior_idx: int, 
-                            log_margresults_for_idx:np.ndarray,
-                            mix_axes_mesh:list[np.ndarray],
-                            final_output_shape:list,
-                            prior_axes_indices: list[list],
-                            hyper_idx: int):
+
+    def select_scan_output_posterior_exploration_class(self, 
+                                                       mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
+                                                       mixture_fraction_exploration_type: str = None, 
+                                                       log_margresults: list | np.ndarray = None,
+                                                       prior_parameter_specifications: dict | list[ParameterSet] | list[dict] =None,
+                                                       *args, **kwargs):
         """
-        Creates a single component (i.e. the component for __a__ prior) of the mixture model. 
-        This method combines log marginalisation results for a given prior index with the 
-        mixture axis information to form a component of the mixture model. 
-
-        Args:
-            prior_idx (int): The index of the prior for which the mixture component is being created.
-
-            log_margresults_for_idx (np.ndarray): The log marginalisation results corresponding to the given prior index.
-
-            mix_axes_mesh (list[np.ndarray]): A list of numpy arrays representing the meshgrid of mixture axes.
-
-            final_output_shape (list): A list to store the final shape of the output mixture component.
-
-            prior_axes_indices (list[list]): A list to keep track of the indices in each prior for the final output.
-
-            hyper_idx (int): The current index in the hyperparameter space.
-
-        Returns:
-            tuple: A tuple containing the created mixture component (numpy array) and the updated hyperparameter index (int).
-
-        Notes:
-            - The method calculates the log mixture component using the Dirichlet stick breaking process.
-            - It expands and combines the calculated mixture component with the log marginalisation results.
-            - Updates `final_output_shape` and `prior_axes_indices` to reflect the new dimensions and indices after 
-            combining the mixture component with the log marginalisation results.
-            - The method returns the new mixture component and the updated hyperparameter index.
-        """
-        # Including 'event' and mixture axes for eventual __non__ expansion into
-        single_prior_axes_indices_instance = list(range(1+len(mix_axes_mesh)))
-
-        # First index of 'log_margresults_for_idx' should just be the number of events
-        for length_of_axis in log_margresults_for_idx.shape[1:]:
-
-            final_output_shape.append(length_of_axis)
-
-            single_prior_axes_indices_instance.append(hyper_idx)
-
-            # Keeping track of the indices in each prior for the final output
-            hyper_idx+=1
-
-        prior_axes_indices.append(single_prior_axes_indices_instance)
-
-
-        mixcomp = np.expand_dims(np.log(
-            apply_direchlet_stick_breaking_direct(mixtures_fractions=mix_axes_mesh, depth=prior_idx)), 
-            axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes_mesh)), 
-                                np.arange(len(mix_axes_mesh))+1),)) 
-
-
-        mixcomp=mixcomp+np.expand_dims(log_margresults_for_idx, 
-                                    axis=(*(np.arange(len(mix_axes_mesh))+1),)
-                                )
-        return mixcomp, hyper_idx
-
-
-            
-    def create_discrete_mixture_log_hyper_likelihood(self, 
-                                                     mixture_param_specifications: dict | ParameterSet = None, 
-                                                     nuisance_log_marg_results: list | tuple | np.ndarray = None):
-        """
-        Creates a discrete mixture model log hyper-likelihood based on the specified mixture parameter specifications 
-        and nuisance log marginalisation results.
-
-        Parameters:
-            mixture_param_specifications (dict | ParameterSet, optional): Mixture parameter specifications. 
-                                                                        If None, uses `self.mixture_param_specifications`.
-            nuisance_log_marg_results (list | tuple | np.ndarray, optional): Nuisance log marginalisation results. 
-                                                                            If None, uses `self.nuisance_log_marg_results`.
-
-        Returns:
-            np.ndarray: The log hyper-likelihood of the discrete mixture model.
-        """
-        logging.debug(f"log_marginalisation_regularisation: {self.log_marginalisation_regularisation}")
-        nuisance_log_marg_results = [log_margresult + self.log_marginalisation_regularisation for log_margresult in nuisance_log_marg_results]
+        Selects and initializes (the class, not the process it contains) the appropriate exploration class based on the 
+        specified mixture fraction exploration type.
         
-        if mixture_param_specifications is None:
-            mixture_param_specifications = self.mixture_param_specifications
-        if nuisance_log_marg_results is None:
-            nuisance_log_marg_results = self.nuisance_log_marg_results
-
-        self.mixture_param_specifications = mixture_param_specifications
-        mesh_mix_axes = np.meshgrid(*mixture_param_specifications.axes, indexing='ij')
-
-        # To get around the fact that every component of the mixture can be a different shape
-        final_output_shape = [len(nuisance_log_marg_results), *np.ones(len(mixture_param_specifications)).astype(int), ]
-
-        # Axes for each of the priors to __not__ expand in
-        prior_axes_indices = []
-
-        # Counter for how many hyperparameter axes we have used
-        hyper_idx = len(mixture_param_specifications)+1
-
-
-        # Creating components of mixture for each prior
-        mixture_array_list = []
-        for prior_idx, log_margresults_for_idx in enumerate(nuisance_log_marg_results):
-
-            mixcomp, hyper_idx = self.create_mixture_comp(prior_idx=prior_idx, 
-                                                          log_margresults_for_idx=log_margresults_for_idx,
-                                                          mix_axes_mesh=mesh_mix_axes,
-                                                          final_output_shape=final_output_shape,
-                                                          prior_axes_indices=prior_axes_indices,
-                                                          hyper_idx=hyper_idx)
+        This method dynamically selects and initializes a class for exploring the posterior of mixture fractions. It supports
+        either deterministic scanning ('scan') or stochastic sampling ('sample') methods for posterior exploration.
+        
+        Args:
+            mixture_parameter_specifications (ParameterSet, list[Parameter], dict): Specifications for the mixture parameters involved in the exploration.
             
-
-            mixture_array_list.append(mixcomp)
+            mixture_fraction_exploration_type (str, optional): The type of exploration to perform. Can be 'scan' for a 
+                deterministic scan or 'sample' for stochastic sampling. If not provided, defaults to the class attribute 
+                `mixture_fraction_exploration_type`.
             
-        # Making all the mixture components the same shape that is compatible for adding together (in logspace)
-        for _prior_idx, mixture_array in enumerate(mixture_array_list):
-            axis = []
-            for _axis_idx in range(len(final_output_shape)):
-                if not(_axis_idx in prior_axes_indices[_prior_idx]):
-                    axis.append(_axis_idx)
-            axis = tuple(axis)
+            log_margresults (list, array like, optional): The logarithm of marginal results to be used in the exploration. If not provided, 
+                defaults to the class attribute `nuisance_log_marg_results`.
+            
+            prior_parameter_specifications (dict, list[ParameterSet], list[dict], optional): Specifications for prior 
+            parameters involved in the exploration. If not provided, defaults to the class attribute `prior_parameter_specifications`.
+            
+            *args, **kwargs: Additional arguments and keyword arguments passed to the exploration class constructor.
+            
+        Raises:
+            ValueError: If `mixture_fraction_exploration_type` is neither 'scan' nor 'sample'.
+        """
+        if mixture_fraction_exploration_type is None:
+            mixture_fraction_exploration_type = self.mixture_fraction_exploration_type
 
-            mixture_array   = np.expand_dims(mixture_array, axis=axis)
+        if prior_parameter_specifications is None:
+            prior_parameter_specifications = self.prior_parameter_specifications
 
-            mixture_array_list[_prior_idx] = mixture_array
+        if log_margresults is None:
+            log_margresults = self.nuisance_log_marg_results
 
-        # Now to combine the results for all the data and to 
-        combined_mixture = -np.inf
-        for mixture_component in mixture_array_list:
-            combined_mixture = np.logaddexp(combined_mixture, mixture_component)
+        if mixture_fraction_exploration_type.lower() == 'scan':
+            scan_output_exploration_class = ScanOutput_ScanMixtureFracPosterior
 
-        log_hyperparameter_likelihood = np.sum(combined_mixture, axis=0)
+        elif mixture_fraction_exploration_type.lower() == 'sample':
+            scan_output_exploration_class = ScanOutput_StochasticMixtureFracPosterior
 
-        return log_hyperparameter_likelihood
+        else:
+           raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
+        
+        self.scan_output_exploration_class_instance = scan_output_exploration_class(
+                log_margresults = log_margresults,
+                log_nuisance_marg_regularisation = self.log_marginalisation_regularisation,
+                mixture_parameter_specifications=mixture_parameter_specifications,
+                prior_parameter_specifications=prior_parameter_specifications,
+                *args, **kwargs)
 
+        
+
+    def init_posterior_exploration(self, *args, **kwargs):
+        """
+        Initiates the posterior exploration process.
+        
+        This method delegates the initiation of exploration to the instance of the exploration class selected by the 
+        `select_scan_output_posterior_exploration_class` method. It prepares the exploration environment and parameters 
+        based on the class instance's configuration.
+        
+        *args, **kwargs: Arguments and keyword arguments to be passed to the initiation method of the exploration class.
+        """
+        self.scan_output_exploration_class_instance.initiate_exploration(*args, **kwargs)
+
+    def run_posterior_exploration(self, *args, **kwargs):
+        """
+        Runs the posterior exploration process and returns the results.
+        
+        This method triggers the actual exploration process using the selected and initialized exploration class instance. 
+        It runs the exploration based on the configured parameters and returns the exploration results.
+        
+        *args, **kwargs: Arguments and keyword arguments to be passed to the run method of the exploration class.
+        
+        Returns:
+            The results of the posterior exploration, the format and content of which depend on the exploration method used.
+        """
+        self._posterior_exploration_output = self.scan_output_exploration_class_instance.run_exploration(*args, **kwargs)
+
+        return self._posterior_exploration_output
+
+
+    @property
+    def posterior_exploration_results(self):
+        """
+        Returns the results of the posterior exploration.
+        
+        This property provides access to the results of the posterior exploration. The nature of the results depends on the 
+        mixture fraction exploration type. For 'scan', it directly returns the exploration output, while for other types, 
+        it accesses the results through the sampler's `results` attribute of the exploration class instance.
+        
+        Returns:
+            The results of the posterior exploration, which may include posterior distributions, samples, or other statistics,
+            depending on the exploration type.
+        """
+        if self.mixture_fraction_exploration_type =='scan':
+            return self._posterior_exploration_output
+        else:
+            return self.scan_output_exploration_class_instance.sampler.results

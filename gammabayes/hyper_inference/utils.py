@@ -33,10 +33,9 @@ def _handle_parameter_specification(
         elif type(parameter_specifications)==list:
             formatted_parameter_specifications = [ParameterSet(parameter_specification) for parameter_specification in parameter_specifications]
 
-    try:
+    if num_required_sets is not None:
         _num_priors = num_required_sets
-    except TypeError as excpt:
-        logging.warning(f"An error occured when trying to calculate the number of priors: {excpt}")
+    else:
         _num_priors = _num_parameter_specifications
 
     if not _no_required_num or (num_required_sets is not None):

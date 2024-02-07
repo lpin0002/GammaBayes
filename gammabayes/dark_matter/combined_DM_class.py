@@ -25,6 +25,10 @@ class CombineDMComps(TwoCompPrior):
         )
 
 
+    def convert_param_to_sigmav(self,):
+        pass
+
+
     
 
 

@@ -6,8 +6,8 @@ from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
 from gammabayes.dark_matter.channel_spectra import single_channel_spectral_data_path
+from gammabayes.utils import update_with_defaults
 import time
-
 
 darkSUSY_to_PPPC_converter = {
             "nuenue":"nu_e",
@@ -29,6 +29,7 @@ darkSUSY_to_PPPC_converter = {
             "HH": "h",
         }
 
+
 single_Wchannel_annihilation_ratios   = {}
 mass_axis       = np.logspace(-1,2,301)
 
@@ -41,6 +42,25 @@ for channel in darkSUSY_to_PPPC_converter:
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class DM_ContinuousEmission_Spectrum(object):
+    darkSUSY_to_PPPC_converter = {
+            "nuenue":"nu_e",
+            "e+e-": "e",
+            "numunumu":"nu_mu",
+            "mu+mu-":"mu",
+            'nutaunutau':"nu_tau",
+            "tau+tau-":"tau",
+            "uu":"u",
+            "dd":"d",
+            "cc": "c",
+            "ss":"s",
+            "tt": "t",
+            "bb": "b",
+            "gammagamma": "gamma",
+            "W+W-": "W",
+            "ZZ": "Z",
+            "gg": "g",
+            "HH": "h",
+        }
 
     def zero_output(self, inputval):
         """
@@ -67,7 +87,11 @@ class DM_ContinuousEmission_Spectrum(object):
         """
         return inputval[0]*0 + 1
     
-    def __init__(self, annihilation_fractions=single_Wchannel_annihilation_ratios, parameter_axes = [mass_axis], ratios: bool = True):
+    def __init__(self, 
+                 annihilation_fractions=single_Wchannel_annihilation_ratios, 
+                 parameter_interpolation_values = [mass_axis], 
+                 ratios: bool = True,
+                 default_parameter_values = {'mass':1.0,}):
         """
         Initializes the DM_ContinuousEmission_Spectrum class, which calculates the continuous emission spectrum for dark matter annihilation.
 
@@ -139,22 +163,38 @@ class DM_ContinuousEmission_Spectrum(object):
         self.sqrtchannelfuncdictionary = sqrtchannelfuncdictionary
 
 
+        if self.ratios:
+            self.normalisations = 0
+            for channel in annihilation_fractions.keys():
+                self.normalisations += annihilation_fractions[channel]
+
+            self.normalisations = np.where(np.isfinite(self.normalisations), self.normalisations, 0)
+
+            for channel in annihilation_fractions.keys():
+                annihilation_fractions[channel] /= self.normalisations
+
+
         # Could have done this with the zero and one output functions, 
             # but I'm planning to make this class the head class for others so I don't want to have to re-write this
-        if len(parameter_axes)>1:
+        if len(parameter_interpolation_values)>1:
             self.partial_sigmav_interpolator_dictionary = {
                 channel: interpolate.LinearNDInterpolator(
-                    (*parameter_axes,),
+                    (*parameter_interpolation_values,),
                     annihilation_fractions[channel]) for channel in list(darkSUSY_to_PPPC_converter.keys()
                     )
                     }
         else:
             self.partial_sigmav_interpolator_dictionary = {
                 channel: interpolate.interp1d(
-                    parameter_axes[0],
+                    parameter_interpolation_values[0],
                     annihilation_fractions[channel]) for channel in list(darkSUSY_to_PPPC_converter.keys()
                     )
                     }
+            
+        self.parameter_interpolation_values = parameter_interpolation_values
+        self.parameter_axes = [np.unique(values) for values in self.parameter_interpolation_values]
+        self.annihilation_fractions = annihilation_fractions
+        self.default_parameter_values = default_parameter_values
 
 
 
@@ -171,7 +211,6 @@ class DM_ContinuousEmission_Spectrum(object):
 
 
     def spectral_gen(self, energy: float | np.ndarray | list, 
-                           mass: float | np.ndarray | list = 1.0, 
                            **kwargs) -> np.ndarray | float:
         """
         Generates the dark matter annihilation gamma-ray spectrum for given energy and mass parameters and given dark matter model.
@@ -192,13 +231,21 @@ class DM_ContinuousEmission_Spectrum(object):
         """
         
         logspectra = -np.inf
+
+        update_with_defaults(kwargs, self.default_parameter_values)
+
         for channel in self.sqrtchannelfuncdictionary.keys():
+
+            channel_sigma = self.partial_sigmav_interpolator_dictionary[channel](*kwargs.values())
+            channel_spectrum = (self.sqrtchannelfuncdictionary[channel]((np.log10(kwargs['mass']), 
+                                                           np.log10(energy)-np.log10(kwargs['mass']))))**2 # Square is to enforce positivity
+
+                            
+            channel_comp = channel_sigma*channel_spectrum 
+
             logspectra = np.logaddexp(
                 logspectra, 
-                np.log(
-                    self.partial_sigmav_interpolator_dictionary[channel](mass, **kwargs)\
-                        *(self.sqrtchannelfuncdictionary[channel]((np.log10(mass), 
-                        np.log10(energy)-np.log10(mass))))**2)) # Square is to enforce positivity
+                np.log(channel_comp))
         
         return logspectra
 

@@ -43,8 +43,8 @@ setup(name='GammaBayes',
                         'package_data/irf_fits_files/prod3b/*',
                         'dark_matter/channel_spectra/griddata/*.npy',
                         'dark_matter/channel_spectra/dark_matter_spectra/AtProduction_gammas.dat',
-                        'dark_matter/models/Z2_ScalarSinglet/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
-                        'dark_matter/models/Z2_ScalarSinglet/temp/*',
+                        'dark_matter/spectral_models/Z2_ScalarSinglet/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv',
+                        'dark_matter/spectral_models/Z2_ScalarSinglet/temp/*',
                         'standard_inference/*',
                         'utils/ozstar/*'
                         ]
