@@ -5,16 +5,15 @@ __Supervisor(s)__: Csaba Balazs, Eric Thrane
 
 ## Referencing
 
-This code is an adaption of a previous work by Abhi Mangipudi and the relevant paper for referencing can be found [here](https://arxiv.org/abs/2112.10371) from ArXiv. The bibtex code for it is
+To reference this code please reference the following paper [2401.13876](https://arxiv.org/abs/2401.13876) or use the following bibtex.
 
-@article{Mangipudi:2021ivm,
-    author = "Mangipudi, Abhi and Thrane, Eric and Balazs, Csaba",
-    title = "{Bayesian WIMP detection with the Cherenkov Telescope Array}",
-    eprint = "2112.10371",
-    archivePrefix = "arXiv",
-    primaryClass = "astro-ph.HE",
-    month = "12",
-    year = "2021"
+@article{pinchbeck2024gammabayes,
+      title={GammaBayes: a Bayesian pipeline for dark matter detection with CTA}, 
+      author={Liam Pinchbeck and Eric Thrane and Csaba Balazs},
+      year={2024},
+      eprint={2401.13876},
+      archivePrefix={arXiv},
+      primaryClass={astro-ph.HE}
 }
 
 
