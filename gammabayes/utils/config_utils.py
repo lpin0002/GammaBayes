@@ -95,7 +95,7 @@ def add_event_axes_config(config_dict, energy_axis_true, longitudeaxistrue, lati
 
 def save_config_file(config_dict, file_path):
     with open(file_path, 'w') as file:
-        yaml.dump(config_dict, file, default_flow_style=False)
+        yaml.dump(config_dict, file, default_flow_style=False, sort_keys=False)
 
 
 def create_true_axes_from_config(config_dict):

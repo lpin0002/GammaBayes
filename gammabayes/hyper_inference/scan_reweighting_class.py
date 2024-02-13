@@ -18,13 +18,13 @@ from gammabayes import EventData, Parameter, ParameterSet
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
 from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
 from gammabayes.hyper_inference.mixture_sampling_nuisance_scan_output import ScanOutput_StochasticMixtureFracPosterior
-
+import pickle, h5py
 
 
 
 
 # Small class to generate proposal posterior samples for a single event
-class DynestyProposalMarg(object):
+class ProposalMarg(object):
 
     def __init__(self, 
                  measured_event: list | np.ndarray, 
@@ -34,13 +34,17 @@ class DynestyProposalMarg(object):
                  bounds: list[list[(str, float)]]):
         """
         Initializes an instance for generating proposal posterior samples for a single event,
-        utilizing a nested sampling approach via the Dynesty sampler.
+        utilizing a nested sampling approach via the Dynesty sampler (for now).
 
         Parameters:
             measured_event (list | np.ndarray): The observed event data, specified as a list or a numpy array.
+            
             log_proposal_prior (DiscreteLogPrior): An instance of DiscreteLogPrior, representing the logarithm of the proposal prior.
+            
             log_likelihood (DiscreteLogLikelihood): An instance of DiscreteLogLikelihood, representing the logarithm of the likelihood function.
+            
             nuisance_axes (list[np.ndarray] | tuple[np.ndarray]): A list or tuple of numpy arrays, each representing a nuisance parameter axis.
+            
             bounds (list[list[(str, float)]]): A nested list where each inner list contains tuples specifying the bounds for nuisance parameters. Each tuple contains a string indicating the bound type and a float indicating the bound value.
         """
 
@@ -122,29 +126,52 @@ class DynestyProposalMarg(object):
         log_like_val = self.log_likelihood(x)
 
         return log_like_val
+    
+    def save(self, file_name:str ):
+        """
+        Saves the ProposalMarg data to an HDF5 file.
+
+        Args:
+        file_name (str): The name of the file to save the data to.
+        """
+
+        if not(file_name.endswith('.pkl')):
+            file_name = file_name+'.pkl'
+
+        pickle.dump(self, open(file_name,'wb'))
+
+    @classmethod
+    def load(cls, file_name):
+        return  pickle.load(open(file_name,'rb'))
 
 
 
 
-
-class DynestyScanReweighting(object):
+class ScanReweighting(object):
 
     def __init__(self, 
-                 measured_events: EventData, 
-                 log_likelihood: DiscreteLogLikelihood, 
-                 log_proposal_prior: DiscreteLogPrior, 
-                 log_target_priors: list[DiscreteLogPrior], 
+                 measured_events: EventData = None, 
+                 log_likelihood: DiscreteLogLikelihood = None, 
+                 log_proposal_prior: DiscreteLogPrior = None, 
+                 log_target_priors: list[DiscreteLogPrior] = None, 
                  nuisance_axes: list[np.ndarray] = None, 
-                 mixture_param_specifications: dict | ParameterSet = None,
+                 mixture_parameter_specifications: dict | ParameterSet = None,
                  marginalisation_bounds: list[(str, float)] = None,
                  bounding_percentiles: list[float] = [90, 90],
                  bounding_sigmas: list[float] = [4,4],
                  logspace_integrator: callable = iterate_logspace_integration,
                  prior_parameter_specifications: dict | list[ParameterSet] = {}, 
                  reweight_batch_size: int = 1000,
-                 no_priors_on_init: bool = False,
                  log_prior_normalisations:np.ndarray = None,
                  mixture_fraction_exploration_type='scan',
+                 log_proposal_evidence_values=[],
+                 proposal_posterior_samples=[],
+                 applied_priors=False,
+                 no_priors_on_init: bool = False,
+                 _log_posterior=np.asarray([np.nan]),
+                 _log_nuisance_marg_results=np.asarray([np.nan]),
+                 _log_marginalisation_regularisation = 0.,
+                 _log_hyperparameter_likelihood = np.asarray([np.nan]),
                  ):
         """
         Initializes an object to reweight nested sampling results based on a set of target priors.
@@ -160,7 +187,7 @@ class DynestyScanReweighting(object):
             
             nuisance_axes (list[np.ndarray], optional): Nuisance parameter axes (true energy, longitude and latitude).
             
-            mixture_param_specifications (dict | ParameterSet, optional): Specifications for mixture model parameters.
+            mixture_parameter_specifications (dict | ParameterSet, optional): Specifications for mixture model parameters.
             
             marginalisation_bounds (list[(str, float)], optional): Bounds for nuisance parameter marginalization.
             
@@ -175,11 +202,12 @@ class DynestyScanReweighting(object):
             prior_parameter_specifications (dict | list[ParameterSet], optional): Parameter sets for the priors.
             
             reweight_batch_size (int, optional): Batch size for reweighting operation.
-            
+                        
+            log_prior_normalisations (np.ndarray, optional): Normalisation constants for the log priors.
+
             no_priors_on_init (bool, optional): If True, no errors are raised if priors are not supplied on 
             initialization. 
-            
-            log_prior_normalisations (np.ndarray, optional): Normalisation constants for the log priors.
+
         """
 
         self.measured_events        = measured_events
@@ -189,10 +217,8 @@ class DynestyScanReweighting(object):
         self.log_target_priors = log_target_priors
         self.no_priors_on_init = no_priors_on_init
 
-        self.nuisance_axes = _handle_nuisance_axes(nuisance_axes, 
-                                                   log_likelihood=self.log_likelihood,
-                                                   log_prior=self.log_target_priors[0])
-        self.mixture_param_specifications = mixture_param_specifications
+
+        self.mixture_parameter_specifications = mixture_parameter_specifications
         self.logspace_integrator = logspace_integrator
 
         if not self.no_priors_on_init:
@@ -200,10 +226,17 @@ class DynestyScanReweighting(object):
                     parameter_specifications=prior_parameter_specifications,
                     num_required_sets=len(self.log_target_priors),
                     _no_required_num=self.no_priors_on_init)
+            
+            self.nuisance_axes = _handle_nuisance_axes(nuisance_axes, 
+                                            log_likelihood=self.log_likelihood,
+                                            log_prior=self.log_target_priors[0])
         else:
             self.prior_parameter_specifications = _handle_parameter_specification(
-                    prior_parameter_sets=prior_parameter_specifications,
-                    _no_required_num=self.no_priors_on_init)        
+                    parameter_specifications=prior_parameter_specifications,
+                    _no_required_num=self.no_priors_on_init) 
+            
+            self.nuisance_axes = _handle_nuisance_axes(nuisance_axes, 
+                                            log_likelihood=self.log_likelihood)
             
         self._num_parameter_specifications = len(self.prior_parameter_specifications)
 
@@ -214,26 +247,40 @@ class DynestyScanReweighting(object):
 
 
         if self.bounds is None:
-            _, logeval_bound               = derive_edisp_bounds(irf_loglike=self.log_likelihood, percentile=bounding_percentiles[0], sigmalevel=bounding_sigmas[0])
-            lonlact_bound                   = derive_psf_bounds(irf_loglike=self.log_likelihood, percentile=bounding_percentiles[1], sigmalevel=bounding_sigmas[1], 
-                                                                axis_buffer=1, parameter_buffer = np.squeeze(np.ptp(self.dependent_axes[1]))/2)
+            _, logeval_bound               = derive_edisp_bounds(
+                irf_loglike=self.log_likelihood, percentile=bounding_percentiles[0], sigmalevel=bounding_sigmas[0])
+            lonlact_bound                   = derive_psf_bounds(
+                irf_loglike=self.log_likelihood, percentile=bounding_percentiles[1], sigmalevel=bounding_sigmas[1], 
+                axis_buffer=1, parameter_buffer = np.squeeze(np.ptp(self.nuisance_axes[1]))/2)
+            
             self.bounds = [['log10', logeval_bound], ['linear', lonlact_bound], ['linear', lonlact_bound]]
 
         logging.info(f"Bounds: {self.bounds}")
 
+        self.log_proposal_evidence_values   = log_proposal_evidence_values
+        self.proposal_posterior_samples     = proposal_posterior_samples
+        self.applied_priors = applied_priors
+        self.log_posterior = _log_posterior
+        self.log_nuisance_marg_results = _log_nuisance_marg_results
+        self.log_marginalisation_regularisation = _log_marginalisation_regularisation
+        self.log_hyperparameter_likelihood = _log_hyperparameter_likelihood
 
     
-            
+    @property
+    def _num_target_priors(self):
+        return len(self.log_target_priors)
+        
+
 
 
     # Function to get proposal posterior samples for a single event
-    def run_proposal_dynesty(self, 
+    def run_proposal_sampler(self, 
                              measured_event: list | np.ndarray, 
                              NestedSampler_kwargs: dict = {'nlive':200}, 
-                             run_nested_kwargs: dict = {'dlogz':0.7, 
-                                                        'maxcall':5000}):
+                             run_nested_kwargs: dict = {'dlogz':1.0, 
+                                                        'maxcall':1000}):
         """
-        Runs the Dynesty nested sampling algorithm for a single event using the proposal prior.
+        Runs the nested sampling algorithm for a single event using the proposal prior (currently with DyNesty).
 
         Parameters:
             measured_event (list | np.ndarray): The event data.
@@ -246,7 +293,7 @@ class DynestyScanReweighting(object):
             object: The result of the nested sampling algorithm.
         """
 
-        single_event_dynesty_wrapper = DynestyProposalMarg(
+        single_event_dynesty_wrapper = ProposalMarg(
             measured_event=measured_event, 
             log_likelihood=self.log_likelihood, 
             log_proposal_prior=self.log_proposal_prior,
@@ -296,7 +343,7 @@ class DynestyScanReweighting(object):
         proposal_samples    = []
 
         for event_datum in measured_events:
-            sampling_results = self.run_proposal_dynesty(
+            sampling_results = self.run_proposal_sampler(
                              measured_event = event_datum, 
                              NestedSampler_kwargs=NestedSampler_kwargs, 
                              run_nested_kwargs=run_nested_kwargs)
@@ -309,6 +356,10 @@ class DynestyScanReweighting(object):
         logging.debug(f"Min, Median and Max log proposal evidence: {min(likelihood_results)}, {np.median(likelihood_results)}, {max(likelihood_results)}")
         logging.debug(f"Min, Median and Max for number of samples to explore proposal posterior: {min(num_samples)}, {np.median(num_samples)}, {max(num_samples)}")
             
+        
+        self.log_proposal_evidence_values.extend(likelihood_results)
+        self.proposal_posterior_samples.extend(proposal_samples)
+
         return likelihood_results, proposal_samples
 
         
@@ -528,6 +579,7 @@ class DynestyScanReweighting(object):
 
         if prior_parameter_specifications is None:
             prior_parameter_specifications = self.prior_parameter_specifications
+    
         else:
             prior_parameter_specifications = _handle_parameter_specification(
                 parameter_specifications = prior_parameter_specifications,
@@ -549,7 +601,7 @@ class DynestyScanReweighting(object):
             self.log_prior_normalisations = {}
 
 
-        nuisance_log_marg_results = []
+        log_nuisance_marg_results = []
 
 
         for log_target_prior, prior_parameter_set in tqdm(
@@ -563,28 +615,28 @@ class DynestyScanReweighting(object):
                                         log_evidence_values,
                                         proposal_prior_ln_norm)
 
-            nuisance_log_marg_results.append(target_prior_log_marg_results)
+            log_nuisance_marg_results.append(target_prior_log_marg_results)
 
 
-        self.nuisance_log_marg_results = nuisance_log_marg_results
+        self.log_nuisance_marg_results = log_nuisance_marg_results
 
 
-        log_marg_mins = np.asarray([np.nanmin(nuisance_log_marg_result[nuisance_log_marg_result != -np.inf]) for nuisance_log_marg_result in self.nuisance_log_marg_results])
-        log_marg_maxs = np.asarray([np.nanmax(nuisance_log_marg_result[nuisance_log_marg_result != -np.inf]) for nuisance_log_marg_result in self.nuisance_log_marg_results])
+        log_nuisance_marg_mins = np.asarray([np.nanmin(log_nuisance_marg_result[log_nuisance_marg_result != -np.inf]) for log_nuisance_marg_result in self.log_nuisance_marg_results])
+        log_nuisance_marg_maxs = np.asarray([np.nanmax(log_nuisance_marg_result[log_nuisance_marg_result != -np.inf]) for log_nuisance_marg_result in self.log_nuisance_marg_results])
 
         # Adaptively set the regularisation based on the range of values in the
         # log marginalisation results. Trying to keep them away from ~-600 or ~600
         # generally precision goes down to ~1e-300 (base 10)
-        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(np.diff(log_marg_maxs-log_marg_mins)))
+        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(np.diff(log_nuisance_marg_maxs-log_nuisance_marg_mins)))
 
 
-        return nuisance_log_marg_results
+        return log_nuisance_marg_results
     
 
     def select_scan_output_posterior_exploration_class(self, 
                                                        mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
                                                        mixture_fraction_exploration_type: str = None, 
-                                                       log_margresults: list | np.ndarray = None,
+                                                       log_nuisance_marg_results: list | np.ndarray = None,
                                                        prior_parameter_specifications: dict | list[ParameterSet] | list[dict] =None,
                                                        *args, **kwargs):
         """
@@ -601,8 +653,8 @@ class DynestyScanReweighting(object):
                 deterministic scan or 'sample' for stochastic sampling. If not provided, defaults to the class attribute 
                 `mixture_fraction_exploration_type`.
             
-            log_margresults (list, array like, optional): The logarithm of marginal results to be used in the exploration. If not provided, 
-                defaults to the class attribute `nuisance_log_marg_results`.
+            log_nuisance_marg_results (list, array like, optional): The logarithm of marginal results to be used in the exploration. If not provided, 
+                defaults to the class attribute `log_nuisance_marg_results`.
             
             prior_parameter_specifications (dict, list[ParameterSet], list[dict], optional): Specifications for prior 
             parameters involved in the exploration. If not provided, defaults to the class attribute `prior_parameter_specifications`.
@@ -618,23 +670,24 @@ class DynestyScanReweighting(object):
         if prior_parameter_specifications is None:
             prior_parameter_specifications = self.prior_parameter_specifications
 
-        if log_margresults is None:
-            log_margresults = self.nuisance_log_marg_results
+        if log_nuisance_marg_results is None:
+            log_nuisance_marg_results = self.log_nuisance_marg_results
 
         if mixture_fraction_exploration_type.lower() == 'scan':
             scan_output_exploration_class = ScanOutput_ScanMixtureFracPosterior
 
         elif mixture_fraction_exploration_type.lower() == 'sample':
+            self.applied_priors = True
             scan_output_exploration_class = ScanOutput_StochasticMixtureFracPosterior
 
         else:
            raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
         
         self.scan_output_exploration_class_instance = scan_output_exploration_class(
-                log_margresults = log_margresults,
+                log_nuisance_marg_results       = log_nuisance_marg_results,
                 log_nuisance_marg_regularisation = self.log_marginalisation_regularisation,
-                mixture_parameter_specifications=mixture_parameter_specifications,
-                prior_parameter_specifications=prior_parameter_specifications,
+                mixture_parameter_specifications = mixture_parameter_specifications,
+                prior_parameter_specifications = prior_parameter_specifications,
                 *args, **kwargs)
 
         
@@ -665,8 +718,16 @@ class DynestyScanReweighting(object):
         """
         self._posterior_exploration_output = self.scan_output_exploration_class_instance.run_exploration(*args, **kwargs)
 
-        return self._posterior_exploration_output
+        if self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):
+            self.log_posterior = self._posterior_exploration_output
 
+        elif not self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):
+            self.log_hyperparameter_likelihood = self._posterior_exploration_output
+
+        else:
+            self.log_posterior = self.scan_output_exploration_class_instance.sampler.results
+
+        return self._posterior_exploration_output
 
     @property
     def posterior_exploration_results(self):
@@ -682,6 +743,253 @@ class DynestyScanReweighting(object):
             depending on the exploration type.
         """
         if self.mixture_fraction_exploration_type =='scan':
-            return self._posterior_exploration_output
+            result = self._posterior_exploration_output
+            if self.applied_priors:
+                self.log_posterior = result
+            else:
+                self.log_hyperparameter_likelihood = result
+
+            return result
         else:
-            return self.scan_output_exploration_class_instance.sampler.results
+            results = self.scan_output_exploration_class_instance.sampler.results
+
+            self.log_posterior = results.samples
+
+            return results
+        
+    # TODO: Make this usable
+    def apply_hyperparameter_priors(self, priorinfos: list[dict] | tuple[dict], 
+                                            hyper_param_axes: list[np.ndarray] | tuple[np.ndarray] | None = None, 
+                                            log_hyper_priormesh: np.ndarray = None, 
+                                            integrator: callable = None):
+        """
+        Applies uniform priors to hyperparameters and calculates the posterior using the updated likelihood and prior mesh.
+
+        This method is designed to compute the posterior distribution of hyperparameters by applying uniform priors, 
+        generating a meshgrid of log prior values, and combining it with the log hyperparameter likelihood.
+
+        Args:
+            priorinfos (list[dict] | tuple[dict]): Information about the priors, such as range and resolution.
+            hyper_param_axes (list[np.ndarray] | tuple[np.ndarray], optional): Axes for the hyperparameters, used to 
+                generate the meshgrid for priors. If None, it must be computed from `priorinfos`.
+            log_hyper_priormesh (np.ndarray, optional): Pre-computed log prior meshgrid. If None, it is computed from 
+                `priorinfos` and `hyper_param_axes`.
+            integrator (callable, optional): Integrator function to be used for calculating the posterior. Defaults to 
+                `self.logspace_integrator` if None.
+
+        Returns:
+            tuple: Contains the log posterior, list of log prior values, and the hyperparameter values lists. Specifically,
+            (log_posterior, log_prior_val_list, hyper_val_list).
+
+        Notes:
+            - This method currently has a "TODO" comment indicating it is not fully implemented.
+        """
+
+        if integrator is None:
+            integrator = self.logspace_integrator
+        if log_hyper_priormesh is None:
+            hyper_val_list = []
+            log_prior_val_list = []
+            
+
+
+        log_hyper_priormesh_list = np.meshgrid(*log_prior_val_list, indexing='ij')
+        log_hyper_priormesh = np.prod(log_hyper_priormesh_list, axis=0)
+
+        self.log_posterior = np.squeeze(self.log_hyperparameter_likelihood)+log_hyper_priormesh
+
+        self.applied_priors = True
+
+        return self.log_posterior, log_prior_val_list, hyper_val_list
+    
+
+    def _pack_data(self, h5f=None, file_name=None, reduce_mem_consumption: bool = True):
+        
+        if h5f is None:
+            h5f = h5py.File(file_name, 'w-')
+
+        h5f.attrs['log_marginalisation_regularisation'] = self.log_marginalisation_regularisation
+        h5f.attrs['mixture_fraction_exploration_type'] = self.mixture_fraction_exploration_type
+
+
+        if hasattr(self, 'log_proposal_evidence_values'):
+            h5f.create_dataset('log_proposal_evidence_values', data=self.log_proposal_evidence_values)
+
+
+        if self.proposal_posterior_samples is not None:
+            # Save log_nuisance_marg_results
+            proposal_posterior_samples_group = h5f.create_group("proposal_posterior_samples")
+            for result_idx, result in enumerate(self.proposal_posterior_samples):
+                proposal_posterior_samples_group.create_dataset(str(result_idx), data=result)
+
+                
+        if self.nuisance_axes is not None:
+            nuisance_axes_group = h5f.create_group('nuisance_axes') 
+            for nuisance_axis_idx, nuisance_axis in enumerate(self.nuisance_axes):
+                nuisance_axis_dataset = nuisance_axes_group.create_dataset(f"{nuisance_axis_idx}", data=nuisance_axis)
+
+
+        if self.log_nuisance_marg_results is not None:
+            # Save log_nuisance_marg_results
+            log_nuisance_marg_results_group = h5f.create_group("log_nuisance_marg_results")
+            for result_idx, result in enumerate(self.log_nuisance_marg_results):
+                log_nuisance_marg_results_group.create_dataset(str(result_idx), data=result)
+
+
+        if self.log_hyperparameter_likelihood is not None:
+            h5f.create_dataset('log_hyperparameter_likelihood', data=self.log_hyperparameter_likelihood)
+
+
+        if self.log_posterior is not None:
+            h5f.create_dataset('log_posterior', data=np.asarray(self.log_posterior, dtype=float))
+        
+        if self.prior_parameter_specifications is not None:
+            prior_param_set_group = h5f.create_group('prior_param_set')
+
+            for prior_idx, (prior, single_prior_param_set) in enumerate(zip(self.log_target_priors, self.prior_parameter_specifications)):
+                if type(single_prior_param_set) == ParameterSet:
+                    single_prior_param_group = prior_param_set_group.create_group(prior.name)
+                    single_prior_param_group = single_prior_param_set.pack(h5f=single_prior_param_group)
+
+        if self.mixture_parameter_specifications is not None:
+
+            mixture_parameter_specifications_group = h5f.create_group('mixture_parameter_specifications')
+
+            mixture_parameter_specifications_group = self.mixture_parameter_specifications.pack(h5f=mixture_parameter_specifications_group)
+
+
+        bound_types = [bound[0] for bound in self.bounds]
+        bound_values = [bound[1] for bound in self.bounds]
+
+        dt = h5py.string_dtype(encoding='utf-8', length=max(len(s) for s in bound_types))
+
+        string_ds = h5f.create_dataset('bound_types', (len(bound_types),), dtype=dt)
+        string_ds[:] = bound_types
+
+        h5f.create_dataset('bound_values', data=bound_values)
+
+        return h5f
+    
+    def pack_data(self, h5f=None, file_name: str = None, reduce_mem_consumption: bool = True):
+        return self._pack_data(h5f=h5f, file_name=file_name, reduce_mem_consumption=reduce_mem_consumption)
+
+
+    def save(self, file_name):
+        """
+        Saves the class data to an HDF5 file.
+
+        Args:
+            file_name (str): The name of the file to save the data to.
+        """
+        if not(file_name.endswith(".h5")):
+            file_name = file_name+".h5"
+
+        h5f = self.pack_data(file_name=file_name)
+        h5f.close()
+
+
+    @classmethod
+    def _unpack(cls, h5f=None, file_name: str = None):
+        """
+        Loads the class data from an HDF5 file.
+
+        Args:
+            file_name (str): The path to the HDF5 file to load.
+
+        Returns:
+            An instance of the class reconstructed from the file.
+        """
+
+        need_to_close = False
+        if h5f is None:
+            need_to_close = True
+            h5f = h5py.File(file_name, 'r')
+
+        # Initialize parameters for class instantiation
+        init_params = {
+            '_log_marginalisation_regularisation': h5f.attrs['log_marginalisation_regularisation'],
+            'mixture_fraction_exploration_type': h5f.attrs['mixture_fraction_exploration_type']
+        }
+
+        # Load datasets if they exist
+        if 'log_proposal_evidence_values' in h5f:
+            init_params['log_proposal_evidence_values'] = np.asarray(h5f['log_proposal_evidence_values'])
+
+        if 'proposal_posterior_samples' in h5f:
+            init_params['proposal_posterior_samples'] = np.asarray(h5f['proposal_posterior_samples'])
+
+        if 'nuisance_axes' in h5f:
+            init_params['nuisance_axes'] = [np.asarray(h5f['nuisance_axes'][str(idx)]) for idx in range(len(h5f['nuisance_axes']))]
+
+
+        # Load log_nuisance_marg_results
+        proposal_posterior_samples = []
+        proposal_posterior_samples_group = h5f["proposal_posterior_samples"]
+            
+        # Load each dataset within the "log_marg_results" group
+        # Assuming the datasets are named as "0", "1", "2", ...
+        # and need to be loaded in the order they were saved
+        result_indices = sorted(proposal_posterior_samples_group.keys(), key=int)
+        for result_idx in result_indices:
+            result = np.asarray(proposal_posterior_samples_group[result_idx])
+            proposal_posterior_samples.append(result)
+
+        proposal_posterior_samples = np.asarray(proposal_posterior_samples, dtype=object)
+
+
+        # Load log_nuisance_marg_results
+        log_nuisance_marg_results = []
+        log_nuisance_marg_results_group = h5f["log_nuisance_marg_results"]
+            
+        # Load each dataset within the "log_marg_results" group
+        # Assuming the datasets are named as "0", "1", "2", ...
+        # and need to be loaded in the order they were saved
+        result_indices = sorted(log_nuisance_marg_results_group.keys(), key=int)
+        for result_idx in result_indices:
+            result = np.asarray(log_nuisance_marg_results_group[result_idx])
+            log_nuisance_marg_results.append(result)
+
+        init_params['_log_nuisance_marg_results'] = log_nuisance_marg_results
+
+
+
+
+
+
+
+        if 'log_hyperparameter_likelihood' in h5f:
+            init_params['_log_hyperparameter_likelihood'] = np.asarray(h5f['log_hyperparameter_likelihood'])
+
+        if 'log_posterior' in h5f:
+            init_params['_log_posterior'] = np.asarray(h5f['log_posterior'])
+
+        # Load complex objects like ParameterSet
+        if 'prior_param_set' in h5f:
+            init_params['prior_parameter_specifications'] = [
+                ParameterSet.load(h5f['prior_param_set'][prior_name]) for prior_name in h5f['prior_param_set']
+            ]
+
+        if 'mixture_parameter_specifications' in h5f:
+            init_params['mixture_parameter_specifications'] = ParameterSet.load(h5f['mixture_parameter_specifications'])
+
+        # Load bound types and values
+        if 'bound_types' in h5f and 'bound_values' in h5f:
+            bound_types = list(h5f['bound_types'])
+            bound_values = h5f['bound_values'][()]
+            init_params['marginalisation_bounds'] = list(zip(bound_types, bound_values))
+
+        init_params['no_priors_on_init'] = True
+
+        # Construct and return the class instance
+            
+        if need_to_close:
+            h5f.close()
+
+        return init_params
+        
+    @classmethod
+    def load(cls, file_name: str = None):
+        return cls(**cls._unpack(file_name=file_name))
+
+
+

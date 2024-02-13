@@ -6,11 +6,11 @@ import warnings
 import os, sys, time, random
 from tqdm import tqdm
 
-from gammabayes.likelihoods.irfs import irf_loglikelihood
+from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from gammabayes.utils import update_with_defaults, logspace_riemann, hdp_credible_interval_1d
 
-from gammabayes.hyper_inference import discrete_hyperparameter_likelihood
-from gammabayes.priors import discrete_logprior
+from gammabayes.hyper_inference import DiscreteAdaptiveScan as discrete_hyperparameter_likelihood
+from gammabayes.priors import DiscreteLogPrior
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +27,7 @@ def test_gauss_sim():
 
     energy_recon_axis, longitudeaxis, latitudeaxis = np.logspace(-1,2,16), np.linspace(-5,5,11), np.linspace(-4,4,9)
 
-    irf_loglike = irf_loglikelihood(axes=[energy_recon_axis, longitudeaxis, latitudeaxis], dependent_axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue])
+    irf_loglike = IRF_LogLikelihood(axes=[energy_recon_axis, longitudeaxis, latitudeaxis], dependent_axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue])
     log_psf_normalisations, log_edisp_normalisations = irf_loglike.create_log_norm_matrices()
 
     NumEvents           = int(5e2)
@@ -42,7 +42,7 @@ def test_gauss_sim():
         result = -(energy-spectral_parameters['centre'])**2/(2.*std_dev**2) - 0.5*np.log(2*np.pi*std_dev**2)
         return result
 
-    gauss1_prior = discrete_logprior(logfunction=_fake_func, 
+    gauss1_prior = DiscreteLogPrior(logfunction=_fake_func, 
                              name='Gauss1',
                              axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], 
                              axes_names=['energy', 'lon', 'lat'],
@@ -51,7 +51,7 @@ def test_gauss_sim():
                               
     g1_energy_vals, g1_lonvals, g1_latvals  = gauss1_prior.sample(ng1)
     print('\n------------------------\n')
-    gauss2_prior = discrete_logprior(logfunction=_fake_func, 
+    gauss2_prior = DiscreteLogPrior(logfunction=_fake_func, 
                              name='Gauss2',
                              axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], 
                              axes_names=['energy', 'lon', 'lat'],

@@ -3,7 +3,7 @@ import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
 from gammabayes import EventData, Parameter, ParameterSet
-
+import pickle
 
 class DiscreteLogLikelihood(object):
     
@@ -209,8 +209,21 @@ class DiscreteLogLikelihood(object):
 
         return measured_event_data
     
+    
 
-        
-        
-        
+    def save(self, file_name:str ):
+        """
+        Saves the DiscreteLogLikelihood data to an HDF5 file.
 
+        Args:
+        file_name (str): The name of the file to save the data to.
+        """
+
+        if not(file_name.endswith('.pkl')):
+            file_name = file_name+'.pkl'
+
+        pickle.dump(self, open(file_name,'wb'))
+
+    @classmethod
+    def load(cls, file_name):
+        return  pickle.load(open(file_name,'rb'))

@@ -18,7 +18,9 @@ gammabayes/dark_matter/base_spectral_class.py
 gammabayes/dark_matter/combined_DM_class.py
 gammabayes/dark_matter/discrete_DM_prior.py
 gammabayes/dark_matter/channel_spectra/__init__.py
-gammabayes/dark_matter/channel_spectra/dark_matter_spectra/AtProduction_gammas.dat
+gammabayes/dark_matter/channel_spectra/PPPC_Tables/AtProduction_gamma_EW_corrections.dat
+gammabayes/dark_matter/channel_spectra/PPPC_Tables/PPPC_reader.py
+gammabayes/dark_matter/channel_spectra/PPPC_Tables/__init__.py
 gammabayes/dark_matter/channel_spectra/griddata/__init__.py
 gammabayes/dark_matter/channel_spectra/griddata/channel=V->e_massenergy_diffflux_grid.npy
 gammabayes/dark_matter/channel_spectra/griddata/channel=V->mu_massenergy_diffflux_grid.npy
@@ -72,7 +74,6 @@ gammabayes/dark_matter/spectral_models/core/csv_to_dict_class.py
 gammabayes/hyper_inference/__init__.py
 gammabayes/hyper_inference/discrete_adaptive_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/discrete_brute_scan_hyperparameter_likelihood.py
-gammabayes/hyper_inference/full_stochastic_reweighting.py
 gammabayes/hyper_inference/full_stochastic_reweighting_class.py
 gammabayes/hyper_inference/mixture_sampling_nuisance_scan_output.py
 gammabayes/hyper_inference/mixture_scan_nuisance_scan_output.py

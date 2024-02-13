@@ -160,6 +160,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             # Transpose is because of the convention for where I place the 
                 # axes of the true values (i.e. first three indices of the prior matrices)
                 # and numpy doesn't support this kind of matrix addition nicely
+            
             logintegrandvalues = (
                 np.squeeze(log_prior_matrices).T[
                     ...,
@@ -200,7 +201,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             large objects like input priors and likelihoods are included in the packed data.
         """
         if h5f is None:
-            h5f = h5py.File(file_name, 'w')  # Replace 'temporary_file.h5' with desired file name
+            h5f = h5py.File(file_name, 'w-')  # Replace 'temporary_file.h5' with desired file name
         # _pack_data method in the brute force class works kind of as
             # as a base method saving the important values of the class
             # into a dictionary. We just need to add the level of restriction
@@ -221,7 +222,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
         string_ds = h5f.create_dataset('bound_types', (len(bound_types),), dtype=dt)
         string_ds[:] = bound_types
 
-        h5f.create_dataset('bound_values', bound_values)
+        h5f.create_dataset('bound_values', data=bound_values)
 
         return h5f
     
@@ -237,7 +238,6 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
             bound_types = np.array(h5f['bound_types'])
             bound_values = np.array(h5f['bound_values'])
-
 
             bound_types_decoded = [s.decode('utf-8') if isinstance(s, bytes) else s for s in bound_types]
             

@@ -29,12 +29,11 @@ def discrete_prior_transform(u, inv_cdf_func=None, log_prior_array=None, axes=No
         return output
 
 
-from scipy import special
-from scipy.interpolate import interp1d
-from tqdm import tqdm
-import numpy as np
-import functools, dynesty, warnings, os, sys, time
-from matplotlib import pyplot as plt
-from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
-from gammabayes.utils import update_with_defaults, iterate_logspace_integration
+class ResultsWrapper:
+    def __init__(self, results_dict):
+        self.__dict__.update(results_dict)
+    
+    def __getattr__(self, attr):
+        # This method is called if the attribute wasn't found the usual ways
+        raise AttributeError(f"'ResultsWrapper' object has no attribute '{attr}'")
 

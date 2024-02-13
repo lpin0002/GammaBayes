@@ -1,7 +1,7 @@
 include gammabayes/package_data/*.gz
 include gammabayes/package_data/*.txt
 include gammabayes/package_data/*.fits
-include gammabayes/dark_matter/griddata/*.npy
+include gammabayes/dark_matter/channel_spectra/PPPC_Tables/*
 include gammabayes/dark_matter/220913_145357/bfmlambdaarray.npy
 include gammabayes/dark_matter/220913_145357/lambdarange.npy
 include gammabayes/dark_matter/220913_145357/massrange.npy

@@ -77,7 +77,7 @@ class ParameterSet(object):
                 self.handle_list_specification_input(parameter_specifications)
 
         elif isinstance(parameter_specifications, ParameterSet):
-            self.append(parameter_specifications)            
+            self.append(parameter_specifications) 
 
 
     # This method presumes that you have given the specifications in the form of 
@@ -206,15 +206,19 @@ class ParameterSet(object):
             parameter (Parameter or ParameterSet): The parameter or parameter set to append.
         """
         if isinstance(parameter, Parameter):
-            type_key = parameter['parameter_type']
 
             param_name = parameter['name']
 
-            if type_key in self.axes_by_type:
-                if 'axis' in parameter:
-                    self.axes_by_type[type_key][param_name] = parameter['axis']
-                else:
-                    self.axes_by_type[type_key][param_name] = np.nan
+            if 'parameter_type' in parameter:
+                type_key = parameter['parameter_type']
+
+
+                if type_key in self.axes_by_type:
+                    if 'axis' in parameter:
+                        self.axes_by_type[type_key][param_name] = parameter['axis']
+                    else:
+                        self.axes_by_type[type_key][param_name] = np.nan
+
 
             self.dict_of_parameters_by_name[param_name] = parameter
 
@@ -222,6 +226,10 @@ class ParameterSet(object):
             parameters = parameter
             for param_name, parameter in parameters.dict_of_parameters_by_name.items():
                 self.append(parameter)
+
+
+    def __repr__(self):
+        return str(self.dict_of_parameters_by_name)
 
 
     def __len__(self):
@@ -378,23 +386,22 @@ default value. Place nan in position of default""")
         h5py.File: An HDF5 file object containing the packed data.
         """
         if h5f is None:
-            h5f = h5py.File(None, 'w')  # 'None' creates an in-memory HDF5 file object
+            h5f = h5py.File(None, 'w-')  # 'None' creates an in-memory HDF5 file object
             
-        for param_name, parameter in self.dict_of_parameters_by_name.items():
-            group = h5f.create_group(param_name)
-            for key, value in parameter.items():
-                
-                if key != 'transform' and key != 'custom_parameter_transform':
-                    # Convert arrays to a format that can be saved in h5py
-                    if isinstance(value, (np.ndarray, list)):
-                        group.create_dataset(key, data=value)
-                    elif isinstance(value, (int, float, str, bool)):
-                        group.attrs[key] = value
+        # Save the order of parameters as an attribute. h5py does not natively support
+            # saving groups in a particular order. They're closer to sets than anything.
+        param_order = list(self.dict_of_parameters_by_name.keys())
+        h5f.attrs['parameter_order'] = param_order
+        
+        for param_name, parameter_specs in self.dict_of_parameters_by_name.items():
+            param_group = h5f.create_group(param_name)
+            for spec_attr, spec_attr_val in parameter_specs.items():
+                if spec_attr != 'transform':
+                    if isinstance(spec_attr_val, (np.ndarray, list)):
+                        param_group.create_dataset(spec_attr, data=spec_attr_val)
                     else:
-                        group.attrs[key] = str(value)
-                elif 'custom_parameter_transform' in parameter and hasattr(parameter['custom_parameter_transform'], '__call__'):
-                    func_name = parameter['custom_parameter_transform'].__name__
-                    group.attrs['custom_scaling_function_name'] = func_name
+                        param_group.attrs[spec_attr] = spec_attr_val
+
         return h5f
     
     def save(self, file_name):
@@ -410,41 +417,32 @@ default value. Place nan in position of default""")
 
 
     @classmethod
-    def load(cls, h5f, file_name: str = None):
-        """
-        Loads the ParameterSet data from an HDF5 file and returns a ParameterSet instance.
+    def load(cls, h5f, file_name=None):
+        new_parameter_set = cls()  # Instantiate a new ParameterSet
 
-        Args:
-            file_name (str): The name of the file to load the data from.
-
-        Returns:
-            ParameterSet: An instance of the ParameterSet class with the loaded data.
-        """
-        have_to_close = False
-
-        
-        parameter_list  = []
         if h5f is None:
-            have_to_close = True
-            h5f = h5py.File(file_name, 'r') 
-            
-        for param_name in h5f.keys():
-            group = h5f[param_name]
-            param_data = {key: group.attrs[key] for key in group.attrs.keys()}
+            h5f = h5py.File(file_name, 'r')
+        
+        param_order = list(h5f.attrs['parameter_order'])
+        
+        for param_name in param_order:
+            if param_name in h5f:  # Check if the parameter name exists in the file
+                param_group = h5f[param_name]
+                parameter_specs = {}
+                
+                for attr_name in param_group.attrs.keys():
+                    if attr_name != 'transform':
+                        parameter_specs[attr_name] = param_group.attrs[attr_name]
+                
+                for dataset_name in param_group.keys():
+                    if dataset_name != 'transform':
+                        parameter_specs[dataset_name] = param_group[dataset_name][()]
+                
+                # Create and append the parameter object accordingly
+                # This assumes a constructor or method to recreate a parameter from specs
+                parameter = Parameter(parameter_specs)
+                new_parameter_set.dict_of_parameters_by_name[param_name] = parameter
 
-            for key in group.keys():
-                param_data[key] = np.array(group[key])
-            
-            # Reconstruct the Parameter instance
-            if param_data != {}:
-                parameter = Parameter(param_data)
+        return new_parameter_set
 
-                parameter_list.append(parameter)
-
-        if have_to_close:
-            h5f.close()
-        if parameter_list != []:
-            return ParameterSet(parameter_list)
-        else:
-            return ParameterSet()
     

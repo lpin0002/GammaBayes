@@ -5,6 +5,7 @@ from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes.core import EventData
 import matplotlib.pyplot as plt
 import warnings, logging
+import h5py, pickle
 
 class DiscreteLogPrior(object):
     
@@ -258,6 +259,7 @@ class DiscreteLogPrior(object):
             outputarray = self.log_mesh_efficient_func(*self.axes, 
                                                        spectral_parameters=spectral_parameters, 
                                                        spatial_parameters=spatial_parameters)
+            
 
         else:
             inputmesh = np.meshgrid(*self.axes, 
@@ -274,7 +276,7 @@ class DiscreteLogPrior(object):
             normalisation = self.normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
 
             logging.info(f"normalisation.shape: {normalisation.shape}")
-            normalisation = np.where(np.isneginf(normalisation), 0, normalisation)
+            normalisation = np.where(np.isinf(normalisation), 0, normalisation)
             outputarray = outputarray - normalisation
 
             # normalisation = self.normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
@@ -283,5 +285,25 @@ class DiscreteLogPrior(object):
 
              
         return outputarray
+    
 
-        
+    def save(self, file_name:str ):
+        """
+        Saves the DiscreteLogPrior data to an HDF5 file.
+
+        Args:
+        file_name (str): The name of the file to save the data to.
+        """
+
+        if not(file_name.endswith('.pkl')):
+            file_name = file_name+'.pkl'
+
+        pickle.dump(self, open(file_name,'wb'))
+
+    @classmethod
+    def load(cls, file_name):
+        return  pickle.load(open(file_name,'rb'))
+
+
+
+

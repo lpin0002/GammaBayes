@@ -1,7 +1,4 @@
-import numpy as np
-from scipy import interpolate
-import pandas as pd
-from gammabayes.dark_matter.density_profiles import DM_Profiles
+import numpy as np, copy
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
@@ -34,7 +31,6 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
                   parameter values and any other necessary initialization options.
     """
 
-    darkSUSY_SS_BFs_cleaned_dict = CSVDictionary(ScalarSinglet_Folder_Path+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
 
     def __init__(self, *args, **kwargs):
         """
@@ -50,17 +46,25 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
                       default parameter values such as mass and lambda.
         """
 
+        darkSUSY_SS_BFs_cleaned_dict = CSVDictionary(ScalarSinglet_Folder_Path+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
+
         # Extracting the annihilation ratios for the Scalar Singlet model
-        self.mass_axis, self.lambda_axis = self.darkSUSY_SS_BFs_cleaned_dict['mS [GeV]']/1e3, self.darkSUSY_SS_BFs_cleaned_dict['lahS']
+        mass_axis, lambda_axis = np.unique(darkSUSY_SS_BFs_cleaned_dict['mS [GeV]'])/1e3, np.unique(darkSUSY_SS_BFs_cleaned_dict['lahS'])
+
+        SS_BFs_dict = copy.deepcopy(darkSUSY_SS_BFs_cleaned_dict)
+
+        del SS_BFs_dict['mS [GeV]']
+        del SS_BFs_dict['lahS']
         
-        # Also as you can probably tell, darkSUSY output the masses in GeV, so we divide by 1e3 to get them in TeV. If you are also 
-            # implementing your own class it is currently required to be over TeV mass/energy
+        parameter_interpolation_values = [mass_axis, lambda_axis]
+        parameter_axes_shapes = (mass_axis.size, lambda_axis.size)
 
-        self.darkSUSY_SS_BFs_cleaned_dict.pop('mS [GeV]')
-        self.darkSUSY_SS_BFs_cleaned_dict.pop('lahS')
+        for channel in SS_BFs_dict.keys():
+            SS_BFs_dict[channel] = SS_BFs_dict[channel].reshape(parameter_axes_shapes)
 
-        super().__init__(annihilation_fractions = self.darkSUSY_SS_BFs_cleaned_dict, 
-                         parameter_interpolation_values = [self.mass_axis, self.lambda_axis],
+
+        super().__init__(annihilation_fractions = SS_BFs_dict, 
+                         parameter_interpolation_values = parameter_interpolation_values,
                          default_parameter_values={'mass':1.0, 'lahS':0.1},
                          *args, **kwargs)
         

@@ -22,10 +22,10 @@ class DiscreteBruteScan(object):
                  log_likelihood: callable = None, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  nuisance_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
-                 parameter_specifications: dict | list[ParameterSet] | dict[ParameterSet] = {}, 
+                 prior_parameter_specifications: dict | list[ParameterSet] | dict[ParameterSet] = {}, 
                  log_likelihoodnormalisation: np.ndarray | float = 0., 
-                 log_margresults: np.ndarray | None = None, 
-                 mixture_param_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 log_nuisance_marg_results: np.ndarray | None = None, 
+                 mixture_parameter_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  log_hyperparameter_likelihood: np.ndarray | float = 0., 
                  log_posterior: np.ndarray | float = 0., 
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
@@ -34,7 +34,8 @@ class DiscreteBruteScan(object):
                  log_marginalisation_regularisation: float  = None,
                  no_priors_on_init: bool = False,
                  no_likelihood_on_init: bool = False,
-                 mixture_fraction_exploration_type='scan',
+                 mixture_fraction_exploration_type=None,
+                 applied_priors=False,
                  ):
         """
         Initializes a discrete brute scan hyperparameter likelihood object.
@@ -52,16 +53,16 @@ class DiscreteBruteScan(object):
             nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
                 Axes that the nuisance parameters can take. Defaults to None.
             
-            parameter_specifications (dict, optional): Specifications for 
+            prior_parameter_specifications (dict, optional): Specifications for 
                 parameters involved in the likelihood estimation. Defaults to an empty dictionary.
             
             log_likelihoodnormalisation (np.ndarray | float, optional): 
                 Normalization for the log likelihood. Defaults to 0.
             
-            log_margresults (np.ndarray | None, optional): Results of 
+            log_nuisance_marg_results (np.ndarray | None, optional): Results of 
                 marginalization, expressed in log form. Defaults to None.
             
-            mixture_param_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            mixture_parameter_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
                 Specifications for the mixture fraction parameters. Defaults to None.
             
             log_hyperparameter_likelihood (np.ndarray | float, optional): 
@@ -111,15 +112,15 @@ class DiscreteBruteScan(object):
             self.nuisance_axes     = _handle_nuisance_axes(nuisance_axes,
                                                         log_likelihood=self.log_likelihood,
                                                         log_prior=self.log_priors[0])
-            self.parameter_specifications = _handle_parameter_specification(
-                parameter_specifications=parameter_specifications,
+            self.prior_parameter_specifications = _handle_parameter_specification(
+                parameter_specifications=prior_parameter_specifications,
                 num_required_sets=len(self.log_priors),
                 _no_required_num=self.no_priors_on_init)
         else:
             self.nuisance_axes     = _handle_nuisance_axes(nuisance_axes,
                                                         log_likelihood=self.log_likelihood)
-            self.parameter_specifications = _handle_parameter_specification(
-                parameter_specifications=parameter_specifications,
+            self.prior_parameter_specifications = _handle_parameter_specification(
+                parameter_specifications=prior_parameter_specifications,
                 _no_required_num=self.no_priors_on_init)
 
 
@@ -135,7 +136,7 @@ class DiscreteBruteScan(object):
         self.logspace_integrator            = logspace_integrator
 
         # Doesn't have to be initialised here, but you can do it if you want
-        self.mixture_param_specifications          = ParameterSet(mixture_param_specifications)
+        self.mixture_parameter_specifications   = ParameterSet(mixture_parameter_specifications)
 
         # Used as regularisation to avoid
         self.log_marginalisation_regularisation = log_marginalisation_regularisation
@@ -145,12 +146,12 @@ class DiscreteBruteScan(object):
             # way, assuming that they match the expected inputs/outputs of what is
             # used/produce here.
 
-        self.log_margresults                    = log_margresults
+        self.log_nuisance_marg_results                    = log_nuisance_marg_results
         self.log_hyperparameter_likelihood      = log_hyperparameter_likelihood
         self.log_posterior                      = log_posterior
         self.log_prior_matrix_list              = log_prior_matrix_list
         self.mixture_fraction_exploration_type  = mixture_fraction_exploration_type
-
+        self.applied_priors = applied_priors
 
 
 
@@ -203,7 +204,8 @@ class DiscreteBruteScan(object):
         
         all_log_marg_results = []
 
-        for log_prior_matrices in log_prior_matrix_list:
+        for prior_idx, log_prior_matrices in enumerate(log_prior_matrix_list):
+            logging.info(f"log prior number {prior_idx} shape: ", log_prior_matrices.shape)
             # Transpose is because of the convention for where I place the 
                 # axes of the true values (i.e. first three indices of the prior matrices)
                 # and numpy doesn't support this kind of matrix addition nicely
@@ -263,7 +265,7 @@ class DiscreteBruteScan(object):
                                    desc='Setting up prior matrices'):
                 
 
-                prior_parameter_specifications = self.parameter_specifications[_prior_idx].scan_format
+                prior_parameter_specifications = self.prior_parameter_specifications[_prior_idx].scan_format
 
                 prior_spectral_params   = prior_parameter_specifications['spectral_parameters']
                 prior_spatial_params    = prior_parameter_specifications['spatial_parameters']
@@ -273,14 +275,16 @@ class DiscreteBruteScan(object):
                                                    *[parameter_specification.size for parameter_specification in prior_spectral_params.values()],
                                                    *[parameter_specification.size for parameter_specification in prior_spatial_params.values()])
 
-
+                logging.info(f'prior_marged_shapes[{_prior_idx}]: ', prior_marged_shapes[_prior_idx])
                 if log_prior.efficient_exist:
+
                     log_prior_matrices = np.squeeze(
                         log_prior.construct_prior_array(
                             spectral_parameters = prior_spectral_params,
                             spatial_parameters =  prior_spatial_params,
                             normalise=True)
                             )
+                    
                     
                     # Computation is more efficient/faster of the arrays 
                         # are as flattened as possible. Also minimises memory
@@ -412,6 +416,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         prior_marged_shapes, _ = self.prior_gen(Nevents=measured_event_data.Nevents)
 
+
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 
             event_vals=event_data) for event_data in measured_event_data.data]
@@ -423,6 +428,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             # Much easier to work with.
         reshaped_marg_results = []
         for _prior_idx in range(len(self.log_priors)):
+
             stacked_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
 
             logging.info('\nstacked_marg_results shape: ', stacked_marg_results.shape)
@@ -431,7 +437,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
             reshaped_marg_results.append(stacked_marg_results)
 
-
+        
         log_marg_mins = np.asarray([np.nanmin(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
         log_marg_maxs = np.asarray([np.nanmax(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
 
@@ -448,29 +454,29 @@ class before the multiprocessing or make sure that it isn't part of the actual
     def add_log_nuisance_marg_results(self, new_log_marg_results: np.ndarray):
         """
         Extends each array in the existing log marginalisation results with corresponding new log marginalisation results. 
-        This method iterates over each array in `self.log_margresults` and the new results, extending each existing array 
+        This method iterates over each array in `self.log_nuisance_marg_results` and the new results, extending each existing array 
         with the corresponding new results. 
 
         Args:
             new_log_marg_results (np.ndarray): An array containing new log marginalisation results. Each element in this 
                                             array corresponds to and will be appended to the respective array in 
-                                            `self.log_margresults`.
+                                            `self.log_nuisance_marg_results`.
 
         Notes:
-            - It's assumed that `self.log_margresults` is a list of lists (or arrays) where each sublist corresponds 
+            - It's assumed that `self.log_nuisance_marg_results` is a list of lists (or arrays) where each sublist corresponds 
             to a set of log marginalisation results.
-            - `new_log_marg_results` should have the same length/number of priors as `self.log_margresults` to ensure 
+            - `new_log_marg_results` should have the same length/number of priors as `self.log_nuisance_marg_results` to ensure 
             correct pairing and extension of each sublist.
             - This method uses list comprehension to iterate and extend each corresponding sublist.
         """
-        self.log_margresults = [log_margresult.extend(new_log_marg_result) for log_margresult, new_log_marg_result in zip(self.log_margresults, new_log_marg_results)]
+        self.log_nuisance_marg_results = [log_margresult.extend(new_log_marg_result) for log_margresult, new_log_marg_result in zip(self.log_nuisance_marg_results, new_log_marg_results)]
 
 
     def select_scan_output_posterior_exploration_class(self, 
                                                        mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
                                                        mixture_fraction_exploration_type: str = None, 
-                                                       log_margresults: list | np.ndarray = None,
-                                                       parameter_specifications: dict | list[ParameterSet] | list[dict] =None,
+                                                       log_nuisance_marg_results: list | np.ndarray = None,
+                                                       prior_parameter_specifications: dict | list[ParameterSet] | list[dict] =None,
                                                        *args, **kwargs):
         """
         Selects and initializes (the class, not the process it contains) the appropriate exploration class based on the 
@@ -486,11 +492,11 @@ class before the multiprocessing or make sure that it isn't part of the actual
                 deterministic scan or 'sample' for stochastic sampling. If not provided, defaults to the class attribute 
                 `mixture_fraction_exploration_type`.
             
-            log_margresults (list, array like, optional): The logarithm of marginal results to be used in the exploration. If not provided, 
-                defaults to the class attribute `log_margresults`.
+            log_nuisance_marg_results (list, array like, optional): The logarithm of marginal results to be used in the exploration. If not provided, 
+                defaults to the class attribute `log_nuisance_marg_results`.
             
-            parameter_specifications (dict, list[ParameterSet], list[dict], optional): Specifications for prior 
-            parameters involved in the exploration. If not provided, defaults to the class attribute `parameter_specifications`.
+            prior_parameter_specifications (dict, list[ParameterSet], list[dict], optional): Specifications for prior 
+            parameters involved in the exploration. If not provided, defaults to the class attribute `prior_parameter_specifications`.
             
             *args, **kwargs: Additional arguments and keyword arguments passed to the exploration class constructor.
             
@@ -500,26 +506,31 @@ class before the multiprocessing or make sure that it isn't part of the actual
         if mixture_fraction_exploration_type is None:
             mixture_fraction_exploration_type = self.mixture_fraction_exploration_type
 
-        if parameter_specifications is None:
-            parameter_specifications = self.parameter_specifications
+        if prior_parameter_specifications is None:
+            prior_parameter_specifications = self.prior_parameter_specifications
 
-        if log_margresults is None:
-            log_margresults = self.log_margresults
+        if log_nuisance_marg_results is None:
+            log_nuisance_marg_results = self.log_nuisance_marg_results
 
         if mixture_fraction_exploration_type.lower() == 'scan':
             scan_output_exploration_class = ScanOutput_ScanMixtureFracPosterior
 
         elif mixture_fraction_exploration_type.lower() == 'sample':
             scan_output_exploration_class = ScanOutput_StochasticMixtureFracPosterior
+            self.applied_priors = True
 
         else:
            raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
         
+        if self.mixture_parameter_specifications.dict_of_parameters_by_name == {}:
+            logging.info("Setting 'self.mixture_parameter_specifications' to that specified in 'select_scan_output_posterior_exploration_class'. ")
+            self.mixture_parameter_specifications = mixture_parameter_specifications
+        
         self.scan_output_exploration_class_instance = scan_output_exploration_class(
-                log_margresults = log_margresults,
+                log_nuisance_marg_results = log_nuisance_marg_results,
                 log_nuisance_marg_regularisation = self.log_marginalisation_regularisation,
                 mixture_parameter_specifications=mixture_parameter_specifications,
-                prior_parameter_specifications=parameter_specifications,
+                prior_parameter_specifications=prior_parameter_specifications,
                 *args, **kwargs)
 
         
@@ -550,6 +561,15 @@ class before the multiprocessing or make sure that it isn't part of the actual
         """
         self._posterior_exploration_output = self.scan_output_exploration_class_instance.run_exploration(*args, **kwargs)
 
+        if self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):
+            self.log_posterior = self._posterior_exploration_output
+
+        elif not self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):
+            self.log_hyperparameter_likelihood = self._posterior_exploration_output
+
+        else:
+            self.log_posterior = self.scan_output_exploration_class_instance.sampler.results
+
         return self._posterior_exploration_output
 
 
@@ -567,16 +587,21 @@ class before the multiprocessing or make sure that it isn't part of the actual
             depending on the exploration type.
         """
         if self.mixture_fraction_exploration_type =='scan':
-            return self._posterior_exploration_output
+            result = self._posterior_exploration_output
+            if self.applied_priors:
+                self.log_posterior = result
+            else:
+                self.log_hyperparameter_likelihood = result
+
+            return result
         else:
-            return self.scan_output_exploration_class_instance.sampler.results
+            results = self.scan_output_exploration_class_instance.sampler.results
+
+            self.log_posterior = results.samples
+
+            return results
         
 
-
-
-
-        
-        
     
     def update_hyperparameter_likelihood(self, 
                                            log_hyperparameter_likelihood: np.ndarray
@@ -603,7 +628,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
     
 
     # TODO: Make this usable
-    def apply_uniform_hyperparameter_priors(self, priorinfos: list[dict] | tuple[dict], 
+    def apply_hyperparameter_priors(self, priorinfos: list[dict] | tuple[dict], 
                                             hyper_param_axes: list[np.ndarray] | tuple[np.ndarray] | None = None, 
                                             log_hyper_priormesh: np.ndarray = None, 
                                             integrator: callable = None):
@@ -643,6 +668,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         self.log_posterior = np.squeeze(self.log_hyperparameter_likelihood)+log_hyper_priormesh
 
+        self.applied_priors = True
+
         return self.log_posterior, log_prior_val_list, hyper_val_list
 
     # Private method for classes that inherit this classes behaviour åto use
@@ -668,12 +695,13 @@ class before the multiprocessing or make sure that it isn't part of the actual
             - Users should ensure that `h5f` is properly closed after use to prevent data corruption.
         """
         if h5f is None:
-            h5f = h5py.File(file_name, 'w')  # Replace 'temporary_file.h5' with desired file name
+            h5f = h5py.File(file_name, 'w-')  # Replace 'temporary_file.h5' with desired file name
         
         
         h5f.attrs['log_marginalisation_regularisation'] = self.log_marginalisation_regularisation
+        h5f.attrs['mixture_fraction_exploration_type']  = self.mixture_fraction_exploration_type
+        
         if self.log_likelihoodnormalisation is not None:
-
             h5f.create_dataset('log_likelihoodnormalisation', data=np.asarray(self.log_likelihoodnormalisation, dtype=np.float64))
 
         
@@ -692,40 +720,40 @@ class before the multiprocessing or make sure that it isn't part of the actual
                 nuisance_axis_dataset = nuisance_axes_group.create_dataset(f"{nuisance_axis_idx}", data=nuisance_axis)
 
 
-        if self.log_margresults is not None:
-            h5f.create_dataset('log_margresults', data=self.log_margresults)
+        if self.log_nuisance_marg_results is not None:
+            h5f.create_dataset('log_nuisance_marg_results', data=self.log_nuisance_marg_results)
 
         if self.log_hyperparameter_likelihood is not None:
             h5f.create_dataset('log_hyperparameter_likelihood', data=self.log_hyperparameter_likelihood)
 
 
         if self.log_posterior is not None:
-            h5f.create_dataset('log_posterior', data=self.log_posterior)
+            h5f.create_dataset('log_posterior', data=np.asarray(self.log_posterior, dtype=float))
 
 
         # Packing ParameterSet objects
-        if self.parameter_specifications is not None:
+        if self.prior_parameter_specifications is not None:
             prior_param_set_group = h5f.create_group('prior_param_set')
 
-            for prior_idx, (prior, single_prior_param_set) in enumerate(zip(self.log_priors, self.parameter_specifications)):
+            for prior_idx, (prior, single_prior_param_set) in enumerate(zip(self.log_priors, self.prior_parameter_specifications)):
                 if type(single_prior_param_set) == ParameterSet:
                     single_prior_param_group = prior_param_set_group.create_group(prior.name)
                     single_prior_param_group = single_prior_param_set.pack(h5f=single_prior_param_group)
 
-        if self.mixture_param_specifications is not None:
+        if self.mixture_parameter_specifications is not None:
 
-            mixture_param_specifications_group = h5f.create_group('mixture_param_specifications')
+            mixture_parameter_specifications_group = h5f.create_group('mixture_parameter_specifications')
 
-            mixture_param_specifications_group = self.mixture_param_specifications.pack(h5f=mixture_param_specifications_group)
+            mixture_parameter_specifications_group = self.mixture_parameter_specifications.pack(h5f=mixture_parameter_specifications_group)
 
 
-        if not reduce_mem_consumption:
+        # if not reduce_mem_consumption:
 
-            if self.log_prior_matrix_list is not None:
-                log_prior_matrix_list_group = h5f.create_group('log_prior_matrix_list')
+        #     if self.log_prior_matrix_list is not None:
+        #         log_prior_matrix_list_group = h5f.create_group('log_prior_matrix_list')
 
-                for prior, single_prior_log_matrix_list in zip(self.log_priors, self.log_prior_matrix_list):
-                    log_prior_matrix_list_group.create_dataset(prior.name, single_prior_log_matrix_list)
+        #         for prior, single_prior_log_matrix_list in zip(self.log_priors, self.log_prior_matrix_list):
+        #             log_prior_matrix_list_group.create_dataset(prior.name, single_prior_log_matrix_list)
 
 
         return h5f
@@ -784,8 +812,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
             if 'nuisance_axes' in h5f:
                 class_input_dict['nuisance_axes'] = [np.array(h5f['nuisance_axes'][str(i)][:]) for i in range(len(h5f['nuisance_axes']))]
 
-            if 'log_margresults' in h5f:
-                class_input_dict['log_margresults'] = np.array(h5f['log_margresults'])
+            if 'log_nuisance_marg_results' in h5f:
+                class_input_dict['log_nuisance_marg_results'] = np.array(h5f['log_nuisance_marg_results'])
 
             if 'log_hyperparameter_likelihood' in h5f:
                 class_input_dict['log_hyperparameter_likelihood'] = np.array(h5f['log_hyperparameter_likelihood'])
@@ -796,14 +824,14 @@ class before the multiprocessing or make sure that it isn't part of the actual
             # Load ParameterSet objects
             # Assuming you have a method in ParameterSet to load from a group
             if 'prior_param_set' in h5f:
-                class_input_dict['parameter_specifications'] = []
+                class_input_dict['prior_parameter_specifications'] = []
                 for prior_name in h5f['prior_param_set']:
                     prior_parameter_set = ParameterSet.load(h5f=h5f['prior_param_set'][prior_name])
-                    class_input_dict['parameter_specifications'].append(prior_parameter_set)
+                    class_input_dict['prior_parameter_specifications'].append(prior_parameter_set)
 
-            if 'mixture_param_specifications' in h5f:
-                mixture_param_specifications_group = h5f['mixture_param_specifications']
-                class_input_dict['mixture_param_specifications'] = ParameterSet.load(h5f=mixture_param_specifications_group)
+            if 'mixture_parameter_specifications' in h5f:
+                mixture_parameter_specifications_group = h5f['mixture_parameter_specifications']
+                class_input_dict['mixture_parameter_specifications'] = ParameterSet.load(h5f=mixture_parameter_specifications_group)
 
         
 

@@ -4,7 +4,7 @@ warnings.simplefilter("ignore", category=DeprecationWarning)
 import os, sys, time
 from tqdm import tqdm
 
-from gammabayes.likelihoods.irfs import irf_loglikelihood
+from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
 import numpy as np
 
@@ -14,7 +14,7 @@ def test_irf_input_output():
     energy_recon_axis, longitudeaxis, latitudeaxis = np.logspace(-1,2,16), np.linspace(-5,5,11), np.linspace(-4,4,9)
 
 
-    irf_loglike = irf_loglikelihood(axes=[energy_recon_axis, longitudeaxis, latitudeaxis], 
+    irf_loglike = IRF_LogLikelihood(axes=[energy_recon_axis, longitudeaxis, latitudeaxis], 
                                     dependent_axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue],
                                     pointing_direction=np.asarray([10,10]).T, 
                                     zenith=40, 

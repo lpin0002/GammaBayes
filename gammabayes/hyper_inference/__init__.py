@@ -1,6 +1,8 @@
 from .discrete_brute_scan_hyperparameter_likelihood import DiscreteBruteScan
 from .discrete_adaptive_scan_hyperparameter_likelihood import DiscreteAdaptiveScan
-# from .full_stochastic_reweighting import dynesty_stochastic_reweighting_class
+
 from .mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
 from .mixture_sampling_nuisance_scan_output import ScanOutput_StochasticMixtureFracPosterior
-from .scan_reweighting_class import DynestyScanReweighting
+
+from .scan_reweighting_class import ScanReweighting
+from .full_stochastic_reweighting_class import StochasticReweighting

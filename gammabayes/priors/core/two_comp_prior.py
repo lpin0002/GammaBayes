@@ -212,6 +212,7 @@ class TwoCompPrior(DiscreteLogPrior):
 
         num_spatial_params      = len(spatial_parameters)
 
+
         # Just the total
         num_total_params = num_spectral_params + num_spatial_params + 3
 
@@ -238,7 +239,6 @@ class TwoCompPrior(DiscreteLogPrior):
         expand_spectral_axes = list([1,2])+list(range(3+num_spectral_params, num_total_params))
         logpdfvalues = np.expand_dims(logspectralvals, 
                                         axis=expand_spectral_axes)
-        
 
         # Expanding along Energy, Mass, and Spectral_Params dims
         expand_spatial_axes = list([0])+list(range(3, 3+num_spectral_params))
@@ -257,6 +257,8 @@ class TwoCompPrior(DiscreteLogPrior):
 
         logpdfvalues = logpdfvalues + log_aeff_vals
 
-        return logpdfvalues
+
+
+        return np.squeeze(logpdfvalues)
 
     

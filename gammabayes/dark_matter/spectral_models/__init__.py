@@ -1,2 +1,2 @@
-from .Z2_ScalarSinglet import SS_DM_dist, Z2_ScalarSinglet
+from .Z2_ScalarSinglet import Z2_ScalarSinglet
 from .core import *

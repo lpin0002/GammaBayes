@@ -1,5 +1,5 @@
 import os, sys, time
-from gammabayes.priors import discrete_logprior
+from gammabayes.priors import DiscreteLogPrior
 import warnings
 import numpy as np
 

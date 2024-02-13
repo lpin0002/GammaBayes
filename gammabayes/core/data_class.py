@@ -658,7 +658,7 @@ class EventData(object):
         if not(filename.endswith(".h5")):
             filename = filename + ".h5"
             
-        with h5py.File(filename, 'w') as f:
+        with h5py.File(filename, 'w-') as f:
             f.create_dataset('energy',          data=self.energy)
             f.create_dataset('glon',            data=self.glon)
             f.create_dataset('glat',            data=self.glat)
@@ -683,7 +683,7 @@ class EventData(object):
 
     # Class method to load an EventData object from an HDF5 file
     @classmethod
-    def load_from_hdf5(cls, filename: str):
+    def load(cls, filename: str):
         """
         Loads an EventData object from an HDF5 file.
 

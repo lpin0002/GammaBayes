@@ -2,7 +2,7 @@ import numpy as np, warnings, dynesty, logging
 from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 from gammabayes.hyper_inference.utils import _handle_parameter_specification
 from gammabayes import ParameterSet, Parameter
-
+import h5py
 
 class ScanOutput_ScanMixtureFracPosterior(object):
     """
@@ -29,10 +29,11 @@ class ScanOutput_ScanMixtureFracPosterior(object):
     """
 
     def __init__(self, 
-                 log_margresults, 
+                 log_nuisance_marg_results, 
                  mixture_parameter_specifications: list | ParameterSet = None, 
                  log_nuisance_marg_regularisation = 0., 
-                 prior_parameter_specifications = None # Argument is for consistent input to this class and "ScanOutput_StochasticMixtureFracPosterior"
+                 prior_parameter_specifications = None, # Argument is for consistent input to this class and "ScanOutput_StochasticMixtureFracPosterior"
+                 log_hyperparameter_likelihood = np.array([0.]),
                  ):
         """
         Initializes the ScanOutput_ScanMixtureFracPosterior object with scan results and model specifications.
@@ -53,15 +54,16 @@ class ScanOutput_ScanMixtureFracPosterior(object):
             prior_parameter_specifications (None, optional): Unused. Present for API consistency with other classes.
         """
         
-        self.log_nuisance_marg_results = log_margresults
+        self.log_nuisance_marg_results = log_nuisance_marg_results
         self.log_nuisance_marg_regularisation = log_nuisance_marg_regularisation
         self.mixture_parameter_specifications = self._handle_mixture_input(mixture_parameter_specifications)
+        self.log_hyperparameter_likelihood      = log_hyperparameter_likelihood
 
 
 
     def _handle_mixture_input(self, 
                                  mixture_param_specifications: list | dict | ParameterSet = None, 
-                                 log_margresults: list | tuple | np.ndarray = None):
+                                 log_nuisance_marg_results: list | tuple | np.ndarray = None):
         """
         Validates and processes the input for mixture model specifications and log marginal results, ensuring they
         are in the correct format and consistent with each other. This method also handles default parameters and
@@ -71,11 +73,11 @@ class ScanOutput_ScanMixtureFracPosterior(object):
             mixture_param_specifications (list | dict | ParameterSet, optional): The specifications for the mixture
                 model parameters. Can include parameter names, bounds, and discretization settings. If None, uses
                 the object's existing specifications.
-            log_margresults (list | tuple | np.ndarray, optional): Log marginal results for validating against the
+            log_nuisance_marg_results (list | tuple | np.ndarray, optional): Log marginal results for validating against the
                 mixture parameter specifications. Not directly used here but ensures consistency.
 
         Returns:
-            tuple: A tuple containing the processed and validated mixture_param_specifications and log_margresults.
+            tuple: A tuple containing the processed and validated mixture_param_specifications and log_nuisance_marg_results.
 
         Raises:
             Exception: If the mixture parameter specifications are not provided or are inconsistent with the log
@@ -94,15 +96,15 @@ class ScanOutput_ScanMixtureFracPosterior(object):
         else:
             self.mixture_param_specifications = ParameterSet(mixture_param_specifications)
 
-        if not(log_margresults is None):
-            if len(mixture_param_specifications)>len(log_margresults)-1:
+        if not(log_nuisance_marg_results is None):
+            if len(mixture_param_specifications)>len(log_nuisance_marg_results)-1:
                 raise Exception(f""""There are more mixtures than would be implied by the log marginalisation results. Please check your inputs.
 Number of mixture axes is {len(mixture_param_specifications)}
-and number of prior components is {len(log_margresults)}.""")
-            elif len(mixture_param_specifications)<len(log_margresults)-1:
+and number of prior components is {len(log_nuisance_marg_results)}.""")
+            elif len(mixture_param_specifications)<len(log_nuisance_marg_results)-1:
                 warnings.warn("""There are less mixtures than would be implied by the log marginalisatio results.
                               Assigning remaining mixtures as linearly uniform from 0 to 1 with 21 bins.""")
-                for missing_mix in range(len(mixture_param_specifications), len(log_margresults)-1):
+                for missing_mix in range(len(mixture_param_specifications), len(log_nuisance_marg_results)-1):
                     mixture_param_specifications.append(Parameter(
                         name=f'UnknownMix{missing_mix}',
                         bounds=[0., 1.],
@@ -293,4 +295,119 @@ and number of prior components is {len(log_margresults)}.""")
 
         log_hyperparameter_likelihood = np.sum(log_hyperparameter_likelihood_batches, axis=0)
 
+        self.log_hyperparameter_likelihood = log_hyperparameter_likelihood
+
         return log_hyperparameter_likelihood
+    
+
+    def _pack_data(self, h5f=None, file_name=None, save_log_hyperparameter_likelihood=False):
+        """
+        Private method that packs the class data into an HDF5 format.
+
+        Equivalent to the public method for use in sub-classes.
+
+        Args:
+        h5f (h5py.File): An open HDF5 file object for writing data.
+        """
+        if h5f is None:
+            h5f = h5py.File(file_name, 'w-')
+        # Ensure mixture_parameter_specifications is properly handled if it's a ParameterSet
+        if isinstance(self.mixture_parameter_specifications, ParameterSet):
+            # Assuming ParameterSet has a pack method to handle its serialization
+            mixture_param_group = h5f.create_group("mixture_parameter_specifications")
+            self.mixture_parameter_specifications.pack(mixture_param_group)
+        
+        # Save log_nuisance_marg_results
+        log_nuisance_marg_results_group = h5f.create_group("log_nuisance_marg_results")
+        for result_idx, result in enumerate(self.log_nuisance_marg_results):
+            log_nuisance_marg_results_group.create_dataset(str(result_idx), data=result)
+
+        if save_log_hyperparameter_likelihood:
+            h5f.create_dataset("log_hyperparameter_likelihood", data=self.log_hyperparameter_likelihood)
+        
+        # Save log_nuisance_marg_regularisation as an attribute
+        h5f.attrs["log_nuisance_marg_regularisation"] = self.log_nuisance_marg_regularisation
+
+        return h5f
+    
+    def pack_data(self, h5f=None, file_name=None, save_log_hyperparameter_likelihood=False):
+        """
+        Packs the class data into an HDF5 format (wrapper for _pack_data).
+
+        Args:
+        h5f (h5py.File): An open HDF5 file object for writing data.
+        """        
+        return self._pack_data(h5f=h5f, file_name=file_name, save_log_hyperparameter_likelihood=save_log_hyperparameter_likelihood)
+    
+
+    
+    def save(self, file_name):
+        """
+        Saves the class data to an HDF5 file.
+
+        Args:
+            file_name (str): The name of the file to save the data to.
+        """
+        h5f = self.pack_data(file_name=file_name)
+        h5f.close()
+    
+
+    @classmethod
+    def load(cls, h5f=None, file_name=None):
+        """
+        Loads the class data from an HDF5 file.
+
+        Args:
+        file_name (str): The path to the HDF5 file to load.
+
+        Returns:
+        ScanOutput_ScanMixtureFracPosterior: An instance of the class reconstructed from the file.
+        """
+
+        if type(h5f)==str:
+            file_name = h5f
+            h5f = None
+
+        if h5f is None:
+            need_to_close = True
+            h5f = h5py.File(file_name)
+
+
+        # Load mixture_parameter_specifications
+        mixture_param_group = h5f["mixture_parameter_specifications"]
+        mixture_parameter_specifications = ParameterSet.load(mixture_param_group)
+        
+        # Load log_nuisance_marg_results
+        log_nuisance_marg_results = []
+        log_nuisance_marg_results_group = h5f["log_nuisance_marg_results"]
+            
+        # Load each dataset within the "log_marg_results" group
+        # Assuming the datasets are named as "0", "1", "2", ...
+        # and need to be loaded in the order they were saved
+        result_indices = sorted(log_nuisance_marg_results_group.keys(), key=int)
+        for result_idx in result_indices:
+            result = np.asarray(log_nuisance_marg_results_group[result_idx])
+            log_nuisance_marg_results.append(result)
+
+        log_nuisance_marg_results = np.asarray(log_nuisance_marg_results, dtype=object)
+
+
+        if 'log_hyperparameter_likelihood' in h5f:
+            log_hyperparameter_likelihood = np.asarray(h5f["log_hyperparameter_likelihood"])
+        else:
+            log_hyperparameter_likelihood = np.array([0.])
+        
+        # Load log_nuisance_marg_regularisation
+        log_nuisance_marg_regularisation = h5f.attrs["log_nuisance_marg_regularisation"]
+        
+        # Reconstruct the class instance
+        instance = cls(log_nuisance_marg_results=log_nuisance_marg_results,
+                    mixture_parameter_specifications=mixture_parameter_specifications,
+                    log_nuisance_marg_regularisation=log_nuisance_marg_regularisation,
+                    log_hyperparameter_likelihood=log_hyperparameter_likelihood)
+        
+        if need_to_close:
+            h5f.close()
+            
+        return instance
+

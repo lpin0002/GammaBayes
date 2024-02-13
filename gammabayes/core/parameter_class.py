@@ -26,136 +26,156 @@ class Parameter(dict):
         of bounds to numerical values and sets up the parameter transformation functions 
         based on scaling and discreteness.
         """
-        data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
-        data_copy.update(kwargs)
-        
-        super().__init__(data_copy)
 
-        if not('scaling' in self):
-            self['scaling'] = 'linear'
-
-
-        # log10 to specifically let people now that the log will be base 10
-            # rather than the natural scale which is generally notated as 
-            # 'log' for the rest of the repo/package/project/thingy
-        if self['scaling'] not in ['linear', 'log10']:
-            warnings.warn("Scaling typically must be 'linear' or 'log10'. ")
-
-        if not('discrete' in self):
-            self['discrete'] = True
-
-        if not('default_value' in self):
-            self['default_value'] = 1.0
-
-
-        # A default value does not have to be given but is helpful, and would 
-            # be required if one uses event dynamic bounds
-        self['default_value'] = float(self['default_value'])
-
-        # For discrete values we highly recommend you explicitly state the bounds
-            # even if they are 0. and 1.
-        if not('bounds' in self):
-            warnings.warn("No bounds given. Defaulting to 0. and 1.")
-            self['bounds'] = [0., 1.]
-        
-        # A specific way of setting the bounds on the parameter if a value is
-            # fairly well known (or set within simulations) and this way makes
-            # the bounds change with the square root of the number of events
-            # (assuming CLT essentially). 
-        
-        if isinstance(self['bounds'], str):
-            if self['bounds']=='event_dynamic':
-                self['num_events'] = float(self['num_events'])
-
-                # If chosen you may have to mess around with this parameter to 
-                    # widen/constrict the bounds that pop out
-                self['dynamic_multiplier'] = float(self['dynamic_multiplier'])
-
-                if 'absolute_bounds' in self:
-
-                    self['absolute_bounds'] = [float(abs_bound) for abs_bound in self['absolute_bounds']]
-                    self['bounds'] = self.construct_dynamic_bounds(
-                        centre=self['default_value'], 
-                        scaling=self['scaling'], 
-                        dynamic_multiplier=self['dynamic_multiplier'], 
-                        num_events=self['num_events'], 
-                        absolute_bounds=self['absolute_bounds'])
-                else:
-                    self['bounds'] = self.construct_dynamic_bounds(
-                        centre=self['default_value'], 
-                        scaling=self['scaling'], 
-                        dynamic_multiplier=self['dynamic_multiplier'], 
-                        num_events=self['num_events'],)
-                    
-
-        for idx, bound in enumerate(self['bounds']):
-            self['bounds'][idx] = float(bound)
-
-        # For sampling with 3 or less parameters we highly recommend making them discrete
-            # and performing a scan over them rather than sampling as the performance is 
-            # currently better than the stochastic/reweighting methods. Future updates
-            # will try to improve the performance of the more expandable reweighting method
-        if self['discrete']:
-
-            if not('bins' in self) and (self['scaling'] == 'linear'):  
-
-                # Defaults to 10 per unit plus one so that if the bounds are 
-                    # 0.0 --> 1.0 you get 
-                    # 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
-                    # __not__
-                    # 0.0, 0.111..., 0.222..., 0.333..., 0.444..., 0.555..., etc
-                self['bins'] = int(np.round(np.diff(self['bounds'])*10+1))
-
-            elif not('bins' in self) and (self['scaling'] == 'log10'):  
-
-                # Defaults to 10 per unit plus one, mimicing the linear behaviour
-                    # but in log10-space
-                self['bins'] = int(np.round(np.diff(np.log10(self['bounds']))*10+1))
-
-            # The axis parameter is only required for discrete parameters
-            if not('axis' in self):
-                if type(self['bins'])==int:
-                    if self['scaling']=='linear':
-                        self['axis'] = np.linspace(*self['bounds'], self['bins'])
-                    else:
-                        self['axis'] = np.logspace(np.log10(self['bounds'][0]), 
-                                                   np.log10(self['bounds'][1]), 
-                                                   self['bins'])
-                        
-            self['axis'] = np.asarray(self['axis'])
-                        
+        if initial_data is None:
+            initial_data = kwargs
             
-            self['transform_scale'] = self['bins']
-            if 'custom_parameter_transform' in self:
-                self.transform = self['custom_parameter_transform']
-            else:
-                self.transform = self.discrete_parameter_transform
-        else:
+        if type(initial_data) == dict:
+            data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
+            data_copy.update(kwargs)
+            
+            super().__init__(data_copy)
 
-            # Future updates will allow one to set a custom function via a dynamic
-                # import
-            if 'custom_parameter_transform' in self:
-                self.transform = self['custom_parameter_transform']
-            else:
-                if self['scaling']=='linear':
-                    self['transform_scale'] = float(np.diff(self['bounds']))
-                    self.transform = self.continuous_parameter_transform_linear_scaling
+            if not('scaling' in self):
+                self['scaling'] = 'linear'
+
+
+            # log10 to specifically let people now that the log will be base 10
+                # rather than the natural scale which is generally notated as 
+                # 'log' for the rest of the repo/package/project/thingy
+            if self['scaling'] not in ['linear', 'log10']:
+                warnings.warn("Scaling typically must be 'linear' or 'log10'. ")
+
+            if not('discrete' in self):
+                self['discrete'] = True
+
+            if not('default_value' in self):
+                self['default_value'] = 1.0
+
+
+            # A default value does not have to be given but is helpful, and would 
+                # be required if one uses event dynamic bounds
+            self['default_value'] = float(self['default_value'])
+
+            # For discrete values we highly recommend you explicitly state the bounds
+                # even if they are 0. and 1.
+            if not('bounds' in self):
+                warnings.warn("No bounds given. Defaulting to 0. and 1.")
+                self['bounds'] = [0., 1.]
+            
+            # A specific way of setting the bounds on the parameter if a value is
+                # fairly well known (or set within simulations) and this way makes
+                # the bounds change with the square root of the number of events
+                # (assuming CLT essentially). 
+            
+            if isinstance(self['bounds'], str):
+                if self['bounds']=='event_dynamic':
+                    self['num_events'] = float(self['num_events'])
+
+                    # If chosen you may have to mess around with this parameter to 
+                        # widen/constrict the bounds that pop out
+                    self['dynamic_multiplier'] = float(self['dynamic_multiplier'])
+
+                    if 'absolute_bounds' in self:
+
+                        self['absolute_bounds'] = [float(abs_bound) for abs_bound in self['absolute_bounds']]
+                        self['bounds'] = self.construct_dynamic_bounds(
+                            centre=self['default_value'], 
+                            scaling=self['scaling'], 
+                            dynamic_multiplier=self['dynamic_multiplier'], 
+                            num_events=self['num_events'], 
+                            absolute_bounds=self['absolute_bounds'])
+                    else:
+                        self['bounds'] = self.construct_dynamic_bounds(
+                            centre=self['default_value'], 
+                            scaling=self['scaling'], 
+                            dynamic_multiplier=self['dynamic_multiplier'], 
+                            num_events=self['num_events'],)
+                        
+
+            for idx, bound in enumerate(self['bounds']):
+                self['bounds'][idx] = float(bound)
+
+            # For sampling with 3 or less parameters we highly recommend making them discrete
+                # and performing a scan over them rather than sampling as the performance is 
+                # currently better than the stochastic/reweighting methods. Future updates
+                # will try to improve the performance of the more expandable reweighting method
+            if self['discrete']:
+
+                if not('bins' in self) and (self['scaling'] == 'linear'):  
+
+                    # Defaults to 10 per unit plus one so that if the bounds are 
+                        # 0.0 --> 1.0 you get 
+                        # 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
+                        # __not__
+                        # 0.0, 0.111..., 0.222..., 0.333..., 0.444..., 0.555..., etc
+                    self['bins'] = int(np.round(np.diff(self['bounds'])*10+1))
+
+                elif not('bins' in self) and (self['scaling'] == 'log10'):  
+
+                    # Defaults to 10 per unit plus one, mimicing the linear behaviour
+                        # but in log10-space
+                    self['bins'] = int(np.round(np.diff(np.log10(self['bounds']))*10+1))
+
+                # The axis parameter is only required for discrete parameters
+                if not('axis' in self):
+                    if type(self['bins'])==int:
+                        if self['scaling']=='linear':
+                            self['axis'] = np.linspace(*self['bounds'], self['bins'])
+                        else:
+                            self['axis'] = np.logspace(np.log10(self['bounds'][0]), 
+                                                    np.log10(self['bounds'][1]), 
+                                                    self['bins'])
+                            
+                self['axis'] = np.asarray(self['axis'])
+                            
+                
+                self['transform_scale'] = self['bins']
+                if 'custom_parameter_transform' in self:
+                    self.transform = self['custom_parameter_transform']
                 else:
-                    self['transform_scale'] = float(np.diff(np.log10(self['bounds'])))
-                    self.transform = self.continuous_parameter_transform_log10_scaling
+                    self.transform = self.discrete_parameter_transform
+            else:
 
-        # A parameter to keep track of which prior the parameter belongs to.
-        if not('prior_id' in self):
-            self['prior_id'] = np.nan
+                # Future updates will allow one to set a custom function via a dynamic
+                    # import
+                if 'custom_parameter_transform' in self:
+                    self.transform = self['custom_parameter_transform']
+                else:
+                    if self['scaling']=='linear':
+                        self['transform_scale'] = float(np.diff(self['bounds']))
+                        self.transform = self.continuous_parameter_transform_linear_scaling
+                    else:
+                        self['transform_scale'] = float(np.diff(np.log10(self['bounds'])))
+                        self.transform = self.continuous_parameter_transform_log10_scaling
 
-        # A parameter to keep track of which likelihood the parameter belongs to.
-        if not('likelihood_id' in self):
-            self['likelihood_id'] = np.nan
+            # A parameter to keep track of which prior the parameter belongs to.
+            if not('prior_id' in self):
+                self['prior_id'] = np.nan
 
-        # A parameter to keep track of what type of prior parameter this parameter is
-            # atm (31/01/24) this is either 'spectral_parameters' or 'spatial_parameters'
-        if not('parameter_type' in self):
-            self['parameter_type'] = 'None'
+            # A parameter to keep track of which likelihood the parameter belongs to.
+            if not('likelihood_id' in self):
+                self['likelihood_id'] = np.nan
+
+            # A parameter to keep track of what type of prior parameter this parameter is
+                # atm (31/01/24) this is either 'spectral_parameters' or 'spatial_parameters'
+            if not('parameter_type' in self):
+                self['parameter_type'] = 'None'
+                
+        elif type(initial_data)==Parameter:
+            # Handle duplicating from another Parameter instance
+            super().__init__()
+            for key, value in initial_data.items():
+                self[key] = copy.deepcopy(value)
+            # If there are any kwargs, update them as well.
+            self.update(kwargs)
+
+        else:
+            super().__init__()
+            if initial_data is not None:  # This ensures compatibility with empty or default init.
+                raise TypeError("Initial data must be of type dict or Parameter")
+
+            self.update(kwargs)
 
 
 
@@ -300,7 +320,7 @@ class Parameter(dict):
         if not(file_name.endswith(".h5")):
             file_name = file_name + ".h5"
 
-        with h5py.File(file_name, 'w') as h5f:
+        with h5py.File(file_name, 'w-') as h5f:
             for key, value in self.items():
                 if key!='transform' and key!='custom_parameter_transform':
                     # Convert arrays to a format that can be saved in h5py

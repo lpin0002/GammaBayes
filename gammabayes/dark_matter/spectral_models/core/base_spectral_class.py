@@ -5,35 +5,25 @@ from gammabayes.dark_matter.density_profiles import DM_Profiles
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
-from gammabayes.dark_matter.channel_spectra import single_channel_spectral_data_path
+from gammabayes.dark_matter.channel_spectra import (
+    single_channel_spectral_data_path,
+    PPPCReader, 
+)
+
 from gammabayes.utils import update_with_defaults
 import time
 
-darkSUSY_to_PPPC_converter = {
-            "nuenue":"nu_e",
-            "e+e-": "e",
-            "numunumu":"nu_mu",
-            "mu+mu-":"mu",
-            'nutaunutau':"nu_tau",
-            "tau+tau-":"tau",
-            "uu":"u",
-            "dd":"d",
-            "cc": "c",
-            "ss":"s",
-            "tt": "t",
-            "bb": "b",
-            "gammagamma": "gamma",
-            "W+W-": "W",
-            "ZZ": "Z",
-            "gg": "g",
-            "HH": "h",
-        }
+from decimal import Decimal, getcontext
+
+# Set the precision higher than default
+getcontext().prec = 600  # Setting precision to 600 decimal places
+
 
 
 single_Wchannel_annihilation_ratios   = {}
 mass_axis       = np.logspace(-1,2,301)
 
-for channel in darkSUSY_to_PPPC_converter:
+for channel in PPPCReader.darkSUSY_to_PPPC_converter:
     if channel[0]=="W":
         single_Wchannel_annihilation_ratios[channel] = mass_axis*0+1
     else:
@@ -42,25 +32,7 @@ for channel in darkSUSY_to_PPPC_converter:
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class DM_ContinuousEmission_Spectrum(object):
-    darkSUSY_to_PPPC_converter = {
-            "nuenue":"nu_e",
-            "e+e-": "e",
-            "numunumu":"nu_mu",
-            "mu+mu-":"mu",
-            'nutaunutau':"nu_tau",
-            "tau+tau-":"tau",
-            "uu":"u",
-            "dd":"d",
-            "cc": "c",
-            "ss":"s",
-            "tt": "t",
-            "bb": "b",
-            "gammagamma": "gamma",
-            "W+W-": "W",
-            "ZZ": "Z",
-            "gg": "g",
-            "HH": "h",
-        }
+
 
     def zero_output(self, inputval):
         """
@@ -89,72 +61,51 @@ class DM_ContinuousEmission_Spectrum(object):
     
     def __init__(self, 
                  annihilation_fractions=single_Wchannel_annihilation_ratios, 
-                 parameter_interpolation_values = [mass_axis], 
+                 parameter_interpolation_values: dict | list = {'mass': mass_axis}, 
                  ratios: bool = True,
-                 default_parameter_values = {'mass':1.0,}):
+                 default_parameter_values = {'mass':1.0,},
+                 parameter_names: list = ['mass'],
+                 ):
         """
-        Initializes the DM_ContinuousEmission_Spectrum class, which calculates the continuous emission spectrum for dark matter annihilation.
-
-        This class leverages interpolated spectral data to provide gamma-ray flux predictions for different dark matter annihilation channels.
-        The interpolation is based on pre-calculated tables for a variety of annihilation products, allowing for efficient and accurate
-        spectral generation.
+        Initialize the DM_ContinuousEmission_Spectrum class to compute the continuous emission spectrum from dark matter annihilation across various channels. This class utilizes precomputed spectral data for different annihilation channels and interpolates these data to provide gamma-ray flux predictions for any given dark matter mass and energy.
 
         Args:
-            annihilation_fractions (dict): A dictionary mapping annihilation channels to their respective fractions. The default uses
-                                           ratios for single W-channel annihilation.
+            annihilation_fractions (dict): A dictionary mapping dark matter annihilation channels to their respective fraction of total annihilation events. This parameter defines the contribution of each channel to the overall annihilation spectrum.
             
-            parameter_axes (list of np.ndarray): List containing the parameter axes, typically mass axes, over which the annihilation
-                                                  fractions are defined. By default, uses a logarithmically spaced mass axis.
+            parameter_interpolation_values (dict | list): A structure specifying the parameter values over which interpolation should be performed. If a dictionary, keys should match the expected parameter names (e.g., 'mass'), with values being arrays of parameter values. If a list, it is expected to contain arrays of parameter values directly, assuming the order matches `parameter_names` if provided.
             
-            ratios (bool): If True, the output values are treated as ratios; otherwise, they are treated as absolute values. Defaults to True.
+            ratios (bool, optional): Indicates whether the provided annihilation fractions are to be interpreted as ratios (True) or absolute values (False). When True, fractions will be normalized to sum to 1 across all channels. Defaults to True.
+            
+            default_parameter_values (dict, optional): A dictionary specifying default values for any parameters required for generating the spectrum but not included in `parameter_interpolation_values`. This could include parameters like 'mass' if not otherwise specified.
+            
+            parameter_names (list, optional): An optional list of parameter names corresponding to the arrays provided in `parameter_interpolation_values` when it is a list. This is used to ensure proper mapping of values to parameters during interpolation. If `parameter_interpolation_values` is a dictionary, this argument is ignored.
 
-        The initialization process also involves creating interpolation functions for the square root of the spectral data to ensure
-        that the interpolated values remain positive when squared during spectral generation.
+        This class supports the interpolation of spectral data across a range of dark matter masses and other parameters, allowing for flexible and dynamic spectral analysis. It handles both single and multidimensional interpolation based on the provided `parameter_interpolation_values`, adjusting automatically to the complexity of the input parameter space.
         """
         self.ratios = ratios
     
         # This class presumes that you're getting your annihilation ratios from darkSUSY
             # If you're using something else (e.g. MicroOMEGAs) you will need to check that this 
             # dictionary is correct for your case
-        self.darkSUSY_to_PPPC_converter = {
-            "nuenue":"nu_e",
-            "e+e-": "e",
-            "numunumu":"nu_mu",
-            "mu+mu-":"mu",
-            'nutaunutau':"nu_tau",
-            "tau+tau-":"tau",
-            "uu":"u",
-            "dd":"d",
-            "cc": "c",
-            "ss":"s",
-            "tt": "t",
-            "bb": "b",
-            "gammagamma": "gamma",
-            "W+W-": "W",
-            "ZZ": "Z",
-            "gg": "g",
-            "HH": "h",
-        }
 
-        # Extracting the grid of log10x = log10E - log10mass and mass values (GeV) for the PPPC values
-        log10xvals = np.load(single_channel_spectral_data_path+f"/griddata/log10xvals_massenergy_diffflux_grid.npy")
-        massvalues = np.load(single_channel_spectral_data_path+f"/griddata/massvals_massenergy_diffflux_grid.npy")
 
+        atprod_gammas = PPPCReader(single_channel_spectral_data_path+"/PPPC_Tables/AtProduction_gamma_EW_corrections.dat")
+        atprod_mass_values = atprod_gammas.mass_axis
+        atprod_log10x_values = atprod_gammas.log10x_axis
 
         # We take the square root of the outputs so later we can square them to enforce positivity
         sqrtchannelfuncdictionary = {}
-        for darkSUSYchannel in self.darkSUSY_to_PPPC_converter.keys():
+        for darkSUSYchannel in PPPCReader.darkSUSY_to_PPPC_converter.keys():
             try:
-                gammapychannel = self.darkSUSY_to_PPPC_converter[darkSUSYchannel]
+                PPPC_channel = PPPCReader.darkSUSY_to_PPPC_converter[darkSUSYchannel]
                 
                 # Extracting single channel spectra
-                tempspectragrid = np.load(
-                    single_channel_spectral_data_path+f"/griddata/channel={gammapychannel}_massenergy_diffflux_grid.npy")
+                tempspectragrid = atprod_gammas[PPPC_channel].reshape(atprod_gammas.output_shape)
                 
                 # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
                 sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator(
-                    (np.log10(massvalues/1e3), log10xvals), 
-                    np.sqrt(np.array(tempspectragrid)), 
+                    (np.log10(atprod_mass_values), atprod_log10x_values), 
+                    np.sqrt(np.asarray(tempspectragrid)), 
                     method='cubic', bounds_error=False, fill_value=0)
             except:
                 sqrtchannelfuncdictionary[darkSUSYchannel] = self.zero_output # inputs should be a tuple or list of log_10(mass) in TeV and log_10(x)
@@ -164,30 +115,37 @@ class DM_ContinuousEmission_Spectrum(object):
 
 
         if self.ratios:
-            self.normalisations = 0
+            self.log_normalisations = -np.inf
             for channel in annihilation_fractions.keys():
-                self.normalisations += annihilation_fractions[channel]
+                self.log_normalisations =np.logaddexp(self.log_normalisations, np.log(annihilation_fractions[channel]))
 
-            self.normalisations = np.where(np.isfinite(self.normalisations), self.normalisations, 0)
+            self.log_normalisations = np.where(np.isfinite(self.log_normalisations), self.log_normalisations, 0)
 
             for channel in annihilation_fractions.keys():
-                annihilation_fractions[channel] /= self.normalisations
+                new_annihilation_fractions = np.exp(np.log(annihilation_fractions[channel])-self.log_normalisations)
+                annihilation_fractions[channel] = new_annihilation_fractions
 
 
-        # Could have done this with the zero and one output functions, 
-            # but I'm planning to make this class the head class for others so I don't want to have to re-write this
+        
+        
+        # sqrt enforces positivity while also transforming values to closer to 1
         if len(parameter_interpolation_values)>1:
-            self.partial_sigmav_interpolator_dictionary = {
-                channel: interpolate.LinearNDInterpolator(
+            self.partial_sqrt_sigmav_interpolator_dictionary = {
+                channel: interpolate.RegularGridInterpolator(
                     (*parameter_interpolation_values,),
-                    annihilation_fractions[channel]) for channel in list(darkSUSY_to_PPPC_converter.keys()
+                    np.sqrt(annihilation_fractions[channel]),
+                    # 'cubic' method can be unstable for small values, we highly recommend 
+                        # you use ratios=True unless otherwise required
+                    method='cubic', bounds_error=False, fill_value=0) \
+                        for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
                     )
                     }
         else:
-            self.partial_sigmav_interpolator_dictionary = {
+            self.partial_sqrt_sigmav_interpolator_dictionary = {
                 channel: interpolate.interp1d(
                     parameter_interpolation_values[0],
-                    annihilation_fractions[channel]) for channel in list(darkSUSY_to_PPPC_converter.keys()
+                    np.sqrt(annihilation_fractions[channel]),
+                    kind='cubic', bounds_error=False, fill_value=0) for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
                     )
                     }
             
@@ -234,18 +192,21 @@ class DM_ContinuousEmission_Spectrum(object):
 
         update_with_defaults(kwargs, self.default_parameter_values)
 
+
+
         for channel in self.sqrtchannelfuncdictionary.keys():
 
-            channel_sigma = self.partial_sigmav_interpolator_dictionary[channel](*kwargs.values())
+            channel_sigma = self.partial_sqrt_sigmav_interpolator_dictionary[channel]((*kwargs.values(),))**2
             channel_spectrum = (self.sqrtchannelfuncdictionary[channel]((np.log10(kwargs['mass']), 
                                                            np.log10(energy)-np.log10(kwargs['mass']))))**2 # Square is to enforce positivity
 
-                            
             channel_comp = channel_sigma*channel_spectrum 
+
 
             logspectra = np.logaddexp(
                 logspectra, 
                 np.log(channel_comp))
+            
         
         return logspectra
 
