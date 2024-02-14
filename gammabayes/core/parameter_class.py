@@ -1,5 +1,5 @@
 import warnings, numpy as np
-import copy, h5py
+import copy, h5py, pickle
 
 class Parameter(dict):
     """
@@ -334,6 +334,20 @@ class Parameter(dict):
                 elif 'custom_parameter_transform' in self and hasattr(self['custom_parameter_transform'], '__call__'):
                     func_name = self['custom_parameter_transform'].__name__
                     h5f.attrs['custom_scaling_function_name'] = func_name
+    
+    
+    def save_to_pickle(self, file_name: str):
+        """
+        Serializes the parameter object to an pickle file.
+
+        Args:
+            file_name (str): The name of the file to save the parameter data.
+        """
+
+        if not(file_name.endswith('.pkl')):
+                    file_name = file_name+'.pkl'
+
+        pickle.dump(self, open(file_name,'wb'))
 
 
 
@@ -360,3 +374,20 @@ class Parameter(dict):
 
             print(data)
             return cls(data)
+        
+    @classmethod
+    def load_from_pcikle(cls, file_name: str):
+        """
+        Loads and initializes a Parameter object from an pickle file.
+
+        Args:
+            file_name (str): The name of the HDF5 file from which to load parameter data.
+
+        Returns:
+            Parameter: An initialized Parameter object with data loaded from the file.
+        """
+        if not(file_name.endswith(".pkl")):
+            file_name = file_name + ".pkl"
+
+        
+        return  pickle.load(open(file_name,'rb'))

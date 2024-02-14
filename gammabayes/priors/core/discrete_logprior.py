@@ -304,6 +304,8 @@ class DiscreteLogPrior(object):
 
     @classmethod
     def load(cls, file_name):
+        if not(file_name.endswith(".pkl")):
+            file_name = file_name + ".pkl"
         return  pickle.load(open(file_name,'rb'))
 
 
