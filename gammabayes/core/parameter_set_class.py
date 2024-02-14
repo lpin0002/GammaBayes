@@ -131,6 +131,8 @@ class ParameterSet(object):
             dict_input (dict): The input dictionary of Parameter instances.
         """
         for param_name, parameter_object in dict_input.items():
+            if not('name' in parameter_object):
+                parameter_object['name'] = param_name
             self.append(parameter_object)
 
     # This method presumes that you have given the specifications in the form of 
@@ -331,6 +333,10 @@ class ParameterSet(object):
         """
         return self.dict_of_parameters_by_name
     
+    @property
+    def sampling_format(self):
+        return self.stochastic_format
+    
     # Method specifically when all parameters are discrete and have a defined 'axis' method
     @property
     def axes(self):
@@ -378,7 +384,7 @@ default value. Place nan in position of default""")
 
 
 
-    def pack(self, h5f):
+    def pack(self, h5f=None, file_name=None):
         """
         Packs the ParameterSet data into an HDF5 format.
 
@@ -386,7 +392,7 @@ default value. Place nan in position of default""")
         h5py.File: An HDF5 file object containing the packed data.
         """
         if h5f is None:
-            h5f = h5py.File(None, 'w-')  # 'None' creates an in-memory HDF5 file object
+            h5f = h5py.File(file_name, 'w-')  # 'None' creates an in-memory HDF5 file object
             
         # Save the order of parameters as an attribute. h5py does not natively support
             # saving groups in a particular order. They're closer to sets than anything.
@@ -411,13 +417,12 @@ default value. Place nan in position of default""")
         Args:
         file_name (str): The name of the file to save the data to.
         """
-        h5f = self.pack()
-        with open(file_name, 'wb') as file:  # Open the file in binary write mode
-            file.write(h5f.file.get_file_image())  # Write the in-memory HDF5 file to disk
+        h5f = self.pack(file_name=file_name)
+        h5f.close()
 
 
     @classmethod
-    def load(cls, h5f, file_name=None):
+    def load(cls, h5f=None, file_name=None,):
         new_parameter_set = cls()  # Instantiate a new ParameterSet
 
         if h5f is None:
