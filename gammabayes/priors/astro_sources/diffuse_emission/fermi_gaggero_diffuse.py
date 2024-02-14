@@ -1,6 +1,5 @@
 from gammabayes.utils import power_law, resources_dir, power_law, haversine
 from gammabayes.utils import iterate_logspace_integration, logspace_riemann
-from gammabayes.utils.event_axes import longitudeaxistrue, latitudeaxistrue, energy_true_axis
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 import numpy as np
 from gammapy.modeling.models import (

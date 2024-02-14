@@ -7,8 +7,8 @@
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
 stem_identifier:                  'tutorial_restricted_scan_analysis'
 numjobs:                          1
-Nevents_per_job:                  100
-Nevents:                          100
+Nevents_per_job:                  1000
+Nevents:                          1000
 common_norm_matrices:             True
 
 dark_matter_spectral_model:       Z2_ScalarSinglet
@@ -40,24 +40,24 @@ dmdensity_profile:                'einasto'
 dark_matter_mass:                 1.0
 
 # Parameters for the 'true' value axes for gamma ray events
-true_energy_min:                  0.2
-true_energy_max:                  90.
-true_energy_bins_per_decade:      100
-true_spatial_res:                 0.1
-true_longitude_min:               -3.
-true_longitude_max:               3.
-true_latitude_min:                -3.
-true_latitude_max:                3.
+true_energy_min:                  0.6
+true_energy_max:                  2.
+true_energy_bins_per_decade:      200
+true_spatial_res:                 0.01
+true_longitude_min:               -0.25
+true_longitude_max:               0.25
+true_latitude_min:                -0.25
+true_latitude_max:                0.25
 
 # Parameters for the reconstructed value axes for gamma ray events
-recon_energy_min:                 0.2
-recon_energy_max:                 90.
-recon_energy_bins_per_decade:     50
-recon_spatial_res:                0.1
-recon_longitude_min:              -3.
-recon_longitude_max:              3.
-recon_latitude_min:               -3.
-recon_latitude_max:               3.
+recon_energy_min:                 0.6
+recon_energy_max:                 2.
+recon_energy_bins_per_decade:     200
+recon_spatial_res:                0.01
+recon_longitude_min:              -0.25
+recon_longitude_max:              0.25
+recon_latitude_min:               -0.25
+recon_latitude_max:               0.25
 
 
 ##################################################################

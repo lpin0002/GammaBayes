@@ -1,6 +1,5 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
-from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis, logjacob, makelogjacob
 from gammabayes.utils import resources_dir, iterate_logspace_integration
 from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
 
@@ -13,8 +12,9 @@ from scipy.integrate import simps
 import os, sys
 
 
-def irf_norm_setup(energy_true_axis=energy_true_axis, energy_recon_axis=energy_recon_axis, 
-          longitudeaxistrue=longitudeaxistrue, longitudeaxis=longitudeaxis, latitudeaxistrue=latitudeaxistrue, latitudeaxis=latitudeaxis,
+def irf_norm_setup(energy_true_axis, energy_recon_axis, 
+          longitudeaxistrue, longitudeaxis, 
+          latitudeaxistrue, latitudeaxis,
           save_directory = resources_dir, log_psf=log_psf, log_edisp=log_edisp,
           save_results=False):
     """Produces default IRF normalisation matrices

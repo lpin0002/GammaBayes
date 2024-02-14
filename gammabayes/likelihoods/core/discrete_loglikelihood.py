@@ -134,7 +134,10 @@ class DiscreteLogLikelihood(object):
     
     
     
-    def raw_sample(self, dependentvalues: tuple[float] | list[float] | np.ndarray,  parameters: dict | ParameterSet = {}, numsamples: int = 1) -> np.ndarray:
+    def raw_sample(self, 
+                   dependentvalues: tuple[float] | list[float] | np.ndarray,  
+                   parameters: dict | ParameterSet = {}, 
+                   numsamples: int = 1) -> np.ndarray:
         """
         Samples from the likelihood for given dependent values.
 

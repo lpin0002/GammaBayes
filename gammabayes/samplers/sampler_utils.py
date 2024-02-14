@@ -1,5 +1,4 @@
 import numpy as np
-from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
 
 def bound_axis(axis: np.ndarray, 
                bound_type: str, 

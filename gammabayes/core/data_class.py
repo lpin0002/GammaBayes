@@ -526,7 +526,7 @@ class EventData(object):
     # Visualization method to peek at the data distributions
     def peek(self, 
              figsize: tuple[int] = (10,4), 
-             colorscale:str = 'log', 
+             scale:str = 'log', 
              *args, 
              **kwargs):
         """
@@ -542,17 +542,18 @@ class EventData(object):
         Returns:
             matplotlib.figure.Figure, matplotlib.axes.Axes: The figure and axes objects of the plot.
         """
-        if colorscale == 'log':
+        if scale == 'log':
             colorscale = colors.LogNorm()
         else:
-            colorscale = None
+            colorscale=scale
+
 
         fig, ax = plt.subplots(1,2, figsize=figsize, *args, **kwargs)
         ax[0].hist(self.energy, bins=self.energy_bins)
         ax[0].set_xlabel('Energy [TeV]')
         ax[0].set_ylabel('Events')
         ax[0].set_xscale('log')
-        ax[0].set_yscale('log')
+        ax[0].set_yscale(scale)
 
         hist2d = ax[1].hist2d(self.glon, self.glat, bins=self.angular_bins, norm=colorscale)
         ax[1].set_xlabel('Galactic Longitude [deg]')

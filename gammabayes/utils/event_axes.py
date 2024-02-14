@@ -8,29 +8,7 @@ import numpy as np
 from scipy.special import logsumexp
 from scipy.interpolate import interp1d
 
-bkgfull2d = bkgfull.to_2d()
-bkgfull2doffsetaxis = bkgfull2d.axes['offset'].center.value
-offsetaxisresolution = bkgfull2doffsetaxis[1]-bkgfull2doffsetaxis[0] # Comes out to 0.2
-latbound            = 3.
-lonbound            = 3.5
 
-
-
-latitudeaxis            = np.linspace(-latbound, latbound, int(round(2*latbound/0.4)))
-latitudeaxistrue        = np.linspace(-latbound, latbound, int(round(2*latbound/0.2)))
-
-longitudeaxis           = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.4))) 
-longitudeaxistrue       = np.linspace(-lonbound, lonbound, int(round(2*lonbound/0.2))) 
-
-
-# Restricting energy axis to values that could have non-zero or noisy energy dispersion (psf for energy) values
-log10estart                     = -1
-log10eend                       = 2
-recon_energy_bins_per_decade    = 50
-true_energy_bins_per_decade     = 200
-log10erange                     = log10eend - log10estart
-energy_recon_axis               = np.logspace(log10estart,log10eend,int(np.round(log10erange*recon_energy_bins_per_decade))+1)
-energy_true_axis                = np.logspace(log10estart,log10eend,int(np.round(log10erange*true_energy_bins_per_decade))+1)
 
 
 
@@ -45,9 +23,6 @@ def makelogjacob(energyaxis: np.ndarray) -> np.ndarray:
     """
     outputlogjacob = np.log(energyaxis)
     return outputlogjacob
-
-logjacob = makelogjacob(energy_recon_axis)
-logjacobtrue = makelogjacob(energy_true_axis)
 
 
 
@@ -112,8 +87,10 @@ def derive_edisp_bounds(irf_loglike, percentile=90, sigmalevel=5):
 def derive_psf_bounds(irf_loglike, 
                       percentile=50, sigmalevel: int=6, 
                       axis_buffer: int = 4, parameter_buffer:float = 1.5, 
-                      default_etrue_val: float = 0.2, n: int = 1000
-):
+                      default_etrue_val: float = 0.2, n: int = 1000):
+    longitudeaxis, latitudeaxis = irf_loglike.axes
+    longitudeaxistrue, latitudeaxistrue = irf_loglike.dependent_axes
+
     fig1, ax = plt.subplots(1,1)
     radii = []
     # levels=(1 - np.exp(-8), 1 - np.exp(-25/2), 1 - np.exp(-36/2)),
@@ -123,7 +100,7 @@ def derive_psf_bounds(irf_loglike,
     for _i, recon_lon in tqdm(enumerate(longitudeaxis[::axis_buffer]), 
                               total=longitudeaxis[::axis_buffer].size,
                               desc='Calculating PSF bounds'):
-        for _j, recon_lat in enumerate(latitudeaxistrue[::axis_buffer]):
+        for _j, recon_lat in enumerate(latitudeaxis[::axis_buffer]):
             temp_lon_axis = longitudeaxistrue[(longitudeaxistrue>recon_lon-parameter_buffer)&(longitudeaxistrue<recon_lon+parameter_buffer)]
             temp_lat_axis = latitudeaxistrue[(latitudeaxistrue>recon_lat-parameter_buffer)&(latitudeaxistrue<recon_lat+parameter_buffer)]
 
