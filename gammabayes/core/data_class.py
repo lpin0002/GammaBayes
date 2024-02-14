@@ -200,6 +200,15 @@ class EventData(object):
 
     
 
+    def __len__(self):
+        """
+        Enables the use of the len() function on an EventData instance to obtain the number of events.
+
+        Returns:
+            int: The total number of events in the dataset, equivalent to Nevents.
+        """
+        return self.Nevents
+    
     # Property to return the number of events
     @property
     def Nevents(self):
@@ -210,16 +219,6 @@ class EventData(object):
             int: The total number of events in the dataset.
         """
         return len(self.energy)
-    
-
-    def __len__(self):
-        """
-        Enables the use of the len() function on an EventData instance to obtain the number of events.
-
-        Returns:
-            int: The total number of events in the dataset, equivalent to Nevents.
-        """
-        return self.Nevents
     
 
     # Property to return the 'full' data set as a list of tuples
@@ -450,7 +449,10 @@ class EventData(object):
             new_data (EventData or array-like): The new data to be appended. If new_data is an EventData instance, its data is extracted and appended; otherwise, the method assumes new_data is a structured array compatible with the EventData format.
         """
         if type(new_data) is EventData:
-            self.update_raw_data(pointing_dirs=new_data.pointing_dirs, event_times=new_data.event_times, data=new_data.data)
+            if new_data._true_vals == self._true_vals:
+                self.update_raw_data(pointing_dirs=new_data.pointing_dirs, event_times=new_data.event_times, data=new_data.data)
+            else:
+                raise ValueError("You are trying to append true values to reconstructed values or vice versa.")
 
         else:
             self.update_raw_data(new_data)
@@ -471,31 +473,33 @@ class EventData(object):
         """
         if not isinstance(other, EventData):
             return NotImplemented
+        if new_data._true_vals == self._true_vals:
+            # Concatenate the attributes of the two instances
+            new_energy = np.concatenate([self.energy, other.energy])
+            new_glon = np.concatenate([self.glon, other.glon])
+            new_glat = np.concatenate([self.glat, other.glat])
+            new_pointing_dirs = np.concatenate([self.pointing_dirs, other.pointing_dirs])
+            new_event_times = np.concatenate([self.event_times, other.event_times])
+            new_source_ids = np.concatenate([self._source_ids, other._source_ids])
 
-        # Concatenate the attributes of the two instances
-        new_energy = np.concatenate([self.energy, other.energy])
-        new_glon = np.concatenate([self.glon, other.glon])
-        new_glat = np.concatenate([self.glat, other.glat])
-        new_pointing_dirs = np.concatenate([self.pointing_dirs, other.pointing_dirs])
-        new_event_times = np.concatenate([self.event_times, other.event_times])
-        new_source_ids = np.concatenate([self._source_ids, other._source_ids])
 
+            # You might need to decide how to handle other attributes like obs_id, zenith_angle, etc.
+            # For this example, I'm just taking them from the first instance.
+            return EventData(energy=new_energy, glon=new_glon, glat=new_glat, 
+                            pointing_dirs=new_pointing_dirs, event_times=new_event_times, 
+                            _source_ids=new_source_ids,
+                            
+                            obs_id=self.obs_id, 
+                            hemisphere=self.hemisphere, zenith_angle=self.zenith_angle, 
 
-        # You might need to decide how to handle other attributes like obs_id, zenith_angle, etc.
-        # For this example, I'm just taking them from the first instance.
-        return EventData(energy=new_energy, glon=new_glon, glat=new_glat, 
-                        pointing_dirs=new_pointing_dirs, event_times=new_event_times, 
-                        _source_ids=new_source_ids,
-                        
-                        obs_id=self.obs_id, 
-                        hemisphere=self.hemisphere, zenith_angle=self.zenith_angle, 
+                            obs_start_time=self.obs_start_time, obs_end_time=self.obs_end_time,
 
-                        obs_start_time=self.obs_start_time, obs_end_time=self.obs_end_time,
+                            energy_axis=self.energy_axis, glongitude_axis=self.glongitude_axis, 
+                            glatitude_axis=self.glatitude_axis, 
 
-                        energy_axis=self.energy_axis, glongitude_axis=self.glongitude_axis, 
-                        glatitude_axis=self.glatitude_axis, 
-
-                        _likelihood_id=self._likelihood_id, _true_vals=self._true_vals)
+                            _likelihood_id=self._likelihood_id, _true_vals=self._true_vals)
+        else:
+            raise ValueError("You are trying to add true values to reconstructed values or vice versa.")
 
     # Extract raw data lists for external use
     def extract_lists(self):
@@ -701,6 +705,9 @@ class EventData(object):
         Returns:
             EventData: An instance of EventData initialized with the data loaded from the specified file.
         """
+        if not(filename.endswith(".h5")):
+            filename = filename + ".h5"
+        
         with h5py.File(filename, 'r') as f:
             # Access the datasets
             energy          = np.array(f['energy'])
