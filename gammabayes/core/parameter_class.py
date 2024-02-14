@@ -376,7 +376,7 @@ class Parameter(dict):
             return cls(data)
         
     @classmethod
-    def load_from_pcikle(cls, file_name: str):
+    def load_from_pickle(cls, file_name: str):
         """
         Loads and initializes a Parameter object from an pickle file.
 
