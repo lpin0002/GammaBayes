@@ -1,7 +1,7 @@
 from gammabayes.core import Parameter
 import warnings, logging
 import numpy as np
-import h5py
+import h5py, pickle
 
 class ParameterSet(object):
     """
@@ -444,5 +444,34 @@ default value. Place nan in position of default""")
                 new_parameter_set.dict_of_parameters_by_name[param_name] = parameter
 
         return new_parameter_set
-
     
+    def save_to_pickle(self, file_name: str):
+        """
+        Saves the parameter object to an pickle file.
+
+        Args:
+            file_name (str): The name of the file to save the parameter data.
+        """
+
+        if not(file_name.endswith('.pkl')):
+                    file_name = file_name+'.pkl'
+
+        pickle.dump(self, open(file_name,'wb'))
+
+
+    @classmethod
+    def load_from_pcikle(cls, file_name: str):
+        """
+        Loads and initializes a Parameter object from an pickle file.
+
+        Args:
+            file_name (str): The name of the HDF5 file from which to load parameter data.
+
+        Returns:
+            Parameter: An initialized Parameter object with data loaded from the file.
+        """
+        if not(file_name.endswith(".pkl")):
+            file_name = file_name + ".pkl"
+
+        
+        return  pickle.load(open(file_name,'rb'))

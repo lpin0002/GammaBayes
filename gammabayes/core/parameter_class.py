@@ -338,7 +338,7 @@ class Parameter(dict):
     
     def save_to_pickle(self, file_name: str):
         """
-        Serializes the parameter object to an pickle file.
+        Saves the parameter object to an pickle file.
 
         Args:
             file_name (str): The name of the file to save the parameter data.
