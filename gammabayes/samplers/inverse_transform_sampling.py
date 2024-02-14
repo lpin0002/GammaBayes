@@ -23,8 +23,9 @@ def inverse_transform_sampler(logpmf, Nsamples=1):
     return indices
 
 # Need to figure out a more rigorous solution. Stable for up to ...
-def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples=1):
+def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples: int = 1):
 
+    Nsamples = int(round(Nsamples))
 
     logpmf_flattened = logpmf.flatten()
 

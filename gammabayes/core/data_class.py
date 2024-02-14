@@ -84,7 +84,7 @@ class EventData(object):
         
         - _true_vals: Indicates if true values are used (private).
         
-        The constructor handles missing data by assigning NaNs and sets up array shapes appropriately. 
+        The constructor handles missing data by assigning NaNs. 
         It defines axes and bins for energy and angular coordinates, falling back to default bins if not provided. 
         Observation metadata such as ID, hemisphere, zenith angle, and start/end times are stored, along with 
         private attributes for source and likelihood ID.
@@ -324,7 +324,7 @@ class EventData(object):
 
         strinfo += "-"*num_spaces+"\n"
 
-        strinfo += f"Num Angular Bins       |   {self.angular_bins}\n"
+        strinfo += f"Num Angular Bins       |   {len(self.angular_bins)}\n"
 
         try:
             strinfo += f"Num Energy Bins        |   {len(self.energy_bins)}\n"
@@ -333,8 +333,8 @@ class EventData(object):
 
         strinfo += "- "*int(round(num_spaces/2))+"\n"
 
-        strinfo += f"Min Energy             |   {min(self.energy)} TeV\n"
-        strinfo += f"Max Energy             |   {max(self.energy)} TeV\n"
+        strinfo += f"Min Energy             |   {min(self.energy):.3f} TeV\n"
+        strinfo += f"Max Energy             |   {max(self.energy):.3f} TeV\n"
 
         strinfo += "-"*num_spaces+"\n"
 
@@ -657,7 +657,8 @@ class EventData(object):
 
         if not(filename.endswith(".h5")):
             filename = filename + ".h5"
-            
+
+        # TODO: Check if file exists beforehand and then tack on date stamp to the end if it does
         with h5py.File(filename, 'w-') as f:
             f.create_dataset('energy',          data=self.energy)
             f.create_dataset('glon',            data=self.glon)
@@ -674,10 +675,17 @@ class EventData(object):
 
 
             f.attrs['obs_id']                       = self.obs_id
-            f.attrs['obs_start_time']               = self.obs_start_time
-            f.attrs['obs_end_time']                 = self.obs_end_time
-            f.attrs['hemisphere']                   = self.hemisphere
-            f.attrs['zenith_angle']                 = self.zenith_angle
+
+            if self.obs_start_time is not None:
+                f.attrs['obs_start_time']               = self.obs_start_time
+                f.attrs['obs_end_time']                 = self.obs_end_time
+            
+            if self.hemisphere is not None:
+                f.attrs['hemisphere']                   = self.hemisphere
+
+            if self.zenith_angle is not None:
+                f.attrs['zenith_angle']                 = self.zenith_angle
+
             f.attrs['_likelihood_id']               = self._likelihood_id
             f.attrs['_true_vals']                   = self._true_vals
 
@@ -712,10 +720,22 @@ class EventData(object):
 
             # Access the attributes (metadata)
             obs_id          = f.attrs['obs_id']
-            obs_start_time  = f.attrs['obs_start_time']
-            obs_end_time    = f.attrs['obs_end_time']
-            hemisphere      = f.attrs['hemisphere']
-            zenith_angle    = f.attrs['zenith_angle']
+            if 'obs_start_time' in f.attrs:
+                obs_start_time  = f.attrs['obs_start_time']
+                obs_end_time    = f.attrs['obs_end_time']
+            else:
+                obs_start_time = None
+                obs_end_time = None
+
+            if 'hemisphere' in f.attrs:
+                hemisphere      = f.attrs['hemisphere']
+            else:
+                hemisphere = None
+            if 'zenith_angle' in f.attrs:
+                zenith_angle    = f.attrs['zenith_angle']
+            else:
+                zenith_angle = None
+
             _likelihood_id  = f.attrs['_likelihood_id']
             _true_vals      = f.attrs['_true_vals']
 

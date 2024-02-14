@@ -182,6 +182,8 @@ class DiscreteLogPrior(object):
 
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
+
+        numsamples = int(round(numsamples))
         
         if numsamples>0:
             if log_prior_values is None:
