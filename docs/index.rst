@@ -10,8 +10,8 @@ Welcome to GammaBayes's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-    tutorials/DataClasses_EventData
-    tutorials/DataClasses_Parameters
+    tutorials/"Data Classes: EventData"
+    tutorials/"Data Classes: Parameters"
     tutorials/ProbabilityClasses
     tutorials/DarkMatterModels
     tutorials/Simulations

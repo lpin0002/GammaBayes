@@ -473,7 +473,7 @@ class EventData(object):
         """
         if not isinstance(other, EventData):
             return NotImplemented
-        if new_data._true_vals == self._true_vals:
+        if other._true_vals == self._true_vals:
             # Concatenate the attributes of the two instances
             new_energy = np.concatenate([self.energy, other.energy])
             new_glon = np.concatenate([self.glon, other.glon])
