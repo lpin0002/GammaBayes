@@ -472,7 +472,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         self.log_nuisance_marg_results = [log_margresult.extend(new_log_marg_result) for log_margresult, new_log_marg_result in zip(self.log_nuisance_marg_results, new_log_marg_results)]
 
 
-    def select_scan_output_posterior_exploration_class(self, 
+    def select_scan_output_exploration_class(self, 
                                                        mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
                                                        mixture_fraction_exploration_type: str = None, 
                                                        log_nuisance_marg_results: list | np.ndarray = None,
@@ -513,20 +513,20 @@ class before the multiprocessing or make sure that it isn't part of the actual
             log_nuisance_marg_results = self.log_nuisance_marg_results
 
         if mixture_fraction_exploration_type.lower() == 'scan':
-            scan_output_exploration_class = ScanOutput_ScanMixtureFracPosterior
+            hyperspace_analysis_class = ScanOutput_ScanMixtureFracPosterior
 
         elif mixture_fraction_exploration_type.lower() == 'sample':
-            scan_output_exploration_class = ScanOutput_StochasticMixtureFracPosterior
+            hyperspace_analysis_class = ScanOutput_StochasticMixtureFracPosterior
             self.applied_priors = True
 
         else:
            raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
         
         if self.mixture_parameter_specifications.dict_of_parameters_by_name == {}:
-            logging.info("Setting 'self.mixture_parameter_specifications' to that specified in 'select_scan_output_posterior_exploration_class'. ")
+            logging.info("Setting 'self.mixture_parameter_specifications' to that specified in 'select_scan_output_exploration_class'. ")
             self.mixture_parameter_specifications = mixture_parameter_specifications
         
-        self.scan_output_exploration_class_instance = scan_output_exploration_class(
+        self.hyper_analysis_instance = hyperspace_analysis_class(
                 log_nuisance_marg_results = log_nuisance_marg_results,
                 log_nuisance_marg_regularisation = self.log_marginalisation_regularisation,
                 mixture_parameter_specifications=mixture_parameter_specifications,
@@ -540,12 +540,12 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Initiates the posterior exploration process.
         
         This method delegates the initiation of exploration to the instance of the exploration class selected by the 
-        `select_scan_output_posterior_exploration_class` method. It prepares the exploration environment and parameters 
+        `select_scan_output_exploration_class` method. It prepares the exploration environment and parameters 
         based on the class instance's configuration.
         
         *args, **kwargs: Arguments and keyword arguments to be passed to the initiation method of the exploration class.
         """
-        self.scan_output_exploration_class_instance.initiate_exploration(*args, **kwargs)
+        self.hyper_analysis_instance.initiate_exploration(*args, **kwargs)
 
     def run_posterior_exploration(self, *args, **kwargs):
         """
@@ -559,7 +559,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Returns:
             The results of the posterior exploration, the format and content of which depend on the exploration method used.
         """
-        self._posterior_exploration_output = self.scan_output_exploration_class_instance.run_exploration(*args, **kwargs)
+        self._posterior_exploration_output = self.hyper_analysis_instance.run_exploration(*args, **kwargs)
 
         if self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):
             self.log_posterior = self._posterior_exploration_output
@@ -568,7 +568,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             self.log_hyperparameter_likelihood = self._posterior_exploration_output
 
         else:
-            self.log_posterior = self.scan_output_exploration_class_instance.sampler.results
+            self.log_posterior = self.hyper_analysis_instance.sampler.results
 
         return self._posterior_exploration_output
 
@@ -595,7 +595,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
             return result
         else:
-            results = self.scan_output_exploration_class_instance.sampler.results
+            results = self.hyper_analysis_instance.sampler.results
 
             self.log_posterior = results.samples
 

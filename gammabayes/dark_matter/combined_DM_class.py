@@ -1,12 +1,10 @@
 import numpy as np
-from gammabayes.dark_matter.density_profiles import DM_Profiles
-from gammabayes.dark_matter.models.Z2_ScalarSinglet import Z2_ScalarSinglet
+from gammabayes.dark_matter.spectral_models import (
+    DM_ContinuousEmission_Spectrum
+)
 from os import path
 from gammabayes.dark_matter.density_profiles import DM_Profile
-from gammabayes.dark_matter.spectral_models import DM_ContinuousEmission_Spectrum
-from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from gammabayes.priors.core import TwoCompPrior
-import time
 
 
 

@@ -196,8 +196,14 @@ class DiscreteLogLikelihood(object):
         Returns:
             An EventData instance containing the sampled data.
         """
+
+        if hasattr(eventdata, 'obs_id'):
+            obs_id = eventdata.obs_id
+        else:
+            obs_id = 'NoID'
+
         measured_event_data = EventData(energy=[], glon=[], glat=[], pointing_dirs=[], 
-                                        _source_ids=[], obs_id=eventdata.obs_id,
+                                        _source_ids=[], obs_id=obs_id,
                                         energy_axis=self.axes[0], glongitude_axis=self.axes[1],
                                         glatitude_axis=self.axes[2], 
                                         _true_vals=False)
@@ -207,8 +213,10 @@ class DiscreteLogLikelihood(object):
                                 parameters=parameters, 
                                 numsamples=Nevents_per)
                 )
-
-        measured_event_data._source_ids = eventdata._source_ids
+        try:
+            measured_event_data._source_ids = eventdata._source_ids
+        except:
+            pass
 
         return measured_event_data
     

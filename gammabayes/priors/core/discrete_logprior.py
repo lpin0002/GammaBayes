@@ -10,7 +10,7 @@ import h5py, pickle
 class DiscreteLogPrior(object):
     
     def __init__(self, name: str='[None]', 
-                 inputunit: str=None, 
+                 inputunits: str=None, 
                  logfunction: callable=None, 
                  log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
@@ -25,7 +25,7 @@ class DiscreteLogPrior(object):
         Parameters:
         - name (str, optional): Name of the instance. Defaults to '[None]'.
         
-        - inputunit (str, optional): Unit of the input values for the axes. Defaults to None.
+        - inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
         
         - logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
           The function should accept arguments in the order of axis values followed by hyperparameter values.
@@ -49,7 +49,7 @@ class DiscreteLogPrior(object):
         - The axes should correspond to physical quantities over which the prior is distributed, such as energy and sky coordinates.
         """
         self.name = name
-        self.inputunit = inputunit
+        self.inputunits = inputunits
         self.logfunction = logfunction
         self.axes_names = axes_names
         
@@ -93,7 +93,7 @@ class DiscreteLogPrior(object):
         description = f"Discrete log prior class\n{'-' * 20}\n" \
                       f"Name: {self.name}\n" \
                       f"Logfunction type: {type(self.logfunction).__name__}\n" \
-                      f"Input units: {self.inputunit}\n" \
+                      f"Input units: {self.inputunits}\n" \
                       f"Axes: {self.axes_names}\n"
         return description
     
@@ -289,9 +289,9 @@ class DiscreteLogPrior(object):
         return outputarray
     
 
-    def save(self, file_name:str ):
+    def save(self, file_name:str, write_method='wb' ):
         """
-        Saves the DiscreteLogPrior data to an HDF5 file.
+        Saves the DiscreteLogPrior data to a pkl file.
 
         Args:
         file_name (str): The name of the file to save the data to.
@@ -300,7 +300,7 @@ class DiscreteLogPrior(object):
         if not(file_name.endswith('.pkl')):
             file_name = file_name+'.pkl'
 
-        pickle.dump(self, open(file_name,'wb'))
+        pickle.dump(self, open(file_name,write_method))
 
     @classmethod
     def load(cls, file_name):

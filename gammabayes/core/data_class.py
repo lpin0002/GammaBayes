@@ -500,6 +500,12 @@ class EventData(object):
                             _likelihood_id=self._likelihood_id, _true_vals=self._true_vals)
         else:
             raise ValueError("You are trying to add true values to reconstructed values or vice versa.")
+        
+    def __radd__(self, other):
+        if other == 0:
+            return self
+        else:
+            return self.__add__(other)
 
     # Extract raw data lists for external use
     def extract_lists(self):

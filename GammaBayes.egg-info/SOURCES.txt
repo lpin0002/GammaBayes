@@ -140,8 +140,9 @@ gammabayes/samplers/__init__.py
 gammabayes/samplers/continuous_samplers.py
 gammabayes/samplers/inverse_transform_sampling.py
 gammabayes/samplers/sampler_utils.py
-gammabayes/standard_inference/Z2_DM_3COMP_BKG_config_default.yaml
+gammabayes/standard_inference/3COMP_BKG_config_default.yaml
 gammabayes/standard_inference/__init__.py
+gammabayes/standard_inference/old_standard_3comp_bkg.py
 gammabayes/standard_inference/run_standard_inf.py
 gammabayes/standard_inference/standard_3comp_bkg.py
 gammabayes/utils/__init__.py
