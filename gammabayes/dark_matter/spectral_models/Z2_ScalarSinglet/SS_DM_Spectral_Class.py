@@ -7,63 +7,68 @@ import time
 
 class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
     """
-    Represents the Z2 Scalar Singlet dark matter model, providing mechanisms to calculate the continuous emission spectrum
-    based on the dark matter annihilation processes. This class extends the DM_ContinuousEmission_Spectrum class, specializing
-    it for the Z2 scalar singlet model by using pre-defined annihilation fractions and parameter axes specific to this model.
+    Implements the Z2 Scalar Singlet dark matter model for calculating the gamma-ray emission spectrum 
+    from dark matter annihilation. This specialized subclass of `DM_ContinuousEmission_Spectrum` leverages 
+    annihilation fractions and parameter axes derived from partial annihilation cross sections from two
+    user changeable sources: 'darkSUSY' or 'dimauromattia'. Referring to the results from the paper with
+    ArXiV ID 2305.11937 by Di Mauro+, with results available on dimauromattia's GitHub page. For 
+    Di Mauro+ results, values above approximately 20 TeV are taken to be the same as at 20 TeV. This 
+    approximation is done because the dominating channels (W, Z and kind of Higgs which makes up 5-8% of the
+    total) are approximately constant at this point
+    anyway.
 
-    The class utilizes annihilation fractions derived from the DarkSUSY software, formatted and stored in a CSV file. These
-    fractions, along with mass and lambda (Higgs coupling constant) axes, are used to initialize the parent class with model-specific
-    parameters.
+    Utilizing these model-specific parameters, it enables precise spectral predictions crucial for dark matter 
+    indirect detection studies. The class reads annihilation fractions from a CSV file, organizing these into 
+    a structured format for spectral computation.
+
+    Initialization:
+    - Mass and lambda (self-interaction strength) parameters are extracted from the CSV file and adjusted from GeV to TeV.
+    - Annihilation fractions are formatted into a dictionary, setting up the model for spectral calculations.
 
     Attributes:
-        darkSUSY_SS_BFs_cleaned_dict (CSVDictionary): A dictionary-like object containing the annihilation fractions and parameter
-                                                      axes (mass and lambda) extracted from the cleaned DarkSUSY outputs.
-
-    The initialization process involves:
-    - Extracting the annihilation ratios and parameter axes for the Scalar Singlet model.
-    - Converting mass units from GeV to TeV to conform with the expected units in the parent class.
-    - Removing unnecessary keys from the dictionary to leave only the annihilation fractions.
-    - Initializing the parent class with the extracted data, ready for spectral generation.
+        interp_file (str): Name of the interpolation file without extension, used to differentiate between 
+                           various model parameterizations.
 
     Args:
-        *args: Variable length argument list passed to the parent class's constructor.
-        **kwargs: Arbitrary keyword arguments passed to the parent class's constructor, allowing for the specification of default
-                  parameter values and any other necessary initialization options.
+        interp_file (str, optional): Specifies the interpolation file to use for model parameters. 
+                                     Defaults to 'dimauromattia'.
+        *args: Additional positional arguments passed to the parent class constructor.
+        **kwargs: Additional keyword arguments passed to the parent class constructor, including options for 
+                  default parameter values and other configurations.
     """
 
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, interp_file = 'dimauromattia', *args, **kwargs):
         """
-        Initializes the Z2_ScalarSinglet class with model-specific annihilation fractions and parameter axes.
-
-        The initialization process includes the extraction of model parameters from a CSV file containing cleaned outputs
-        from the DarkSUSY software, specifically tailored for the Z2 Scalar Singlet dark matter model. The class then
-        initializes its parent class, DM_ContinuousEmission_Spectrum, with these parameters to enable spectral calculations.
+        Initializes the Z2_ScalarSinglet class with data specific to the model, preparing it for emission spectrum calculations.
 
         Args:
+            interp_file (str, optional): File name (without extension) of the interpolation data within the 
+                                         `annihilation_ratio_data` directory. This file contains the model-specific 
+                                         annihilation fractions and parameter axes. Defaults to 'dimauromattia'.
             *args: Variable length argument list for the parent class's constructor.
-            **kwargs: Arbitrary keyword arguments for the parent class's constructor, including options to specify
-                      default parameter values such as mass and lambda.
+            **kwargs: Arbitrary keyword arguments for the parent class's constructor. This includes options to specify
+                      default parameter values such as mass and self-interaction strength (`lahS`).
         """
 
-        darkSUSY_SS_BFs_cleaned_dict = CSVDictionary(ScalarSinglet_Folder_Path+'/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv', delimiter=' ')
+        annihilation_ratio_data_dict = CSVDictionary(ScalarSinglet_Folder_Path+f'/annihilation_ratio_data/annihilation_ratios__{interp_file}.csv', delimiter=' ')
 
         # Extracting the annihilation ratios for the Scalar Singlet model
-        mass_axis, lambda_axis = np.unique(darkSUSY_SS_BFs_cleaned_dict['mS [GeV]'])/1e3, np.unique(darkSUSY_SS_BFs_cleaned_dict['lahS'])
+        mass_axis, lahS_axis = np.unique(annihilation_ratio_data_dict['mS [GeV]'])/1e3, np.unique(annihilation_ratio_data_dict['lahS'])
 
-        SS_BFs_dict = copy.deepcopy(darkSUSY_SS_BFs_cleaned_dict)
+        SS_ratios_dict = copy.deepcopy(annihilation_ratio_data_dict)
 
-        del SS_BFs_dict['mS [GeV]']
-        del SS_BFs_dict['lahS']
+        del SS_ratios_dict['mS [GeV]']
+        del SS_ratios_dict['lahS']
         
-        parameter_interpolation_values = [mass_axis, lambda_axis]
-        parameter_axes_shapes = (mass_axis.size, lambda_axis.size)
+        parameter_interpolation_values = [mass_axis, lahS_axis]
+        parameter_axes_shapes = (mass_axis.size, lahS_axis.size)
 
-        for channel in SS_BFs_dict.keys():
-            SS_BFs_dict[channel] = SS_BFs_dict[channel].reshape(parameter_axes_shapes)
+        for channel in SS_ratios_dict.keys():
+            SS_ratios_dict[channel] = SS_ratios_dict[channel].reshape(parameter_axes_shapes)
 
 
-        super().__init__(annihilation_fractions = SS_BFs_dict, 
+        super().__init__(annihilation_fractions = SS_ratios_dict, 
                          parameter_interpolation_values = parameter_interpolation_values,
                          default_parameter_values={'mass':1.0, 'lahS':0.1},
                          *args, **kwargs)

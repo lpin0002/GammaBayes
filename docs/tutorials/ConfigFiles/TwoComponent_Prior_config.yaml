@@ -5,13 +5,11 @@
 ##################################################################
 
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
-stem_identifier:                  'tutorial_restricted_scan_analysis'
+stem_identifier:                  'multicomp_param_test'
 numjobs:                          1
-Nevents_per_job:                  10000
-Nevents:                          10000
+Nevents_per_job:                  1000
+Nevents:                          1000
 common_norm_matrices:             True
-
-dark_matter_spectral_model:       Z2_ScalarSinglet
 
 seed:                             0
 save_path:                        "data/tutorial_restricted_scan_analysis/"
@@ -33,17 +31,15 @@ mixture_scanning_buffer:          1
 ##################################################################
 ### Simulation Parameters
 
-signal_fraction:                  0.1
-ccr_of_bkg_fraction:              0.8
-diffuse_of_astro_fraction:        0.3
-dmdensity_profile:                'einasto'
-dark_matter_mass:                 1.0
+gauss1_fraction:                  0.25
+gauss2_fraction:                  0.33333333333333333333333333333333333
+gauss3_fraction:                  0.5
 
 # Parameters for the 'true' value axes for gamma ray events
 true_energy_min:                  0.2
 true_energy_max:                  90.
 true_energy_bins_per_decade:      100
-true_spatial_res:                 0.2
+true_spatial_res:                 0.1
 true_longitude_min:               -3.
 true_longitude_max:               3.
 true_latitude_min:                -3.
@@ -53,7 +49,7 @@ true_latitude_max:                3.
 recon_energy_min:                 0.2
 recon_energy_max:                 90.
 recon_energy_bins_per_decade:     50
-recon_spatial_res:                0.4
+recon_spatial_res:                0.1
 recon_longitude_min:              -3.
 recon_longitude_max:              3.
 recon_latitude_min:               -3.
@@ -66,51 +62,55 @@ recon_latitude_max:               3.
 
 
 # Dark Matter Inference Parameters
-parameter_specifications:
-  'Z2 dark matter':
+prior_parameter_specifications:
+  'Gauss1':
   
     spectral_parameters:
-      'mass':
+      'loc':
         discrete: True
         scaling: 'log10'
-        bounds: 'event_dynamic'
-        absolute_bounds: [1e-1, 1e2]
-        num_events: 1e2
-        dynamic_multiplier: 3
+        bounds: [7e-1, 1.5e0]
         default_value: 1.0
-        bins: 31
-      # 'lahS':
-      #   discrete: True
-      #   scaling: 'log10'
-      #   bounds: 'event_dynamic'
-      #   absolute_bounds: [1e-2, 1e0]
-      #   num_events: 1e2
-      #   dynamic_multiplier: 7
-      #   default_value: 0.1
-      #   bins: 21
+        bins: 21
 
-    # spatial_parameters:
-    #   'alpha':
-    #     discrete: True
-    #     scaling: 'log10'
-    #     bounds: 'event_dynamic'
-    #     num_events: 1e2
-    #     dynamic_multiplier: 3
-    #     absolute_bounds: [1e-2, 1e1]
-    #     bins: 31
-    #     default_value: 0.17
+    spatial_parameters:
+      'scale':
+        discrete: True
+        scaling: 'log10'
+        bounds: [8e-2, 1.2e-1]
+        default_value: 0.1
+        bins: 34
+
+  'Gauss2':
+    spectral_parameters:
+      'loc':
+        discrete: True
+        scaling: 'log10'
+        bounds: [9.5e0, 1.05e1]
+        default_value: 10.0
+        bins: 43
+
+    spatial_parameters:
+      'scale':
+        discrete: True
+        scaling: 'log10'
+        bounds: [1e0,5e0]
+        default_value: 3.0
+        bins: 31
 
 
 mixture_fraction_specifications:
-  'sig|total':
+  'Gauss1|total':
     discrete: False
     scaling: 'linear'
     bounds: [0., 1.0]
-  'ccr|bkg':
+
+  'Gauss2|Gauss345':
     discrete: False
     scaling: 'linear'
     bounds: [0., 1.0]
-  'diffuse|astro':
+
+  'Gauss3|Gauss4':
     discrete: False
     scaling: 'linear'
     bounds: [0., 1.0]

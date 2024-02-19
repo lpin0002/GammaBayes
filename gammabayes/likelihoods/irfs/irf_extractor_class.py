@@ -154,7 +154,7 @@ class IRFExtractor(object):
     def aefffunc(self, energy, offset, parameters={}):
         return self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-    def log_aeff(self, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
+    def log_aeff(self, energy, longitude, latitude, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the log of 
             the CTA effective area function.
 
@@ -168,9 +168,9 @@ class IRFExtractor(object):
         Returns:
             float: The natural log of the effective area of the CTA in m^2
         """
-        return np.log(self.aeff_default.evaluate(energy_true = true_energy*u.TeV, 
+        return np.log(self.aeff_default.evaluate(energy_true = energy*u.TeV, 
                                 offset=haversine(
-                                    true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).to(u.cm**2).value)
+                                    longitude, latitude, pointing_direction[0], pointing_direction[1])*u.deg).to(u.cm**2).value)
         
     def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.

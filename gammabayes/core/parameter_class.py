@@ -1,5 +1,6 @@
 import warnings, numpy as np
 import copy, h5py, pickle
+from scipy.stats import uniform, loguniform
 
 class Parameter(dict):
     """
@@ -29,6 +30,8 @@ class Parameter(dict):
 
         if initial_data is None:
             initial_data = kwargs
+
+
             
         if type(initial_data) == dict:
             data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
@@ -45,6 +48,7 @@ class Parameter(dict):
                 # 'log' for the rest of the repo/package/project/thingy
             if self['scaling'] not in ['linear', 'log10']:
                 warnings.warn("Scaling typically must be 'linear' or 'log10'. ")
+
 
             if not('discrete' in self):
                 self['discrete'] = True
@@ -95,6 +99,18 @@ class Parameter(dict):
 
             for idx, bound in enumerate(self['bounds']):
                 self['bounds'][idx] = float(bound)
+            if 'prob_model' in initial_data:
+                self.prob_model = initial_data['prob_model']
+
+            else:
+                if self['scaling'] =='linear':
+                        self.prob_model = uniform(
+                            loc=self['bounds'][0],
+                            scale=self['bounds'][1]-self['bounds'][0])
+                if self['scaling'] =='log10':
+                        self.prob_model = loguniform(
+                            a=self['bounds'][0],
+                            b=self['bounds'][1])
 
             # For sampling with 3 or less parameters we highly recommend making them discrete
                 # and performing a scan over them rather than sampling as the performance is 
@@ -176,6 +192,11 @@ class Parameter(dict):
                 raise TypeError("Initial data must be of type dict or Parameter")
 
             self.update(kwargs)
+
+
+    @property
+    def default(self):
+        return self["default_value"]
 
 
 
@@ -310,6 +331,8 @@ class Parameter(dict):
         return u        
     
 
+    
+
     def save(self, file_name: str):
         """
         Serializes the parameter object to an HDF5 file.
@@ -391,3 +414,42 @@ class Parameter(dict):
 
         
         return  pickle.load(open(file_name,'rb'))
+    
+
+    def pdf(self, x):
+        return self.prob_model.pdf(x)
+    
+
+    def logpdf(self, x):
+        return self.prob_model.logpdf(x)
+    
+    def cdf(self, x):
+        return self.prob_model.cdf(x)
+    
+    def logcdf(self, x):
+        return self.prob_model.logcdf(x)
+    
+    @property
+    def median(self, x):
+        return self.prob_model.median()
+    @property
+    def mean(self, x):
+        return self.prob_model.mean()
+    @property
+    def var(self):
+        return self.prob_model.var()
+    
+    @property
+    def std(self, x):
+        return self.prob_model.std()
+    
+    def interval(self, confidence):
+        return self.prob_model.interval(confidence)
+
+    def ppf(self, q):
+        return self.prob_model.ppf(q)
+    
+    
+    
+    
+    

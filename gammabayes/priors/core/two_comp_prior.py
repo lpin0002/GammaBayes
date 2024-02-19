@@ -63,9 +63,9 @@ class TwoCompPrior(DiscreteLogPrior):
         else:
              spatial_mesh_efficient_exist = True
         
+        self.mesh_efficient_exists = spatial_mesh_efficient_exist & spectral_mesh_efficient_exist
 
-
-        if spatial_mesh_efficient_exist & spectral_mesh_efficient_exist:
+        if self.mesh_efficient_exists:
             super().__init__(logfunction=self.log_dist, 
                             log_mesh_efficient_func=self.log_dist_mesh_efficient,
                             name=name,
@@ -220,9 +220,12 @@ class TwoCompPrior(DiscreteLogPrior):
 
         logspectralvals     = self.spectral_comp.mesh_efficient_logfunc(energy, kwd_parameters=spectral_parameters)
 
+        print('logspace shape:', logspectralvals.shape)
+
         ####################
 
         logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
+        print('logspatialvals shape:', logspatialvals.shape)
 
         ####################
 
@@ -256,6 +259,9 @@ class TwoCompPrior(DiscreteLogPrior):
         
 
         logpdfvalues = logpdfvalues + log_aeff_vals
+
+
+
 
 
 

@@ -14,9 +14,7 @@ gammabayes/core/data_class.py
 gammabayes/core/parameter_class.py
 gammabayes/core/parameter_set_class.py
 gammabayes/dark_matter/__init__.py
-gammabayes/dark_matter/base_spectral_class.py
 gammabayes/dark_matter/combined_DM_class.py
-gammabayes/dark_matter/discrete_DM_prior.py
 gammabayes/dark_matter/channel_spectra/__init__.py
 gammabayes/dark_matter/channel_spectra/PPPC_Tables/AtProduction_gamma_EW_corrections.dat
 gammabayes/dark_matter/channel_spectra/PPPC_Tables/PPPC_reader.py
@@ -58,12 +56,10 @@ gammabayes/dark_matter/density_profiles/__init__.py
 gammabayes/dark_matter/density_profiles/base_dm_profile.py
 gammabayes/dark_matter/density_profiles/gammapy_wrappers.py
 gammabayes/dark_matter/spectral_models/__init__.py
-gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/SS_DM_Constructor.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/SS_DM_Spectral_Class.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/__init__.py
-gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/convert_signal_fraction_logmass_to_sigmav.py
-gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/darkSUSY_BFs/__init__.py
-gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/darkSUSY_BFs/darkSUSY_BFs_cleaned.csv
+gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/__init__.py
+gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/annihilation_ratios__darkSUSY.csv
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/temp/__init__.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/temp/bfmlambdaarray.npy
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/temp/lambdarange.npy

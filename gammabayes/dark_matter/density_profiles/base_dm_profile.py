@@ -25,7 +25,7 @@ class DM_Profile(object):
                  default_r_s: float = 28.4, 
                  angular_central_coords: np.ndarray = np.array([0,0]),
                  kwd_profile_default_vals: dict = {}):
-
+        self.kpc_to_cm                  = 3.086e21
         self.log_profile_func           = log_profile_func
         self.LOCAL_DENSITY              = LOCAL_DENSITY
         self.DISTANCE                   = dist_to_source
@@ -60,7 +60,7 @@ class DM_Profile(object):
 
     def logdiffJ(self, longitude: float | np.ndarray, 
                  latitude: float | np.ndarray, 
-              int_resolution: int = 601, 
+              int_resolution: int = 1001, 
               integration_method: callable = logspace_riemann, 
               kwd_parameters = {}) -> float | np.ndarray :
         angular_offset = haversine(longitude, 
@@ -79,7 +79,7 @@ class DM_Profile(object):
             axis=0)
         
 
-        return logintegral+np.log(self.DISTANCE)+np.log(np.cos(angular_offset*np.pi/180))
+        return logintegral+np.log(self.DISTANCE)+np.log(np.cos(angular_offset*np.pi/180)) + np.log(self.kpc_to_cm)
     
 
     def mesh_efficient_logfunc(self, longitude, latitude, kwd_parameters={}, *args, **kwargs) -> float | np.ndarray :

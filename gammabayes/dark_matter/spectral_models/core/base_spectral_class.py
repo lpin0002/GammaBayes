@@ -61,10 +61,9 @@ class DM_ContinuousEmission_Spectrum(object):
     
     def __init__(self, 
                  annihilation_fractions=single_Wchannel_annihilation_ratios, 
-                 parameter_interpolation_values: dict | list = {'mass': mass_axis}, 
+                 parameter_interpolation_values:  list[np.ndarray] = [mass_axis], 
                  ratios: bool = True,
                  default_parameter_values = {'mass':1.0,},
-                 parameter_names: list = ['mass'],
                  ):
         """
         Initialize the DM_ContinuousEmission_Spectrum class to compute the continuous emission spectrum from dark matter annihilation across various channels. This class utilizes precomputed spectral data for different annihilation channels and interpolates these data to provide gamma-ray flux predictions for any given dark matter mass and energy.
@@ -105,7 +104,7 @@ class DM_ContinuousEmission_Spectrum(object):
                 # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
                 sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator(
                     (np.log10(atprod_mass_values), atprod_log10x_values), 
-                    np.sqrt(np.asarray(tempspectragrid)), 
+                    np.sqrt(np.asarray(tempspectragrid)/1000), # 1000 is to convert to 1/TeV 
                     method='cubic', bounds_error=False, fill_value=0)
             except:
                 sqrtchannelfuncdictionary[darkSUSYchannel] = self.zero_output # inputs should be a tuple or list of log_10(mass) in TeV and log_10(x)
@@ -117,7 +116,7 @@ class DM_ContinuousEmission_Spectrum(object):
         if self.ratios:
             self.log_normalisations = -np.inf
             for channel in annihilation_fractions.keys():
-                self.log_normalisations =np.logaddexp(self.log_normalisations, np.log(annihilation_fractions[channel]))
+                self.log_normalisations = np.logaddexp(self.log_normalisations, np.log(annihilation_fractions[channel]))
 
             self.log_normalisations = np.where(np.isfinite(self.log_normalisations), self.log_normalisations, 0)
 
@@ -136,7 +135,7 @@ class DM_ContinuousEmission_Spectrum(object):
                     np.sqrt(annihilation_fractions[channel]),
                     # 'cubic' method can be unstable for small values, we highly recommend 
                         # you use ratios=True unless otherwise required
-                    method='cubic', bounds_error=False, fill_value=0) \
+                    method='cubic', bounds_error=False, fill_value=None) \
                         for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
                     )
                     }
@@ -145,7 +144,7 @@ class DM_ContinuousEmission_Spectrum(object):
                 channel: interpolate.interp1d(
                     parameter_interpolation_values[0],
                     np.sqrt(annihilation_fractions[channel]),
-                    kind='cubic', bounds_error=False, fill_value=0) for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
+                    kind='cubic', bounds_error=False, fill_value='extrapolate') for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
                     )
                     }
             

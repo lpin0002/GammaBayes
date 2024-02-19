@@ -722,7 +722,10 @@ class ScanReweighting(object):
             self.log_posterior = self._posterior_exploration_output
 
         elif not self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):
+            
             self.log_hyperparameter_likelihood = self._posterior_exploration_output
+
+            self.apply_hyperparameter_priors()
 
         else:
             self.log_posterior = self.scan_output_exploration_class_instance.sampler.results
@@ -757,13 +760,18 @@ class ScanReweighting(object):
 
             return results
         
-    # TODO: Make this usable
-    def apply_hyperparameter_priors(self, priorinfos: list[dict] | tuple[dict], 
-                                            hyper_param_axes: list[np.ndarray] | tuple[np.ndarray] | None = None, 
-                                            log_hyper_priormesh: np.ndarray = None, 
-                                            integrator: callable = None):
+    def apply_hyperparameter_priors(self, 
+                                    log_hyperparameter_likelihood_matrix=None,
+                                    prior_parameter_specifications: list[ParameterSet] | dict[dict[dict[dict]]] | list[dict[dict[dict]]] = None, 
+                                    mixture_parameter_specifications: list[Parameter] | ParameterSet = None,
+                                    log_hyper_priormesh: np.ndarray = None, 
+                                    integrator: callable = None
+                                    ):
         """
         Applies uniform priors to hyperparameters and calculates the posterior using the updated likelihood and prior mesh.
+
+        Assumes hyperparameter likelihood is a scan output/matrix ____not samples____, sample outputs are presumed to have priors
+        inerherently applied with the use of the relevant sampler.
 
         This method is designed to compute the posterior distribution of hyperparameters by applying uniform priors, 
         generating a meshgrid of log prior values, and combining it with the log hyperparameter likelihood.
@@ -780,27 +788,60 @@ class ScanReweighting(object):
         Returns:
             tuple: Contains the log posterior, list of log prior values, and the hyperparameter values lists. Specifically,
             (log_posterior, log_prior_val_list, hyper_val_list).
-
-        Notes:
-            - This method currently has a "TODO" comment indicating it is not fully implemented.
         """
-
+        
         if integrator is None:
             integrator = self.logspace_integrator
-        if log_hyper_priormesh is None:
-            hyper_val_list = []
-            log_prior_val_list = []
+
+        if log_hyperparameter_likelihood_matrix is None:
+            log_hyperparameter_likelihood_matrix = self.log_hyperparameter_likelihood
+        
+        if prior_parameter_specifications is None:
+            prior_parameter_specifications = self.prior_parameter_specifications
+
+        else:
+            prior_parameter_specifications = _handle_parameter_specification(
+                parameter_specifications=prior_parameter_specifications,
+                num_required_sets=len(self.log_priors),)
             
 
+        if mixture_parameter_specifications is None:
+            mixture_parameter_specifications = self.mixture_parameter_specifications
 
-        log_hyper_priormesh_list = np.meshgrid(*log_prior_val_list, indexing='ij')
-        log_hyper_priormesh = np.prod(log_hyper_priormesh_list, axis=0)
+        else:
+            mixture_parameter_specifications = ParameterSet(mixture_parameter_specifications)
 
-        self.log_posterior = np.squeeze(self.log_hyperparameter_likelihood)+log_hyper_priormesh
+            
+        if log_hyper_priormesh is None:
+            prior_parameter_axes = []
+            log_prior_param_probabilities = []
+
+
+            for mixture_parameter_name, mixture_parameter in mixture_parameter_specifications.items():
+                mixture_parameter_axis = mixture_parameter.axis
+                mixture_parameter_log_probability_axis = mixture_parameter.logpdf(mixture_parameter_axis)
+                prior_parameter_axes.append(mixture_parameter_axis)
+                log_prior_param_probabilities.append(mixture_parameter_log_probability_axis)
+
+
+            for prior_parameters in prior_parameter_specifications:
+                for parameter_name, parameter in prior_parameters.items():
+                    parameter_axis = parameter.axis
+                    parameter_log_probability_axis = parameter.logpdf(parameter_axis)
+                    prior_parameter_axes.append(parameter_axis)
+                    log_prior_param_probabilities.append(parameter_log_probability_axis)
+
+
+
+            log_hyper_priormeshes = np.meshgrid(*log_prior_param_probabilities, indexing='ij')
+            log_hyper_priormesh = np.sum(log_hyper_priormeshes, axis=0)
+
+
+        self.log_posterior = np.squeeze(log_hyperparameter_likelihood_matrix)+log_hyper_priormesh
 
         self.applied_priors = True
 
-        return self.log_posterior, log_prior_val_list, hyper_val_list
+        return self.log_posterior, log_prior_param_probabilities, prior_parameter_axes
     
 
     def _pack_data(self, h5f=None, file_name=None, reduce_mem_consumption: bool = True):

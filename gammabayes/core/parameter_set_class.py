@@ -21,6 +21,7 @@ class ParameterSet(object):
         """
 
         self.axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
+        self.dict_of_parameters_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_name = {}
 
 
@@ -37,7 +38,8 @@ class ParameterSet(object):
             if (initial_type is dict):
 
                 try:
-                    secondary_type_is_dict = type(list(list(parameter_specifications.values())[0].values())[0]) == dict
+                    secondary_objects = list(list(parameter_specifications.values())[0].values())[0]
+                    secondary_type_is_dict = type(secondary_objects) == dict
                 except IndexError as indexerr:
                     logging.warning(f"An error occurred: {indexerr}")
                     secondary_type_is_dict = False 
@@ -221,6 +223,9 @@ class ParameterSet(object):
                     else:
                         self.axes_by_type[type_key][param_name] = np.nan
 
+            if type_key in self.dict_of_parameters_by_type.keys():
+                self.dict_of_parameters_by_type[type_key][param_name] = parameter
+
 
             self.dict_of_parameters_by_name[param_name] = parameter
 
@@ -367,6 +372,26 @@ class ParameterSet(object):
 default value. Place nan in position of default""")
                 default_values.append(np.nan)
         return default_values
+    
+
+    def fetch_defaults(self, param_type):
+        default_values = {}
+        for parameter in self.dict_of_parameters_by_type[param_type].values():
+            default_values[parameter['name']] = parameter['default_value']
+        return default_values   
+     
+    @property
+    def spectral_defaults(self):
+        return self.fetch_defaults('spectral_parameters')
+    
+
+        
+    @property
+    def spatial_defaults(self):
+        return self.fetch_defaults('spatial_parameters')
+    
+
+
     
     # When some sort of iterable behaviour is expected of the class it
         # defaults to using the behaviour of the dict_of_parameters_by_name dict
