@@ -11,4 +11,3 @@ setuptools
 pyyaml
 gammapy
 h5py
-pickle
