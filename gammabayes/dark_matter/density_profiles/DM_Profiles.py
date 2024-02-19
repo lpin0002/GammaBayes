@@ -7,7 +7,14 @@ import astropy.units as u
 from gammabayes.utils import logspace_riemann, haversine, update_with_defaults
 from .base_dm_profile import DM_Profile
 import time
-
+from gammapy.astro.darkmatter.profiles import (
+    DMProfile as Gammapy_DMProfile,
+    EinastoProfile as Gammapy_EinastoProfile,
+    NFWProfile as Gammapy_NFWProfile,
+    BurkertProfile as Gammapy_BurkertProfile,
+    MooreProfile as Gammapy_MooreProfile,
+    IsothermalProfile as Gammapy_IsothermalProfile,
+)
 
 
 class Einasto_Profile(DM_Profile):
@@ -31,6 +38,7 @@ class Einasto_Profile(DM_Profile):
             kwd_profile_default_vals = {'r_s': default_r_s, 
                                         'alpha': default_alpha, 
                                         'rho_s':default_rho_s},
+                                        gammapy_profile_class=Gammapy_EinastoProfile,
             *args, **kwargs
         )
 

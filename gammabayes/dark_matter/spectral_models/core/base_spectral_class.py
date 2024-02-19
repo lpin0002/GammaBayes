@@ -135,7 +135,7 @@ class DM_ContinuousEmission_Spectrum(object):
                     np.sqrt(annihilation_fractions[channel]),
                     # 'cubic' method can be unstable for small values, we highly recommend 
                         # you use ratios=True unless otherwise required
-                    method='cubic', bounds_error=False, fill_value=None) \
+                    method='cubic', bounds_error=False, fill_value=0) \
                         for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
                     )
                     }
