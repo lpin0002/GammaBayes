@@ -6,8 +6,8 @@ import time
 from matplotlib import cm
 import sys, os
 from scipy.special import logsumexp
-from gammabayes.utils import hdp_credible_interval_1d, bin_centres_to_edges, logspace_simpson, logspace_riemann, iterate_logspace_integration
-from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue, energy_recon_axis, longitudeaxis, latitudeaxis
+from gammabayes.utils import hdp_credible_interval_1d, logspace_simpson, logspace_riemann, iterate_logspace_integration
+from gammabayes.core.core_utils import bin_centres_to_edges
 from matplotlib.colors import LogNorm
 
 
@@ -30,8 +30,9 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                            cmap=cm.get_cmap('Blues_r'), contours2d = False,
                            levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
                            axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm=None,
-                           single_dim_yscales='symlog', single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
-                           single_dim_logspace_integrator=logspace_riemann, **kwargs):
+                           single_dim_yscales='linear', single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
+                           single_dim_logspace_integrator=logspace_riemann, axes_scale=None,
+                           **kwargs):
     numaxes = len(axes)
     n = 1000
 
@@ -55,6 +56,9 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                 ax[rowidx,rowidx].set_ylim([0,None])
                 ax[rowidx, rowidx].set_xlim([axes[colidx].min(), axes[colidx].max()])
                 ax[rowidx,rowidx].set_yscale(single_dim_yscales)
+
+                if axes_scale is not None:
+                    ax[rowidx,rowidx].set_xscale(axes_scale[rowidx])
 
 
 
@@ -102,6 +106,12 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                     ax[rowidx, colidx].set_xlabel(axis_names[colidx])
                 if not(axis_names is None) and colidx==0:
                     ax[rowidx, colidx].set_ylabel(axis_names[rowidx])
+
+
+                if axes_scale is not None:
+                    ax[rowidx, colidx].set_xscale(axes_scale[rowidx])
+                    ax[rowidx, colidx].set_xscale(axes_scale[colidx])
+
             else:
                 ax[rowidx,colidx].set_axis_off()
 
@@ -110,58 +120,5 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
     return fig,ax
                 
 
-
-def plot_loge_lon_lat_prior_samples(samples, 
-    twodhist_xlabel='Galactic Longitude [deg]', twodhist_ylabel='Galactic Latitude [deg]', 
-    onedhist_xlabel = r'Log$_{10}$ Energy [TeV]',
-    onedhist_bins = bin_centres_to_edges(energy_true_axis),
-    twodhist_bins = (bin_centres_to_edges(longitudeaxistrue), bin_centres_to_edges(latitudeaxistrue)),
-    dist_names = None, 
-    energy_true_axis=energy_true_axis, longitudeaxistrue=longitudeaxistrue, latitudeaxistrue=latitudeaxistrue, 
-    **kwargs,):
-
-    num_priors = len(samples)
-
-    fig, ax = plt.subplots(num_priors,2, **kwargs)
-    for idx, prior_samples in enumerate(samples):
-        if dist_names!=None:
-            ax[idx,0].set_title(dist_names[idx])
-        ax[idx,0].set_xlabel(twodhist_xlabel)
-        ax[idx,0].set_ylabel(twodhist_ylabel)
-        hist2dplot = ax[idx,0].hist2d(prior_samples[1],prior_samples[2], 
-            bins=twodhist_bins, norm=LogNorm())
-        plt.colorbar(mappable=hist2dplot[3])
-
-        ax[idx,1].hist(prior_samples[0], bins=onedhist_bins)
-        ax[idx,1].set_xlabel(onedhist_xlabel)
-
-    plt.tight_layout()
-
-
-def plot_loge_lon_lat_recon_samples(samples, 
-    twodhist_xlabel='Galactic Longitude [deg]', twodhist_ylabel='Galactic Latitude [deg]', 
-    onedhist_xlabel = r'Log$_{10}$ Energy [TeV]',
-    onedhist_bins = bin_centres_to_edges(energy_recon_axis),
-    twodhist_bins = (bin_centres_to_edges(longitudeaxis), bin_centres_to_edges(latitudeaxis)),
-    dist_names = None, 
-    log10eaxis=energy_recon_axis, longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, 
-    **kwargs,):
-
-    num_priors = len(samples)
-
-    fig, ax = plt.subplots(num_priors,2, **kwargs)
-    for idx, recon_samples in enumerate(samples):
-        if dist_names!=None:
-            ax[idx,0].set_title(dist_names[idx])
-        ax[idx,0].set_xlabel(twodhist_xlabel)
-        ax[idx,0].set_ylabel(twodhist_ylabel)
-        hist2dplot = ax[idx,0].hist2d(recon_samples[1],recon_samples[2], 
-            bins=twodhist_bins, norm=LogNorm())
-        plt.colorbar(mappable=hist2dplot[3])
-
-        ax[idx,1].hist(recon_samples[0], bins=onedhist_bins)
-        ax[idx,1].set_xlabel(onedhist_xlabel)
-
-    plt.tight_layout()
 
     

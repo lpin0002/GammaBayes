@@ -1,0 +1,12 @@
+astropy==5.3.4
+corner
+dynesty
+matplotlib
+scipy
+tqdm
+numpy
+pandas
+pytest
+setuptools
+pyyaml
+gammapy

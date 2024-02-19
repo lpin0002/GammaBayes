@@ -1,6 +1,7 @@
-import warnings, yaml, sys, time, pickle
+import warnings, yaml, sys, time, pickle, copy
 from gammabayes.utils.event_axes import create_axes
 import numpy as np
+
 
 def read_config_file(file_path):
     print(f"file path: {file_path}")
@@ -12,7 +13,7 @@ def read_config_file(file_path):
         print(f"Error: Input file '{file_path}' not found.")
         sys.exit(1)
     except yaml.YAMLError:
-        print(f"Error: Unable to parse YAML in '{file_path}'. Please ensure it is valid JSON.")
+        print(f"Error: Unable to parse YAML in '{file_path}'. Please ensure it is valid.")
         sys.exit(1)
         
         
@@ -94,9 +95,7 @@ def add_event_axes_config(config_dict, energy_axis_true, longitudeaxistrue, lati
 
 def save_config_file(config_dict, file_path):
     with open(file_path, 'w') as file:
-        yaml.dump(config_dict, file, default_flow_style=False)
-    print("YAML saved to config_dict")
-
+        yaml.dump(config_dict, file, default_flow_style=False, sort_keys=False)
 
 
 def create_true_axes_from_config(config_dict):
@@ -111,3 +110,126 @@ def create_recon_axes_from_config(config_dict):
                      config_dict['recon_energy_bins_per_decade'], config_dict['recon_spatial_res'], 
                      config_dict['recon_longitude_min'], config_dict['recon_longitude_max'],
                      config_dict['recon_latitude_min'], config_dict['recon_latitude_max'])
+
+
+def construct_parameter_axes(construction_config):
+
+    # Copying the dict so I don't accidentally overwrite the original
+    construction_config_copy = copy.deepcopy(construction_config)
+    if type(construction_config_copy)==list:
+        return np.asarray(construction_config_copy)
+    
+
+    elif construction_config_copy['spacing']=='custom':
+        return np.load(construction_config_copy['custom_bins_filepath'])
+
+
+    elif construction_config_copy['spacing']=='linear':
+
+        if type(construction_config_copy['bounds'])==list:
+            return np.linspace(float(construction_config_copy['bounds'][0]), 
+                               float(construction_config_copy['bounds'][1]), 
+                               int(construction_config_copy['nbins']))
+
+        
+        elif construction_config_copy['bounds']=='event_dynamic':
+            if ('num_events' in construction_config_copy) and ('true_val' in construction_config_copy):
+                num_events  = float(construction_config_copy['num_events'])
+                true_val    = construction_config_copy['true_val']
+
+                if 'dynamic_multiplier' in construction_config_copy:
+                    dynamic_multiplier = float(construction_config_copy['dynamic_multiplier'])
+                else:
+                    dynamic_multiplier = 10
+                
+
+                lower_bound     = true_val - dynamic_multiplier/np.sqrt(num_events)
+                upper_bound     = true_val + dynamic_multiplier/np.sqrt(num_events)
+
+                if 'absolute_bounds' in construction_config_copy:
+                    absolutes = [float(construction_config_copy['absolute_bounds'][0]), float(construction_config_copy['absolute_bounds'][1])]
+                else:
+                    absolutes = [-np.inf, np.inf]
+
+                if lower_bound < absolutes[0]:
+                    lower_bound = absolutes[0]
+
+                if upper_bound > absolutes[1]:
+                    upper_bound = absolutes[1]
+                
+                return np.linspace(lower_bound, upper_bound, int(construction_config_copy['nbins']))
+
+            else:
+                if 'absolute_bounds' in construction_config_copy:
+                    warnings.warn("Number of events or true value not given for event dynamic bound setting. Defaulting to absolute bounds")
+                    construction_config_copy['bounds'] = construction_config_copy['absolute_bounds']
+
+                    return construct_parameter_axes(construction_config_copy)
+                else:
+                    raise Exception("Number of events or true value, and absolute bounds not given for event dynamic bounds. Please check inputs.")
+        else:
+            raise Exception("Bounds must either be a list, [lower bound, upper bound] or the string 'event_dynamic'. ")
+                
+
+    
+    elif construction_config_copy['spacing']=='logspace':
+
+        if type(construction_config_copy['bounds'])==list:
+            return np.logspace(np.log10(float(construction_config_copy['bounds'][0])), 
+                               np.log10(float(construction_config_copy['bounds'][1])), 
+                               int(construction_config_copy['nbins']))
+        
+
+        elif construction_config_copy['bounds']=='event_dynamic':
+            if 'num_events' in construction_config_copy:
+                num_events = float(construction_config_copy['num_events'])
+
+                if 'dynamic_multiplier' in construction_config_copy:
+                    dynamic_multiplier = float(construction_config_copy['dynamic_multiplier'])
+                else:
+                    dynamic_multiplier = 10
+                
+
+                lower_bound = np.log10(construction_config_copy['true_val']) - dynamic_multiplier/np.sqrt(num_events)
+                upper_bound = np.log10(construction_config_copy['true_val']) + dynamic_multiplier/np.sqrt(num_events)
+
+                if 'absolute_bounds' in construction_config_copy:
+                    absolutes = [float(construction_config_copy['absolute_bounds'][0]), float(construction_config_copy['absolute_bounds'][1])]
+                else:
+                    absolutes = [-np.inf, np.inf]
+
+                if lower_bound < np.log10(absolutes[0]):
+                    lower_bound = np.log10(absolutes[0])
+
+                if upper_bound > np.log10(absolutes[1]):
+                    upper_bound = np.log10(absolutes[1])
+                
+                return np.logspace(lower_bound, upper_bound, int(construction_config_copy['nbins']))
+
+            else:
+                if 'absolute_bounds' in construction_config_copy:
+                    warnings.warn("Number of events not given for event dynamic bound setting. Defaulting to absolute bounds")
+                    construction_config_copy['bounds'] = construction_config_copy['absolute_bounds']
+
+                    return construct_parameter_axes(construction_config_copy)
+                else:
+                    raise Exception("Neither number of events or absolute bounds given for event dynamic bounds.")
+    
+        else:
+            raise Exception("Bounds must either be a list, [lower bound, upper bound] or the string 'event_dynamic'. ")
+
+    else:
+        raise Exception("Unknown spacing condition given. Please check 'spacing' keyword in dictionary given. Must be 'logspace', 'linear' or 'custom'.")
+
+
+
+def iterative_parameter_axis_construction(scan_specification_dict):
+    scan_dict = copy.deepcopy(scan_specification_dict)
+    for prior_scan_specifications in scan_specification_dict:
+        for parameter_type_scan_dict in scan_specification_dict[prior_scan_specifications]:
+            for parameter in scan_specification_dict[prior_scan_specifications][parameter_type_scan_dict]:
+                temp_single_param_scan_dict = scan_specification_dict[prior_scan_specifications][parameter_type_scan_dict][parameter]
+                scan_dict[prior_scan_specifications][parameter_type_scan_dict][parameter] = construct_parameter_axes(temp_single_param_scan_dict)
+
+
+    return scan_dict

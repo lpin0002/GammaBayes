@@ -1,4 +1,4 @@
-from gammabayes.utils import convertlonlat_to_offset, angularseparation, resources_dir
+from gammabayes.utils import resources_dir, haversine
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_irf_dict_from_file,load_cta_irfs
@@ -118,7 +118,7 @@ def find_irf_file_path(zenith_angle=20, hemisphere='South', prod_vers=5, subarra
 
 
 
-class irf_extractor(object):
+class IRFExtractor(object):
     def __init__(self, zenith_angle, hemisphere, prod_vers=5, file_path=None):
         self.file_path = file_path
         if self.file_path is None:
@@ -148,9 +148,13 @@ class irf_extractor(object):
         self.psf3d              = self.psf_default.to_psf3d()
         self.aeff_default       = extracted_default_irfs['aeff']
 
-        self.aefffunc = lambda energy, offset: self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
 
-    def log_aeff(self, true_energy, true_lon, true_lat, pointing_direction=None):
+
+    # Deprecated function that I need to get rid of eventually
+    def aefffunc(self, energy, offset, parameters={}):
+        return self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
+
+    def log_aeff(self, energy, longitude, latitude, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the log of 
             the CTA effective area function.
 
@@ -164,11 +168,11 @@ class irf_extractor(object):
         Returns:
             float: The natural log of the effective area of the CTA in m^2
         """
-        return np.log(self.aeff_default.evaluate(energy_true = true_energy*u.TeV, 
-                                offset=convertlonlat_to_offset(
-                                    np.array([true_lon, true_lat]), pointing_direction=pointing_direction)*u.deg).to(u.cm**2).value)
+        return np.log(self.aeff_default.evaluate(energy_true = energy*u.TeV, 
+                                offset=haversine(
+                                    longitude, latitude, pointing_direction[0], pointing_direction[1])*u.deg).to(u.cm**2).value)
         
-    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=None):
+    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
         Args:
@@ -186,12 +190,11 @@ class irf_extractor(object):
 
         return np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
                                                         migra = recon_energy/true_energy, 
-                                                        offset=convertlonlat_to_offset(
-                                                            np.array([true_lon, true_lat]), 
-                                                            pointing_direction=pointing_direction)*u.deg).value)
+                                                        offset=haversine(
+                                    true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).value)
 
 
-    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=None):
+    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
         Args:
@@ -209,10 +212,8 @@ class irf_extractor(object):
             float: natural log of the CTA point spread function likelihood for the given 
                 gamma-ray event data
         """
-        reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
-        truespatialcoord = np.array([true_lon, true_lat])
-        rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
-        offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
+        rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
+        offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
         output = np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
                                                         rad = rad*u.deg, 
                                                         offset=offset*u.deg).value)
@@ -220,7 +221,10 @@ class irf_extractor(object):
         return output
 
 
-    def single_loglikelihood(self, recon_energy, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=None):
+    def single_loglikelihood(self, 
+                             recon_energy, recon_lon, recon_lat, 
+                             true_energy, true_lon, true_lat, 
+                             pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
 
@@ -240,8 +244,7 @@ class irf_extractor(object):
             float: natural log of the full CTA likelihood for the given gamma-ray 
                 event data
         """
-        truespatialcoord = np.array([true_lon, true_lat])
-        offset  = convertlonlat_to_offset(truespatialcoord, pointing_direction=pointing_direction).flatten()
+        offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
 
         
         # # Unique edisp input filtering
@@ -259,16 +262,18 @@ class irf_extractor(object):
                 
         
         # Standard input method for psf (for now)
-        reconstructed_spatialcoord = np.array([recon_lon, recon_lat])
-        rad = angularseparation(reconstructed_spatialcoord, truespatialcoord).flatten()
+        rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
 
         output+=  np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
                                                         rad = rad*u.deg, 
                                                         offset=offset*u.deg).value)
-        return output
+        return output.reshape(true_lon.shape)
 
-
-    def dynesty_single_loglikelihood(self, true_vals, recon_energy, recon_lon, recon_lat, pointing_direction=None):
+    # Made for the reverse convention of parameter order required by dynesty
+    def dynesty_single_loglikelihood(self, 
+                                     true_vals, 
+                                     recon_energy, recon_lon, recon_lat, 
+                                     pointing_direction=[0,0], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
 
@@ -288,4 +293,17 @@ class irf_extractor(object):
             float: natural log of the full CTA likelihood for the given gamma-ray 
                 event data
         """
-        return self.single_loglikelihood(recon_energy, recon_lon, recon_lat, *true_vals, pointing_direction=None)
+        true_energy, true_lon, true_lat = true_vals
+        offset  = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1])
+
+        output = np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
+                                                        migra = recon_energy/true_energy, 
+                                                        offset=offset*u.deg).value)
+
+        rad = haversine(recon_lon, recon_lat, true_lon, true_lat)
+
+        output+=  np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
+                                                        rad = rad*u.deg, 
+                                                        offset=offset*u.deg).value)
+        
+        return output

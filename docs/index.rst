@@ -10,13 +10,14 @@ Welcome to GammaBayes's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   tutorials/astrophysical_background
-   tutorials/Dark_matter_models
-   tutorials/prior_class
-   tutorials/likelihood_class
-   tutorials/Simulations
-   tutorials/hyperparameter_inference
-   tutorials/multi_component_mixtures
+    tutorials/"Data Classes: EventData"
+    tutorials/"Data Classes: Parameters"
+    tutorials/ProbabilityClasses
+    tutorials/DarkMatterModels
+    tutorials/Simulations
+    tutorials/HyperParameterInference
+    tutorials/Reweighting
+
 
 
 

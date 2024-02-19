@@ -3,6 +3,7 @@ __Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
 
 __Supervisor(s)__: Csaba Balazs, Eric Thrane
 
+
 __Documentation__: [ReadtheDocs](https://gammabayes.readthedocs.io/en/latest/index.html)
 
 __Referencing__:

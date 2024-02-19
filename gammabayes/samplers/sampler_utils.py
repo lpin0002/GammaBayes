@@ -1,24 +1,20 @@
 import numpy as np
-from gammabayes.utils.event_axes import energy_true_axis, longitudeaxistrue, latitudeaxistrue
 
-def construct_constrained_axes(measured, axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], num_sigmas=8, axes_sigmas=[0.05,0.07,0.07]):
-    constructed_axis1 = axes[0][np.where(
-        np.logical_and(
-            np.log10(axes[0])>=np.log10(measured[0])-num_sigmas*axes_sigmas[0], 
-            np.log10(axes[0])<=np.log10(measured[0])+num_sigmas*axes_sigmas[0]
-            ))]
-    constructed_axis2 = axes[1][np.where(
-        np.logical_and(
-            axes[1]>=measured[1]-num_sigmas*axes_sigmas[1], 
-            axes[1]<=measured[1]+num_sigmas*axes_sigmas[1])
-            )]
-    constructed_axis3 = axes[2][np.where(
-        np.logical_and(
-            axes[2]>=measured[2]-num_sigmas*axes_sigmas[2], 
-            axes[2]<=measured[2]+num_sigmas*axes_sigmas[2])
-            )]
-    
-    return [constructed_axis1, constructed_axis2, constructed_axis3]
+def bound_axis(axis: np.ndarray, 
+               bound_type: str, 
+               bound_radii: float, 
+               estimated_val: float):
+    if bound_type=='linear':
+        axis_indices = np.where(
+        (axis>estimated_val-bound_radii) & (axis<estimated_val+bound_radii) )[0]
+
+    elif bound_type=='log10':
+        axis_indices = np.where(
+        (np.log10(axis)>np.log10(estimated_val)-bound_radii) & (np.log10(axis)<np.log10(estimated_val)+bound_radii) )[0]
+        
+    temp_axis = axis[axis_indices]
+
+    return temp_axis, axis_indices
 
 
 def default_proposal_prior_array(axes):
@@ -30,3 +26,13 @@ def discrete_prior_transform(u, inv_cdf_func=None, log_prior_array=None, axes=No
         reshaped_indices = np.unravel_index(output_index, shape=log_prior_array.shape)
         output = [axis[output_idx] for output_idx, axis in zip(reshaped_indices, axes)]
         return output
+
+
+class ResultsWrapper:
+    def __init__(self, results_dict):
+        self.__dict__.update(results_dict)
+    
+    def __getattr__(self, attr):
+        # This method is called if the attribute wasn't found the usual ways
+        raise AttributeError(f"'ResultsWrapper' object has no attribute '{attr}'")
+

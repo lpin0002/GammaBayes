@@ -1,0 +1,100 @@
+##################################################################
+##################################################################
+### OZSTAR RESOURCE ALLOCATIONS
+##################################################################
+##################################################################
+
+# # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
+immediate_run:                    False
+env_name:                         GammaBayesEnv
+jobname:                          '1'
+stem_identifier:                  'Z2_DM_3COMP_BKG_test'
+numcores:                         8 
+numjobs:                          10
+
+# Time and memory here is completely random. 
+# Run small test job to figure out time and memory allocation
+mem_per_cpu:                      16000
+time_hrs:                         1
+time_mins:                        0
+mail_progress:                    True
+mail_address:                     progressemail1999@gmail.com
+
+
+
+##################################################################
+##################################################################
+### GAMMABAYES RUN PARAMETERS
+##################################################################
+##################################################################
+
+
+##################################################################
+### Simulation Parameters
+
+signalfraction:                   0.3
+ccr_of_bkg_fraction:              0.8
+diffuse_of_astro_fraction:        0.3
+Nevents_per_job:                  2000
+Nevents:                          2000
+dmdensity_profile:                'einasto'
+dark_matter_mass:                 1.0
+
+# Parameters for the 'true' value axes for gamma ray events
+true_energy_min:                  0.1
+true_energy_max:                  100
+true_energy_bins_per_decade:      40
+true_spatial_res:                 0.2
+true_longitude_min:               -3.5
+true_longitude_max:               3.5
+true_latitude_min:                -3
+true_latitude_max:                3
+
+# Parameters for the reconstructed value axes for gamma ray events
+recon_energy_min:                 0.1
+recon_energy_max:                 100
+recon_energy_bins_per_decade:     30
+recon_spatial_res:                0.4
+recon_longitude_min:              -3.5
+recon_longitude_max:              3.5
+recon_latitude_min:               -3
+recon_latitude_max:               3
+
+
+##################################################################
+### Inference/Analysis Parameters
+
+
+# Dark Matter Inference Parameters
+nbins_signalfraction:             31
+sigfrac_upper_bd:                 1.
+sigfrac_lower_bd:                 0.
+sigfrac_spacing:                  'linear'
+
+nbins_mass:                       51
+
+
+
+# Misidentified Cosmic Ray Background Inference Parameters
+nbins_ccrfraction:                31
+ccrfrac_upper_bd:                 1.
+ccrfrac_lower_bd:                 0.
+ccrfrac_spacing:                  'linear'
+
+# Diffuse Gamma Ray Background Inference Parameters
+nbins_diffusefraction:            31
+diffusefrac_upper_bd:             1.
+diffusefrac_lower_bd:             0.
+diffusefrac_spacing:              'linear'
+
+
+# Refers to the method for exploring the mixture hyperparameters
+mixture_fraction_sampling:        'scan' # Either 'stochastic' or 'scan'
+
+
+# Parameters for stochastic sampling if chosen
+nestedsampler_kwarg_dict:         {'nlive': 900}
+
+# Debugging and plotting arguments
+diagnostics:                      False
+blockplot:                        True

@@ -11,8 +11,10 @@ def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
     # With the default values being atol=1e-8 and rtol=1e-5. Need to be careful
     # If we ever have differences ~1e-8 
     if np.isclose(dx[1], dx[0]):
+        # Equal spacing, therefore the last dx can just be the same as the second last
         dx = np.append(dx, dx[-1])
     else:
+        # Presuming log-uniform spacing
         dx = axis*(10**(np.log10(axis[1])-np.log10(axis[0])))
 
     return np.log(dx)
@@ -136,6 +138,12 @@ def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarr
         return logspace_trapz(logy, x, axis=axis)
 
 
+# Vectorised this function and chucked it into cython. 
+    # best speed increase I got was about 6% with lots of loss in generality
+    # Key bottlenecks if you can get around them is the creation of logdx
+    # Also tried lintegrate library but couldn't get it to work
+    # (from one of the issues doesn't seem to be 64-bit?)
+
 def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
     logintegrandvalues = logy
             
@@ -145,16 +153,15 @@ def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_in
     else:
         axisindices = np.asarray(axisindices)
 
-        # TODO: Remove this for loop, any for loop, all the for loops
         for loop_idx, (axis, axis_idx) in enumerate(zip(axes, axisindices)):
 
             # Assuming the indices are in order we subtract the loop idx from the axis index
             # print(loop_idx, axis_idx-loop_idx, axis.shape, logintegrandvalues.shape)
             try:
                 logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
-            except:
+            except Exception as excpt:
                 print(loop_idx, axis.shape, axis_idx, logintegrandvalues.shape)
-                raise Exception("Error occurred during integration.")
+                raise Exception(f"Error occurred during integration --> {excpt}")
 
 
 
