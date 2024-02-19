@@ -3,7 +3,10 @@ __Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
 
 __Supervisor(s)__: Csaba Balazs, Eric Thrane
 
-## Referencing
+
+__Documentation__: [ReadtheDocs](https://gammabayes.readthedocs.io/en/latest/index.html)
+
+__Referencing__:
 
 To reference this code please reference the following paper [2401.13876](https://arxiv.org/abs/2401.13876) or use the following bibtex.
 
@@ -16,19 +19,15 @@ To reference this code please reference the following paper [2401.13876](https:/
       primaryClass={astro-ph.HE}
 }
 
-
 ## Warning
 
 Within the analysis we slice into matrices for the normalisation values of likelihood functions to enforce a normalisation on the interpolation done.
-These matrices can be quite large depending on the resolution of the axes chosen. Keep this in mind when implementing multi-processing as pytohn will
+These matrices can be quite large depending on the resolution of the axes chosen. Keep this in mind when implementing multi-processing as python will
 duplicate the arrays instead of reference the same one.
 
 ## Introduction
 
-This coding repository contains a Bayesian Inference pipeline for calculating dark matter related observables from (simulated) observations from the galactic centre. Example files that run the simulation and analysis are contained in `single_script_code.py` and `combine_results.py`, this will provide inference on the $log_{10}$ mass of a scalar singlet dark matter particle and the fraction of signal events to total events, $\xi$ that have been simulated. To convert these results into those on the thermally averaged velocity weighted self-annihilation cross section, $\langle \sigma v \rangle$, a function is contained in the `gammabayes/plotting.py` script.
-
-Detailed documentation for the code is currently being written with the notebook files within the `gammabayes/documentation` folder for all the components that
-make up the analysis. These notebooks also detail how the code can be modified for your own analysis for the relevant components.
+This coding repository contains a Bayesian Inference pipeline for calculating dark matter related observables from (simulated) observations from the galactic centre. Example files that run the simulation and analysis can be found within the `docs` folder. All documentation for the code is within the notebook files contained within that folder, that make up the [ReadTheDocs](https://gammabayes.readthedocs.io/en/latest/index.html) page and all the major components that make up the analysis in the oncoming publication.
 
 A python package version of the code exists on `PyPi` that can be installed with the command,
 

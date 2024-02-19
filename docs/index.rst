@@ -20,6 +20,7 @@ Welcome to GammaBayes's documentation!
 
 
 
+
 Indices and tables
 ==================
 
