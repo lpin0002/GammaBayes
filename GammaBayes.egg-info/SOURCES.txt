@@ -60,6 +60,7 @@ gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/SS_DM_Spectral_Class.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/__init__.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/__init__.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/annihilation_ratios__darkSUSY.csv
+gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/annihilation_ratios__dimauromattia.csv
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/temp/__init__.py
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/temp/bfmlambdaarray.npy
 gammabayes/dark_matter/spectral_models/Z2_ScalarSinglet/temp/lambdarange.npy

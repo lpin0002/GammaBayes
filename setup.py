@@ -42,7 +42,7 @@ setup(name='GammaBayes',
                         'package_data/irf_fits_files/prod5/*.FITS.tar.gz',
                         'package_data/irf_fits_files/prod3b/*',
                         'dark_matter/channel_spectra/PPPC_Tables/*.dat',
-                        'dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/annihilation_ratios__darkSUSY.csv',
+                        'dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/*.csv',
                         'dark_matter/spectral_models/Z2_ScalarSinglet/temp/*',
                         'standard_inference/*',
                         'utils/ozstar/*'

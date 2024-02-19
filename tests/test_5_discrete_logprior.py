@@ -12,7 +12,7 @@ def test_discrete_logprior():
 
     warnings.simplefilter("ignore", category=UserWarning)
 
-    discrete_logprior_instance = discrete_logprior(logfunction=fake_func, 
+    discrete_logprior_instance = DiscreteLogPrior(logfunction=fake_func, 
                              name='Fake Test Func',
                              axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], 
                              axes_names=['energy', 'lon', 'lat'],

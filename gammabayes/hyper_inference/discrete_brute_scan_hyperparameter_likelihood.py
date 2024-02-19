@@ -568,7 +568,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
             self.log_hyperparameter_likelihood = self._posterior_exploration_output
 
-            # self.apply_hyperparameter_priors()
+            self.apply_hyperparameter_priors()
 
         else:
             self.log_posterior = self.hyper_analysis_instance.sampler.results

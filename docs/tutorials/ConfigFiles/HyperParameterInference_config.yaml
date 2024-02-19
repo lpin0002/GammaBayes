@@ -7,8 +7,8 @@
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
 stem_identifier:                  'tutorial_restricted_scan_analysis'
 numjobs:                          1
-Nevents_per_job:                  1000
-Nevents:                          1000
+Nevents_per_job:                  10
+Nevents:                          10
 common_norm_matrices:             True
 
 dark_matter_spectral_model:       Z2_ScalarSinglet
