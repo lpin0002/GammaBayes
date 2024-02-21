@@ -1,4 +1,4 @@
-import sys, os, warnings
+import sys, os, warnings, numpy as np
 
 from gammabayes.standard_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
 from gammabayes.utils.config_utils import read_config_file, save_config_file
@@ -20,15 +20,16 @@ if __name__=="__main__":
     standard_3COMP_BKG_instance = ScanMarg_ConfigAnalysis(config_dict=config_dict,)
     standard_3COMP_BKG_instance.run()
     print("\n\nRun Done. Now saving")
+
     standard_3COMP_BKG_instance.discrete_hyper_like_instance.save(config_dict['save_path']+'results.h5')
     print("\n\nResults saved.")
 
 
-    try:
+    # try:
         
-        standard_3COMP_BKG_instance.plot_results(
-            **config_dict['plot_results_kwargs'])
+    #     standard_3COMP_BKG_instance.plot_results(
+    #         **config_dict['plot_results_kwargs'])
 
-    except Exception as excpt:
-        print("An error occurred when trying to plot the results:")
-        print(excpt)
+    # except Exception as excpt:
+    #     print("An error occurred when trying to plot the results:")
+    #     print(excpt)

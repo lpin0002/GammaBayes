@@ -232,6 +232,7 @@ class ParameterSet(object):
         elif isinstance(parameter, ParameterSet):
             parameters = parameter
             for param_name, parameter in parameters.dict_of_parameters_by_name.items():
+                parameter = self.create_parameter(parameter, param_name=param_name)
                 self.append(parameter)
 
 

@@ -146,7 +146,7 @@ class DiscreteBruteScan(object):
             # way, assuming that they match the expected inputs/outputs of what is
             # used/produce here.
 
-        self.log_nuisance_marg_results                    = log_nuisance_marg_results
+        self.log_nuisance_marg_results        = log_nuisance_marg_results
         self.log_hyperparameter_likelihood      = log_hyperparameter_likelihood
         self.log_posterior                      = log_posterior
         self.log_prior_matrix_list              = log_prior_matrix_list
@@ -440,12 +440,13 @@ class before the multiprocessing or make sure that it isn't part of the actual
         
         log_marg_mins = np.asarray([np.nanmin(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
         log_marg_maxs = np.asarray([np.nanmax(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
-
         # Adaptively set the regularisation based on the range of values in the
-        # log marginalisation results. Trying to keep them away from ~-600 or ~600
+        # log marginalisation results. Trying to keep them away from ~-600 or ~+600
         # generally precision goes down to ~1e-300 (base 10)
         diffs = log_marg_maxs-log_marg_mins
-        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(np.mean(diffs, axis=tuple(range(1, diffs.ndim)))))
+        print(diffs)
+
+        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(diffs))
 
 
         return reshaped_marg_results
@@ -469,7 +470,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             correct pairing and extension of each sublist.
             - This method uses list comprehension to iterate and extend each corresponding sublist.
         """
-        self.log_nuisance_marg_results = [log_margresult.extend(new_log_marg_result) for log_margresult, new_log_marg_result in zip(self.log_nuisance_marg_results, new_log_marg_results)]
+        self.log_nuisance_marg_results = [np.append(log_margresult, new_log_marg_result, axis=0) for log_margresult, new_log_marg_result in zip(self.log_nuisance_marg_results, new_log_marg_results)]
 
 
     def select_scan_output_exploration_class(self, 
@@ -505,6 +506,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
         """
         if mixture_fraction_exploration_type is None:
             mixture_fraction_exploration_type = self.mixture_fraction_exploration_type
+
+        self.mixture_fraction_exploration_type = mixture_fraction_exploration_type
 
         if prior_parameter_specifications is None:
             prior_parameter_specifications = self.prior_parameter_specifications
@@ -738,55 +741,82 @@ class before the multiprocessing or make sure that it isn't part of the actual
         if h5f is None:
             h5f = h5py.File(file_name, 'w-')  # Replace 'temporary_file.h5' with desired file name
         
-        
-        h5f.attrs['log_marginalisation_regularisation'] = self.log_marginalisation_regularisation
-        h5f.attrs['mixture_fraction_exploration_type']  = self.mixture_fraction_exploration_type
+        try:
+            h5f.attrs['log_marginalisation_regularisation'] = self.log_marginalisation_regularisation
+        except Exception as err:
+            warnings.warn(f"Could not save log_marginalisation_regularisation: {err}")
+
+        try:
+            h5f.attrs['mixture_fraction_exploration_type']  = self.mixture_fraction_exploration_type
+        except Exception as err:
+            warnings.warn(f"Could not save mixture_fraction_exploration_type: {err}")
         
         if self.log_likelihoodnormalisation is not None:
-            h5f.create_dataset('log_likelihoodnormalisation', data=np.asarray(self.log_likelihoodnormalisation, dtype=np.float64))
-
+            try:
+                h5f.create_dataset('log_likelihoodnormalisation', data=np.asarray(self.log_likelihoodnormalisation, dtype=np.float64))
+            except Exception as err:
+                warnings.warn(f"Could not save log_likelihoodnormalisation: {err}")
         
         # Handling numpy arrays
         if self.axes is not None:
-
-            axes_group = h5f.create_group('axes') 
-            for axis_idx, axis in enumerate(self.axes):
-                axis_dataset = axes_group.create_dataset(f"{axis_idx}", data=axis)
-
+            try:
+                axes_group = h5f.create_group('axes') 
+                for axis_idx, axis in enumerate(self.axes):
+                    axis_dataset = axes_group.create_dataset(f"{axis_idx}", data=axis)
+            except Exception as err:
+                warnings.warn(f"Could not save axes: {err}")
 
                 
         if self.nuisance_axes is not None:
-            nuisance_axes_group = h5f.create_group('nuisance_axes') 
-            for nuisance_axis_idx, nuisance_axis in enumerate(self.nuisance_axes):
-                nuisance_axis_dataset = nuisance_axes_group.create_dataset(f"{nuisance_axis_idx}", data=nuisance_axis)
-
+            try:
+                nuisance_axes_group = h5f.create_group('nuisance_axes') 
+                for nuisance_axis_idx, nuisance_axis in enumerate(self.nuisance_axes):
+                    nuisance_axis_dataset = nuisance_axes_group.create_dataset(f"{nuisance_axis_idx}", data=nuisance_axis)
+            except Exception as err:
+                warnings.warn(f"Could not save nuisance_axes: {err}")
 
         if self.log_nuisance_marg_results is not None:
-            h5f.create_dataset('log_nuisance_marg_results', data=self.log_nuisance_marg_results)
+            try:
+
+                log_nuisance_marg_results_group = h5f.create_group('log_nuisance_marg_results')            
+
+                for result_idx, result in enumerate(self.log_nuisance_marg_results):
+                    log_nuisance_marg_results_group.create_dataset(f'{result_idx}', data=result)
+
+            except Exception as err:
+                warnings.warn(f"Could not save log_nuisance_marg_results: {err}")
 
         if self.log_hyperparameter_likelihood is not None:
-            h5f.create_dataset('log_hyperparameter_likelihood', data=self.log_hyperparameter_likelihood)
-
+            try:
+                h5f.create_dataset('log_hyperparameter_likelihood', data=self.log_hyperparameter_likelihood)
+            except Exception as err:
+                warnings.warn(f"Could not save log_hyperparameter_likelihood: {err}")
 
         if self.log_posterior is not None:
-            h5f.create_dataset('log_posterior', data=np.asarray(self.log_posterior, dtype=float))
-
+            try:
+                h5f.create_dataset('log_posterior', data=np.asarray(self.log_posterior, dtype=float))
+            except Exception as err:
+                warnings.warn(f"Could not save log_posterior: {err}")
 
         # Packing ParameterSet objects
         if self.prior_parameter_specifications is not None:
-            prior_param_set_group = h5f.create_group('prior_param_set')
+            try:
+                prior_param_set_group = h5f.create_group('prior_param_set')
 
-            for prior_idx, (prior, single_prior_param_set) in enumerate(zip(self.log_priors, self.prior_parameter_specifications)):
-                if type(single_prior_param_set) == ParameterSet:
-                    single_prior_param_group = prior_param_set_group.create_group(prior.name)
-                    single_prior_param_group = single_prior_param_set.pack(h5f=single_prior_param_group)
+                for prior_idx, (prior, single_prior_param_set) in enumerate(zip(self.log_priors, self.prior_parameter_specifications)):
+                    if type(single_prior_param_set) == ParameterSet:
+                        single_prior_param_group = prior_param_set_group.create_group(prior.name)
+                        single_prior_param_group = single_prior_param_set.pack(h5f=single_prior_param_group)
+            except Exception as err:
+                warnings.warn(f"Could not save prior_param_set: {err}")
 
         if self.mixture_parameter_specifications is not None:
+            try:
+                mixture_parameter_specifications_group = h5f.create_group('mixture_parameter_specifications')
 
-            mixture_parameter_specifications_group = h5f.create_group('mixture_parameter_specifications')
-
-            mixture_parameter_specifications_group = self.mixture_parameter_specifications.pack(h5f=mixture_parameter_specifications_group)
-
+                mixture_parameter_specifications_group = self.mixture_parameter_specifications.pack(h5f=mixture_parameter_specifications_group)
+            except Exception as err:
+                warnings.warn(f"Could not save mixture_parameter_specifications: {err}")
 
         # if not reduce_mem_consumption:
 
@@ -828,7 +858,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
 
     @classmethod
-    def unpack(cls, file_name):
+    def unpack(cls, file_name, overriding_class_input_dict = {}):
         """
         Class method that loads class data from an HDF5 file, creating a class instance with the loaded data.
 
@@ -840,43 +870,83 @@ class before the multiprocessing or make sure that it isn't part of the actual
         """
         with h5py.File(file_name, 'r') as h5f:
             # Create a new instance of the class
+            
             class_input_dict = {}
-
             # Load simple attributes
-            class_input_dict['log_likelihoodnormalisation'] = np.array(h5f['log_likelihoodnormalisation'])
-            class_input_dict['log_marginalisation_regularisation'] = float(h5f.attrs['log_marginalisation_regularisation'])
+            if 'log_likelihoodnormalisation' in h5f:
+                try:
+                    class_input_dict['log_likelihoodnormalisation'] = np.array(h5f['log_likelihoodnormalisation'])
+                except Exception as err:
+                    warnings.warn(f"Could not load log_likelihoodnormalisation: {err}")
+
+            if 'log_marginalisation_regularisation' in h5f:
+                try:
+                    class_input_dict['log_marginalisation_regularisation'] = float(h5f.attrs['log_marginalisation_regularisation'])
+                except Exception as err:
+                    warnings.warn(f"Could not load log_marginalisation_regularisation: {err}")
 
             # Load numpy arrays
             if 'axes' in h5f:
-                class_input_dict['axes'] = [np.array(h5f['axes'][str(i)][:]) for i in range(len(h5f['axes']))]
+                try:
+                    class_input_dict['axes'] = [np.array(h5f['axes'][str(i)][:]) for i in range(len(h5f['axes']))]
+                except Exception as err:
+                    warnings.warn(f"Could not load axes: {err}")
 
             if 'nuisance_axes' in h5f:
-                class_input_dict['nuisance_axes'] = [np.array(h5f['nuisance_axes'][str(i)][:]) for i in range(len(h5f['nuisance_axes']))]
+                try:
+                    class_input_dict['nuisance_axes'] = [np.array(h5f['nuisance_axes'][str(i)][:]) for i in range(len(h5f['nuisance_axes']))]
+                except Exception as err:
+                    warnings.warn(f"Could not load nuisance_axes: {err}")
 
             if 'log_nuisance_marg_results' in h5f:
-                class_input_dict['log_nuisance_marg_results'] = np.array(h5f['log_nuisance_marg_results'])
+                try:
+                    log_nuisance_marg_results = []
+                    log_nuisance_marg_results_group = h5f['log_nuisance_marg_results']
+                    # Iterate over the datasets in the group
+                    for result_idx in range(len(log_nuisance_marg_results_group)):
+                        # Read each dataset and append to the list
+                        data = np.asarray(log_nuisance_marg_results_group[str(result_idx)][()])
+                        log_nuisance_marg_results.append(data)
+
+                    class_input_dict['log_nuisance_marg_results'] = list(log_nuisance_marg_results)
+
+                except Exception as err:
+                    warnings.warn(f"Could not load log_nuisance_marg_results: {err}")
+
 
             if 'log_hyperparameter_likelihood' in h5f:
-                class_input_dict['log_hyperparameter_likelihood'] = np.array(h5f['log_hyperparameter_likelihood'])
+                try:
+                    class_input_dict['log_hyperparameter_likelihood'] = np.array(h5f['log_hyperparameter_likelihood'])
+                except Exception as err:
+                    warnings.warn(f"Could not load log_hyperparameter_likelihood: {err}")
 
             if 'log_posterior' in h5f:
-                class_input_dict['log_posterior'] = np.array(h5f['log_posterior'])
+                try:
+                    class_input_dict['log_posterior'] = np.array(h5f['log_posterior'])
+                except Exception as err:
+                    warnings.warn(f"Could not load log_posterior: {err}")
+
 
             # Load ParameterSet objects
             # Assuming you have a method in ParameterSet to load from a group
             if 'prior_param_set' in h5f:
-                class_input_dict['prior_parameter_specifications'] = []
-                for prior_name in h5f['prior_param_set']:
-                    prior_parameter_set = ParameterSet.load(h5f=h5f['prior_param_set'][prior_name])
-                    class_input_dict['prior_parameter_specifications'].append(prior_parameter_set)
+                try:
+                    class_input_dict['prior_parameter_specifications'] = []
+                    for prior_name in h5f['prior_param_set']:
+                        prior_parameter_set = ParameterSet.load(h5f=h5f['prior_param_set'][prior_name])
+                        class_input_dict['prior_parameter_specifications'].append(prior_parameter_set)
+                except Exception as err:
+                    warnings.warn(f"Could not load prior_param_set: {err}")
 
             if 'mixture_parameter_specifications' in h5f:
-                mixture_parameter_specifications_group = h5f['mixture_parameter_specifications']
-                class_input_dict['mixture_parameter_specifications'] = ParameterSet.load(h5f=mixture_parameter_specifications_group)
-
+                try:
+                    mixture_parameter_specifications_group = h5f['mixture_parameter_specifications']
+                    class_input_dict['mixture_parameter_specifications'] = ParameterSet.load(h5f=mixture_parameter_specifications_group)
+                except Exception as err:
+                    warnings.warn(f"Could not load mixture_parameter_specifications: {err}")
         
-
-            return class_input_dict
+            update_with_defaults(overriding_class_input_dict, class_input_dict)
+            return overriding_class_input_dict
         
     @classmethod
     def load(cls, file_name:str, *args, **kwargs):

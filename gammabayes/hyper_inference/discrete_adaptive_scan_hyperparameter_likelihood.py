@@ -229,8 +229,8 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
     
     @classmethod
-    def load(cls, file_name, *args, **kwargs):
-        class_input_dict = cls.unpack(file_name)
+    def load(cls, file_name, overriding_class_input_dict = {}, *args, **kwargs):
+        class_input_dict = cls.unpack(file_name, overriding_class_input_dict=overriding_class_input_dict)
 
         logging.info("Unpacking of stem class parameters successful")
         

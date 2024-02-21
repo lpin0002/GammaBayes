@@ -10,7 +10,7 @@ jobname:                          '1'
 numjobs:                          1
 Nevents_per_job:                  100
 Nevents:                          100
-common_norm_matrices:             True
+common_norm_matrices:             False
 
 dark_matter_spectral_model:       Z2_ScalarSinglet
 dark_matter_density_profile:      Einasto_Profile

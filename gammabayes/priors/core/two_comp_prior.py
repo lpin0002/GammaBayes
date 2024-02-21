@@ -220,12 +220,9 @@ class TwoCompPrior(DiscreteLogPrior):
 
         logspectralvals     = self.spectral_comp.mesh_efficient_logfunc(energy, kwd_parameters=spectral_parameters)
 
-        print('logspace shape:', logspectralvals.shape)
-
         ####################
 
         logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
-        print('logspatialvals shape:', logspatialvals.shape)
 
         ####################
 

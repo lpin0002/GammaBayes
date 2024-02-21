@@ -166,19 +166,25 @@ class ScanMarg_ConfigAnalysis(object):
 
 
         else:
-            log_irf_norm_matrix_path = self.config_dict['irf_norm_matrix_path']
+            if 'irf_norm_matrix_path' in self.config_dict:
+                log_irf_norm_matrix_path = self.config_dict['irf_norm_matrix_path']
 
-            try:
                 self.irf_norm_matrix = np.load(log_irf_norm_matrix_path)
 
-            except Exception as excpt:
-                print(f"An error occured when trying to load log irf normalisation matrices: {excpt}")
-                print("Generating them based on configuration file.")
-                self.log_psf_normalisations, self.log_edisp_normalisations = self.irf_loglike.create_log_norm_matrices()
-                self.irf_norm_matrix = self.log_psf_normalisations + self.log_edisp_normalisations
+
+            elif 'log_psf_norm_matrix_path' in self.config_dict:
+                self.log_psf_norms = np.load(self.config_dict["log_psf_norm_matrix_path"])
+                self.log_edisp_norms = np.load(self.config_dict["log_edisp_norm_matrix_path"])
+                self.irf_norm_matrix = self.log_psf_norms + self.log_edisp_norms
+            else:
+                raise Exception("Neither 'irf_norm_matrix_path' or 'log_psf_norm_matrix_path' are within the configuration dictionary but shared matrices is switched on.")
+
 
         if 'save_irf_matrix' in self.config_dict:
-            np.save(self.save_path+'irf_norm_matrx.npy', self.irf_norm_matrix)
+            if 'irf_norm_matrix_path' in self.config_dict:
+                np.save('irf_norm_matrix_path', self.irf_norm_matrix)
+            else:
+                np.save(self.save_path+'irf_norm_matrix.npy', self.irf_norm_matrix)
 
         self.prior_parameter_sets = [ParameterSet(prior_param_specifications) for prior_param_specifications in config_dict['prior_parameter_specifications'].items()]
         self.mixture_parameter_set = ParameterSet(config_dict['mixture_fraction_specifications'])
@@ -414,6 +420,8 @@ class ScanMarg_ConfigAnalysis(object):
         else:
             self.log_nuisance_marg_results = self.discrete_hyper_like_instance.nuisance_log_marginalisation(
                 measured_event_data=self.recon_event_data)
+            
+        self.discrete_hyper_like_instance.log_nuisance_marg_results = self.log_nuisance_marg_results
         
         return self.log_nuisance_marg_results
     
@@ -467,13 +475,13 @@ class ScanMarg_ConfigAnalysis(object):
 
         _t3 = time.perf_counter()
 
-        self.mixture_fraction_exploration()
+        # self.mixture_fraction_exploration()
 
-        _t4 = time.perf_counter()
+        # _t4 = time.perf_counter()
 
         print(f"Time to simulate events: {_t2-_t1:.3f} seconds")
         print(f"Time to marginalise over nuisance parameters: {_t3-_t2:.3f} seconds")
-        print(f"Time to generate hyper param log-likelihood: {_t4-_t3:.3f} seconds")
+        # print(f"Time to generate hyper param log-likelihood: {_t4-_t3:.3f} seconds")
 
 
 

@@ -40,7 +40,6 @@ class CombineDMComps(TwoCompPrior):
         
     
         if self.mesh_efficient_exists:
-            print('boop')
             integrand = self.log_mesh_efficient_func(*true_axes, 
                                                      spectral_parameters=spectral_parameters,
                                                      spatial_parameters=spatial_parameters)

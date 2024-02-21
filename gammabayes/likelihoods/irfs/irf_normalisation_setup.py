@@ -52,7 +52,8 @@ def irf_norm_setup(energy_true_axis, energy_recon_axis,
     """
 
     
-    print(f"Save directory is {save_directory}")
+    if save_results:
+        print(f"Save directory is {save_directory}")
 
 
     psfnorm = []

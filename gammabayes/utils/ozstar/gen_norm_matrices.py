@@ -4,7 +4,7 @@ from gammabayes.utils.config_utils import (
     create_true_axes_from_config, 
     create_recon_axes_from_config
 )
-from gammabayes.likelihoods.irfs import irf_loglikelihood
+from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
 from gammabayes.utils.ozstar.ozstar_job_script_gen import gen_scripts
 import sys, os, time
@@ -14,13 +14,15 @@ import numpy as np
         
 config_file_path = sys.argv[1]
 config_inputs = read_config_file(config_file_path)
+os.makedirs('data', exist_ok=True)
+os.makedirs(f'data/{config_inputs["stem_identifier"]}')
     
 
 energy_true_axis,  longitudeaxistrue, latitudeaxistrue       = create_true_axes_from_config(config_inputs)
 energy_recon_axis, longitudeaxis,     latitudeaxis           = create_recon_axes_from_config(config_inputs)
 
 
-irf_loglike = irf_loglikelihood(axes   =   [energy_recon_axis,    longitudeaxis,     latitudeaxis], 
+irf_loglike = IRF_LogLikelihood(axes   =   [energy_recon_axis,    longitudeaxis,     latitudeaxis], 
                                 dependent_axes =   [energy_true_axis,     longitudeaxistrue, latitudeaxistrue])
 
 log_psf_normalisations, log_edisp_normalisations = irf_loglike.create_log_norm_matrices()
@@ -31,6 +33,8 @@ stemdirname = f"data/{config_inputs['stem_identifier']}"
 
 log_psf_norm_matrix_path = f"{stemdirname}/log_psf_normalisations.npy"
 log_edisp_norm_matrix_path = f"{stemdirname}/log_edisp_normalisations.npy"
+
+
 
 np.save(log_psf_norm_matrix_path, log_psf_normalisations)
 np.save(log_edisp_norm_matrix_path, log_edisp_normalisations)
