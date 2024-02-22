@@ -17,7 +17,7 @@ import copy
 config_file_path = sys.argv[1]
 config_inputs = read_config_file(config_file_path)
 os.makedirs('data', exist_ok=True)
-os.makedirs(f'data/{config_inputs["stem_identifier"]}')
+os.makedirs(f'data/{config_inputs["stem_identifier"]}', exist_ok=True)
     
 
 energy_true_axis,  longitudeaxistrue, latitudeaxistrue       = create_true_axes_from_config(config_inputs)

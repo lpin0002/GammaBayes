@@ -40,7 +40,7 @@ if common_norm_matrices:
     matgen_config_file_path = f"data/{config_inputs['stem_identifier']}/irfmat_gen_config.yaml"
     save_config_file(config_inputs, matgen_config_file_path)
 
-    config_inputs['jobname'] = f'MatrixGen_{config_inputs['jobname']}'
+    config_inputs['jobname'] = f'MatrixGen_{config_inputs['stem_identifier']}'
     config_inputs['numcores'] = 1
     config_inputs['mem_per_cpu'] = config_inputs['mem_for_matrix_gen']
     config_inputs['time_hrs'] = config_inputs['time_for_matrix_gen_hrs']
