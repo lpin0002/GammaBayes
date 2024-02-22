@@ -26,6 +26,7 @@ from multiprocessing import Pool
 from dynesty.pool import Pool as DyPool
 from dynesty import NestedSampler
 from scipy.interpolate import RegularGridInterpolator
+from scipy.special import logsumexp
 
 import functools
 
@@ -198,10 +199,12 @@ class ScanMarg_ConfigAnalysis(object):
         construct_hess_source_map_log_vals = np.log(construct_hess_source_map(*nuisance_axes, log_aeff=self.irf_loglike.log_aeff))
 
 
-        bkg_log_vals = log_bkg_CCR_dist_log_vals+construct_fermi_gaggero_matrix_log_vals+construct_hess_source_map_log_vals
+        log_bkg_dist_vals = logsumexp([log_bkg_CCR_dist_log_vals, 
+                                       construct_fermi_gaggero_matrix_log_vals, 
+                                       construct_hess_source_map_log_vals], axis=0)
 
         bkg_interpolator_tuple_inputs = RegularGridInterpolator(
-            values=bkg_log_vals, 
+            values=log_bkg_dist_vals, 
             points=nuisance_axes)
 
 
@@ -468,7 +471,6 @@ class ScanMarg_ConfigAnalysis(object):
     def plot_results(self, save_fig_file_name=None, *args, **kwargs):
         from corner import corner
         from gammabayes.utils.plotting import defaults_kwargs
-        from scipy.special import logsumexp
         defaults_kwargs['smooth'] = 2
 
 

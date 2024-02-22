@@ -44,20 +44,20 @@ true_energy_min:                  0.2
 true_energy_max:                  90.
 true_energy_bins_per_decade:      100
 true_spatial_res:                 0.2
-true_longitude_min:               -2.31
-true_longitude_max:               2.31
-true_latitude_min:                -2.
-true_latitude_max:                2.0
+true_longitude_min:               -3.31
+true_longitude_max:               3.31
+true_latitude_min:                -3.
+true_latitude_max:                3.0
 
 # Parameters for the reconstructed value axes for gamma ray events
 recon_energy_min:                 0.2
 recon_energy_max:                 90.
 recon_energy_bins_per_decade:     50
 recon_spatial_res:                0.2
-recon_longitude_min:              -2.31
-recon_longitude_max:              2.31
-recon_latitude_min:               -2.
-recon_latitude_max:               2.0
+recon_longitude_min:              -3.31
+recon_longitude_max:              3.31
+recon_latitude_min:               -3.
+recon_latitude_max:               3.0
 
 
 ##################################################################
