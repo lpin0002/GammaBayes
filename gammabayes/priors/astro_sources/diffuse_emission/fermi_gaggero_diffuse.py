@@ -56,7 +56,7 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
     )
 
     # Need to flip as convention goes positive to negative 
-    fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.m**2))
+    fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.cm**2))
 
     # Normalising so I can apply the normalisation of that in Gaggero et al.
     fermi_integral_values= logspace_integrator(logy=np.log(fermievaluated.value), x=energy_axis, axis=0)

@@ -142,6 +142,7 @@ gammabayes/standard_inference/__init__.py
 gammabayes/standard_inference/combine_3comp_standard_inf.py
 gammabayes/standard_inference/old_standard_3comp_bkg.py
 gammabayes/standard_inference/run_standard_inf.py
+gammabayes/standard_inference/standard_1comp_bkg.py
 gammabayes/standard_inference/standard_3comp_bkg.py
 gammabayes/utils/__init__.py
 gammabayes/utils/config_utils.py

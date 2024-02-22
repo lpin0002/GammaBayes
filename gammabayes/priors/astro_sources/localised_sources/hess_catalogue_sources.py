@@ -1,7 +1,7 @@
 # Necessary imports for the script functionality
 from gammabayes.utils import resources_dir, iterate_logspace_integration, haversine
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
-import numpy as np
+import numpy as np, logging
 from scipy import interpolate
 from scipy.special import logsumexp
 from astropy.coordinates import SkyCoord
@@ -73,9 +73,11 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
             
         # If the location of the source satisfies the criteria above then we start to store it's flux values
         if np.abs(temp_l_value)<np.max(longitudeaxis) and np.abs(temp_b_value)<np.max(latitudeaxis):
-        
+            
             # We extract the flux by assigning it to the HESSmap object
             HESSmap.quantity = model.evaluate_geom(HESSmap.geom)
+            # For future debuggers, HESSmap.quantity should have units of 1/TeV s sr cm^2
+
             
             # We can then extract the actual values by referencing the data of this object
             startdata = HESSmap.data
@@ -95,6 +97,7 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
                 
             count+=1
             
+    logging.info(f"The unit for the HESS map is {HESSmap.quantity.unit}")
     # Transposing the longitude and latitude values such that the order of indices goes [logenergy_index, longitude_index, latitude_index]
     full_hess_flux = np.transpose(full_hess_flux, axes=(0,2,1))
     full_hess_flux = np.flip(full_hess_flux, axis=1)

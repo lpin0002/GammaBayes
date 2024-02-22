@@ -97,7 +97,7 @@ if __name__=="__main__":
     
     sampler_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results
     # Backup
-    ResultsWrapper.save(file_name=f"data/{config_dict['stem_identifier']}/backup_samples.h5",sampler_results=sampler_results)
+    ResultsWrapper.save(file_name=f"data/{config_dict['stem_identifier']}/backup_posterior_samples.h5",sampler_results=sampler_results)
 
 
 
@@ -130,11 +130,11 @@ if __name__=="__main__":
 
     fig = plt.figure()
     figure=corner(sampling_results, fig=fig,
-        labels=['sig/total', 'ccr/bkg', 'diffuse/astro bkg', r'$m_{\chi}$ [TeV]'],
+        # labels=['sig/total', 'ccr/bkg', 'diffuse/astro bkg', r'$m_{\chi}$ [TeV]'],
         quantiles=[0.025, .16, 0.5, .84, 0.975],
-        bins=[41, 41, 41,*[axis.size*3 for axis in prior_parameter_sets[0].axes]],
+        bins=[*[41]*config_dict['num_bkg_comp'],*[axis.size*2 for axis in prior_parameter_sets[0].axes]],
         #    range=([0.,0.2], [0.5,1.0], [0.,0.6], *[[axis.min(), axis.max()] for axis in prior_parameters.axes]),
-        axes_scale=['linear', 'linear', 'linear', 'log',],
+        axes_scale=[*['linear']*config_dict['num_bkg_comp'], 'log',],
         
         **defaults_kwargs)
 

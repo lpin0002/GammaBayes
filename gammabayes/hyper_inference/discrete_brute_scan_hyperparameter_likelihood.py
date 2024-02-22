@@ -449,7 +449,6 @@ class before the multiprocessing or make sure that it isn't part of the actual
         # log marginalisation results. Trying to keep them away from ~-600 or ~+600
         # generally precision goes down to ~1e-300 (base 10)
         diffs = log_marg_maxs-log_marg_mins
-        print(diffs)
 
         self.log_marginalisation_regularisation = np.abs(0.3*np.mean(diffs))
 

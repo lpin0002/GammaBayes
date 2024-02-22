@@ -1,6 +1,5 @@
 import sys, os, warnings, numpy as np
 
-from gammabayes.standard_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
 from gammabayes.utils.config_utils import read_config_file, save_config_file
 
 if __name__=="__main__":
@@ -16,12 +15,22 @@ if __name__=="__main__":
     except:
         pass
 
+    # A bit nasty but it works
+    if 'num_bkg_comp' in config_dict:
+        if config_dict['num_bkg_comp']==1:
+            from gammabayes.standard_inference.standard_1comp_bkg import ScanMarg_ConfigAnalysis
+        if config_dict['num_bkg_comp']==3:
+            from gammabayes.standard_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
+    else:
+        from gammabayes.standard_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
+
+
     print(f"initial config_file_path: {config_file_path}")
-    standard_3COMP_BKG_instance = ScanMarg_ConfigAnalysis(config_dict=config_dict,)
-    standard_3COMP_BKG_instance.run()
+    standard_inference_instance = ScanMarg_ConfigAnalysis(config_dict=config_dict,)
+    standard_inference_instance.run()
     print("\n\nRun Done. Now saving")
 
-    standard_3COMP_BKG_instance.discrete_hyper_like_instance.save(config_dict['save_path']+'results.h5')
+    standard_inference_instance.discrete_hyper_like_instance.save(config_dict['save_path']+'results.h5')
     print("\n\nResults saved.")
 
 
