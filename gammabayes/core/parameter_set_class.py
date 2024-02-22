@@ -428,11 +428,19 @@ default value. Place nan in position of default""")
         for param_name, parameter_specs in self.dict_of_parameters_by_name.items():
             param_group = h5f.create_group(param_name)
             for spec_attr, spec_attr_val in parameter_specs.items():
-                if spec_attr != 'transform':
+                if (spec_attr != 'transform'):
                     if isinstance(spec_attr_val, (np.ndarray, list)):
                         param_group.create_dataset(spec_attr, data=spec_attr_val)
-                    else:
+                    elif isinstance(spec_attr_val, (str, tuple, set, int, float)):
                         param_group.attrs[spec_attr] = spec_attr_val
+                    elif spec_attr=='prob_model':
+                        try:
+                            param_group.attrs['prob_model_name'] = spec_attr_val.__name__
+                        except:
+                            param_group.attrs['prob_model_type'] = str(type(spec_attr_val))
+                        
+                    else:
+                        warnings.warn(f"Could not save {spec_attr} for the parameter {param_name}")
 
         return h5f
     

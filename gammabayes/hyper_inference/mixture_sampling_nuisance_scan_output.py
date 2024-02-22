@@ -313,7 +313,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
 
     @classmethod
-    def load(cls, file_name=None):
+    def load(cls, h5f=None, file_name=None, log_nuisance_marg_results=[]):
         """
         Loads the class data from an HDF5 file.
 
@@ -323,84 +323,79 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         Returns:
             An instance of the class reconstructed from the file.
         """
-        with h5py.File(file_name, 'r') as h5f:
-            # Load mixture_parameter_specifications
-            if "mixture_parameter_specifications" in h5f:
-                mixture_param_group = h5f["mixture_parameter_specifications"]
-                # Assuming ParameterSet class has a corresponding load or similar method
-                mixture_parameter_specifications = ParameterSet.load(mixture_param_group)
-            else:
-                mixture_parameter_specifications = None
+        if isinstance(h5f, str):
+            file_name = h5f
+            h5f=None
+        
+        if (h5f is None):
+            if file_name is None:
+                raise ValueError("Either an h5py object or a file name must be provided.")
+            # Open the file to get the h5py object
+            h5f = h5py.File(file_name, 'r')            
+
+        # Load mixture_parameter_specifications
+        if "mixture_parameter_specifications" in h5f:
+            mixture_param_group = h5f["mixture_parameter_specifications"]
+            # Assuming ParameterSet class has a corresponding load or similar method
+            mixture_parameter_specifications = ParameterSet.load(mixture_param_group)
+        else:
+            mixture_parameter_specifications = None
+        
+        # Load prior_parameter_specifications
+        prior_parameter_specifications = []
+        if "prior_parameter_specifications" in h5f:
+            prior_parameters_group = h5f["prior_parameter_specifications"]
+            for prior_idx in sorted(prior_parameters_group, key=int):
+                prior_group = prior_parameters_group[str(prior_idx)]
+                # Assuming ParameterSet.load is capable of handling the loading process
+                prior_parameters = ParameterSet.load(prior_group)
+                prior_parameter_specifications.append(prior_parameters)
             
-            # Load prior_parameter_specifications
-            prior_parameter_specifications = []
-            if "prior_parameter_specifications" in h5f:
-                prior_parameters_group = h5f["prior_parameter_specifications"]
-                for prior_idx in sorted(prior_parameters_group, key=int):
-                    prior_group = prior_parameters_group[str(prior_idx)]
-                    # Assuming ParameterSet.load is capable of handling the loading process
-                    prior_parameters = ParameterSet.load(prior_group)
-                    prior_parameter_specifications.append(prior_parameters)
+
+        _sampler_results = {}
+        if 'sampler_results' in h5f:
+            sampler_group = h5f['sampler_results']  # Access the group where the sampler data is stored
             
-            # Load log_nuisance_marg_results
-            log_nuisance_marg_results = []
-            log_nuisance_marg_results_group = h5f["log_nuisance_marg_results"]
-                
-            # Load each dataset within the "log_marg_results" group
-            # Assuming the datasets are named as "0", "1", "2", ...
-            # and need to be loaded in the order they were saved
-            result_indices = sorted(log_nuisance_marg_results_group.keys(), key=int)
-            for result_idx in result_indices:
-                result = np.asarray(log_nuisance_marg_results_group[result_idx])
-                log_nuisance_marg_results.append(result)
-
-            log_nuisance_marg_results = np.asarray(log_nuisance_marg_results, dtype=object)
-
-
-            _sampler_results = {}
-            if 'sampler_results' in h5f:
-                sampler_group = h5f['sampler_results']  # Access the group where the sampler data is stored
-                
-                # Load samples
-                if 'samples' in sampler_group:
-                    _sampler_results['samples'] = np.array(sampler_group['samples'])
-                
-                # Load log weights
-                if 'logwt' in sampler_group:
-                    _sampler_results['logwt'] = np.array(sampler_group['logwt'])
-                
-                # Load log likelihoods
-                if 'logl' in sampler_group:
-                    _sampler_results['logl'] = np.array(sampler_group['logl'])
-                
-                # Load evidence information, if available
-                if 'logz' in sampler_group:
-                    _sampler_results['logz'] = np.array(sampler_group['logz'])
-                if 'logzerr' in sampler_group:
-                    _sampler_results['logzerr'] = np.array(sampler_group['logzerr'])
-
-                if 'information' in sampler_group:
-                    _sampler_results['information'] = np.array(sampler_group['information'])
-
-                if 'nlive' in sampler_group:
-                    _sampler_results['nlive'] = int(sampler_group['nlive'])
-
-                if 'niter' in sampler_group:
-                    _sampler_results['niter'] = int(sampler_group['niter'])
-
-                if 'eff' in sampler_group:
-                    _sampler_results['eff'] = float(sampler_group['eff'])
-
-            _sampler_results = ResultsWrapper(_sampler_results)
+            # Load samples
+            if 'samples' in sampler_group:
+                _sampler_results['samples'] = np.array(sampler_group['samples'])
             
+            # Load log weights
+            if 'logwt' in sampler_group:
+                _sampler_results['logwt'] = np.array(sampler_group['logwt'])
             
-            # Reconstruct the class instance
-            instance = cls(
-                log_nuisance_marg_results=log_nuisance_marg_results,
-                mixture_parameter_specifications=mixture_parameter_specifications,
-                prior_parameter_specifications=prior_parameter_specifications,  # Assuming your __init__ can handle this
-                _sampler_results=_sampler_results,
-            )
+            # Load log likelihoods
+            if 'logl' in sampler_group:
+                _sampler_results['logl'] = np.array(sampler_group['logl'])
+            
+            # Load evidence information, if available
+            if 'logz' in sampler_group:
+                _sampler_results['logz'] = np.array(sampler_group['logz'])
+            if 'logzerr' in sampler_group:
+                _sampler_results['logzerr'] = np.array(sampler_group['logzerr'])
+
+            if 'information' in sampler_group:
+                _sampler_results['information'] = np.array(sampler_group['information'])
+
+            if 'nlive' in sampler_group:
+                _sampler_results['nlive'] = int(sampler_group['nlive'])
+
+            if 'niter' in sampler_group:
+                _sampler_results['niter'] = int(sampler_group['niter'])
+
+            if 'eff' in sampler_group:
+                _sampler_results['eff'] = float(sampler_group['eff'])
+
+        _sampler_results = ResultsWrapper(_sampler_results)
+        
+        
+        # Reconstruct the class instance
+        instance = cls(
+            log_nuisance_marg_results=log_nuisance_marg_results,
+            mixture_parameter_specifications=mixture_parameter_specifications,
+            prior_parameter_specifications=prior_parameter_specifications,  # Assuming your __init__ can handle this
+            _sampler_results=_sampler_results,
+        )
             
         return instance
 

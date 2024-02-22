@@ -48,9 +48,6 @@ if __name__=="__main__":
     full_hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = initial_save_file_name)
 
 
-    print('\n\n\n', full_hyper_class_instance.log_nuisance_marg_results, '\n\n\n')
-
-
     for subdirectory in tqdm(subdirectories[1:], desc='Accessing directories and adding data'):
         hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/results.h5", 
                                                                     overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
@@ -68,11 +65,34 @@ if __name__=="__main__":
                 prior_parameter_specifications      = prior_parameter_sets,
                 mixture_fraction_exploration_type   = scan_type
             )
-    full_hyper_class_instance.init_posterior_exploration()
-    full_hyper_class_instance.run_posterior_exploration()
+        
+    if 'combine_num_cores' in config_dict:
+        combine_num_cores = config_dict['combine_num_cores']
+    else:
+        combine_num_cores = 1
 
 
-    full_hyper_class_instance.save(f"data/{config_dict['stem_identifier']}/full_results.h5")
+    if scan_type_sample and combine_num_cores>1:
+
+        with DyPool(njobs=combine_num_cores, loglike=full_hyper_class_instance.hyper_analysis_instance.ln_likelihood,
+                    prior_transform=full_hyper_class_instance.hyper_analysis_instance.prior_transform) as pool:
+            sampler = NestedSampler(pool.loglike, 
+                                    pool.prior_transform, 
+                                    pool=pool,
+                                    ndim=full_hyper_class_instance.hyper_analysis_instance.ndim)
+            
+            sampler.run_nested()
+            
+
+            
+            
+        full_hyper_class_instance.hyper_analysis_instance.sampler = sampler
+    else:
+        full_hyper_class_instance.init_posterior_exploration()
+        full_hyper_class_instance.run_posterior_exploration()
+
+    full_hyper_class_instance.mixture_parameter_specifications = mixture_parameter_set
+    full_hyper_class_instance.save_to_pickle(f"data/{config_dict['stem_identifier']}/full_results.pkl")
 
 
 
@@ -84,13 +104,28 @@ if __name__=="__main__":
 
 
     num_params = 4
-    sampling_results = full_hyper_class_instance.posterior_exploration_results
-    weights = np.exp(sampling_results.logwt - logsumexp(sampling_results.logwt))  # Calculate normalized weights
+    sampling_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results.samples
 
-    fig = plt.figure(figsize=(12,12))
-    figure=corner(sampling_results.samples_equal(), fig=fig,
+    if ('plot_results_kwargs' in config_dict):
+        plot_kwargs = config_dict['plot_results_kwargs']
+        if 'save_fig_file_name' in plot_kwargs:
+            save_fig_file_name = plot_kwargs['save_fig_file_name']
+
+            save_fig_file_name = plot_kwargs.pop('save_fig_file_name')
+        else:
+            save_fig_file_name = 'full_result_corner.pdf'
+
+        if 'figsize' in plot_kwargs:
+            plot_kwargs['figsize'] = (int(val) for val in plot_kwargs['figsize'])
+
+    else:
+        save_fig_file_name = 'full_result_corner.pdf'
+        plot_kwargs = {}
+
+
+    fig = plt.figure()
+    figure=corner(sampling_results, fig=fig,
         labels=['sig/total', 'ccr/bkg', 'diffuse/astro bkg', r'$m_{\chi}$ [TeV]'],
-        truths=[0.01,0.8, 0.3, 1.0],
         quantiles=[0.025, .16, 0.5, .84, 0.975],
         bins=[41, 41, 41,*[axis.size*3 for axis in prior_parameter_sets[0].axes]],
         #    range=([0.,0.2], [0.5,1.0], [0.,0.6], *[[axis.min(), axis.max()] for axis in prior_parameters.axes]),
@@ -111,4 +146,8 @@ if __name__=="__main__":
     plt.suptitle(str(float(config_dict['numjobs'])*float(config_dict['Nevents_per_job'])) + " events", size=24)
 
 
+
+    plt.tight_layout()
+
+    plt.savefig(f"data/{config_dict['stem_identifier']}/{save_fig_file_name}")
     plt.show()
