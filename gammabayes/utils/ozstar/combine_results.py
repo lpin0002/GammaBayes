@@ -52,7 +52,7 @@ if __name__=="__main__":
     for subdirectory in tqdm(subdirectories[1:], desc='Accessing directories and adding data'):
         hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/results.h5", 
                                                                     overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
-        full_hyper_class_instance.add_log_nuisance_marg_results(full_hyper_class_instance.log_nuisance_marg_results)
+        full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
 
 
 
