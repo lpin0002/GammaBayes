@@ -73,9 +73,10 @@ if __name__=="__main__":
         combine_num_cores = 1
 
 
+    print(f"Number of cores being used: {combine_num_cores}")
     if scan_type_sample and combine_num_cores>1:
 
-        with DyPool(njobs=combine_num_cores, loglike=full_hyper_class_instance.hyper_analysis_instance.ln_likelihood,
+        with DyPool(combine_num_cores, loglike=full_hyper_class_instance.hyper_analysis_instance.ln_likelihood,
                     prior_transform=full_hyper_class_instance.hyper_analysis_instance.prior_transform) as pool:
             sampler = NestedSampler(pool.loglike, 
                                     pool.prior_transform, 
