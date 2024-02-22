@@ -1,6 +1,7 @@
-import sys, os, numpy as np
+import sys, os, numpy as np, h5py
 from gammabayes.utils.config_utils import read_config_file, create_true_axes_from_config, create_recon_axes_from_config
 from gammabayes.utils.import_utilities import dynamic_import
+from gammabayes.samplers.sampler_utils import ResultsWrapper
 from gammabayes import ParameterSet
 from scipy import special
 
@@ -93,6 +94,10 @@ if __name__=="__main__":
 
     full_hyper_class_instance.mixture_parameter_specifications = mixture_parameter_set
     full_hyper_class_instance.save_to_pickle(f"data/{config_dict['stem_identifier']}/full_results.pkl")
+    
+    sampler_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results
+    # Backup
+    ResultsWrapper.save(file_name=f"data/{config_dict['stem_identifier']}/backup_samples.h5",sampler_results=sampler_results)
 
 
 
@@ -104,7 +109,7 @@ if __name__=="__main__":
 
 
     num_params = 4
-    sampling_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results.samples
+    sampling_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results.samples_equal()
 
     if ('plot_results_kwargs' in config_dict):
         plot_kwargs = config_dict['plot_results_kwargs']

@@ -1044,13 +1044,24 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         if reduce_memory_consumption:
             warnings.warn("Reduce memory consumption enabled. Not saving log_nuisance_marg_results.")
-            log_nuisance_marg_results = self.log_nuisance_marg_results
-
+            # Backup and remove the attribute
+            original_log_nuisance_marg_results = self.log_nuisance_marg_results
+            original_log_likelihoodnormalisation = self.log_likelihoodnormalisation
+            original_log_prior_matrix_list = self.log_prior_matrix_list
             self.log_nuisance_marg_results = None
+            self.log_likelihoodnormalisation = None
+            self.log_prior_matrix_list = None
 
-        pickle.dump(self, open(file_name,'wb'))
-
-        self.log_nuisance_marg_results = log_nuisance_marg_results
+        try:
+            # Use 'with' statement for safe file handling
+            with open(file_name, 'wb') as file:
+                pickle.dump(self, file)
+        finally:
+            # Restore the original attribute value if it was removed
+            if reduce_memory_consumption:
+                self.log_nuisance_marg_results = original_log_nuisance_marg_results
+                self.log_likelihoodnormalisation = original_log_likelihoodnormalisation
+                self.log_prior_matrix_list = original_log_prior_matrix_list
 
     @classmethod
     def load_from_pickle(cls, file_name: str, read_mode='rb'):
