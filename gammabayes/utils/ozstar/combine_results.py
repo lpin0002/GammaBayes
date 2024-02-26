@@ -42,15 +42,19 @@ if __name__=="__main__":
     subdirectories = [os.path.join(rundata_filepath, item) for item in all_items if os.path.isdir(os.path.join(rundata_filepath, item))]
 
 
+    if 'result_save_filename' in config_dict:
+        result_save_filename = config_dict['result_save_filename']
+    else:
+        result_save_filename = 'results.h5'
 
     initial_subdirectory = subdirectories[0]
-    initial_save_file_name = f"{initial_subdirectory}/results.h5"
+    initial_save_file_name = f"{initial_subdirectory}/{result_save_filename}"
 
     full_hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = initial_save_file_name)
 
 
     for subdirectory in tqdm(subdirectories[1:], desc='Accessing directories and adding data'):
-        hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/results.h5", 
+        hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/{result_save_filename}", 
                                                                     overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
         full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
 
@@ -93,12 +97,23 @@ if __name__=="__main__":
         full_hyper_class_instance.init_posterior_exploration()
         full_hyper_class_instance.run_posterior_exploration()
 
+    if 'full_results_filename' in config_dict:
+        full_results_filename = config_dict['full_results_filename']
+    else:
+        full_results_filename = 'full_results.pkl'
+
     full_hyper_class_instance.mixture_parameter_specifications = mixture_parameter_set
-    full_hyper_class_instance.save_to_pickle(f"data/{config_dict['stem_identifier']}/full_results.pkl")
+    full_hyper_class_instance.save_to_pickle(f"data/{config_dict['stem_identifier']}/{full_results_filename}")
     
     sampler_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results
     # Backup
-    ResultsWrapper.save(file_name=f"data/{config_dict['stem_identifier']}/backup_posterior_samples.h5",sampler_results=sampler_results)
+
+    if 'posterior_samples_file_name' in config_dict:
+        posterior_samples_file_name = config_dict['posterior_samples_file_name']
+    else:
+        posterior_samples_file_name = 'backup_posterior_samples.h5'
+
+    ResultsWrapper.save(file_name=f"data/{config_dict['stem_identifier']}/{posterior_samples_file_name}",sampler_results=sampler_results)
 
 
 
@@ -110,7 +125,9 @@ if __name__=="__main__":
 
 
     num_params = 4
-    sampling_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results.samples_equal()
+    sampling_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results.samples
+    logz_val         = full_hyper_class_instance.hyper_analysis_instance.sampler.results.logz[-1]
+    # sampling_results_equal = full_hyper_class_instance.hyper_analysis_instance.sampler.results.samples_equal()
 
     if ('plot_results_kwargs' in config_dict):
         plot_kwargs = config_dict['plot_results_kwargs']
@@ -131,7 +148,7 @@ if __name__=="__main__":
 
     fig = plt.figure()
     figure=corner(sampling_results, fig=fig,
-        # labels=['sig/total', 'ccr/bkg', 'diffuse/astro bkg', r'$m_{\chi}$ [TeV]'],
+        # labels=['sig/total', 'ccr/bkg', 'diffuse/astro bkg', r'$m_{\chi}$ [TeV]']
         quantiles=[0.025, .16, 0.5, .84, 0.975],
         bins=[*[41]*config_dict['num_bkg_comp'],*[axis.size*2 for axis in prior_parameter_sets[0].axes]],
         #    range=([0.,0.2], [0.5,1.0], [0.,0.6], *[[axis.min(), axis.max()] for axis in prior_parameters.axes]),
@@ -149,7 +166,7 @@ if __name__=="__main__":
                         line.set_color('tab:green')  # Change the color of the median lines
                     elif line_idx<len(lines)-1:
                         line.set_color('tab:blue')
-    plt.suptitle(str(float(config_dict['numjobs'])*float(config_dict['Nevents_per_job'])) + " events", size=24)
+    plt.suptitle(str(float(config_dict['numjobs'])*float(config_dict['Nevents_per_job'])) + f" events, logz={logz_val:.2e}", size=16)
 
 
 

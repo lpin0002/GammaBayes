@@ -10,7 +10,7 @@ setup(name='GammaBayes',
       author='Liam Pinchbeck',
       author_email='Liam.Pinchbeck@monash.edu',
       license="MIT",
-      version='0.1.2',
+      version='0.1.3',
       packages=find_packages(),
 
       # For a lot of the DM spectral classes we require that dict types are ordered
@@ -44,6 +44,7 @@ setup(name='GammaBayes',
                         'dark_matter/channel_spectra/PPPC_Tables/*.dat',
                         'dark_matter/spectral_models/Z2_ScalarSinglet/annihilation_ratio_data/*.csv',
                         'dark_matter/spectral_models/Z2_ScalarSinglet/temp/*',
+                        'dark_matter/spectral_models/Z5/annihilation_ratio_data/*',
                         'standard_inference/*',
                         'utils/ozstar/*'
                         ]

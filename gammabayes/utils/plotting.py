@@ -30,7 +30,7 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                            cmap=cm.get_cmap('Blues_r'), contours2d = False,
                            levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
                            axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm=None,
-                           single_dim_yscales='linear', single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
+                           single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
                            single_dim_logspace_integrator=logspace_riemann, axes_scale=None,
                            **kwargs):
     numaxes = len(axes)
@@ -53,9 +53,11 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                 ax[rowidx,rowidx].plot(axes[rowidx], marginal_dist)
                 if not(truevals is None):
                     ax[rowidx, rowidx].axvline(truevals[rowidx], ls='--', lw=1, c='tab:orange')
-                ax[rowidx,rowidx].set_ylim([0,None])
+                    
+                if norm!='log':
+                    ax[rowidx,rowidx].set_ylim([0,None])
                 ax[rowidx, rowidx].set_xlim([axes[colidx].min(), axes[colidx].max()])
-                ax[rowidx,rowidx].set_yscale(single_dim_yscales)
+                ax[rowidx,rowidx].set_yscale(norm)
 
                 if axes_scale is not None:
                     ax[rowidx,rowidx].set_xscale(axes_scale[rowidx])

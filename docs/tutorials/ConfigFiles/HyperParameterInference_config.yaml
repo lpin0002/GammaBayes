@@ -43,7 +43,7 @@ dark_matter_mass:                 1.0
 true_energy_min:                  0.2
 true_energy_max:                  90.
 true_energy_bins_per_decade:      100
-true_spatial_res:                 0.2
+true_spatial_res:                 0.05
 true_longitude_min:               -3.31
 true_longitude_max:               3.31
 true_latitude_min:                -3.

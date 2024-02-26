@@ -34,7 +34,7 @@ import functools
 
 class ScanMarg_ConfigAnalysis(object):
 
-    def __init__(self, config_dict: dict = {}, config_file_path = None):
+    def __init__(self, config_dict: dict = {}, config_file_path = None, path_to_measured_event_data=None, recon_event_data=None):
         print(time.strftime("ScanMarg_ConfigAnalysis Class initiated: %H:%M:%S"))
 
         try:
@@ -76,9 +76,11 @@ class ScanMarg_ConfigAnalysis(object):
         try:
             self.seed       = int(self.config_dict['seed'])
         except Exception as excpt:
-            print(f"""An error occurred when trying to extract the seed: {excpt}\n
-            A seed will be generated based on the name of the job.""")
+
             self.seed = int(generate_unique_int_from_string(self.jobname))
+
+            print(f"""An error occurred when trying to extract the seed: {excpt}\n
+            A seed has been generated based on the name of the job with value: {self.seed}""")
         
         try:
             self.numjobs    = self.config_dict['numjobs']
@@ -118,16 +120,29 @@ class ScanMarg_ConfigAnalysis(object):
 
 
 
-        self.nsig = int(
-            round( self.config_dict['signal_fraction'] * self.config_dict['Nevents'])
-                  )
+        if 'path_to_measured_event_data' in config_dict:
+            self.path_to_measured_event_data = config_dict['path_to_measured_event_data']
+        else:
+            self.path_to_measured_event_data = path_to_measured_event_data
+
+
+        if self.path_to_measured_event_data is not None:
+
+            self.recon_event_data = EventData.load(self.path_to_measured_event_data)
+        elif recon_event_data is not None:
+            self.recon_event_data = recon_event_data
+
+        else:
+            self.recon_event_data = None
+            self.nsig = int(
+                round( self.config_dict['signal_fraction'] * self.config_dict['Nevents'])
+                    )
+            
+            self.nbkg = int(
+                round( (1-self.config_dict['signal_fraction']) * self.config_dict['Nevents'])
+                    )
+            
         
-        self.nbkg = int(
-            round( (1-self.config_dict['signal_fraction']) * self.config_dict['Nevents'])
-                  )
-
-
-
         self.energy_true_axis,  self.longitudeaxistrue, self.latitudeaxistrue = create_true_axes_from_config(self.config_dict)
         self.energy_recon_axis, self.longitudeaxis,     self.latitudeaxis     = create_recon_axes_from_config(self.config_dict)
 
@@ -230,7 +245,7 @@ class ScanMarg_ConfigAnalysis(object):
             'gammabayes.dark_matter.spectral_models',
               self.config_dict['dark_matter_spectral_model'])
         
-        self.DM_prior = TwoCompPrior(name='Z2 Scalar Singlet dark matter',
+        self.DM_prior = TwoCompPrior(name='Z5 Scalar dark matter',
                                 spectral_class = dark_matter_spectral_class, 
                                 spectral_class_kwds={'ratios':True},
                                 spatial_class = dark_matter_density_dist_class,
@@ -239,9 +254,10 @@ class ScanMarg_ConfigAnalysis(object):
                                     self.longitudeaxistrue, 
                                     self.latitudeaxistrue,), 
                                 axes_names=['energy', 'lon', 'lat'],
-                                default_spectral_parameters={
-                                    'mass':config_dict['dark_matter_mass'],
-                                    'lahS':0.1}, )        
+                                default_spectral_parameters=config_dict['signal_default_spectral_parameters'], 
+                                default_spatial_parameters=config_dict['signal_default_spatial_parameters'], 
+                                )
+                
 
         print("Initiating Scan Nuisance Marginalisation Hyperparameter Analysis class...")
 
@@ -310,45 +326,63 @@ class ScanMarg_ConfigAnalysis(object):
         plt.show(block=self.blockplot)
 
 
-    def simulate(self):
+    def simulate(self, nsig=None, nbkg=None, event_save_path=None):
         print("Simulating true values...")
 
-        self.true_sig_event_data  = self.DM_prior.sample(self.nsig)
+        if event_save_path is None:
+            if 'save_path_for_measured_event_data' in self.config_dict:
+                event_save_path = self.config_dict['save_path_for_measured_event_data']
+
+        if nsig is None:
+            nsig = self.nsig
+
+        if nbkg is None:
+            nbkg = self.nbkg
+
+        true_sig_event_data  = self.DM_prior.sample(nsig)
         
-        self.true_bkg_event_data  = self.bkg_prior.sample(self.nbkg)
+        true_bkg_event_data  = self.bkg_prior.sample(nbkg)
 
 
         if self.diagnostics:
 
-            self.true_sig_event_data.peek()
+            true_sig_event_data.peek()
             plt.show(block=self.blockplot)
 
-            self.true_bkg_event_data.peek()
+            true_bkg_event_data.peek()
             plt.show(block=self.blockplot)
 
 
-        self.true_event_data = self.true_sig_event_data \
-                                + self.true_bkg_event_data \
+        true_event_data = true_sig_event_data + true_bkg_event_data
 
         print("Simulating reconstructed values...")
         if ('num_simulation_batches' in self.config_dict) and ('numcores' in self.config_dict):
-            true_event_data_batches = self.true_event_data.create_batches(self.config_dict['num_simulation_batches'])
+            true_event_data_batches = true_event_data.create_batches(self.config_dict['num_simulation_batches'])
             list_of_event_data = []
             with Pool(self.config_dict['numcores']) as pool:
                 for result in pool.imap(self.irf_loglike.sample,true_event_data_batches ):
                     list_of_event_data.append(result)
 
-            self.recon_event_data = sum(list_of_event_data)
+            recon_event_data = sum(list_of_event_data)
 
         else:
-            self.recon_event_data = self.irf_loglike.sample(tqdm(self.true_event_data, total=self.true_event_data.Nevents))
+            recon_event_data = self.irf_loglike.sample(tqdm(true_event_data, total=true_event_data.Nevents))
 
         if self.diagnostics:
-            self.recon_event_data.peek()
+            recon_event_data.peek()
             plt.show(block=self.blockplot)
 
-            self.recon_event_data.hist_sources()
+            recon_event_data.hist_sources()
             plt.show(block=self.blockplot)
+
+        if self.recon_event_data is None:
+            self.recon_event_data = recon_event_data
+
+
+        if event_save_path is not None:
+            recon_event_data.save(filename=event_save_path)
+
+        return recon_event_data
 
 
 
@@ -423,15 +457,21 @@ class ScanMarg_ConfigAnalysis(object):
 
 
 
-    def run(self):
+    def run(self, path_to_measured_event_data=None, event_save_path=None):
 
         if self.diagnostics:
             self.test_priors()
 
         _t1 = time.perf_counter()
 
-        self.simulate()
 
+        if (self.recon_event_data is None):
+            if (path_to_measured_event_data is None):
+                self.simulate(event_save_path=event_save_path)
+            else:
+                self.recon_event_data = EventData.load(path_to_measured_event_data)
+                self.path_to_measured_event_data = path_to_measured_event_data
+        
         _t2 = time.perf_counter()
 
         self.nuisance_marg()
@@ -448,7 +488,7 @@ class ScanMarg_ConfigAnalysis(object):
 
 
 
-    def save(self, file_name:str, write_method='wb' ):
+    def save(self, filename:str, write_method='wb' ):
         """
         Saves a class instance to a pkl file.
 
@@ -456,16 +496,16 @@ class ScanMarg_ConfigAnalysis(object):
         file_name (str): The name of the file to save the data to.
         """
 
-        if not(file_name.endswith('.pkl')):
-            file_name = file_name+'.pkl'
+        if not(filename.endswith('.pkl')):
+            filename = filename+'.pkl'
 
-        pickle.dump(self, open(file_name,write_method))
+        pickle.dump(self, open(filename,write_method))
 
     @classmethod
-    def load(cls, file_name, open_method='rb'):
-        if not(file_name.endswith(".pkl")):
-            file_name = file_name + ".pkl"
-        return  pickle.load(open(file_name,open_method))
+    def load(cls, filename, open_method='rb'):
+        if not(filename.endswith(".pkl")):
+            filename = filename + ".pkl"
+        return  pickle.load(open(filename,open_method))
     
 
     def plot_results(self, save_fig_file_name=None, *args, **kwargs):
@@ -489,7 +529,7 @@ class ScanMarg_ConfigAnalysis(object):
 
             quantiles=[0.025, .16, 0.5, .84, 0.975],
 
-            bins=[41, 41, 41,*[axis.size//2 for axis in self.prior_parameter_sets[0].axes]],
+            bins=[41, 41, 41,*[axis.size for axis in self.prior_parameter_sets[0].axes]],
             #    range=([0.44,0.68], [0.7,0.9], [0.3,0.5], *[[axis.min(), axis.max()] for axis in prior_parameters.axes]),
             axes_scale=['linear', 'linear', 'linear', 'log', 'log'],
             

@@ -72,9 +72,10 @@ class ScanMarg_ConfigAnalysis(object):
         try:
             self.seed       = int(self.config_dict['seed'])
         except Exception as excpt:
-            print(f"""An error occurred when trying to extract the seed: {excpt}\n
-            A seed will be generated based on the name of the job.""")
             self.seed = int(generate_unique_int_from_string(self.jobname))
+
+            print(f"""An error occurred when trying to extract the seed: {excpt}\n
+            A seed has been generated based on the name of the job with value: {self.seed}""")
         
         try:
             self.numjobs    = self.config_dict['numjobs']
