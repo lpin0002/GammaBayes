@@ -245,7 +245,7 @@ class ScanMarg_ConfigAnalysis(object):
             'gammabayes.dark_matter.spectral_models',
               self.config_dict['dark_matter_spectral_model'])
         
-        self.DM_prior = TwoCompPrior(name='Z5 Scalar dark matter',
+        self.DM_prior = TwoCompPrior(name='Dark matter prior',
                                 spectral_class = dark_matter_spectral_class, 
                                 spectral_class_kwds={'ratios':True},
                                 spatial_class = dark_matter_density_dist_class,

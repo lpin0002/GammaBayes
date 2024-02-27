@@ -145,7 +145,7 @@ def gen_scripts(config_inputs):
 
         run_data_folder = f"{workingfolder}/{stemdirname}/rundata/{runnum}"
 
-        os.makedirs(run_data_folder, exist_ok=reanalysis)
+        os.makedirs(run_data_folder, exist_ok=True)
 
         job_config_inputs['save_path'] = f"{run_data_folder}/"
         job_config_inputs['Nevents'] = job_config_inputs['Nevents_per_job']
@@ -157,11 +157,6 @@ def gen_scripts(config_inputs):
             job_config_inputs['path_to_measured_event_data'] = path_to_measured_event_data
 
         job_config_inputs['save_path_for_measured_event_data'] = path_to_measured_event_data
-
-        if reanalysis:
-            result_save_filename = config_inputs['result_save_filename']
-            posterior_samples_file_name = config_inputs['posterior_samples_file_name']
-            full_results_filename = config_inputs['full_results_filename']
 
         job_seed = generate_unique_int_from_string(job_config_inputs['jobname'])
 

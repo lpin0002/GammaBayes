@@ -107,11 +107,26 @@ if __name__=="__main__":
     sampler_results = full_hyper_class_instance.hyper_analysis_instance.sampler.results
     # Backup
 
+
+    if 'reanalysis' in config_dict:
+        reanalysis = config_dict['reanalysis']
+    else:
+        reanalysis = False
+
     if 'posterior_samples_file_name' in config_dict:
         posterior_samples_file_name = config_dict['posterior_samples_file_name']
+
+    if reanalysis:
+        if 'reanalysis_stem' in config_dict:
+            reanalysis_stem = config_dict ['reanalysis_stem']
+        else:
+            reanalysis_stem = 'reanalysis'
+
+        posterior_samples_file_name = reanalysis_stem+'_backup_posterior_samples.h5'
+
     else:
         posterior_samples_file_name = 'backup_posterior_samples.h5'
-
+    
     ResultsWrapper.save(file_name=f"data/{config_dict['stem_identifier']}/{posterior_samples_file_name}",sampler_results=sampler_results)
 
 
@@ -145,13 +160,17 @@ if __name__=="__main__":
         plot_kwargs = {}
 
 
+    scales = [parameter['scaling'] for parameter in prior_parameter_sets[0].values()]
+
+    scales = ['log' for scale in scales if scale=='log10']
+
     fig = plt.figure()
     figure=corner(sampling_results, fig=fig,
         # labels=['sig/total', 'ccr/bkg', 'diffuse/astro bkg', r'$m_{\chi}$ [TeV]']
         quantiles=[0.025, .16, 0.5, .84, 0.975],
         bins=[*[41]*config_dict['num_bkg_comp'],*[axis.size*2 for axis in prior_parameter_sets[0].axes]],
         #    range=([0.,0.2], [0.5,1.0], [0.,0.6], *[[axis.min(), axis.max()] for axis in prior_parameters.axes]),
-        axes_scale=[*['linear']*config_dict['num_bkg_comp'], 'log',],
+        axes_scale=[*['linear']*config_dict['num_bkg_comp'], *scales,],
         
         **defaults_kwargs)
 
@@ -165,11 +184,16 @@ if __name__=="__main__":
                         line.set_color('tab:green')  # Change the color of the median lines
                     elif line_idx<len(lines)-1:
                         line.set_color('tab:blue')
-    plt.suptitle(str(float(config_dict['numjobs'])*float(config_dict['Nevents_per_job'])) + f" events, logz={logz_val:.2e}", size=16)
+    plt.suptitle(str(float(config_dict['numjobs'])*float(config_dict['Nevents_per_job'])) + f" events, logz={logz_val}", size=16)
 
 
 
     plt.tight_layout()
 
-    plt.savefig(f"data/{config_dict['stem_identifier']}/{save_fig_file_name}")
+    if reanalysis:
+        extra_stem = reanalysis_stem+'_'
+    else:
+        extra_stem = ''
+    saveifg_filename = f"data/{config_dict['stem_identifier']}/{extra_stem}{save_fig_file_name}"
+    plt.savefig(saveifg_filename)
     plt.show()
