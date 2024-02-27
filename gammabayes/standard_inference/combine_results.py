@@ -15,7 +15,6 @@ from dynesty import NestedSampler
 if __name__=="__main__":
     config_file_path = sys.argv[1]
 
-
     # Extracting base config dict
 
     config_dict = read_config_file(config_file_path)

@@ -51,48 +51,7 @@ matgen_config_file_path = f"data/{config_inputs['stem_identifier']}/irfmat_gen_c
 save_config_file(config_inputs, matgen_config_file_path)
 
 
-print("Generating combine job bash script...")
-combine_config_inputs = copy.deepcopy(config_inputs)
 
-if 'combine_time_mins' in combine_config_inputs:
-    combine_config_inputs['time_mins'] = combine_config_inputs['combine_time_mins']
-
-if 'combine_time_hrs' in combine_config_inputs:
-    combine_config_inputs['time_hrs'] = combine_config_inputs['combine_time_hrs']
-
-
-
-if 'combine_numcores' in combine_config_inputs:
-    combine_config_inputs['numcores'] = combine_config_inputs['combine_numcores']
-elif 'numcores' in combine_config_inputs:
-    combine_config_inputs['numcores'] = combine_config_inputs['numcores']
-else:
-    combine_config_inputs['numcores'] = 8
-
-if 'combine_mem_per_cpu' in combine_config_inputs:
-    combine_config_inputs['mem_per_cpu'] = combine_config_inputs['combine_mem_per_cpu']
-elif 'mem_per_cpu' in combine_config_inputs:
-    combine_config_inputs['mem_per_cpu'] = combine_config_inputs['mem_per_cpu']
-else:
-    combine_config_inputs['mem_per_cpu'] = 1000
-
-
-
-combine_config_inputs['jobname'] = f"{config_inputs['stem_identifier']}_combine"
-
-combine_config_file_path = f"data/{config_inputs['stem_identifier']}/combine_config.yaml"
-
-
-save_config_file(combine_config_inputs, combine_config_file_path)
-
-combine_bash_file_body = makejobscripts(combine_config_inputs, combine_config_file_path, path_to_run_file='-m gammabayes.utils.ozstar.combine_results')
-
-
-with open(f"data/{config_inputs['stem_identifier']}/combine_jobscript.sh", 'w') as f:
-    f.write(combine_bash_file_body)
-
-
-print("Scheduling the main job scripts...")
 gen_scripts(config_inputs)
 
 
