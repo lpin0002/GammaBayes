@@ -1,4 +1,4 @@
-import sys, os, numpy as np, h5py
+import sys, os, numpy as np, h5py, logging
 from gammabayes.utils.config_utils import read_config_file, create_true_axes_from_config, create_recon_axes_from_config
 from gammabayes.utils.import_utilities import dynamic_import
 from gammabayes.samplers.sampler_utils import ResultsWrapper
@@ -53,10 +53,13 @@ if __name__=="__main__":
 
 
     for subdirectory in tqdm(subdirectories[1:], desc='Accessing directories and adding data'):
-        hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/{result_save_filename}", 
-                                                                    overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
-        full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
 
+        try:
+            hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/{result_save_filename}", 
+                                                                        overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
+            full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
+        except:
+            logging.error(f"Could not load results from run directory '{subdirectory}/{result_save_filename}'")
 
 
 
