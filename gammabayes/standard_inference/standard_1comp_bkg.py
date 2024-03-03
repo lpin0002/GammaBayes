@@ -382,6 +382,9 @@ class ScanMarg_ConfigAnalysis(object):
         if event_save_path is not None:
             recon_event_data.save(filename=event_save_path)
 
+
+        print("Finished simulating events.")
+
         return recon_event_data
 
 
@@ -471,6 +474,8 @@ class ScanMarg_ConfigAnalysis(object):
             else:
                 self.recon_event_data = EventData.load(path_to_measured_event_data)
                 self.path_to_measured_event_data = path_to_measured_event_data
+
+            
         
         _t2 = time.perf_counter()
 

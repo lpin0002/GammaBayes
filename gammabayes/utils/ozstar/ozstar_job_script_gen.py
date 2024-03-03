@@ -98,7 +98,7 @@ def gen_scripts(config_inputs):
 
         save_config_file(combine_config_inputs, combine_config_file_path)
 
-        combine_bash_file_body = makejobscripts(combine_config_inputs, combine_config_file_path, path_to_run_file='-m gammabayes.utils.ozstar.combine_results')
+        combine_bash_file_body = makejobscripts(combine_config_inputs, combine_config_file_path, path_to_run_file='-m gammabayes.standard_inference.combine_results')
 
 
         with open(f"data/{config_inputs['stem_identifier']}/{reanalysis_stem}_combine_jobscript.sh", 'w') as f:
