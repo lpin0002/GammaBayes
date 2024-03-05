@@ -16,10 +16,7 @@ Welcome to GammaBayes's documentation!
     tutorials/DarkMatterModels
     tutorials/Simulations
     tutorials/HyperParameterInference
-    tutorials/UsefulUtilities
-    tutorials/ConfigFile_Analysis_class
-    tutorials/TheoreticalFramework
-    tutorials/Reweighting
+
 
 
 
