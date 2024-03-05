@@ -34,8 +34,6 @@ dist/*
 *log_edisp_normalisations*
 *log_psf_normalisations*
 **/prod5/*.FITS
-*event*
-*measured*
 *samples*
 *.pkl
 *norm_matrix.npy*
