@@ -55,11 +55,18 @@ class DM_Profile(object):
         self.gammapy_profile.distance = self.DISTANCE*u.kpc
         self.gammapy_profile.scale_to_local_density()
 
-
     def __call__(self, *args, **kwargs) -> float | np.ndarray :
         return self.compute_logdifferential_jfactor(*args, **kwargs)
     
-    def compute_logdifferential_jfactor(self, longitude, latitude, ndecade=1e3, kwd_parameters={}):
+    def log_density(self, *args, **kwargs):
+        update_with_defaults(kwargs, self.kwd_profile_default_vals)
+
+        return self.log_profile_func(*args, **kwargs)
+    
+    def compute_logdifferential_jfactor(self, 
+                                        longitude:float|np.ndarray, 
+                                        latitude:float|np.ndarray, ndecade:int|float = 1e4, 
+                                        kwd_parameters:dict={}):
         r"""Compute differential J-Factor.
 
         .. math::

@@ -655,7 +655,7 @@ class EventData(object):
     
 
     # Method to save the current state of the object to an HDF5 file
-    def save(self, filename: str = None):
+    def save(self, filename: str = None, writemethod='w-'):
         """
         Saves the current state of the EventData object to an HDF5 file.
 
@@ -669,8 +669,7 @@ class EventData(object):
         if not(filename.endswith(".h5")):
             filename = filename + ".h5"
 
-        # TODO: Check if file exists beforehand and then tack on date stamp to the end if it does
-        with h5py.File(filename, 'w-') as f:
+        with h5py.File(filename, writemethod) as f:
             f.create_dataset('energy',          data=self.energy)
             f.create_dataset('glon',            data=self.glon)
             f.create_dataset('glat',            data=self.glat)

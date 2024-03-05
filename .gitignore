@@ -34,3 +34,10 @@ dist/*
 *log_edisp_normalisations*
 *log_psf_normalisations*
 **/prod5/*.FITS
+*event*
+*measured*
+*samples*
+*.pkl
+*norm_matrix.npy*
+docs/tutorials/irf_norm_matrix.npy
+docs/tutorials/test_results.pkl

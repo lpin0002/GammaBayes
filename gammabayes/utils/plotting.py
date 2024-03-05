@@ -29,7 +29,7 @@ defaults_kwargs = dict(
 def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=True, sigmas=range(0,6), 
                            cmap=cm.get_cmap('Blues_r'), contours2d = False,
                            levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
-                           axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm=None,
+                           axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm='linear',
                            single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
                            single_dim_logspace_integrator=logspace_riemann, axes_scale=None,
                            **kwargs):

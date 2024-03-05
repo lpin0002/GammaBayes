@@ -25,13 +25,13 @@ class Einasto_Profile(DM_Profile):
                     alpha: float, 
                     rho_s: float) -> float | np.ndarray :
         rr = radius / r_s
-        exponent = (2 / alpha) * (rr**alpha - 1)
-        return np.log(rho_s) + -1 * exponent
+        exponent = -(2 / alpha) * (rr**alpha - 1)
+        return np.log(rho_s) + exponent
 
     def __init__(self, 
                  default_alpha = 0.17, 
                  default_rho_s: float = 1., 
-                 default_r_s: float = 28.4, 
+                 default_r_s: float = 28.44, 
                  *args, **kwargs):
         super().__init__(
             log_profile_func=self.log_profile, 

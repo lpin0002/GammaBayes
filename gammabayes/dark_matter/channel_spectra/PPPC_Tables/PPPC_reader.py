@@ -18,7 +18,7 @@ class PPPCReader:
         "nuenue":"\\[Nu]e",
         "e+e-": "e",
         "numunumu":"\\[Nu]\\[Mu]",
-        "mu+mu-":"mu",
+        "mu+mu-":"\\[Mu]",
         'nutaunutau':"\\[Nu]\\[Tau]",
         "tau+tau-":"\\[Tau]",
         "cc": "c",
