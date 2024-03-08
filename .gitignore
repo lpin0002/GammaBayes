@@ -39,3 +39,4 @@ dist/*
 *norm_matrix.npy*
 docs/tutorials/irf_norm_matrix.npy
 docs/tutorials/test_results.pkl
+docs/tutorials/tutorial_data/measured_data.h5
