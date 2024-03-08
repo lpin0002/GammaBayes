@@ -218,27 +218,42 @@ class TwoCompPrior(DiscreteLogPrior):
 
         ####################
 
+        times = []
+
+        times.append(time.perf_counter())
+
         logspectralvals     = self.spectral_comp.mesh_efficient_logfunc(energy, kwd_parameters=spectral_parameters)
 
         ####################
 
+        times.append(time.perf_counter())
+
         logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
+
+        times.append(time.perf_counter())
+
 
         ####################
 
         aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, longitude, latitude, indexing='ij')
 
+        times.append(time.perf_counter())
+
         # Flattening the meshes helps the IRFs evaluate
         log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
         
+        times.append(time.perf_counter())
+
         ####################
 
         # Convention is Energy, Lon, Lat, Mass, [Spectral_Params], [Spatial_Params]
 
         # Expanding along Lon, Lat, and spatial param dims
+
         expand_spectral_axes = list([1,2])+list(range(3+num_spectral_params, num_total_params))
         logpdfvalues = np.expand_dims(logspectralvals, 
                                         axis=expand_spectral_axes)
+        
 
         # Expanding along Energy, Mass, and Spectral_Params dims
         expand_spatial_axes = list([0])+list(range(3, 3+num_spectral_params))
@@ -246,22 +261,131 @@ class TwoCompPrior(DiscreteLogPrior):
         log_spatial_vals = np.expand_dims(logspatialvals, 
                                         axis=expand_spatial_axes)
         
+        times.append(time.perf_counter())
 
         logpdfvalues = logpdfvalues + log_spatial_vals
+
+        times.append(time.perf_counter())
+
         
         # Expanding along all the spectral and spatial parameters
         expand_aeff_axes = list(range(3, num_total_params))
         log_aeff_vals = np.expand_dims(log_aeffvals, 
                                         axis=expand_aeff_axes)
         
+        times.append(time.perf_counter())
 
         logpdfvalues = logpdfvalues + log_aeff_vals
 
+        times.append(time.perf_counter())
 
 
-
-
+        print(np.diff(times))
 
         return np.squeeze(logpdfvalues)
 
     
+    def log_dist_integral_mesh_efficient(self, 
+                                energy: float | np.ndarray | list,
+                                longitude: float | np.ndarray | list, 
+                                latitude: float | np.ndarray | list,
+                                spatial_parameters: dict = {}, 
+                                spectral_parameters: dict = {}, 
+                                ) -> np.ndarray:
+        
+        """
+        An efficient version of `log_dist` that utilizes mesh grid computations for the spectral and spatial components.
+        
+        This method is designed to be used when `spectral_mesh_efficient_logfunc` and/or `spatial_mesh_efficient_logfunc` 
+        are provided during class initialization, allowing for more efficient computation over grid meshes.
+        
+        Args:
+            energy (float | np.ndarray | list): The energy values for which the log distribution is calculated.
+            
+            longitude (float | np.ndarray | list): The longitude values for the spatial component.
+            
+            latitude (float | np.ndarray | list): The latitude values for the spatial component.
+            
+            spatial_parameters (dict, optional): Parameters specific to the spatial component. Defaults to {}.
+            
+            spectral_parameters (dict, optional): Parameters specific to the spectral component. Defaults to {}.
+            
+        Returns:
+            np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
+        """
+            
+        num_spectral_params     = len(spectral_parameters)
+
+        num_spatial_params      = len(spatial_parameters)
+
+
+        # Just the total
+        num_total_params = num_spectral_params + num_spatial_params + 3
+
+        ####################
+
+        times = []
+
+        times.append(time.perf_counter())
+
+        logspectralvals     = self.spectral_comp.mesh_integral_efficient_logfunc(energy, kwd_parameters=spectral_parameters)
+
+        ####################
+
+        times.append(time.perf_counter())
+
+        logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
+
+        times.append(time.perf_counter())
+
+
+        ####################
+
+        aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, longitude, latitude, indexing='ij')
+
+        times.append(time.perf_counter())
+
+        # Flattening the meshes helps the IRFs evaluate
+        log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
+        
+        times.append(time.perf_counter())
+
+        ####################
+
+        # Convention is Energy, Lon, Lat, Mass, [Spectral_Params], [Spatial_Params]
+
+        # Expanding along Lon, Lat, and spatial param dims
+
+        expand_spectral_axes = list([1,2])+list(range(3+num_spectral_params, num_total_params))
+        logpdfvalues = np.expand_dims(logspectralvals, 
+                                        axis=expand_spectral_axes)
+        
+
+        # Expanding along Energy, Mass, and Spectral_Params dims
+        expand_spatial_axes = list([0])+list(range(3, 3+num_spectral_params))
+
+        log_spatial_vals = np.expand_dims(logspatialvals, 
+                                        axis=expand_spatial_axes)
+        
+        times.append(time.perf_counter())
+
+        logpdfvalues = logpdfvalues + log_spatial_vals
+
+        times.append(time.perf_counter())
+
+        
+        # Expanding along all the spectral and spatial parameters
+        expand_aeff_axes = list(range(3, num_total_params))
+        log_aeff_vals = np.expand_dims(log_aeffvals, 
+                                        axis=expand_aeff_axes)
+        
+        times.append(time.perf_counter())
+
+        logpdfvalues = logpdfvalues + log_aeff_vals
+
+        times.append(time.perf_counter())
+
+
+        print(np.diff(times))
+
+        return np.squeeze(logpdfvalues)

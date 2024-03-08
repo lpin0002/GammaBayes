@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np, time
 from gammabayes.dark_matter.spectral_models import (
     DM_ContinuousEmission_Spectrum
 )
@@ -23,37 +23,91 @@ class CombineDMComps(TwoCompPrior):
                          *args, **kwargs
         )
 
-
     def convert_param_to_logsigmav(self,
-                                signal_fraction, 
-                                true_axes=None,
-                                spectral_parameters = {},
-                                spatial_parameters = {},
-                                totalnumevents=1e8, 
-                             tobs_seconds=525*60*60, symmetryfactor=1):
+                            signal_fraction, 
+                            true_axes=None,
+                            spectral_parameters = {},
+                            spatial_parameters = {},
+                            totalnumevents=1e8, 
+                            tobs_seconds=525*60*60, symmetryfactor=1):
         
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
+
 
         if true_axes is None:
             true_axes = self.axes
         
     
         if self.mesh_efficient_exists:
-            integrand = self.log_mesh_efficient_func(*true_axes, 
+            integrand = self.log_dist_mesh_efficient(*true_axes, 
                                                      spectral_parameters=spectral_parameters,
                                                      spatial_parameters=spatial_parameters)
+            
+
+        # Splitting it up for easy debuggin
+        log_integrated_energy = logspace_simpson(
+                                    logy=integrand, x = true_axes[0], axis=0)
+        
+
+        
+        log_integrated_energy_longitude = logspace_simpson(
+                                logy=log_integrated_energy, 
+                                    x = true_axes[1], axis=0)
+        
                         
         logintegral = logspace_simpson(
-                            logy=logspace_simpson(
-                                logy=logspace_simpson(
-                                    logy=integrand, x = true_axes[0], axis=0), 
-                                    x = true_axes[1], axis=0)*np.cos(true_axes[2]*np.pi/180), 
-                                    x = true_axes[2], axis=0)
+                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2]*np.pi/180), 
+                                    x = true_axes[2], axis=-1).T
         
-        
+
         logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
+
+        print(logsigmav)
+        return np.exp(logsigmav)
+
+
+    def convert_param_to_logsigmav_integral_efficient(self,
+                                signal_fraction, 
+                                true_axes=None,
+                                spectral_parameters = {},
+                                spatial_parameters = {},
+                                totalnumevents=1e8, 
+                                tobs_seconds=525*60*60, symmetryfactor=1):
         
-        return logsigmav
+        update_with_defaults(spectral_parameters, self.default_spectral_parameters)
+        update_with_defaults(spatial_parameters, self.default_spatial_parameters)
+
+
+        if true_axes is None:
+            true_axes = self.axes
+        
+    
+        if self.mesh_efficient_exists:
+            integrand = self.log_dist_integral_mesh_efficient(*true_axes, 
+                                                     spectral_parameters=spectral_parameters,
+                                                     spatial_parameters=spatial_parameters)
+            
+
+        # Splitting it up for easy debuggin
+        log_integrated_energy = logspace_simpson(
+                                    logy=integrand, x = true_axes[0], axis=0)
+        
+
+        
+        log_integrated_energy_longitude = logspace_simpson(
+                                logy=log_integrated_energy, 
+                                    x = true_axes[1], axis=0)
+        
+                        
+        logintegral = logspace_simpson(
+                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2]*np.pi/180), 
+                                    x = true_axes[2], axis=-1).T.reshape(signal_fraction.shape)
+        
+
+        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
+
+
+        return np.exp(logsigmav)
     
 

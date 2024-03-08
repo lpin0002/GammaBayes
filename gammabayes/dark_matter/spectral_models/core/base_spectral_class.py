@@ -230,27 +230,27 @@ class DM_ContinuousEmission_Spectrum(object):
         """
         energy = np.asarray(energy)
 
-        # for key, val in kwd_parameters.items():
-        #     asarray_param = np.asarray(val) 
-        #     kwd_parameters[key] = asarray_param
+        for key, val in kwd_parameters.items():
+            kwd_parameters[key] = np.asarray(val) 
 
-        # flatten_param_vals = np.asarray([energy.flatten(), *[theta_param_mesh.flatten() for theta_param_mesh in kwd_parameters.values()]])
+        flatten_param_vals = np.asarray([energy.flatten(), *[theta_param.flatten() for theta_param in kwd_parameters.values()]])
             
-        # unique_param_vals = np.unique(flatten_param_vals, axis=1)
-
-        # logspectralvals = self.spectral_gen(
-        #     energy=unique_param_vals[0], 
-        #     **{param_key: unique_param_vals[1+idx].flatten() for idx, param_key in enumerate(kwd_parameters.keys())})
-
-        # mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
-
-        # slices = np.where(mask, logspectralvals[None, :], 0.0)
-
-        # logspectralvals = np.sum(slices, axis=-1).reshape(energy.shape)
+        unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
         logspectralvals = self.spectral_gen(
-            energy=energy, 
-            **kwd_parameters)            
+            energy=unique_param_vals[0], 
+            **{param_key: unique_param_vals[1+idx].flatten() for idx, param_key in enumerate(kwd_parameters.keys())})
+
+        mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
+
+        slices = np.where(mask, logspectralvals[None, :], 0.0)
+
+        logspectralvals = np.sum(slices, axis=-1).reshape(energy.shape)
+
+        # logspectralvals = self.spectral_gen(
+        #     energy=energy, 
+        #     **kwd_parameters)
+        
         return logspectralvals
     
 
@@ -279,17 +279,72 @@ class DM_ContinuousEmission_Spectrum(object):
         """
 
 
-        kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
+        new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
 
-        param_meshes = np.meshgrid(energy, *kwd_parameters.values(), indexing='ij')
+
+        
+
+        param_meshes = np.meshgrid(energy, *new_kwd_parameters.values(), indexing='ij')
 
         logspectralvals = self.spectral_gen(
             energy = param_meshes[0].flatten(), 
-            **{param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(kwd_parameters.keys())}
+            **{param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(new_kwd_parameters.keys())}
             ).reshape(param_meshes[0].shape)
         
         return logspectralvals
 
 
 
+    def mesh_integral_efficient_logfunc(self, 
+                               energy: list | np.ndarray | float, 
+                               kwd_parameters: dict = {'mass':1.0, 'coupling': 0.1}) -> np.ndarray | float:
+        """
+        An mesh efficient version of `logfunc` that utilizes meshgrid computations for generating the dark matter annihilation gamma-ray spectrum.
 
+        This method is optimized for scenarios where computations over a grid of model parameters are required, reducing the computational
+        overhead by leveraging numpy's meshgrid functionality. It calculates the gamma-ray flux for each combination of energy and model
+        parameters specified in `kwd_parameters`.
+
+        Args:
+            energy (list | np.ndarray | float): Gamma-ray energies for which to calculate the log flux, in TeV.
+            kwd_parameters (dict, optional): A dictionary of keyword parameters for the dark matter model, including mass and coupling values.
+                                             Defaults to {'mass':1.0, 'coupling': 0.1}.
+
+        Returns:
+            np.ndarray | float: The log of the gamma-ray flux for the specified energies and dark matter model parameters over the grid
+                                defined by the input parameters.
+        """
+        energy = np.asarray(energy)
+
+        new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
+
+
+        for key, val in new_kwd_parameters.items():
+            new_kwd_parameters[key] = np.asarray(val) 
+
+        hyper_params_shape = new_kwd_parameters[list(new_kwd_parameters.keys())[0]].shape
+        
+        # minimises the amount of needed memory and comp time by reducing number of combinations in meshgrid
+        flatten_hyperparam_vals = np.asarray([*[theta_param.flatten() for theta_param in new_kwd_parameters.values()]])
+            
+        unique_param_vals = np.unique(flatten_hyperparam_vals, axis=1)
+
+        param_meshes = np.meshgrid(energy, *unique_param_vals, indexing='ij')
+
+
+
+
+        logspectralvals = self.spectral_gen(
+            energy = param_meshes[0].flatten(), 
+            **{param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(new_kwd_parameters.keys())}
+            ).reshape(param_meshes[0].shape)
+        
+        mask = np.all(unique_param_vals[:, None, :] == flatten_hyperparam_vals[:, :, None], axis=0)
+
+        slices = np.where(mask, logspectralvals[:, None, :], 0.0)
+
+
+        logspectralvals = np.sum(slices, axis=-1).reshape((energy.size, *hyper_params_shape))
+
+
+        return logspectralvals

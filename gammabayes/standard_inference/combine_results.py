@@ -15,6 +15,11 @@ from dynesty import NestedSampler
 if __name__=="__main__":
     config_file_path = sys.argv[1]
 
+    try:
+        max_idx = int(sys.argv[2])
+    except:
+        max_idx = None
+
     # Extracting base config dict
 
     config_dict = read_config_file(config_file_path)
@@ -40,27 +45,57 @@ if __name__=="__main__":
     # Filter out only directories within rundata_filepath
     subdirectories = [os.path.join(rundata_filepath, item) for item in all_items if os.path.isdir(os.path.join(rundata_filepath, item))]
 
+    failed_access_counter = 0
 
     if 'result_save_filename' in config_dict:
         result_save_filename = config_dict['result_save_filename']
     else:
         result_save_filename = 'results.h5'
 
-    initial_subdirectory = subdirectories[0]
-    initial_save_file_name = f"{initial_subdirectory}/{result_save_filename}"
+    first_index = 0
+    try:
+        initial_subdirectory = subdirectories[first_index]
+        initial_save_file_name = f"{initial_subdirectory}/{result_save_filename}"
 
-    full_hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = initial_save_file_name)
+        full_hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = initial_save_file_name)
+    except:
+        failed_access_counter+=1
+        first_index = 1
+        initial_subdirectory = subdirectories[first_index]
+        initial_save_file_name = f"{initial_subdirectory}/{result_save_filename}"
 
+        full_hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = initial_save_file_name)
 
-    for subdirectory in tqdm(subdirectories[1:], desc='Accessing directories and adding data'):
+    if max_idx is None:
+        print("no max idx given")
+        for subdirectory in tqdm(subdirectories[first_index:], desc='Accessing directories and adding data'):
 
-        try:
-            hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/{result_save_filename}", 
-                                                                        overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
-            full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
-        except:
-            logging.error(f"Could not load results from run directory '{subdirectory}/{result_save_filename}'")
+            try:
+                hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/{result_save_filename}", 
+                                                                            overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
+                full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
+            
+                del hyper_class_instance
+            
+            except:
+                failed_access_counter+=1
+                logging.debug(f"Could not load results from run directory '{subdirectory}/{result_save_filename}'")
 
+    else:
+        print('\n\n\nBeginning access of data...\n')
+        for subdirectory in tqdm(subdirectories[first_index:max_idx], desc='Accessing directories and adding data'):
+
+            try:
+                hyper_class_instance = discrete_hyperparameter_likelihood.load(file_name = f"{subdirectory}/{result_save_filename}", 
+                                                                            overriding_class_input_dict={'prior_parameter_specifications':prior_parameter_sets})
+                full_hyper_class_instance.add_log_nuisance_marg_results(hyper_class_instance.log_nuisance_marg_results)
+            
+                del hyper_class_instance
+            except:
+                failed_access_counter+=1
+                logging.debug(f"Could not load results from run directory '{subdirectory}/{result_save_filename}'")
+
+        print(f'\n\n\nFinished accessing data. Failed to access {failed_access_counter} directories.\n\n\n')
 
 
     scan_type = config_dict['mixture_fraction_exploration_type']
