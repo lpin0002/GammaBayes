@@ -7,6 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os
 import sys
+# import sphinx_rtd_theme
+
 
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -18,7 +20,18 @@ release = '0.0.42'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc','sphinx_rtd_theme','myst_parser','nbsphinx','sphinx.ext.napoleon']
+
+
+
+
+extensions = [
+    'sphinx.ext.autodoc',
+    'nbsphinx',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.mathjax',
+    'myst_parser',
+]
+
 
 
 master_doc = 'index'
@@ -27,7 +40,7 @@ nbsphinx_execute = 'never'  # Set to 'never' if you want to use static notebooks
 
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', '**.ipynb_checkpoints', 'Thumbs.db', '.DS_Store', 'Future/*.ipynb', ]
 
 
 
@@ -36,7 +49,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'sphinx_rtd_theme'
 
-# html_static_path = ['_static']
+html_static_path = ['_static']
 
 source_suffix = '.rst'
 

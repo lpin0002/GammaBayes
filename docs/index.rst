@@ -18,6 +18,7 @@ Welcome to GammaBayes's documentation!
     tutorials/HyperParameterInference
 
 
+
 Indices and tables
 ==================
 
