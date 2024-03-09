@@ -40,7 +40,7 @@ nbsphinx_execute = 'never'  # Set to 'never' if you want to use static notebooks
 
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', '**.ipynb_checkpoints', 'Thumbs.db', '.DS_Store', 'Future/*.ipynb', ]
+exclude_patterns = ['_build', '**.ipynb_checkpoints', 'Thumbs.db', '.DS_Store']
 
 
 
