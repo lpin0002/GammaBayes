@@ -25,6 +25,18 @@ if __name__=="__main__":
     config_dict = read_config_file(config_file_path)
     discrete_hyperparameter_likelihood = dynamic_import('gammabayes.hyper_inference', config_dict['hyper_parameter_scan_class'])
 
+    if 'init_nested_sampler_kwargs' in config_dict:
+        init_nested_sampler_kwargs = config_dict['init_nested_sampler_kwargs']
+    else:
+        init_nested_sampler_kwargs = {}
+
+
+    if 'run_nested_sampler_kwargs' in config_dict:
+        run_nested_sampler_kwargs = config_dict['run_nested_sampler_kwargs']
+    else:
+        run_nested_sampler_kwargs = {}
+
+
     prior_parameter_sets = [ParameterSet(set) for set in list(config_dict['prior_parameter_specifications'].items())]
     mixture_parameter_set = ParameterSet(config_dict['mixture_fraction_specifications'])
     # Extracting relevant file paths
@@ -122,9 +134,10 @@ if __name__=="__main__":
             sampler = NestedSampler(pool.loglike, 
                                     pool.prior_transform, 
                                     pool=pool,
-                                    ndim=full_hyper_class_instance.hyper_analysis_instance.ndim)
+                                    ndim=full_hyper_class_instance.hyper_analysis_instance.ndim,
+                                    **init_nested_sampler_kwargs)
             
-            sampler.run_nested()
+            sampler.run_nested(**run_nested_sampler_kwargs)
             
 
             
