@@ -61,7 +61,7 @@ nbsphinx_prolog = """
 
 .. nbinfo::
 
-   This page is a tutorial for the [GammaBayes](https://github.com/lpin0002/GammaBayes)
+   This page is a tutorial for the (GammaBayes)[https://github.com/lpin0002/GammaBayes]
    and the original notebook can be found within the docs/tutorials folder within the GitHub repository.
 
 """
