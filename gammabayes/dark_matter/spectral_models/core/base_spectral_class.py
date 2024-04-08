@@ -323,7 +323,6 @@ class DM_ContinuousEmission_Spectrum(object):
             new_kwd_parameters[key] = np.asarray(val) 
 
         hyper_params_shape = new_kwd_parameters[list(new_kwd_parameters.keys())[0]].shape
-        
         # minimises the amount of needed memory and comp time by reducing number of combinations in meshgrid
         flatten_hyperparam_vals = np.asarray([*[theta_param.flatten() for theta_param in new_kwd_parameters.values()]])
             
