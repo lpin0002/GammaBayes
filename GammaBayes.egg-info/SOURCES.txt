@@ -9,8 +9,10 @@ GammaBayes.egg-info/requires.txt
 GammaBayes.egg-info/top_level.txt
 gammabayes/__init__.py
 gammabayes/core/__init__.py
+gammabayes/core/analysis_cube.py
 gammabayes/core/core_utils.py
 gammabayes/core/data_class.py
+gammabayes/core/geometry.py
 gammabayes/core/parameter_class.py
 gammabayes/core/parameter_set_class.py
 gammabayes/dark_matter/__init__.py
