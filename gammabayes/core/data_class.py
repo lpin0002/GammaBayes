@@ -3,6 +3,7 @@ import h5py, time, numpy as np, warnings
 from gammabayes.core.core_utils import bin_centres_to_edges
 
 class EventData(object):
+    """Class to contain data relating to a single observation run."""
 
     def __init__(self, 
                  energy: np.ndarray = None, 

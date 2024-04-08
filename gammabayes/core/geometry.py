@@ -1,6 +1,9 @@
 import numpy as np
 
 class DataGeometry(object):
+    """Class to contain metadata relating to a observational event data."""
+
+
 
     def __init__(self, 
                  pixelation_method: str = 'HEALPix', 
