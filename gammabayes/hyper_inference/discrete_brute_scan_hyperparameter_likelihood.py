@@ -481,7 +481,9 @@ class before the multiprocessing or make sure that it isn't part of the actual
                                                        mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
                                                        mixture_fraction_exploration_type: str = None, 
                                                        log_nuisance_marg_results: list | np.ndarray = None,
-                                                       prior_parameter_specifications: dict | list[ParameterSet] | list[dict] =None,
+                                                       prior_parameter_specifications: dict | list[ParameterSet] | list[dict] = None,
+                                                        shared_parameter_info: list | dict | ParameterSet = None,
+                                                       prior_parameter_meta_data: dict | list[dict] = None,
                                                        *args, **kwargs):
         """
         Selects and initializes (the class, not the process it contains) the appropriate exploration class based on the 
@@ -540,6 +542,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
                     log_nuisance_marg_regularisation = self.log_marginalisation_regularisation,
                     mixture_parameter_specifications=mixture_parameter_specifications,
                     prior_parameter_specifications=prior_parameter_specifications,
+                    shared_parameter_info=shared_parameter_info,
+                    prior_parameter_meta_data=prior_parameter_meta_data,
                     *args, **kwargs)
             
         return self.hyper_analysis_instance

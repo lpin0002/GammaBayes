@@ -1,12 +1,16 @@
 import numpy as np
+from astropy.wcs import WCS
+import healpy as hp
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
-class DataGeometry(object):
+
+class CoordinateGeometry(object):
     """Class to contain metadata relating to a observational event data."""
 
-
-
     def __init__(self, 
-                 pixelation_method: str = 'HEALPix', 
+                 discrete_coordinate_projection_method: str = 'HEALPix', 
+                 continuous_coordinate_projection_method: str = None, 
                  frame: str = 'galactic',
                  angular_bounds: list | list[list] = [[-3, 3], [-3, 3]], 
                  energy_bounds: list[float] = [1e-1, 1e2], 
@@ -17,7 +21,8 @@ class DataGeometry(object):
                  energy_range: list | np.ndarray = None, 
                  **kwargs):
         
-        self.pixelation_method = pixelation_method
+        self.discrete_coordinate_projection_method = discrete_coordinate_projection_method
+        self.continuous_coordinate_projection_method = continuous_coordinate_projection_method
         self.frame = frame
         self.angular_bounds = angular_bounds
         self.energy_bounds = energy_bounds

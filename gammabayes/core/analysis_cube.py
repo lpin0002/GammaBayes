@@ -1,5 +1,5 @@
 
-from gammabayes import DataGeometry, EventData, Parameter, ParameterSet
+from gammabayes import CoordinateGeometry, EventData, Parameter, ParameterSet
 from gammabayes.priors import DiscreteLogPrior
 from gammabayes.likelihoods import DiscreteLogLikelihood
 
@@ -14,7 +14,7 @@ class AnalysisContainer(object):
                 parameter_info: dict,
                 proposal_priors: list[DiscreteLogPrior],
                 analysis_method: str = 'sample', 
-                data_geometry: DataGeometry = None,
+                data_geometry: CoordinateGeometry = None,
                 eventdata_container: EventData = None, 
                 pixelation_method: str = None):
 

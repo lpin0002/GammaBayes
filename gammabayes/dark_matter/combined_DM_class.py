@@ -110,4 +110,9 @@ class CombineDMComps(TwoCompPrior):
 
         return np.exp(logsigmav)
     
+    def calc_ratios(self, kwd_parameters={}):
+        update_with_defaults(kwd_parameters, self.default_spectral_parameters)
+
+        return self.spectral_comp.calc_ratios(kwd_parameters)
+    
 

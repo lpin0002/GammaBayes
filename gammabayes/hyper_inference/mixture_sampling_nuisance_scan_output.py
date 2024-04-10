@@ -2,7 +2,7 @@ import numpy as np, warnings, dynesty, logging
 from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 from gammabayes.hyper_inference.utils import _handle_parameter_specification
 from gammabayes.samplers.sampler_utils import ResultsWrapper
-from gammabayes import ParameterSet
+from gammabayes import ParameterSet, ParameterSetCollection
 import h5py
 
 
@@ -37,11 +37,12 @@ class ScanOutput_StochasticMixtureFracPosterior(object):
         sampler (dynesty.NestedSampler): The Dynesty sampler object used for exploration.
     """
     def __init__(self, 
-                 log_nuisance_marg_results,
-                 mixture_parameter_specifications:list | dict | ParameterSet,
-                 log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
-                 prior_parameter_specifications: list | dict | ParameterSet = None,
-                 _sampler_results={}):
+                log_nuisance_marg_results,
+                mixture_parameter_specifications:list | dict | ParameterSet,
+                log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
+                prior_parameter_specifications: list | dict | ParameterSet = None,
+                shared_parameters: list | dict | ParameterSet = None,
+                _sampler_results={}):
         """
         Initializes the ScanOutput_StochasticMixtureFracPosterior class with necessary parameters and configurations.
 
@@ -58,11 +59,23 @@ class ScanOutput_StochasticMixtureFracPosterior(object):
             prior_parameter_specifications,
             _no_required_num=True
         )
+        self.shared_parameters = shared_parameters
+
         self.hyperparameter_axes    = [param_set.axes_by_type for param_set in self.prior_parameter_specifications]
 
 
         self.mixture_parameter_specifications = ParameterSet(mixture_parameter_specifications)
         self.mixture_bounds         = self.mixture_parameter_specifications.bounds
+
+
+        # self.parameter_set_collection = ParameterSetCollection(
+        #     parameter_sets=self.prior_parameter_specifications,
+        #     mixture_parameter_set=self.mixture_parameter_specifications,
+        #     shared_parameters=self.shared_parameters,
+        #     parameter_meta_data={},
+        #     collection_name = 'ScanOutput_Stochastic_MixtureFracPosterior parameter set collection'
+        # )
+
 
 
         self.log_nuisance_marg_results = log_nuisance_marg_results

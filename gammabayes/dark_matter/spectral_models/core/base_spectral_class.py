@@ -347,3 +347,19 @@ class DM_ContinuousEmission_Spectrum(object):
 
 
         return logspectralvals
+    
+
+    def calc_ratios(self, kwd_parameters):
+
+        update_with_defaults(kwd_parameters, self.default_parameter_values)
+
+        sigma_dict = {}
+
+        for channel in self.sqrtchannelfuncdictionary.keys():
+
+            channel_sigma = self.partial_sqrt_sigmav_interpolator_dictionary[channel]((*kwd_parameters.values(),))**2
+            sigma_dict[channel] = channel_sigma
+
+        return sigma_dict
+
+

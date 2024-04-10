@@ -15,6 +15,8 @@ gammabayes/core/data_class.py
 gammabayes/core/geometry.py
 gammabayes/core/parameter_class.py
 gammabayes/core/parameter_set_class.py
+gammabayes/core/parameter_set_collection_class.py
+gammabayes/core/stacked_data_class.py
 gammabayes/dark_matter/__init__.py
 gammabayes/dark_matter/combined_DM_class.py
 gammabayes/dark_matter/channel_spectra/__init__.py
@@ -53,6 +55,8 @@ gammabayes/dark_matter/channel_spectra/griddata/channel=tau_massenergy_diffflux_
 gammabayes/dark_matter/channel_spectra/griddata/energyvals_massenergy_diffflux_grid.npy
 gammabayes/dark_matter/channel_spectra/griddata/log10xvals_massenergy_diffflux_grid.npy
 gammabayes/dark_matter/channel_spectra/griddata/massvals_massenergy_diffflux_grid.npy
+gammabayes/dark_matter/channel_spectra/single_channel_spectral_model/__init__.py
+gammabayes/dark_matter/channel_spectra/single_channel_spectral_model/single_channel_DM_Spectral_Class.py
 gammabayes/dark_matter/density_profiles/DM_Profiles.py
 gammabayes/dark_matter/density_profiles/__init__.py
 gammabayes/dark_matter/density_profiles/base_dm_profile.py
@@ -75,6 +79,8 @@ gammabayes/dark_matter/spectral_models/core/__init__.py
 gammabayes/dark_matter/spectral_models/core/base_multi_DM_spectral_class.py
 gammabayes/dark_matter/spectral_models/core/base_spectral_class.py
 gammabayes/dark_matter/spectral_models/core/csv_to_dict_class.py
+gammabayes/dark_matter/spectral_models/custom_ratios/__init__.py
+gammabayes/dark_matter/spectral_models/custom_ratios/custom_ratios_model.py
 gammabayes/hyper_inference/__init__.py
 gammabayes/hyper_inference/discrete_adaptive_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/discrete_brute_scan_hyperparameter_likelihood.py
