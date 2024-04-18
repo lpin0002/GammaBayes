@@ -63,7 +63,6 @@ class CombineDMComps(TwoCompPrior):
 
         logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
 
-        print(logsigmav)
         return np.exp(logsigmav)
 
 

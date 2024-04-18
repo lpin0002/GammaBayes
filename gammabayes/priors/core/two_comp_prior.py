@@ -218,32 +218,19 @@ class TwoCompPrior(DiscreteLogPrior):
 
         ####################
 
-        times = []
-
-        times.append(time.perf_counter())
-
         logspectralvals     = self.spectral_comp.mesh_efficient_logfunc(energy, kwd_parameters=spectral_parameters)
 
         ####################
 
-        times.append(time.perf_counter())
-
         logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
-
-        times.append(time.perf_counter())
-
 
         ####################
 
         aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, longitude, latitude, indexing='ij')
 
-        times.append(time.perf_counter())
-
         # Flattening the meshes helps the IRFs evaluate
         log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
         
-        times.append(time.perf_counter())
-
         ####################
 
         # Convention is Energy, Lon, Lat, Mass, [Spectral_Params], [Spatial_Params]
@@ -261,11 +248,7 @@ class TwoCompPrior(DiscreteLogPrior):
         log_spatial_vals = np.expand_dims(logspatialvals, 
                                         axis=expand_spatial_axes)
         
-        times.append(time.perf_counter())
-
         logpdfvalues = logpdfvalues + log_spatial_vals
-
-        times.append(time.perf_counter())
 
         
         # Expanding along all the spectral and spatial parameters
@@ -273,14 +256,8 @@ class TwoCompPrior(DiscreteLogPrior):
         log_aeff_vals = np.expand_dims(log_aeffvals, 
                                         axis=expand_aeff_axes)
         
-        times.append(time.perf_counter())
-
         logpdfvalues = logpdfvalues + log_aeff_vals
 
-        times.append(time.perf_counter())
-
-
-        print(np.diff(times))
 
         return np.squeeze(logpdfvalues)
 

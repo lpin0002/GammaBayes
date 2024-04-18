@@ -10,7 +10,8 @@ class ParameterSet(object):
     dictionaries, lists, and other ParameterSet instances.
     """
 
-    def __init__(self, parameter_specifications: dict | list | tuple = None):
+    def __init__(self, parameter_specifications: dict | list | tuple = {}, 
+                 set_name: str = "UnnamedSet", prior_name: str = 'UnknownPrior'):
         """
         Initializes a ParameterSet with the given parameter specifications.
 
@@ -20,9 +21,27 @@ class ParameterSet(object):
                 This can include parameter names, types, prior names, and their specifications or instances.
         """
 
+
+
         self.axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_name = {}
+
+        try:
+            if 'set_name' in parameter_specifications:
+                self.set_name = parameter_specifications['set_name']
+            else:
+                self.set_name = set_name
+        except TypeError:
+            self.set_name = set_name
+
+        try:
+            if 'prior_name' in parameter_specifications:
+                self.prior_name = parameter_specifications['prior_name']
+            else:
+                self.prior_name = prior_name
+        except TypeError:
+            self.prior_name = prior_name
 
 
 
@@ -57,7 +76,7 @@ class ParameterSet(object):
             
 
             else:
-                warnings.warn("Something went wrong when tring to access dictionary values.")
+                warnings.warn("Something went wrong when trying to access dictionary values.")
 
         elif (type(parameter_specifications) == tuple):
             unformatted_parameter_specifications = list(parameter_specifications)
@@ -82,6 +101,9 @@ class ParameterSet(object):
             self.append(parameter_specifications) 
 
 
+
+
+
     # This method presumes that you have given the specifications in the form of 
             # nested dictionaries of the form
             # prior_name > parameter type > parameter name > parameter specifications
@@ -95,14 +117,13 @@ class ParameterSet(object):
         """
 
         
-        for prior_name, single_prior_parameter_specifications in dict_input.items():
-            for type_key, type_value in single_prior_parameter_specifications.items():
-                for param_name, param_specification in type_value.items():
-                    parameter = self.create_parameter(param_specification=param_specification, 
-                                                      param_name=param_name, 
-                                                      type_key=type_key, 
-                                                      prior_name=prior_name)
-                    self.append(parameter)
+        for type_key, type_value in dict_input.items():
+            for param_name, param_specification in type_value.items():
+                parameter = self.create_parameter(param_specification=param_specification, 
+                                                    param_name=param_name, 
+                                                    type_key=type_key, 
+                                                    prior_name=self.prior_name)
+                self.append(parameter)
 
     # This method presumes that you have given the specifications in the form of 
             # nested dictionaries of the form
@@ -116,7 +137,6 @@ class ParameterSet(object):
             dict_input (dict): The input dictionary containing parameter specifications.
         """
         for param_name, single_parameter_specifications in dict_input.items():
-
             parameter = self.create_parameter(param_specification=single_parameter_specifications, 
                                               param_name=param_name)
             self.append(parameter)
