@@ -10,7 +10,7 @@ setup(name='GammaBayes',
       author='Liam Pinchbeck',
       author_email='Liam.Pinchbeck@monash.edu',
       license="MIT",
-      version='0.1.5',
+      version='0.1.6',
       packages=find_packages(),
 
       # For a lot of the DM spectral classes we require that dict types are ordered
