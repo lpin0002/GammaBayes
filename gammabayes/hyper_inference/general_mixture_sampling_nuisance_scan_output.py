@@ -7,9 +7,10 @@ import h5py
 
 
 
-class ScanOutput_StochasticMixtureFracPosterior(object):
+class ScanOutput_StochasticTreeMixturePosterior(object):
     """
-    A class designed to handle stochastic exploration of posterior distributions for mixture fractions using the Dynesty sampler.
+    A class designed to handle stochastic exploration of posterior distributions for general 
+    mixture fractions using the Dynesty nested sampling package and the "Tree" GammaBayes class.
 
     Attributes:
         prior_parameter_specifications (list | dict | ParameterSet): Specifications for prior parameters.

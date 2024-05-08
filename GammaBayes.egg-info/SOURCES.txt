@@ -13,10 +13,10 @@ gammabayes/core/analysis_cube.py
 gammabayes/core/core_utils.py
 gammabayes/core/data_class.py
 gammabayes/core/geometry.py
+gammabayes/core/mixture_tree.py
 gammabayes/core/parameter_class.py
 gammabayes/core/parameter_set_class.py
 gammabayes/core/parameter_set_collection_class.py
-gammabayes/core/stacked_data_class.py
 gammabayes/dark_matter/__init__.py
 gammabayes/dark_matter/combined_DM_class.py
 gammabayes/dark_matter/custom_ratios_model.py
@@ -90,9 +90,9 @@ gammabayes/hyper_inference/__init__.py
 gammabayes/hyper_inference/discrete_adaptive_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/discrete_brute_scan_hyperparameter_likelihood.py
 gammabayes/hyper_inference/full_stochastic_reweighting_class.py
-gammabayes/hyper_inference/mixture_sampling_nuisance_scan_output.py
 gammabayes/hyper_inference/mixture_scan_nuisance_scan_output.py
 gammabayes/hyper_inference/scan_reweighting_class.py
+gammabayes/hyper_inference/stick_breaking_mixture_sampling_nuisance_scan_output.py
 gammabayes/hyper_inference/utils.py
 gammabayes/likelihoods/__init__.py
 gammabayes/likelihoods/core/__init__.py
