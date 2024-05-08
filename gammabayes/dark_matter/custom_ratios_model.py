@@ -20,11 +20,12 @@ from gammabayes.dark_matter.channel_spectra import (
 )
 from gammabayes.likelihoods import DiscreteLogLikelihood
 
-from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 
 from gammabayes.dark_matter.density_profiles import DM_Profile
-from gammabayes import ParameterSet
-from gammabayes import EventData
+from gammabayes import (
+    ParameterSet, EventData, 
+    apply_dirichlet_stick_breaking_direct, update_with_defaults
+)
 
 
 class CustomDMRatiosModel(object):
@@ -180,7 +181,7 @@ class CustomDMRatiosModel(object):
         if stick_breaking:
             formatted_weights = []
             for depth, channel in enumerate(self.channels):
-                formatted_weight = apply_direchlet_stick_breaking_direct(input_weights, depth) 
+                formatted_weight = apply_dirichlet_stick_breaking_direct(input_weights, depth) 
                 # print(channel, depth, formatted_weight)
                 formatted_weights.append(formatted_weight)
 

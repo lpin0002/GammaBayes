@@ -1,8 +1,8 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
-from gammabayes.utils import resources_dir, iterate_logspace_integration
+from gammabayes.utils import iterate_logspace_integration
 from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
-
+from gammabayes import resources_dir
 
 from tqdm import tqdm
 import numpy as np

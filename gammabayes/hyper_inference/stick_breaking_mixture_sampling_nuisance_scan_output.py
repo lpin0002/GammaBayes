@@ -1,8 +1,7 @@
 import numpy as np, warnings, dynesty, logging
-from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 from gammabayes.hyper_inference.utils import _handle_parameter_specification
 from gammabayes.samplers.sampler_utils import ResultsWrapper
-from gammabayes import ParameterSet, ParameterSetCollection
+from gammabayes import ParameterSet, ParameterSetCollection, apply_dirichlet_stick_breaking_direct, update_with_defaults
 import h5py
 
 
@@ -166,7 +165,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
                 
         ln_like = -np.inf
         for prior_idx in range(self.num_priors):
-            ln_component = np.log(apply_direchlet_stick_breaking_direct(mixture_weights.flatten(), depth=prior_idx))
+            ln_component = np.log(apply_dirichlet_stick_breaking_direct(mixture_weights.flatten(), depth=prior_idx))
 
             ln_marg_results_for_prior = self.log_nuisance_marg_results[prior_idx]
 

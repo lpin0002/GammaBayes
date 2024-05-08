@@ -6,10 +6,11 @@ from scipy import integrate, special
 from scipy.optimize import curve_fit
 
 
-from utils.utils import aeff_efficient, convertlonlat_to_offset
-from utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
-from utils.config_utils import read_config_file
-from inverse_transform_sampling import inverse_transform_sampling
+from gammabayes import aeff_efficient, convertlonlat_to_offset
+from gammabayes.utils.event_axes import log10eaxistrue, longitudeaxistrue, latitudeaxistrue
+from gammabayes.utils.config_utils import read_config_file
+
+
 # from SingleChannel_DM_Prior import DM_dist
 from SS_DM_Prior import SS_DM_dist as DM_dist
 

@@ -1,7 +1,8 @@
 
 from gammabayes.utils.config_utils import read_config_file, save_config_file
-from gammabayes.utils import generate_unique_int_from_string
 from gammabayes.utils.ozstar.make_ozstar_scripts import makejobscripts
+from gammabayes import generate_unique_int_from_string
+
 import sys, os, time, copy
 from tqdm import tqdm
 from warnings import warn

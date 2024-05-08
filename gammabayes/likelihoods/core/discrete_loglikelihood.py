@@ -1,8 +1,8 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
-from gammabayes import EventData, Parameter, ParameterSet
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
+from gammabayes import EventData, Parameter, ParameterSet, update_with_defaults
 import pickle
 
 class DiscreteLogLikelihood(object):

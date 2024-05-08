@@ -1,4 +1,4 @@
-from gammabayes import ParameterSet
+from .parameter_set_class import ParameterSet
 import logging, warnings, numpy as np
 
 def _handle_parameter_specification(

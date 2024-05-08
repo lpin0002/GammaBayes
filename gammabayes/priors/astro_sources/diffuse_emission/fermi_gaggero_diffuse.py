@@ -1,6 +1,7 @@
-from gammabayes.utils import power_law, resources_dir, power_law, haversine
+from gammabayes import resources_dir, power_law, haversine, power_law
 from gammabayes.utils import iterate_logspace_integration, logspace_riemann
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
+
 import numpy as np
 from gammapy.modeling.models import (
     PowerLawSpectralModel,

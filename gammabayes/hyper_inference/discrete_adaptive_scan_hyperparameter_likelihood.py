@@ -1,13 +1,14 @@
 from gammabayes.hyper_inference.discrete_brute_scan_hyperparameter_likelihood import DiscreteBruteScan
+
 from gammabayes.utils import (
     iterate_logspace_integration, 
     logspace_riemann, 
-    update_with_defaults,
-    bound_axis,
 )
+
+
 from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
 from gammabayes.utils.config_utils import save_config_file
-from gammabayes import EventData
+from gammabayes import EventData, update_with_defaults, bound_axis
 
 import numpy as np
 from tqdm import tqdm

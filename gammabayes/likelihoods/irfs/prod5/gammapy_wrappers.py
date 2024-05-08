@@ -1,4 +1,4 @@
-from gammabayes.utils import resources_dir, haversine
+from gammabayes import resources_dir, haversine
 import numpy as np
 from astropy import units as u
 from gammapy.irf import load_irf_dict_from_file

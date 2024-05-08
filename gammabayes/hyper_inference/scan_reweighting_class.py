@@ -6,18 +6,23 @@ import functools, dynesty, warnings, os, sys, time
 from matplotlib import pyplot as plt
 from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
 from gammabayes.utils import (
-    update_with_defaults, 
     iterate_logspace_integration, 
-    bound_axis, 
-    apply_direchlet_stick_breaking_direct)
+    )
 
 import logging
 from gammabayes.priors import DiscreteLogPrior
 from gammabayes.likelihoods import DiscreteLogLikelihood
-from gammabayes import EventData, Parameter, ParameterSet
+from gammabayes import (
+    EventData, 
+    Parameter, ParameterSet, 
+    bound_axis, apply_dirichlet_stick_breaking_direct,
+    update_with_defaults
+)
+
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
 from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
-from gammabayes.hyper_inference.mixture_sampling_nuisance_scan_output import ScanOutput_StochasticMixtureFracPosterior
+from gammabayes.hyper_inference.stick_breaking_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticStickingBreakingMixturePosterior
+
 import pickle, h5py
 
 

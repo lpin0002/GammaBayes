@@ -1,12 +1,23 @@
 import warnings
 import numpy as np
+from gammabayes.priors.core import DiscreteLogPrior
 
 class TreeNode:
-    def __init__(self, value, id=None, parent_node=None):
+    def __init__(self, value, id=None, parent_node=None, prior=None):
         self.value = value
         self.children = []
         self.id = id  # Unique identifier for each node
         self.parent_node = parent_node
+        self.prior = prior
+
+        if id is None:
+            if prior is None:
+                self.id = None
+            else:
+                self.id = prior.name
+            
+        
+
 
     def add_child(self, child):
         self.children.append(child)
@@ -17,7 +28,10 @@ class TreeNode:
     
 
     def deep_copy(self):
-        copied_node = TreeNode(self.value, self.id)
+        copied_node = TreeNode(value    = self.value, 
+                                id  = self.id, 
+                                parent_node = self.parent_node, 
+                                prior = self.prior)
         copied_node.children = [child.deep_copy() for child in self.children]
         return copied_node
 
@@ -47,28 +61,34 @@ class Tree:
     def collect_leaves(self, node):
         if not node.children:
             self.leaves.append(node)
-            self.leaf_values[node.id] = self.compute_product(node)
+            self.leaf_values[node.id] = self.compute_weight(node)
         for child in node.children:
             self.collect_leaves(child)
 
-    def generate_id(self, parent=None):
-        idprefix = f"{parent.id}_" if parent else ""
+    def generate_id(self, parent=None, prior=None):
+        if parent is not None:
+            idprefix = f"{parent.id}_" 
+        elif prior is not None:
+            idprefix = f"{prior.name}_"
+        else:
+            idprefix = f""
+
         id = 1
         while f"{idprefix}auto_id{id}" in self.nodes:
             id += 1
         return f"{idprefix}auto_id{id}"
 
-    def add(self, value, parent, id=None):
+    def add(self, value, parent, prior:DiscreteLogPrior = None, id=None):
         if id and id in self.nodes:
             raise ValueError(f"Node ID '{id}' already exists.")
         new_node_id = id if id is not None else self.generate_id(parent)
-        new_node = TreeNode(value, id=new_node_id, parent_node=parent)
+        new_node = TreeNode(value, id=new_node_id, parent_node=parent, prior=prior)
         parent.add_child(new_node)
         self.nodes[new_node_id] = new_node
         self.refresh_leaves()
         return new_node
 
-    def compute_product(self, node):
+    def compute_weight(self, node):
         product = node.value
         while node.parent_node:
             node = node.parent_node
@@ -90,10 +110,16 @@ class Tree:
                 new_node = self.add(values[index], parent)
                 index += 1
                 index = self.create_tree(item, values, new_node, index)
+            elif isinstance(item, DiscreteLogPrior):
+                # Base case: item is an ID
+                new_node = self.add(values[index], parent, prior=item, id=item.name)
+                index += 1
+
             else:
                 # Base case: item is an ID
                 new_node = self.add(values[index], parent, id=item)
                 index += 1
+            
 
         return index
 

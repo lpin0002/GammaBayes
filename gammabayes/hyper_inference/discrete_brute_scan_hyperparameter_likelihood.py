@@ -4,15 +4,14 @@ from tqdm import tqdm
 from gammabayes.utils import (
     iterate_logspace_integration, 
     logspace_riemann, 
-    update_with_defaults,
-    apply_direchlet_stick_breaking_direct
 )
+
 
 from gammabayes.utils.config_utils import save_config_file
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
 from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
-from gammabayes.hyper_inference.mixture_sampling_nuisance_scan_output import ScanOutput_StochasticMixtureFracPosterior
-from gammabayes import EventData, Parameter, ParameterSet
+from gammabayes.hyper_inference.stick_breaking_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticStickingBreakingMixturePosterior
+from gammabayes import EventData, Parameter, ParameterSet, update_with_defaults, bound_axis
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
@@ -525,7 +524,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             hyperspace_analysis_class = ScanOutput_ScanMixtureFracPosterior
 
         elif mixture_fraction_exploration_type.lower() == 'sample':
-            hyperspace_analysis_class = ScanOutput_StochasticMixtureFracPosterior
+            hyperspace_analysis_class = ScanOutput_StochasticStickingBreakingMixturePosterior
             self.applied_priors = True
 
         else:
@@ -997,7 +996,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
                     hyperspace_analysis_class = ScanOutput_ScanMixtureFracPosterior
 
                 elif class_input_dict['mixture_fraction_exploration_type'].lower() == 'sample':
-                    hyperspace_analysis_class = ScanOutput_StochasticMixtureFracPosterior
+                    hyperspace_analysis_class = ScanOutput_StochasticStickingBreakingMixturePosterior
 
 
                 hyper_analysis_instance = hyperspace_analysis_class.load(posterior_exploration_group)
@@ -1007,7 +1006,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
                 try:
                     hyper_analysis_instance = ScanOutput_ScanMixtureFracPosterior.load(posterior_exploration_group)
                 except:
-                    hyper_analysis_instance = ScanOutput_StochasticMixtureFracPosterior.load(h5f=posterior_exploration_group)
+                    hyper_analysis_instance = ScanOutput_StochasticStickingBreakingMixturePosterior.load(h5f=posterior_exploration_group)
 
 
             class_input_dict['hyper_analysis_instance'] = hyper_analysis_instance

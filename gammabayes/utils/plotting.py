@@ -6,8 +6,8 @@ import time
 from matplotlib import cm
 import sys, os
 from scipy.special import logsumexp
-from gammabayes.utils import hdp_credible_interval_1d, logspace_simpson, logspace_riemann, iterate_logspace_integration
-from gammabayes.core.core_utils import bin_centres_to_edges
+from gammabayes.utils import logspace_simpson, logspace_riemann, iterate_logspace_integration
+from gammabayes import bin_centres_to_edges, hdp_credible_interval_1d
 from matplotlib.colors import LogNorm
 
 

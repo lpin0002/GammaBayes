@@ -5,7 +5,7 @@ from gammabayes.dark_matter.spectral_models import (
 from os import path
 from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes.priors.core import TwoCompPrior
-from gammabayes.utils import update_with_defaults
+from gammabayes import update_with_defaults
 from gammabayes.utils import logspace_simpson
 
 

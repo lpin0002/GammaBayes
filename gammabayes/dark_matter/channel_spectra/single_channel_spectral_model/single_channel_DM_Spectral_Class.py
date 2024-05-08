@@ -6,7 +6,7 @@ single_channel_spectral_data_path = os.path.dirname(os.path.dirname(__file__))
 
 from ..PPPC_Tables import PPPCReader
 
-from gammabayes.utils import update_with_defaults
+from gammabayes import update_with_defaults
 
 
 class SingleDMChannel(object):

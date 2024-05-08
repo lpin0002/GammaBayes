@@ -10,7 +10,7 @@ from gammabayes.dark_matter.channel_spectra import (
     PPPCReader, 
 )
 
-from gammabayes.utils import update_with_defaults
+from gammabayes import update_with_defaults
 import time
 
 from decimal import Decimal, getcontext

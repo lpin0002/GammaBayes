@@ -1,6 +1,7 @@
 import numpy as np
 import astropy.units as u
-from gammabayes.utils import logspace_riemann, haversine, update_with_defaults
+from gammabayes.utils import logspace_riemann
+from gammabayes import haversine, update_with_defaults
 
 import time
 

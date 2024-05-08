@@ -2,7 +2,11 @@ import numpy as np, time, random, os, warnings, pickle
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from gammabayes import EventData, Parameter, ParameterSet, ParameterSetCollection
+from gammabayes import (
+    EventData, Parameter, 
+    ParameterSet, ParameterSetCollection, 
+    apply_direchlet_stick_breaking_direct, update_with_defaults
+)
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
 from gammabayes.utils.config_utils import (
@@ -20,7 +24,6 @@ from gammabayes.utils import (
 
 from gammabayes.dark_matter import CombineDMComps, CustomDMRatiosModel
 
-from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
 
 from gammabayes.priors import DiscreteLogPrior, log_bkg_CCR_dist, TwoCompPrior
 from gammabayes.priors.astro_sources import FermiGaggeroDiffusePrior, HESSCatalogueSources_Prior

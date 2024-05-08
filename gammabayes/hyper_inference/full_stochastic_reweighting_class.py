@@ -1,9 +1,12 @@
 from .scan_reweighting_class import ScanReweighting
 import dynesty, time, numpy as np
-from gammabayes.utils import update_with_defaults, iterate_logspace_integration, apply_direchlet_stick_breaking_direct
+from gammabayes.utils import iterate_logspace_integration
 from scipy import special
 from gammabayes.samplers.sampler_utils import ResultsWrapper
-from gammabayes import Parameter, ParameterSet
+from gammabayes import (
+    Parameter, ParameterSet, 
+    apply_dirichlet_stick_breaking_direct, update_with_defaults
+)
 from gammabayes.priors import DiscreteLogPrior
 import h5py
 
@@ -183,7 +186,7 @@ class StochasticReweighting(ScanReweighting):
         hyper_values    = inputs[num_mixes:]
 
         # Calculating the log of the mixture fractions based on a Dirichlet stick breaking process
-        log_mixture_values_array = np.log([apply_direchlet_stick_breaking_direct(mixture_weights, depth=prior_id) for prior_id in range(self._num_target_priors)])
+        log_mixture_values_array = np.log([apply_dirichlet_stick_breaking_direct(mixture_weights, depth=prior_id) for prior_id in range(self._num_target_priors)])
 
 
 

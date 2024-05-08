@@ -1,11 +1,16 @@
 # Necessary imports for the script functionality
-from gammabayes.utils import resources_dir, iterate_logspace_integration, haversine
+from gammabayes import resources_dir, haversine
+from gammabayes.utils import iterate_logspace_integration
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
+from gammabayes.priors.core import DiscreteLogPrior
+
+
 import numpy as np, logging
 from scipy import interpolate
 from scipy.special import logsumexp
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+
 from gammapy.maps import Map, MapAxis, WcsGeom
 from gammapy.modeling.models import (
     PowerLawSpectralModel,
@@ -13,7 +18,6 @@ from gammapy.modeling.models import (
     TemplateSpatialModel,
 )
 from gammapy.catalog import SourceCatalogHGPS
-from gammabayes.priors.core import DiscreteLogPrior
 
 
 def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
@@ -218,7 +222,7 @@ class HESSCatalogueSources_Prior(DiscreteLogPrior):
                                                                             latitudeaxis=latitudeaxis, 
                                                                             log_aeff=irf.log_aeff,)
         
-        super().__init__(
+        DiscreteLogPrior.__init__(self,
             name='HESS Catalogue Sources Prior',
             axes_names=['energy', 'lon', 'lat'],
             axes=(energy_axis, longitudeaxis, latitudeaxis),

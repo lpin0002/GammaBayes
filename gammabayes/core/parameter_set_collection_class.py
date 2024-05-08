@@ -1,6 +1,6 @@
 from .parameter_set_class import ParameterSet
 from .parameter_class import Parameter
-from gammabayes.utils import update_with_defaults
+from .core_utils import update_with_defaults
 import numpy as np
 
 class ParameterSetCollection:

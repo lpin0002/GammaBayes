@@ -1,7 +1,6 @@
 import numpy as np, warnings, dynesty, logging
-from gammabayes.utils import apply_direchlet_stick_breaking_direct, update_with_defaults
+from gammabayes import apply_dirichlet_stick_breaking_direct, update_with_defaults, ParameterSet, Parameter
 from gammabayes.hyper_inference.utils import _handle_parameter_specification
-from gammabayes import ParameterSet, Parameter
 import h5py
 
 class ScanOutput_ScanMixtureFracPosterior(object):
@@ -163,7 +162,7 @@ and number of prior components is {len(log_nuisance_marg_results)}.""")
 
 
         mixcomp = np.expand_dims(np.log(
-            apply_direchlet_stick_breaking_direct(mixtures_fractions=mix_axes_mesh, depth=prior_idx)), 
+            apply_dirichlet_stick_breaking_direct(mixtures_fractions=mix_axes_mesh, depth=prior_idx)), 
             axis=(*np.delete(np.arange(log_margresults_for_idx.ndim+len(mix_axes_mesh)), 
                                 np.arange(len(mix_axes_mesh))+1),)) 
 
