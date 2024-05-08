@@ -5,7 +5,7 @@
 ##################################################################
 
 # # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
-stem_identifier:                  'standard_analysis_default'
+stem_identifier:                  'high_level_inference_default'
 jobname:                          '1'
 numjobs:                          1
 Nevents_per_job:                  100
@@ -21,7 +21,7 @@ marginalisation_bounds:             [['log10', 0.36], ['linear', 0.44], ['linear
 
 
 seed:                             24
-save_path:                        "data/standard_analysis_default/"
+save_path:                        "data/high_level_inference_default/"
 num_in_marg_batch:                10
 num_in_mixture_scanning_batch:    10
 

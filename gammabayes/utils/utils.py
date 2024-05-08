@@ -179,6 +179,20 @@ def apply_direchlet_stick_breaking_direct(mixtures_fractions: list | tuple,
     return direchletmesh
 
 
+def _event_ratios_to_sticking_breaking_ratios(event_ratios: list | tuple) -> np.ndarray | float:
+    event_ratios = np.asarray(event_ratios)
+
+
+    stick_ratios = []
+
+    for depth, event_ratio in enumerate(event_ratios):
+        stick_ratio = event_ratio/(1-np.sum(event_ratios[:depth]))
+        stick_ratios.append(stick_ratio)
+
+
+    return np.asarray(stick_ratios)
+
+
 
 def bound_axis(axis: np.ndarray, 
                 bound_type: str, 

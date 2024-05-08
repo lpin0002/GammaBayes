@@ -73,6 +73,10 @@ class ParameterSet(object):
             elif (initial_type is Parameter):
                 self.handle_dict_of_param_input(parameter_specifications)
 
+
+            elif isinstance(parameter_specifications, ParameterSet):
+                self.append(parameter_specifications) 
+
             
 
             else:

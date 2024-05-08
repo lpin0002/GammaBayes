@@ -88,8 +88,8 @@ def derive_psf_bounds(irf_loglike,
                       percentile=50, sigmalevel: int=6, 
                       axis_buffer: int = 4, parameter_buffer:float = 1.5, 
                       default_etrue_val: float = 0.2, n: int = 1000):
-    longitudeaxis, latitudeaxis = irf_loglike.axes
-    longitudeaxistrue, latitudeaxistrue = irf_loglike.dependent_axes
+    energyaxis, longitudeaxis, latitudeaxis = irf_loglike.axes
+    energyaxistrue, longitudeaxistrue, latitudeaxistrue = irf_loglike.dependent_axes
 
     fig1, ax = plt.subplots(1,1)
     radii = []

@@ -31,16 +31,16 @@ if __name__=="__main__":
     # A bit nasty but it works
     if 'num_bkg_comp' in config_dict:
         if config_dict['num_bkg_comp']==1:
-            from gammabayes.standard_inference.standard_1comp_bkg import ScanMarg_ConfigAnalysis
+            from gammabayes.high_level_inference.standard_1comp_bkg import ScanMarg_ConfigAnalysis
         if config_dict['num_bkg_comp']==3:
-            from gammabayes.standard_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
+            from gammabayes.high_level_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
     else:
-        from gammabayes.standard_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
+        from gammabayes.high_level_inference.standard_3comp_bkg import ScanMarg_ConfigAnalysis
 
 
     print(f"initial config_file_path: {config_file_path}")
-    standard_inference_instance = ScanMarg_ConfigAnalysis(config_dict=config_dict,)
-    standard_inference_instance.run(path_to_measured_event_data=path_to_measured_event_data)
+    high_level_inference_instance = ScanMarg_ConfigAnalysis(config_dict=config_dict,)
+    high_level_inference_instance.run(path_to_measured_event_data=path_to_measured_event_data)
     print("\n\nRun Done. Now saving")
 
 
@@ -49,7 +49,7 @@ if __name__=="__main__":
     else:
         result_save_filename = 'results.h5'
 
-    standard_inference_instance.discrete_hyper_like_instance.save(config_dict['save_path']+result_save_filename)
+    high_level_inference_instance.discrete_hyper_like_instance.save(config_dict['save_path']+result_save_filename)
     print("\n\nResults saved.")
 
 

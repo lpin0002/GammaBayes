@@ -161,6 +161,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         
     def prior_transform(self, u):
         unitcube = np.squeeze(self.parameter_set_collection.prior_transform(u))
+        # print('unitcube: ', unitcube)
         return unitcube
     
     # def ln_likelihood(self, inputs):
@@ -217,6 +218,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
                 log_nuisance_param_slice = slice_argmin.flatten()
                 log_nuisance_param_slice = log_nuisance_param_slice[0]
 
+
                 log_nuisance_param_matrix_slices[prior_idx].append(log_nuisance_param_slice)
 
                 
@@ -225,15 +227,25 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
             ln_component = np.log(apply_direchlet_stick_breaking_direct(mixture_weights.flatten(), depth=prior_idx))
 
             ln_marg_results_for_prior = self.log_nuisance_marg_results[prior_idx]
+
             try:
                 ln_comp_marg_comp = ln_marg_results_for_prior[:, *log_nuisance_param_matrix_slices[prior_idx]]
                 ln_component = ln_comp_marg_comp + ln_component
             except Exception as err:
                 ln_component = ln_component + ln_marg_results_for_prior
 
-            ln_like = np.logaddexp(ln_like, np.squeeze(ln_component))
+            # print('\n\n\nTypes!: ', type(ln_like), type(np.squeeze(ln_component)))
+            # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
+
+            ln_like = np.logaddexp(ln_like, np.squeeze(ln_component).astype(np.float64))
         result = np.sum(ln_like)
+
+        # print('ln_like: ', result)
         return result
+
+
+    def _zero_likelihood(self, inputs):
+        return inputs[0]*0
 
 
 

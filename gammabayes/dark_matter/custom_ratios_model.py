@@ -32,12 +32,11 @@ class CustomDMRatiosModel(object):
     def __init__(self, 
                  irf_loglike:DiscreteLogLikelihood, 
                  axes: list | tuple | np.ndarray,
-                spatial_class: DM_Profile = Einasto_Profile, 
+                 spatial_class: DM_Profile = Einasto_Profile, 
 
-                channels: list[str] | str = 'all',
+                 channels: list[str] | str = 'all',
                  default_spectral_parameters: dict = {},
                  default_spatial_parameters: dict = {},
-                 default_parameter_specifications: dict = {},
                  *args, **kwargs
                  ):
         
@@ -98,41 +97,14 @@ class CustomDMRatiosModel(object):
                         default_spectral_parameters=default_spectral_parameters,
                         default_spatial_parameters=default_spatial_parameters,
                         )
-            
-        self.default_parameter_specifications = default_parameter_specifications
-    
+                
 
 
     def generate_parameter_specifications(self, set_specifications_to_duplicate: dict = {}) -> dict:
 
         input_set = set_specifications_to_duplicate
 
-        update_with_defaults(input_set, self.default_parameter_specifications)
-
-
-        # It's either a bunch of try and excepts or some convoluted method to do any possible formatting
-        if len(self.default_parameter_specifications)>0:
-            for specified_spec, default_spec in zip(input_set, self.default_parameter_specifications):
-
-                try:
-                    update_with_defaults(input_set[specified_spec], self.default_parameter_specifications[default_spec])
-
-                except Exception as err:
-                    warnings.warn(err)
-
-
-
-                try:
-                    for paramspec, default_paramspec in zip(input_set[specified_spec], self.default_parameter_specifications[default_spec]):
-                        try:
-                            update_with_defaults(input_set[specified_spec][paramspec], self.default_parameter_specifications[default_spec][default_paramspec])
-                        except Exception as err:
-                            warnings.warn(err)
-
-                except Exception as err:
-                    warnings.warn(err)
-
-
+  
         all_parameter_sets = {}
         for channel in self.channels:
             all_parameter_sets[f'{channel} DM Class'] = ParameterSet(input_set)
@@ -193,14 +165,24 @@ class CustomDMRatiosModel(object):
     def sample_from_weights(self, 
                             num_events: int, 
                             input_weights: list[float] | dict[float], 
-                            stick_breaking: bool = True) -> dict[str, EventData]:
+                            stick_breaking: bool = True, 
+                            exhaustive_fractions=False) -> dict[str, EventData]:
+        
+
+
         
         if type(input_weights) == dict:
-            input_weights = [input_weights[key] for key in self.channels]
+            if exhaustive_fractions:
+                input_weights = [input_weights[key] for key in self.channels[:-1]]
+            else:
+                input_weights = [input_weights[key] for key in self.channels]
         
         if stick_breaking:
-
-            formatted_weights = [apply_direchlet_stick_breaking_direct(input_weights, depth) for depth in range(len(self.channels))]
+            formatted_weights = []
+            for depth, channel in enumerate(self.channels):
+                formatted_weight = apply_direchlet_stick_breaking_direct(input_weights, depth) 
+                # print(channel, depth, formatted_weight)
+                formatted_weights.append(formatted_weight)
 
         else:
             formatted_weights = input_weights
