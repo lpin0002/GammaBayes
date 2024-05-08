@@ -135,69 +135,12 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
 
 
-
-    # def prior_transform(self, u):
-    #     """
-    #     Transforms uniform samples `u` from the unit cube to the parameter space defined by mixture and hyperparameter axes.
-
-    #     Args:
-    #         u (np.array): An array of uniform samples to be transformed.
-
-    #     Returns:
-    #         np.array: Transformed samples in the parameter space.
-    #     """
-
-    #     for _mix_idx in range(self.num_mixes):
-    #         u[_mix_idx] = self.mixture_bounds[_mix_idx][0]+u[_mix_idx]*(self.mixture_bounds[_mix_idx][1]- self.mixture_bounds[_mix_idx][0])
-
-    #     for _hyper_idx in range(self.num_hyper_axes):
-    #         hyper_axis = self.index_to_hyper_parameter_info[_hyper_idx][3]
-    #         # Scale the value in u to the range of indices
-    #         scaled_value = u[self.num_mixes + _hyper_idx] * len(hyper_axis)
-    #         index = int(np.floor(scaled_value))
-    #         # Ensure index is within bounds
-    #         index = max(0, min(index, len(hyper_axis) - 1))
-    #         u[self.num_mixes + _hyper_idx] = hyper_axis[index]
-    #     return u
         
     def prior_transform(self, u):
         unitcube = np.squeeze(self.parameter_set_collection.prior_transform(u))
         # print('unitcube: ', unitcube)
         return unitcube
     
-    # def ln_likelihood(self, inputs):
-    #     """
-    #     Calculates the logarithm of the likelihood for a given set of input parameters.
-
-    #     Args:
-    #         inputs (np.array): Array of input parameters, including mixture weights and hyperparameter values.
-
-    #     Returns:
-    #         float: The logarithm of the likelihood for the given inputs.
-    #     """
-        
-    #     mixture_weights = inputs[:self.num_mixes]
-    #     hyper_values    = inputs[self.num_mixes:]
-
-    #     slices_for_priors = [[] for idx in range(self.num_priors)]
-
-    #     for hyper_idx in range(self.num_hyper_axes):
-    #             slice_idx = np.where(self.index_to_hyper_parameter_info[hyper_idx][3]==hyper_values[hyper_idx])[0][0]
-    #             slices_for_priors[self.index_to_hyper_parameter_info[hyper_idx][0]].append(slice_idx)
-
-    #     ln_like = -np.inf
-    #     for prior_idx in range(self.num_priors):
-    #         ln_component = np.log(apply_direchlet_stick_breaking_direct(mixture_weights, depth=prior_idx))
-
-    #         ln_marg_results_for_prior = self.log_nuisance_marg_results[prior_idx]
-    #         try:
-    #             ln_component += ln_marg_results_for_prior[:, *slices_for_priors[prior_idx]]
-    #         except:
-    #             ln_component += ln_marg_results_for_prior
-
-    #         ln_like = np.logaddexp(ln_like, ln_component)
-
-    #     return np.sum(ln_like)
     
 
     def ln_likelihood(self, inputs):
