@@ -166,7 +166,7 @@ class CustomDMRatiosModel(object):
     def sample_from_weights(self, 
                             num_events: int, 
                             input_weights: list[float] | dict[float], 
-                            stick_breaking: bool = True, 
+                            stick_breaking: bool = False, 
                             exhaustive_fractions=False) -> dict[str, EventData]:
         
 

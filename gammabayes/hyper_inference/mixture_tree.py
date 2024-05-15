@@ -2,7 +2,7 @@ import warnings
 import numpy as np
 from gammabayes.priors.core import DiscreteLogPrior
 
-class TreeNode:
+class MTreeNode:
     def __init__(self, value, id=None, parent_node=None, prior=None):
         self.value = value
         self.children = []
@@ -28,7 +28,7 @@ class TreeNode:
     
 
     def deep_copy(self):
-        copied_node = TreeNode(value    = self.value, 
+        copied_node = MTreeNode(value    = self.value, 
                                 id  = self.id, 
                                 parent_node = self.parent_node, 
                                 prior = self.prior)
@@ -38,10 +38,10 @@ class TreeNode:
 
 
 
-class Tree:
+class MTree:
     def __init__(self, root=None):
         if root is None:
-            self.root = TreeNode(1.0, id="root")  # Initialize the root node
+            self.root = MTreeNode(1.0, id="root")  # Initialize the root node
             self.nodes = {self.root.id: self.root}
         else:
             self.root = root
@@ -82,7 +82,7 @@ class Tree:
         if id and id in self.nodes:
             raise ValueError(f"Node ID '{id}' already exists.")
         new_node_id = id if id is not None else self.generate_id(parent)
-        new_node = TreeNode(value, id=new_node_id, parent_node=parent, prior=prior)
+        new_node = MTreeNode(value, id=new_node_id, parent_node=parent, prior=prior)
         parent.add_child(new_node)
         self.nodes[new_node_id] = new_node
         self.refresh_leaves()
@@ -96,7 +96,7 @@ class Tree:
         return product
 
     def create_tree(self, layout, values, parent=None, index=0):
-        if isinstance(layout, Tree):
+        if isinstance(layout, MTree):
             # If the layout is another Tree, deep copy it
             self.root = layout.root.deep_copy()
             self.refresh_leaves()
@@ -168,7 +168,7 @@ class Tree:
         return output_string
 
     def copy(self):
-        return Tree(self.root.deep_copy())
+        return MTree(self.root.deep_copy())
 
 
     # Recursive function to delete all children nodes
@@ -177,7 +177,7 @@ class Tree:
         # iterate over a copy of the list, as otherwise when iterating
             # the list itself could be changing
         for child in node.children[:]:  
-            self.remove_children(child)  # recursively remove children
+            self._remove_children(child)  # recursively remove children
             del self.nodes[child.id]  # remove child from nodes dictionary
 
         # Clear the children list after removal
@@ -208,5 +208,27 @@ class Tree:
         self.refresh_leaves()
         return True
 
+
+    def overwrite(self, values):
+        # Presumes nicely behaving inputs
+
+        
+        # Use a queue to handle the breadth-first traversal
+        queue = list(self.root.children)  # Start with children of the root
+        value_index = 0  # Start from the first provided value
+
+        while queue and value_index < len(values):
+            current_node = queue.pop(0)
+            # Update current node's value
+            current_node.value = values[value_index]
+            # Calculate the complementary value and update it
+            
+            value_index += 1  # Move to the next value
+
+            # Add children of the current nodes to the queue
+            queue.extend(current_node.children)
+
+        # After updating, recompute leaf values
+        self.refresh_leaves()
 
 

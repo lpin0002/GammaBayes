@@ -3,7 +3,8 @@ from .discrete_adaptive_scan_hyperparameter_likelihood import DiscreteAdaptiveSc
 
 from .mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
 from .stick_breaking_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticStickingBreakingMixturePosterior
+from .general_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticTreeMixturePosterior
 
 from .scan_reweighting_class import ScanReweighting
 from .full_stochastic_reweighting_class import StochasticReweighting
-from .mixture_tree import TreeNode, Tree
+from .mixture_tree import MTreeNode, MTree

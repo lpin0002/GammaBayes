@@ -1,6 +1,10 @@
 import warnings, numpy as np
 import copy, h5py, pickle
 from scipy.stats import uniform, loguniform
+from scipy import stats
+from scipy.stats._multivariate import multi_rv_generic
+from scipy.stats import gamma
+
 
 class Parameter(dict):
     """
@@ -34,10 +38,16 @@ class Parameter(dict):
 
             
         if type(initial_data) == dict:
+
+
+            
             data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
             data_copy.update(kwargs)
             
             super().__init__(data_copy)
+
+            self.update_distribution()
+            
 
             if not('scaling' in self):
                 self['scaling'] = 'linear'
@@ -116,6 +126,9 @@ class Parameter(dict):
                 # and performing a scan over them rather than sampling as the performance is 
                 # currently better than the stochastic/reweighting methods. Future updates
                 # will try to improve the performance of the more expandable reweighting method
+
+
+
             if self['discrete']:
 
                 if not('bins' in self) and (self['scaling'] == 'linear'):  
@@ -157,6 +170,17 @@ class Parameter(dict):
                     # import
                 if 'custom_parameter_transform' in self:
                     self.transform = self['custom_parameter_transform']
+
+                elif not(self.scipy_distribution is None):
+                    self.rvs_sampling = False
+                    if hasattr(self.scipy_distribution, 'ppf'):
+                        self.transform = self.scipy_distribution.ppf
+                    # elif isinstance(self.scipy_distribution, list):
+                    #     self.transform = [dist.ppf for dist in self.scipy_distribution]
+
+                    else:
+                        self.rvs_sampling = True
+                        self.transform = self.scipy_distribution.rvs
                 else:
                     if self['scaling']=='linear':
                         self['transform_scale'] = float(np.diff(self['bounds']))
@@ -185,6 +209,8 @@ class Parameter(dict):
                 self[key] = copy.deepcopy(value)
             # If there are any kwargs, update them as well.
             self.update(kwargs)
+            self.update_distribution()
+
 
         else:
             super().__init__()
@@ -192,6 +218,59 @@ class Parameter(dict):
                 raise TypeError("Initial data must be of type dict or Parameter")
 
             self.update(kwargs)
+            self.update_distribution()
+
+
+
+    def unitcube_transform(self, unitcube):
+        if not((self.scipy_dist and self.rvs_sampling) or self.split_dirichlet):
+            return self.transform(unitcube)
+        
+        # elif self.split_dirichlet:
+        #     weights = [transform(u) for transform, u in zip(self.transform, unitcube)]
+        #     weights = weights/np.sum(weights, axis=0)
+        #     return weights.T
+        
+        else:
+            return self.transform()
+        
+
+
+
+
+
+
+    def update_distribution(self):
+        self.scipy_dist = False
+        self.scipy_distribution = None
+        
+        if 'scipy_dist_name' in self:
+            self.split_dirichlet   = False 
+            self.scipy_dist         = True
+
+            dist_name = self['scipy_dist_name']
+            dist_kwargs = self['scipy_dist_kwargs']
+
+            # if dist_name.lower()=='dirichlet':
+            #     if 'alpha' in dist_kwargs:
+            #         alphas = dist_kwargs['alpha']
+
+
+
+            #     gamma_dist_kwargs = {}
+            #     for key, value in dist_kwargs.items():
+            #         if key!='alpha':
+            #             gamma_dist_kwargs[key] = value
+
+            #     self.split_dirichlet = True 
+            #     self.scipy_distribution = [gamma(alpha, **gamma_dist_kwargs) for alpha in alphas]
+
+            # # Update kwargs with values from dependent parameters
+            # else:
+            self.scipy_distribution = getattr(stats, dist_name)(**dist_kwargs)
+            self.prob_model = self.scipy_distribution
+
+
 
 
     @property

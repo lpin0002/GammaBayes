@@ -49,7 +49,12 @@ class ParameterSetCollection:
 
 
         self.parameter_meta_data = parameter_meta_data
+        print(self.parameter_meta_data)
+
+
         self.mixture_parameter_set = mixture_parameter_set
+
+        print(self.mixture_parameter_set)
 
         self.setup_discrete_prior_parameter_transform_intermediaries()
 
@@ -62,7 +67,7 @@ class ParameterSetCollection:
             # and slice the relevant part of the matrix for the given parameter value
             # for the scanned parameters (i.e. the prior parameters are generally presumed
             # to be discrete for now)
-        self.prior_param_index_to_info_dict = {}
+        self.hyper_param_index_to_info_dict = {}
         self.prior_idx_to_param_idx_dict = {}
         hyper_param_idx = 0
 
@@ -70,7 +75,18 @@ class ParameterSetCollection:
         # First few indices of the unit cube are predesignated to be for the mixture weights
             # just for a consistent convention
         for mixture_param in self.mixture_parameter_set.values():
-            self.prior_transform_list.append(mixture_param.transform)
+
+            self.hyper_param_index_to_info_dict[hyper_param_idx] = {'name': mixture_param['name'], 
+                                                                    'prior_param_axes': [],
+                                                                    'log_nuisance_marg_slice_indices':[],
+                                                                    }
+
+            if 'dependent' in mixture_param:
+                self.hyper_param_index_to_info_dict[hyper_param_idx]['dependent'] = mixture_param['dependent']
+
+
+
+            self.prior_transform_list.append([mixture_param.unitcube_transform, [hyper_param_idx]])
             hyper_param_idx+=1
 
 
@@ -85,20 +101,26 @@ class ParameterSetCollection:
                 if prior_identifier in self.prior_ids_to_idx:
                     prior_identifiers_indices.append(self.prior_ids_to_idx[prior_identifier])
         
-            self.prior_param_index_to_info_dict[hyper_param_idx] = {'name': shared_param['name'], 
+            self.hyper_param_index_to_info_dict[hyper_param_idx] = {'name': shared_param['name'], 
                                                                     'prior_identifiers': prior_identifiers_indices, 
                                                                     'prior_param_axes': [],
                                                                     'log_nuisance_marg_slice_indices':[],
                                                                     }
+
+            if 'dependent' in shared_param:
+                self.hyper_param_index_to_info_dict[hyper_param_idx]['dependent'] = shared_param['dependent']
+
+
+
+            self.prior_transform_list.append([shared_param.transform, [hyper_param_idx]])
             hyper_param_idx+=1
 
-            self.prior_transform_list.append(shared_param.transform)
 
 
         # Remaining indices of the unit cube are allocated to the unique prior parameters in order of
             # the input of said priors to class then via input of spectral components then 
             # spatial/angular. The ordering of parameters within a parameter set for a given prior
-            # is tracked via the 'prior_param_idx' variable, which thanks to the ParameterSet class,
+            # is tracked via the 'hyper_param_idx' variable, which thanks to the ParameterSet class,
             # iterates along the parameters in the mentioned order.
             # I cannot think of a better way of doing this so feel free to send
             # me an email at Liam.Pinchbeck@monash.edu if you can think of something better
@@ -112,7 +134,7 @@ class ParameterSetCollection:
 f"""{param['name']} is not discrete. Prior parameters are presumed to be unique for this analysis class.
 """)
                 is_shared = False
-                for temp_prior_param_idx, temp_parameter_info in self.prior_param_index_to_info_dict.items():
+                for temp_prior_param_idx, temp_parameter_info in self.hyper_param_index_to_info_dict.items():
 
                     # See if the parameter is shared
                     if param['name'] == temp_parameter_info['name']:
@@ -125,12 +147,15 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
 
                     
                 if not(is_shared):
-                    self.prior_transform_list.append(param.transform)
-                    self.prior_param_index_to_info_dict[hyper_param_idx] = {'name': param['name'], 
+                    self.prior_transform_list.append([param.transform, [hyper_param_idx]])
+                    self.hyper_param_index_to_info_dict[hyper_param_idx] = {'name': param['name'], 
                                                                     'prior_identifiers': [prior_idx], 
                                                                     'prior_param_axes': [param['axis']],
                                                                     'log_nuisance_marg_slice_indices':[prior_param_idx],
                                                                     }
+                    if 'dependent' in param:
+                        self.hyper_param_index_to_info_dict[hyper_param_idx]['dependent'] = param['dependent']
+
                     self.prior_idx_to_param_idx_dict[prior_idx].append([param_idx, prior_param_idx])
                     hyper_param_idx+=1
 
@@ -140,13 +165,33 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
 
 
 
+        dummy_parameter_transform_hyper_param_names = {}
+        for param_idx, param_info in self.hyper_param_index_to_info_dict.items():
+            if param_info['name'] in dummy_parameter_transform_hyper_param_names:
+                print(f"Assinging {param_info['name']} transform to dummy transform")
+                self.prior_transform_list[param_idx][0] = self._dummy_prior_transform
+                self.prior_transform_list[dummy_parameter_transform_hyper_param_names[param_info['name']]][1].append(param_idx)
+            
+            elif 'dependent' in param_info:
+                for dependent_param_name in param_info['dependent']:
+                    dummy_parameter_transform_hyper_param_names[dependent_param_name] = param_idx
+
+
+
+
+
+    def _dummy_prior_transform(self, u):
+        return u
+
+
+
     def __repr__(self):
         string_val = "ParameterSetCollection Instance:\n"
         string_val+= f"Name:                {self.collection_name}\n"
         string_val+= f"Num Priors:          {len(self.parameter_sets)}\n"
         string_val+= f"Num Mixtures:        {len(self.mixture_parameter_set)}\n"
         string_val+= f"Num Shared:          {len(self.shared_parameters)}\n"
-        string_val+= f"Num Unique Params:   {len(self.prior_param_index_to_info_dict)}\n"
+        string_val+= f"Num Unique Params:   {len(self.hyper_param_index_to_info_dict)}\n"
         return string_val
 
 
@@ -157,12 +202,14 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
         Returns:
             int: The number of parameters.
         """
-        return len(self.prior_param_index_to_info_dict)
+        return len(self.hyper_param_index_to_info_dict)
 
 
 
     def prior_transform(self, u):
-        u = np.row_stack([f(u[i]) for i, f in enumerate(self.prior_transform_list)])
+
+        for prior_transform, prior_transform_indices in self.prior_transform_list:
+            u[prior_transform_indices] = prior_transform(u[prior_transform_indices])
         return u
     
 
