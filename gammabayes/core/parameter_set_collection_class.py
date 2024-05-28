@@ -111,7 +111,6 @@ class ParameterSetCollection:
                 self.hyper_param_index_to_info_dict[hyper_param_idx]['dependent'] = shared_param['dependent']
 
 
-
             self.prior_transform_list.append([shared_param.transform, [hyper_param_idx]])
             hyper_param_idx+=1
 
@@ -168,7 +167,7 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
         dummy_parameter_transform_hyper_param_names = {}
         for param_idx, param_info in self.hyper_param_index_to_info_dict.items():
             if param_info['name'] in dummy_parameter_transform_hyper_param_names:
-                print(f"Assinging {param_info['name']} transform to dummy transform")
+                print(f"Assigning {param_info['name']} transform to dummy transform")
                 self.prior_transform_list[param_idx][0] = self._dummy_prior_transform
                 self.prior_transform_list[dummy_parameter_transform_hyper_param_names[param_info['name']]][1].append(param_idx)
             

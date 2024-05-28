@@ -1,10 +1,12 @@
-import numpy as np, warnings, dynesty, logging
+import numpy as np, warnings, dynesty, logging, time
 
 from gammabayes.hyper_inference.utils import _handle_parameter_specification
 from gammabayes.hyper_inference.mixture_tree import MTree, MTreeNode
 from gammabayes.samplers.sampler_utils import ResultsWrapper
 from gammabayes import ParameterSet, ParameterSetCollection
 from gammabayes.core.core_utils import apply_dirichlet_stick_breaking_direct, update_with_defaults
+from itertools import islice
+
 import h5py
 
 
@@ -73,6 +75,13 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
         self.mixture_parameter_specifications = ParameterSet(mixture_parameter_specifications)
+
+        # Making sure that the order of the mixture parameters is the same as the tree layout
+        mixture_param_order = mixture_tree.nodes.copy()
+        del mixture_param_order['root']
+        self.mixture_parameter_specifications.reorder(list(mixture_param_order))
+
+
         self.mixture_bounds         = self.mixture_parameter_specifications.bounds
 
 
@@ -105,6 +114,18 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         # -1 is to not count the root node, which is always 1.
         self.num_mixes   = len(mixture_tree.nodes)-1
 
+        self.results = _sampler_results
+
+        self.ndim = len(self.parameter_set_collection.prior_transform_list)
+
+
+        self.set_hyper_axis_info()
+
+
+
+
+    def set_hyper_axis_info(self):
+
 
         # Counter for hyperparameter axes, mostly for 'index_to_hyper_parameter_info'
         hyper_idx = 0
@@ -135,9 +156,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
         self.index_to_hyper_parameter_info = index_to_hyper_parameter_info
 
-        self.ndim = len(self.parameter_set_collection.prior_transform_list)
 
-        self.results = _sampler_results
 
 
 
@@ -147,16 +166,25 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         
         return unitcube
     
-    
-
     def ln_likelihood(self, inputs):
+        
+        times = []
 
+        
 
         # Extract values of parameters
         mixture_fractions = inputs[:self.num_mixes]
 
+
+
+
         self.mixture_tree.overwrite(mixture_fractions)
-        mixture_weights     = np.array(list(self.mixture_tree.leaf_values.values()))
+
+
+        mixture_weights     = list(self.mixture_tree.leaf_values.values())
+
+
+
 
         # print("mixture_fractions: ", mixture_fractions)
         # print("mixture_weights: ", mixture_weights)
@@ -166,21 +194,25 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
         # Generate slices of log nuisance parameter marginalised matrices
 
+
+
         log_nuisance_param_matrix_slices = [[] for _ in range(self.num_priors)]
 
-        for hyper_param_idx, hyper_param_info in self.parameter_set_collection.hyper_param_index_to_info_dict.items():
+
+        for hyper_param_idx, hyper_param_info in islice(self.parameter_set_collection.hyper_param_index_to_info_dict.items(), self.num_mixes, None):
             # print(hyper_param_idx, log_nuisance_param_matrix_slices, inputs[hyper_param_idx])
-            if hyper_param_idx>=self.num_mixes:
-                for prior_idx in hyper_param_info['prior_identifiers']:
+            
+            prior_axes = hyper_param_info['prior_param_axes']
+            prior_param_value = inputs[hyper_param_idx]
+            for prior_idx in hyper_param_info['prior_identifiers']:
 
-                    slice_argmin =  np.abs(inputs[hyper_param_idx]-hyper_param_info['prior_param_axes'][prior_idx]).argmin()
-                    log_nuisance_param_slice = slice_argmin.flatten()
-                    log_nuisance_param_slice = log_nuisance_param_slice[0]
+                log_nuisance_param_slice =  np.abs(prior_param_value-prior_axes[prior_idx]).argmin()
+                # log_nuisance_param_slice = slice_argmin.flatten()[0]
 
 
-                    log_nuisance_param_matrix_slices[prior_idx].append(log_nuisance_param_slice)
+                log_nuisance_param_matrix_slices[prior_idx].append(log_nuisance_param_slice)
 
-                
+
         ln_like = -np.inf
         for prior_idx, mixture_weight in enumerate(mixture_weights,):
             ln_component = np.log(mixture_weight)
@@ -197,7 +229,11 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
             # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
 
             ln_like = np.logaddexp(ln_like, np.squeeze(ln_component).astype(np.float64))
+
+            
         result = np.sum(ln_like)
+
+
 
         # print('ln_like: ', result)
         return result

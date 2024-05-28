@@ -89,12 +89,21 @@ class CustomDMRatiosModel(object):
 
 
         for channel in self.channels:
+
+            if 'spectral_class_kwds' in kwargs:
+                spectral_class_kwds = kwargs['spectral_class_kwds']
+            else:
+                spectral_class_kwds = {}
+
+            spectral_class_kwds['channel'] = channel
+
             self.channel_prior_dict[channel] = CombineDMComps(name=f"{channel} DM Class",
                         spectral_class = SingleDMChannel, 
                         spatial_class = spatial_class,
                         irf_loglike=irf_loglike, 
                         axes=axes, 
                         axes_names=['energy', 'lon', 'lat'],
+                        spectral_class_kwds = spectral_class_kwds,
                         default_spectral_parameters=default_spectral_parameters,
                         default_spatial_parameters=default_spatial_parameters,
                         )

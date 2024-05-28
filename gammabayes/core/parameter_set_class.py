@@ -538,3 +538,25 @@ default value. Place nan in position of default""")
 
         
         return  pickle.load(open(file_name,'rb'))
+    
+    def reorder(self, order_list):
+        """
+        Reorders the parameters in the set based on the provided order list.
+
+        Args:
+            order_list (list): A list of parameter names in the desired order.
+        """
+        reordered_parameters = {name: self.dict_of_parameters_by_name[name] for name in order_list if name in self.dict_of_parameters_by_name}
+        self.dict_of_parameters_by_name = reordered_parameters
+
+        # Reorder dict_of_parameters_by_type
+        for type_key in self.dict_of_parameters_by_type:
+            type_parameters = self.dict_of_parameters_by_type[type_key]
+            reordered_type_parameters = {name: type_parameters[name] for name in order_list if name in type_parameters}
+            self.dict_of_parameters_by_type[type_key] = reordered_type_parameters
+
+        # Reorder axes_by_type
+        for type_key in self.axes_by_type:
+            type_axes = self.axes_by_type[type_key]
+            reordered_axes = {name: type_axes[name] for name in order_list if name in type_axes}
+            self.axes_by_type[type_key] = reordered_axes

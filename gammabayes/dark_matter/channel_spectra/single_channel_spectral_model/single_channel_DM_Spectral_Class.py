@@ -18,20 +18,22 @@ class SingleDMChannel(object):
                  ):
     
         self.channel = channel
+
+        print(self.channel)
         atprod_gammas = PPPCReader(single_channel_spectral_data_path+"/PPPC_Tables/AtProduction_gamma_EW_corrections.dat")
         atprod_mass_values = atprod_gammas.mass_axis
         atprod_log10x_values = atprod_gammas.log10x_axis
 
         # We take the square root of the outputs so later we can square them to enforce positivity
         try:
-            PPPC_channel = PPPCReader.darkSUSY_to_PPPC_converter[channel]
+            PPPC_channel = PPPCReader.darkSUSY_to_PPPC_converter[self.channel]
         
             # Extracting single channel spectra
             tempspectragrid = atprod_gammas[PPPC_channel].reshape(atprod_gammas.output_shape)
             
         except:
             # Extracting single channel spectra
-            tempspectragrid = atprod_gammas[channel].reshape(atprod_gammas.output_shape)
+            tempspectragrid = atprod_gammas[self.channel].reshape(atprod_gammas.output_shape)
             
         # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
         self.sqrtchannelfunc = interpolate.RegularGridInterpolator(

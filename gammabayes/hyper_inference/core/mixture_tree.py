@@ -105,11 +105,12 @@ class MTree:
             parent = self.root
 
         for item in layout:
-            if isinstance(item, list):
+            if isinstance(item, dict):
                 # Recursive case: item is a sublist representing children of the current node
-                new_node = self.add(values[index], parent)
+                new_node = self.add(values[index], parent, id=list(item.keys())[0])
                 index += 1
-                index = self.create_tree(item, values, new_node, index)
+                index = self.create_tree(layout=list(item.values())[0], values=values, parent=new_node, index=index)
+
             elif isinstance(item, DiscreteLogPrior):
                 # Base case: item is an ID
                 new_node = self.add(values[index], parent, prior=item, id=item.name)
@@ -210,25 +211,19 @@ class MTree:
 
 
     def overwrite(self, values):
-        # Presumes nicely behaving inputs
-
-        
         # Use a queue to handle the breadth-first traversal
-        queue = list(self.root.children)  # Start with children of the root
+        queue = list(self.root.children)  # Start with the root node
         value_index = 0  # Start from the first provided value
 
         while queue and value_index < len(values):
             current_node = queue.pop(0)
             # Update current node's value
             current_node.value = values[value_index]
-            # Calculate the complementary value and update it
-            
             value_index += 1  # Move to the next value
 
             # Add children of the current nodes to the queue
-            queue.extend(current_node.children)
+            queue = list(current_node.children)+queue
 
         # After updating, recompute leaf values
         self.refresh_leaves()
-
 

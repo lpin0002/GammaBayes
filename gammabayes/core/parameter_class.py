@@ -160,28 +160,23 @@ class Parameter(dict):
                             
                 
                 self['transform_scale'] = self['bins']
-                if 'custom_parameter_transform' in self:
-                    self.transform = self['custom_parameter_transform']
-                else:
+
+                if self.custom_distribution is None:
                     self.transform = self.discrete_parameter_transform
             else:
 
                 # Future updates will allow one to set a custom function via a dynamic
                     # import
-                if 'custom_parameter_transform' in self:
-                    self.transform = self['custom_parameter_transform']
 
-                elif not(self.scipy_distribution is None):
+                if not(self.custom_distribution is None):
                     self.rvs_sampling = False
-                    if hasattr(self.scipy_distribution, 'ppf'):
-                        self.transform = self.scipy_distribution.ppf
-                    # elif isinstance(self.scipy_distribution, list):
-                    #     self.transform = [dist.ppf for dist in self.scipy_distribution]
-
+                    if hasattr(self.custom_distribution, 'ppf'):
+                        self.transform = self.custom_distribution.ppf
                     else:
                         self.rvs_sampling = True
-                        self.transform = self.scipy_distribution.rvs
+                        self.transform = self.custom_distribution.rvs
                 else:
+
                     if self['scaling']=='linear':
                         self['transform_scale'] = float(np.diff(self['bounds']))
                         self.transform = self.continuous_parameter_transform_linear_scaling
@@ -217,13 +212,10 @@ class Parameter(dict):
             if initial_data is not None:  # This ensures compatibility with empty or default init.
                 raise TypeError("Initial data must be of type dict or Parameter")
 
-            self.update(kwargs)
-            self.update_distribution()
-
 
 
     def unitcube_transform(self, unitcube):
-        if not((self.scipy_dist and self.rvs_sampling) or self.split_dirichlet):
+        if not((self.custom_dist and self.rvs_sampling) or self.split_dirichlet):
             return self.transform(unitcube)
         
         # elif self.split_dirichlet:
@@ -241,34 +233,42 @@ class Parameter(dict):
 
 
     def update_distribution(self):
-        self.scipy_dist = False
-        self.scipy_distribution = None
+        self.custom_dist = False
+        self.custom_distribution = None
         
-        if 'scipy_dist_name' in self:
-            self.split_dirichlet   = False 
-            self.scipy_dist         = True
+        if ('custom_dist_name' in self):
+            self.custom_dist         = True
 
-            dist_name = self['scipy_dist_name']
-            dist_kwargs = self['scipy_dist_kwargs']
+            dist_name = self['custom_dist_name']
+            dist_kwargs = self['custom_dist_kwargs']
 
-            # if dist_name.lower()=='dirichlet':
-            #     if 'alpha' in dist_kwargs:
-            #         alphas = dist_kwargs['alpha']
+            self.custom_distribution = getattr(stats, dist_name)(**dist_kwargs)
+
+        elif 'custom_distribution' in self:
+            
+            self.custom_dist         = True
+
+            self.custom_distribution = self['custom_distribution']
+
+            if type(self.custom_distribution)==str:
+                self['custom_dist_name'] = self.custom_distribution
+
+                del self.custom_distribution
+                del self['custom_distribution']
+
+                self.update_distribution()
+
+            elif 'custom_dist_kwargs' in self:
+                dist_kwargs = self['custom_dist_kwargs']
+                self.custom_distribution = self.custom_distribution(**dist_kwargs)
 
 
 
-            #     gamma_dist_kwargs = {}
-            #     for key, value in dist_kwargs.items():
-            #         if key!='alpha':
-            #             gamma_dist_kwargs[key] = value
+        try:
+            self.prob_model = self.custom_distribution.pdf
+        except:
+            pass
 
-            #     self.split_dirichlet = True 
-            #     self.scipy_distribution = [gamma(alpha, **gamma_dist_kwargs) for alpha in alphas]
-
-            # # Update kwargs with values from dependent parameters
-            # else:
-            self.scipy_distribution = getattr(stats, dist_name)(**dist_kwargs)
-            self.prob_model = self.scipy_distribution
 
 
 
