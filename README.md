@@ -1,4 +1,8 @@
-# GammaBayes
+<p align="center">
+    <img src="misc/banner_logo_v2.png" alt="drawing" class="center"/>
+</p>
+
+
 __Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
 
 __Supervisor(s)__: Csaba Balazs, Eric Thrane
