@@ -1,6 +1,7 @@
 from gammabayes.likelihoods.core import DiscreteLogLikelihood
 from gammabayes.likelihoods.irfs.irf_extractor_class import IRFExtractor
 from gammabayes.likelihoods.irfs.irf_normalisation_setup import irf_norm_setup
+from astropy import units as u
 import numpy as np
 class IRF_LogLikelihood(DiscreteLogLikelihood):
 
@@ -73,8 +74,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         return self.irf_loglikelihood.log_psf(pointing_direction=self.pointing_direction, *args, **kwargs)
     
     def log_aeff(self, *args, **kwargs):
-            return self.irf_loglikelihood.log_aeff(pointing_direction=self.pointing_direction, *args, **kwargs)
+        return self.irf_loglikelihood.log_aeff(pointing_direction=self.pointing_direction, *args, **kwargs)
     
+
+    def log_bkg_CCR(self, *args, **kwargs):
+        return self.irf_loglikelihood.log_bkg_CCR(pointing_direction=self.pointing_direction, *args, **kwargs)
+
 
     def create_log_norm_matrices(self, **kwargs):
         return irf_norm_setup(energy_true_axis=self.dependent_axes[0],

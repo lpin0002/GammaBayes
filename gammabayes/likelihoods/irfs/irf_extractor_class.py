@@ -146,6 +146,7 @@ class IRFExtractor(object):
 
         self.psf3d              = self.psf_default.to_psf3d()
         self.aeff_default       = extracted_default_irfs['aeff']
+        self.CCR_BKG       = extracted_default_irfs['bkg'].to_2d()
 
 
 
@@ -306,3 +307,26 @@ class IRFExtractor(object):
                                                         offset=offset*u.deg).value)
         
         return output
+    
+    def log_bkg_CCR(self, energy, longitude, latitude, 
+                    spectral_parameters={}, spatial_parameters={},
+                    pointing_direction=[0,0], ):
+        """Wrapper for the Gammapy interpretation of the log of 
+            the CTA's background charged cosmic-ray mis-identification rate.
+
+        Args:
+            energy (float): True energy of a gamma-ray event detected by the CTA
+            longitude (float): True FOV longitude of a gamma-ray event 
+                detected by the CTA
+            latitude (float): True FOV latitude of a gamma-ray event 
+                detected by the CTA
+
+        Returns:
+            float: Natural log of the charged cosmic ray mis-idenfitication rate for the CTA
+        """
+
+        offset  = haversine(longitude, latitude, pointing_direction[0], pointing_direction[1])
+
+
+
+        return np.log(self.CCR_BKG.evaluate(energy=energy*u.TeV, offset=offset*u.deg).to((u.TeV*u.sr*u.s)**(-1)).value)

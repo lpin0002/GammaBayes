@@ -2,7 +2,7 @@ import numpy as np, time, random, os, warnings, pickle
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from gammabayes import EventData, Parameter, ParameterSet
+from gammabayes import EventData, Parameter, ParameterSet, generate_unique_int_from_string
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
 from gammabayes.utils.config_utils import (
@@ -14,7 +14,6 @@ from gammabayes.utils.config_utils import (
 from gammabayes.utils import (
     logspace_riemann, 
     iterate_logspace_integration, 
-    generate_unique_int_from_string, 
     dynamic_import
 )
 from gammabayes.dark_matter import CombineDMComps

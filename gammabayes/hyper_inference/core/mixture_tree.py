@@ -95,12 +95,23 @@ class MTree:
             product *= node.value
         return product
 
-    def create_tree(self, layout, values, parent=None, index=0):
+    def create_tree(self, layout, values=None, parent=None, index=0):
+
+
+        no_values=False
+        if values is None:
+            no_values = True
+
+            num_in_layer = len(layout)
+
+            values = [1/num_in_layer]*num_in_layer
+            
         if isinstance(layout, MTree):
             # If the layout is another Tree, deep copy it
             self.root = layout.root.deep_copy()
             self.refresh_leaves()
             return
+        
         if parent is None:
             parent = self.root
 
@@ -108,7 +119,13 @@ class MTree:
             if isinstance(item, dict):
                 # Recursive case: item is a sublist representing children of the current node
                 new_node = self.add(values[index], parent, id=list(item.keys())[0])
+
                 index += 1
+
+                if no_values:
+                    num_in_layer = len(list(item.values())[0])
+                    values[index:index] = [1/num_in_layer]*num_in_layer
+
                 index = self.create_tree(layout=list(item.values())[0], values=values, parent=new_node, index=index)
 
             elif isinstance(item, DiscreteLogPrior):
@@ -120,7 +137,7 @@ class MTree:
                 # Base case: item is an ID
                 new_node = self.add(values[index], parent, id=item)
                 index += 1
-            
+
 
         return index
 

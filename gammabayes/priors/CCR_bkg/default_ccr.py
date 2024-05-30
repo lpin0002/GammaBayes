@@ -24,3 +24,5 @@ def log_bkg_CCR_dist(energy, longitude, latitude, spectral_parameters={}, spatia
         float: Natural log of the charged cosmic ray mis-idenfitication rate for the CTA
     """
     return np.log(bkgfull.evaluate(energy=energy*u.TeV, fov_lon=longitude*u.deg, fov_lat=latitude*u.deg).to((u.TeV*u.sr*u.s)**(-1)).value)
+
+
