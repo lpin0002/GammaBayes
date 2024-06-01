@@ -36,9 +36,9 @@ from .setup import hl_setup_from_config
 
 class high_level_mixture(hl_setup_from_config):
 
-    def __init__(self, config_file_name):
+    def __init__(self, config):
 
-        super().__init__(config_file_name=config_file_name)
+        super().__init__(config=config)
 
 
     def simulate(self, Nevents=None, tree_node_values=None):
@@ -49,15 +49,21 @@ class high_level_mixture(hl_setup_from_config):
         if not(tree_node_values is None):
             sample_mixture_tree.overwrite(tree_node_values)
 
+        
         if Nevents is None:
             Nevents = self.Nevents_per_job
 
-        num_samples = np.asarray(list(sample_mixture_tree.leaf_values.values()))*Nevents
 
+        leaf_values = list(sample_mixture_tree.leaf_values.values())
+
+        num_samples = np.asarray(leaf_values)*Nevents
 
         true_event_data = [obs_prior.sample(num_sample) for obs_prior, num_sample in zip(self.observational_prior_models, num_samples)]
 
+        # true_events = true_event_data[0]
         true_events = sum(true_event_data)
+
+
 
 
         measured_event_data = self.irf_loglike.sample(true_events)

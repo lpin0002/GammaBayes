@@ -1,4 +1,5 @@
-import numpy as np, time, random, warnings
+import numpy as np
+import time, random, warnings, os
 
 
 from gammabayes.dark_matter.channel_spectra import (
@@ -34,9 +35,13 @@ from dynesty.pool import Pool as DyPool
 
 class hl_setup_from_config:
 
-    def __init__(self, config_file_name):
+    def __init__(self, config):
 
-        self.config_dict = read_config_file(config_file_name)
+
+        if isinstance(config, dict):
+            self.config_dict = config
+        else:
+            self.config_dict = read_config_file(config)
 
         self.prior_parameter_specifications = self.config_dict['prior_parameter_specifications']
         self.shared_parameter_specifications = self.config_dict['shared_parameter_specifications']
@@ -73,25 +78,31 @@ class hl_setup_from_config:
         
 
 
-        if 'log_irf_norm_matrix_load_path' in self.config_dict:
-            self.log_irf_norm_matrix_path = self.config_dict['log_irf_norm_matrix_load_path']
+        if 'log_irf_norm_matrix_path' in self.config_dict:
+            self.log_irf_norm_matrix_path = self.config_dict['log_irf_norm_matrix_path']
+
             try:
+                print("Loaded from specified path")
                 self.log_irf_norm_matrix = np.load(self.log_irf_norm_matrix_path)
+
             except:
                 self.log_irf_norm_matrix = None
         else:
             self.log_irf_norm_matrix = None
 
 
-        if ('log_psf_norm_matrix_load_path' in self.config_dict) and ('log_edisp_norm_matrix_load_path' in self.config_dict):
-            self.log_psf_norm_matrix_path = self.config_dict['log_psf_norm_matrix_load_path']
-            self.log_psf_norm_matrix = np.load(self.log_psf_norm_matrix_path)
+        if ('log_edisp_norm_matrix_path' in self.config_dict) and ('log_psf_norm_matrix_path' in self.config_dict):
+            
+            self.log_psf_norm_matrix_load_path = self.config_dict['log_psf_norm_matrix_path']
+            self.log_psf_norm_matrix = np.load(self.log_psf_norm_matrix_load_path)
 
-            self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_load_path']
+            self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
             self.log_edisp_norm_matrix = np.load(self.log_edisp_norm_matrix_path)
         else:
+
             self.log_psf_norm_matrix = None
             self.log_edisp_norm_matrix = None
+
 
 
         if self.log_irf_norm_matrix is None:
@@ -103,23 +114,47 @@ class hl_setup_from_config:
 
         
         
-        if 'log_irf_norm_matrix_save_path' in self.config_dict:
-            np.save(self.config_dict['log_irf_norm_matrix_save_path'], self.log_irf_norm_matrix)
+        if 'log_irf_norm_matrix_path' in self.config_dict:
+            np.save(self.config_dict['log_irf_norm_matrix_path'], self.log_irf_norm_matrix)
         else:
-            np.save(self.save_path+'irf_norm_matrix.npy', self.log_irf_norm_matrix)
+            if self.save_path=="":
+                self.log_irf_norm_matrix_path = 'irf_norm_matrix.npy'
+            else:
+                self.log_irf_norm_matrix_path = self.save_path+'/irf_norm_matrix.npy'
+
+
+            np.save(self.log_irf_norm_matrix_path, self.log_irf_norm_matrix)
+            self.log_psf_norm_matrix_path = os.path.abspath(self.log_irf_norm_matrix_path)
+
+            print(f"Saving to {self.log_irf_norm_matrix_path}")
 
         
-        if 'log_psf_matrix_save_path' in self.config_dict:
-            np.save(self.config_dict['log_psf_matrix_save_path'], self.log_psf_norm_matrix)
+        if 'log_psf_norm_matrix_path' in self.config_dict:
+            np.save(self.config_dict['log_psf_norm_matrix_path'], self.log_psf_norm_matrix)
         else:
-            np.save(self.save_path+'log_psf_norm_matrix.npy', self.log_psf_norm_matrix)
+            if self.save_path=="":
+                self.log_psf_norm_matrix_path = 'log_psf_norm_matrix.npy'
+            else:
+                self.log_psf_norm_matrix_path = self.save_path+'/log_psf_norm_matrix.npy'
+
+
+            np.save(self.log_psf_norm_matrix_path, self.log_psf_norm_matrix)
+            self.log_psf_norm_matrix_path = os.path.abspath(self.log_psf_norm_matrix_path)
+            
+
         
 
-        if 'log_edisp_matrix_save_path' in self.config_dict:
-            np.save(self.config_dict['log_edisp_matrix_save_path'], self.log_edisp_norm_matrix)
+        if 'log_edisp_norm_matrix_path' in self.config_dict:
+            np.save(self.config_dict['log_edisp_norm_matrix_path'], self.log_edisp_norm_matrix)
         else:
-            np.save(self.save_path+'log_edisp_norm_matrix.npy', self.log_edisp_norm_matrix)
+            if self.save_path=="":
+                self.log_edisp_norm_matrix_path = 'log_edisp_norm_matrix.npy'
+            else:
+                self.log_edisp_norm_matrix_path = self.save_path+'/log_edisp_norm_matrix.npy'
 
+                
+            np.save(self.log_edisp_norm_matrix_path, self.log_edisp_norm_matrix)
+            self.log_psf_norm_matrix_path = os.path.abspath(self.log_edisp_norm_matrix_path)
 
 
 
@@ -309,7 +344,7 @@ class hl_setup_from_config:
 
         if values is None:
 
-            values = []
+            unformatted_values = []
 
             if 'true_mixture_fractions' in self.config_dict:
                 self.true_mixture_fractions = self.config_dict['true_mixture_fractions']
@@ -323,9 +358,13 @@ class hl_setup_from_config:
             else:
                 self.DM_Annihilation_Ratios = {}
 
+            print(self.true_mixture_fractions)
+            print(self.DM_Annihilation_Ratios)
+
+            values = []
             for source_name, fraction in self.true_mixture_fractions.items():
 
-                
+
                 values.append(fraction)
 
                 if source_name=='DM':

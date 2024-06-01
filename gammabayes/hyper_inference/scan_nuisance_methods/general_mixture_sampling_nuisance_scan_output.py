@@ -1,6 +1,6 @@
 import numpy as np, warnings, dynesty, logging, time
 
-from gammabayes.hyper_inference.utils import _handle_parameter_specification
+from gammabayes.hyper_inference.core.utils import _handle_parameter_specification
 from gammabayes.hyper_inference.mixture_tree import MTree, MTreeNode
 from gammabayes.samplers.sampler_utils import ResultsWrapper
 from gammabayes import ParameterSet, ParameterSetCollection
@@ -221,10 +221,12 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
             try:
                 ln_comp_marg_comp = ln_marg_results_for_prior[:, *log_nuisance_param_matrix_slices[prior_idx]]
+
+
                 ln_component = ln_comp_marg_comp + ln_component
+
             except Exception as err:
                 ln_component = ln_component + ln_marg_results_for_prior
-
             # print('\n\n\nTypes!: ', type(ln_like), type(np.squeeze(ln_component)))
             # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
 

@@ -191,7 +191,7 @@ class CustomDMRatiosModel(object):
             formatted_weights = []
             for depth, channel in enumerate(self.channels):
                 formatted_weight = apply_dirichlet_stick_breaking_direct(input_weights, depth) 
-                # print(channel, depth, formatted_weight)
+
                 formatted_weights.append(formatted_weight)
 
         else:

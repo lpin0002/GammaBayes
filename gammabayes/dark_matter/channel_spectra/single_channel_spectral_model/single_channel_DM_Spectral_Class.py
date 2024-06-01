@@ -18,8 +18,6 @@ class SingleDMChannel(object):
                  ):
     
         self.channel = channel
-
-        print(self.channel)
         atprod_gammas = PPPCReader(single_channel_spectral_data_path+"/PPPC_Tables/AtProduction_gamma_EW_corrections.dat")
         atprod_mass_values = atprod_gammas.mass_axis
         atprod_log10x_values = atprod_gammas.log10x_axis

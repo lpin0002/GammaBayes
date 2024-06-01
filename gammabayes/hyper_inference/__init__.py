@@ -11,5 +11,6 @@ from .resampling import (
 
 from .core import (
     MTreeNode, 
-    MTree
+    MTree,
+    utils
 )
