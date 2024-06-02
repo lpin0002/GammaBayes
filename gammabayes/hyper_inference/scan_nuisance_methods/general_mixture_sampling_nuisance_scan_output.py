@@ -166,10 +166,11 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         
         return unitcube
     
-    def ln_likelihood(self, inputs):
+    def ln_likelihood(self, inputs, log_nuisance_marg_results=None):
         
         times = []
-
+        if log_nuisance_marg_results is None:
+            self.log_nuisance_marg_results = log_nuisance_marg_results
         
 
         # Extract values of parameters
@@ -217,7 +218,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         for prior_idx, mixture_weight in enumerate(mixture_weights,):
             ln_component = np.log(mixture_weight)
 
-            ln_marg_results_for_prior = self.log_nuisance_marg_results[prior_idx]
+            ln_marg_results_for_prior = log_nuisance_marg_results[prior_idx]
 
             try:
                 ln_comp_marg_comp = ln_marg_results_for_prior[:, *log_nuisance_param_matrix_slices[prior_idx]]
