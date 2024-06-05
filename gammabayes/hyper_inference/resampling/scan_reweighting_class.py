@@ -2,8 +2,7 @@ from scipy import special
 from scipy.interpolate import interp1d
 from tqdm import tqdm
 import numpy as np
-import functools, dynesty, warnings, os, sys, time
-from matplotlib import pyplot as plt
+import functools, dynesty
 from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
 from gammabayes.utils import (
     iterate_logspace_integration, 
@@ -15,13 +14,12 @@ from gammabayes.likelihoods import DiscreteLogLikelihood
 from gammabayes import (
     EventData, 
     Parameter, ParameterSet, 
-    bound_axis, apply_dirichlet_stick_breaking_direct,
+    bound_axis,
     update_with_defaults
 )
 
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
-from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
-from gammabayes.hyper_inference.stick_breaking_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticStickingBreakingMixturePosterior
+from gammabayes.hyper_inference import ScanOutput_StochasticTreeMixturePosterior
 
 import pickle, h5py
 
@@ -678,15 +676,8 @@ class ScanReweighting(object):
         if log_nuisance_marg_results is None:
             log_nuisance_marg_results = self.log_nuisance_marg_results
 
-        if mixture_fraction_exploration_type.lower() == 'scan':
-            scan_output_exploration_class = ScanOutput_ScanMixtureFracPosterior
-
-        elif mixture_fraction_exploration_type.lower() == 'sample':
-            self.applied_priors = True
-            scan_output_exploration_class = ScanOutput_StochasticMixtureFracPosterior
-
-        else:
-           raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
+        self.applied_priors = True
+        scan_output_exploration_class = ScanOutput_StochasticTreeMixturePosterior
         
         self.scan_output_exploration_class_instance = scan_output_exploration_class(
                 log_nuisance_marg_results       = log_nuisance_marg_results,

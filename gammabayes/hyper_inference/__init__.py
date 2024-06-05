@@ -4,10 +4,10 @@ from .scan_nuisance_methods import (
     DiscreteAdaptiveScan, 
     ScanOutput_StochasticTreeMixturePosterior
     )
-from .resampling import (
-    ScanReweighting,
-    StochasticReweighting
-)
+# from .resampling import (
+#     ScanReweighting,
+#     StochasticReweighting
+# )
 
 from .core import (
     MTreeNode, 

@@ -1,10 +1,10 @@
 import numpy as np, warnings, dynesty, logging, time
 
 from gammabayes.hyper_inference.core.utils import _handle_parameter_specification
-from gammabayes.hyper_inference.mixture_tree import MTree, MTreeNode
+from gammabayes.hyper_inference.core.mixture_tree import MTree, MTreeNode
 from gammabayes.samplers.sampler_utils import ResultsWrapper
 from gammabayes import ParameterSet, ParameterSetCollection
-from gammabayes.core.core_utils import apply_dirichlet_stick_breaking_direct, update_with_defaults
+from gammabayes.core.core_utils import update_with_defaults
 from itertools import islice
 
 import h5py
@@ -168,9 +168,8 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
     
     def ln_likelihood(self, inputs, log_nuisance_marg_results=None):
         
-        times = []
         if log_nuisance_marg_results is None:
-            self.log_nuisance_marg_results = log_nuisance_marg_results
+            log_nuisance_marg_results = self.log_nuisance_marg_results
         
 
         # Extract values of parameters

@@ -1,4 +1,4 @@
-from gammabayes.hyper_inference.discrete_brute_scan_hyperparameter_likelihood import DiscreteBruteScan
+from gammabayes.hyper_inference.scan_nuisance_methods.discrete_brute_scan_hyperparameter_likelihood import DiscreteBruteScan
 
 from gammabayes.utils import (
     iterate_logspace_integration, 

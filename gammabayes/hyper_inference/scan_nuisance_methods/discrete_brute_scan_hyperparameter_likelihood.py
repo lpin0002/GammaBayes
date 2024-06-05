@@ -9,8 +9,6 @@ from gammabayes.utils import (
 
 from gammabayes.utils.config_utils import save_config_file
 from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
-from gammabayes.hyper_inference.mixture_scan_nuisance_scan_output import ScanOutput_ScanMixtureFracPosterior
-from gammabayes.hyper_inference.stick_breaking_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticStickingBreakingMixturePosterior
 from gammabayes import EventData, Parameter, ParameterSet, update_with_defaults, bound_axis
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
