@@ -8,7 +8,8 @@ from gammabayes.utils import (
 
 
 from gammabayes.utils.config_utils import save_config_file
-from gammabayes.hyper_inference.utils import _handle_parameter_specification, _handle_nuisance_axes
+from gammabayes.hyper_inference.core.utils import _handle_parameter_specification, _handle_nuisance_axes
+from gammabayes.hyper_inference.scan_nuisance_methods import ScanOutput_StochasticTreeMixturePosterior
 from gammabayes import EventData, Parameter, ParameterSet, update_with_defaults, bound_axis
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
@@ -518,15 +519,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
         if log_nuisance_marg_results is None:
             log_nuisance_marg_results = self.log_nuisance_marg_results
 
-        if mixture_fraction_exploration_type.lower() == 'scan':
-            hyperspace_analysis_class = ScanOutput_ScanMixtureFracPosterior
-
-        elif mixture_fraction_exploration_type.lower() == 'sample':
-            hyperspace_analysis_class = ScanOutput_StochasticStickingBreakingMixturePosterior
-            self.applied_priors = True
-
-        else:
-           raise ValueError("Invalid 'mixture_fraction_exploration_type' must be either 'scan' or 'sample'.")
+        hyperspace_analysis_class = ScanOutput_StochasticTreeMixturePosterior
+        self.applied_priors = True
         
         if self.mixture_parameter_specifications.dict_of_parameters_by_name == {}:
             logging.info("Setting 'self.mixture_parameter_specifications' to that specified in 'select_scan_output_exploration_class'. ")

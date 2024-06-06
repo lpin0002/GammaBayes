@@ -1,6 +1,6 @@
 import numpy as np, warnings, dynesty, logging
 from gammabayes import apply_dirichlet_stick_breaking_direct, update_with_defaults, ParameterSet, Parameter
-from gammabayes.hyper_inference.utils import _handle_parameter_specification
+from gammabayes.hyper_inference.core.utils import _handle_parameter_specification
 import h5py
 
 class ScanOutput_ScanMixtureFracPosterior(object):

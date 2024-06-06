@@ -121,6 +121,9 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
         self.set_hyper_axis_info()
 
+        self.ln_cache = []
+        self.unit_cube_cache = []
+
 
 
 
@@ -163,6 +166,8 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         
     def prior_transform(self, u):
         unitcube = np.squeeze(self.parameter_set_collection.prior_transform(u))
+
+        self.unit_cube_cache.append(unitcube)
         
         return unitcube
     
@@ -234,6 +239,8 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
             
         result = np.sum(ln_like)
+
+        self.ln_cache.append(result)
 
 
 
