@@ -124,7 +124,7 @@ class IRFExtractor(object):
             self.file_path = resources_dir+'/irf_fits_files/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits'
 
             if (zenith_angle is None) and (hemisphere is None):
-                extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
+                self.extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
             else:
                 prod_version, fits_file_path = find_irf_file_path(zenith_angle=zenith_angle, 
                                                     hemisphere=hemisphere, 
@@ -132,21 +132,21 @@ class IRFExtractor(object):
                 
                 print(f"\nPath to irf fits file: {fits_file_path}\n")
                 if prod_version=='prod5':
-                    extracted_default_irfs  = load_irf_dict_from_file(fits_file_path)
+                    self.extracted_default_irfs  = load_irf_dict_from_file(fits_file_path)
                 elif prod_version=='prod3b':
-                    extracted_default_irfs  = load_cta_irfs(fits_file_path)
+                    self.extracted_default_irfs  = load_cta_irfs(fits_file_path)
 
 
         else:
-            extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
+            self.extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
 
 
-        self.edisp_default      = extracted_default_irfs['edisp']
-        self.psf_default        = extracted_default_irfs['psf']
+        self.edisp_default      = self.extracted_default_irfs['edisp']
+        self.psf_default        = self.extracted_default_irfs['psf']
 
         self.psf3d              = self.psf_default.to_psf3d()
-        self.aeff_default       = extracted_default_irfs['aeff']
-        self.CCR_BKG       = extracted_default_irfs['bkg'].to_2d()
+        self.aeff_default       = self.extracted_default_irfs['aeff']
+        self.CCR_BKG       = self.extracted_default_irfs['bkg'].to_2d()
 
 
 
@@ -213,11 +213,13 @@ class IRFExtractor(object):
                 gamma-ray event data
         """
         rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
+
         offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
+
         output = np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
                                                         rad = rad*u.deg, 
                                                         offset=offset*u.deg).value)
-        
+                
         return output
 
 

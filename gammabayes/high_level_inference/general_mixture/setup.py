@@ -29,8 +29,21 @@ from gammabayes import (
 from matplotlib import pyplot as plt
 from gammabayes.dark_matter import CustomDMRatiosModel, CombineDMComps
 
+from gammabayes.priors.astro_sources import construct_fermi_gaggero_matrix, construct_hess_source_map
+from gammabayes.utils.integration import iterate_logspace_integration, logspace_simpson
+
 
 from dynesty.pool import Pool as DyPool
+
+
+
+class log_obs_interpolator:
+
+    def __init__(self, real_space_interpolator):
+        self.real_space_interpolator = real_space_interpolator
+
+    def log_func(self, energy, lon, lat):
+        return np.log(self.real_space_interpolator([energy, lon, lat]))
 
 
 class hl_setup_from_config:
@@ -296,6 +309,32 @@ class hl_setup_from_config:
                             axes=self.true_axes, 
                             axes_names=['energy', 'lon', 'lat'], )
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = ccr_bkg_prior
+
+
+            elif model_name=='FG_HS_CCR':
+
+
+                from scipy.interpolate import RegularGridInterpolator
+
+                true_meshes = np.meshgrid(*self.true_axes, indexing='ij')
+
+                fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
+                                                log_aeff = self.irf_loglike.log_aeff)
+                hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
+                                                log_aeff = self.irf_loglike.log_aeff)
+                log_CCR_matrix = self.irf_loglike.log_bkg_CCR(energy=true_meshes[0], longitude=true_meshes[1], latitude=true_meshes[2])
+
+                fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=fermi_gaggero_rate_matrix+hess_source_rate_matrix+np.exp(log_CCR_matrix))
+
+
+                log_obs_interpolator_bkgs = log_obs_interpolator(fixed_background_interpolator)
+
+
+
+                bkg_prior = DiscreteLogPrior(logfunction=log_obs_interpolator_bkgs.log_func, name='FG_HS_CCR',
+                            axes=self.true_axes, 
+                            axes_names=['energy', 'lon', 'lat'], )
+                self.observational_prior_models[model_idx+nested_model_idx_offset] = bkg_prior
 
 
 
