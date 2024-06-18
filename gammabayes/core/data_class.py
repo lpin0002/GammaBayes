@@ -121,7 +121,6 @@ class EventData(object):
 
 
         else:
-            warnings.warn("No energy, longitude or latitude values given. Assigning empty lists.")
             self.energy             = np.asarray([])
             self.glon               = np.asarray([])
             self.glat               = np.asarray([])

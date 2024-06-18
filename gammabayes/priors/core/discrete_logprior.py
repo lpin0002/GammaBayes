@@ -62,7 +62,6 @@ class DiscreteLogPrior(object):
             self.log_mesh_efficient_func = log_mesh_efficient_func
         else:
             self.efficient_exist = False
-            warnings.warn('No function to calculate on mesh efficiently given')
 
         if self.num_axes==1:
             self.axes_mesh = (axes,)

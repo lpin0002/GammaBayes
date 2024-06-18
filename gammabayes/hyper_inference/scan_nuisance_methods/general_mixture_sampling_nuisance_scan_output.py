@@ -112,7 +112,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
                 self.mixture_bounds.append([0., 1.])
 
         # -1 is to not count the root node, which is always 1.
-        self.num_mixes   = len(mixture_tree.nodes)-1
+        self.num_mixes   = len(self.mixture_tree.nodes)-1
 
         self.results = _sampler_results
 
@@ -222,29 +222,27 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
         for prior_idx, mixture_weight in enumerate(mixture_weights,):
             ln_component = np.log(mixture_weight)
 
+
             ln_marg_results_for_prior = log_nuisance_marg_results[prior_idx]
 
-            try:
-                ln_comp_marg_comp = ln_marg_results_for_prior[:, *log_nuisance_param_matrix_slices[prior_idx]]
+            ln_comp_marg_comp = ln_marg_results_for_prior[:, *log_nuisance_param_matrix_slices[prior_idx]]
+
+            ln_component += ln_comp_marg_comp
 
 
-                ln_component = ln_comp_marg_comp + ln_component
 
-            except Exception as err:
-                ln_component = ln_component + ln_marg_results_for_prior
             # print('\n\n\nTypes!: ', type(ln_like), type(np.squeeze(ln_component)))
             # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
+            # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
 
-            ln_like = np.logaddexp(ln_like, np.squeeze(ln_component).astype(np.float64))
 
-            
+            ln_like = np.logaddexp(ln_like, np.squeeze(ln_component))
+
         result = np.sum(ln_like)
 
         self.ln_cache.append(result)
 
 
-
-        # print('ln_like: ', result)
         return result
 
 

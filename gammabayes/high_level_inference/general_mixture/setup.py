@@ -1,6 +1,6 @@
 import numpy as np
 import time, random, warnings, os
-
+from scipy import special
 
 from gammabayes.dark_matter.channel_spectra import (
     single_channel_spectral_data_path,
@@ -34,6 +34,7 @@ from gammabayes.utils.integration import iterate_logspace_integration, logspace_
 
 
 from dynesty.pool import Pool as DyPool
+from scipy.interpolate import RegularGridInterpolator
 
 
 
@@ -42,8 +43,11 @@ class log_obs_interpolator:
     def __init__(self, real_space_interpolator):
         self.real_space_interpolator = real_space_interpolator
 
-    def log_func(self, energy, lon, lat):
-        return np.log(self.real_space_interpolator([energy, lon, lat]))
+    def log_func(self, energy, lon, lat, spectral_parameters={}, spatial_parameters={}):
+
+        output = np.log(self.real_space_interpolator( (energy, lon, lat) ))
+
+        return output
 
 
 class hl_setup_from_config:
@@ -281,7 +285,8 @@ class hl_setup_from_config:
 
         for model_idx, model_name in enumerate(self.observational_prior_model_names):
             
-            if not(model_name in ['DM', 'CCR_BKG']):
+            if not(model_name in ['DM', 'CCR_BKG', 'FG_HS_CCR']):
+
                 prior_model_class = dynamic_import('gammabayes.priors', model_name)
                 prior_model = prior_model_class(
                     energy_axis=self.true_axes[0], 
@@ -313,9 +318,6 @@ class hl_setup_from_config:
 
             elif model_name=='FG_HS_CCR':
 
-
-                from scipy.interpolate import RegularGridInterpolator
-
                 true_meshes = np.meshgrid(*self.true_axes, indexing='ij')
 
                 fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
@@ -324,7 +326,17 @@ class hl_setup_from_config:
                                                 log_aeff = self.irf_loglike.log_aeff)
                 log_CCR_matrix = self.irf_loglike.log_bkg_CCR(energy=true_meshes[0], longitude=true_meshes[1], latitude=true_meshes[2])
 
-                fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=fermi_gaggero_rate_matrix+hess_source_rate_matrix+np.exp(log_CCR_matrix))
+
+                log_bkg_matrix = special.logsumexp([np.log(fermi_gaggero_rate_matrix), np.log(hess_source_rate_matrix), log_CCR_matrix], axis=0)
+
+                # Pseudo-normalisation to regularise/make calculations more numerically stable
+                log_bkg_matrix = log_bkg_matrix - special.logsumexp(log_bkg_matrix)
+
+                print("Setup Checks:")
+                print(f"Num Nans: {np.sum(np.isnan(log_bkg_matrix))}, Num Pos Infs: {np.sum(np.isposinf(log_bkg_matrix))}")
+
+
+                fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=np.exp(log_bkg_matrix))
 
 
                 log_obs_interpolator_bkgs = log_obs_interpolator(fixed_background_interpolator)
@@ -335,6 +347,30 @@ class hl_setup_from_config:
                             axes=self.true_axes, 
                             axes_names=['energy', 'lon', 'lat'], )
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = bkg_prior
+
+
+            elif model_name=='FG_HS':
+
+
+
+                true_meshes = np.meshgrid(*self.true_axes, indexing='ij')
+
+                fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
+                                                log_aeff = self.irf_loglike.log_aeff)
+                hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
+                                                log_aeff = self.irf_loglike.log_aeff)
+
+                fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=fermi_gaggero_rate_matrix+hess_source_rate_matrix)
+
+
+                log_obs_interpolator_bkgs = log_obs_interpolator(fixed_background_interpolator)
+
+
+
+                FG_HS_bkg_prior = DiscreteLogPrior(logfunction=log_obs_interpolator_bkgs.log_func, name='FG_HS',
+                            axes=self.true_axes, 
+                            axes_names=['energy', 'lon', 'lat'], )
+                self.observational_prior_models[model_idx+nested_model_idx_offset] = FG_HS_bkg_prior
 
 
 
@@ -415,6 +451,8 @@ class hl_setup_from_config:
 
         self.mixture_tree = MTree()
         self.mixture_tree.create_tree(self.mixture_layout, values=values)
+
+
 
 
 

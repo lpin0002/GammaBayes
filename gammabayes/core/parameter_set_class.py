@@ -77,7 +77,6 @@ class ParameterSet(object):
             elif isinstance(parameter_specifications, ParameterSet):
                 self.append(parameter_specifications) 
 
-            
 
             else:
                 warnings.warn("Something went wrong when trying to access dictionary values.")
