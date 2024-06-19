@@ -50,7 +50,6 @@ class DiscreteLogLikelihood(object):
         self.logfunction = logfunction
         self.axes_names = axes_names
         self.axes = axes
-        print(f'Number of input dimensions {len(self.axes)}')
         self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
 

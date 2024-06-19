@@ -54,7 +54,7 @@ class hl_setup_from_config:
 
     def __init__(self, config):
 
-
+        print("\n\n")
         if isinstance(config, dict):
             self.config_dict = config
         else:
@@ -98,8 +98,9 @@ class hl_setup_from_config:
         if 'log_irf_norm_matrix_path' in self.config_dict:
             self.log_irf_norm_matrix_path = self.config_dict['log_irf_norm_matrix_path']
 
+            print(f"\n__Log IRF Matrix loaded from specified path__: {self.log_irf_norm_matrix_path}\n")
+
             try:
-                print("Loaded from specified path")
                 self.log_irf_norm_matrix = np.load(self.log_irf_norm_matrix_path)
 
             except:
@@ -109,12 +110,16 @@ class hl_setup_from_config:
 
 
         if ('log_edisp_norm_matrix_path' in self.config_dict) and ('log_psf_norm_matrix_path' in self.config_dict):
-            
             self.log_psf_norm_matrix_load_path = self.config_dict['log_psf_norm_matrix_path']
             self.log_psf_norm_matrix = np.load(self.log_psf_norm_matrix_load_path)
 
             self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
             self.log_edisp_norm_matrix = np.load(self.log_edisp_norm_matrix_path)
+
+            print(f"""\n__Log IRF energy dispersion and PSF matrices loaded from specified paths__:\n
+PSF: {self.log_psf_norm_matrix_load_path}
+EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
+            
         else:
 
             self.log_psf_norm_matrix = None
@@ -282,6 +287,8 @@ class hl_setup_from_config:
         self.observational_prior_models = ['Not Set']*len(self.observational_prior_model_names)
         nested_model_idx_offset = 0
 
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
         for model_idx, model_name in enumerate(self.observational_prior_model_names):
             
@@ -332,10 +339,6 @@ class hl_setup_from_config:
                 # Pseudo-normalisation to regularise/make calculations more numerically stable
                 log_bkg_matrix = log_bkg_matrix - special.logsumexp(log_bkg_matrix)
 
-                print("Setup Checks:")
-                print(f"Num Nans: {np.sum(np.isnan(log_bkg_matrix))}, Num Pos Infs: {np.sum(np.isposinf(log_bkg_matrix))}")
-
-
                 fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=np.exp(log_bkg_matrix))
 
 
@@ -372,7 +375,7 @@ class hl_setup_from_config:
                             axes_names=['energy', 'lon', 'lat'], )
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = FG_HS_bkg_prior
 
-
+        warnings.filterwarnings("default", category=RuntimeWarning)
 
 
     def _setup_parameter_specifications(self):
@@ -433,9 +436,6 @@ class hl_setup_from_config:
             else:
                 self.DM_Annihilation_Ratios = {}
 
-            print(self.true_mixture_fractions)
-            print(self.DM_Annihilation_Ratios)
-
             values = []
             for source_name, fraction in self.true_mixture_fractions.items():
 
@@ -451,6 +451,12 @@ class hl_setup_from_config:
 
         self.mixture_tree = MTree()
         self.mixture_tree.create_tree(self.mixture_layout, values=values)
+
+        print("__________ MIXTURE TREE STRUCTURE __________")
+        print("""note: if 'True' values have been unspecified, 
+then the tree node values are the defaults such that if you add them up for their given branch you get 1.\n""")
+
+        print(self.mixture_tree)
 
 
 

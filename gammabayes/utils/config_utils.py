@@ -4,7 +4,7 @@ import numpy as np
 
 
 def read_config_file(file_path):
-    print(f"file path: {file_path}")
+    print(f"Configuration File Path: {file_path}\n")
     try:
         with open(file_path, 'r') as file:
             inputs = yaml.safe_load(file)
@@ -103,13 +103,15 @@ def create_true_axes_from_config(config_dict):
     return create_axes(config_dict['true_energy_min'], config_dict['true_energy_max'], 
                      config_dict['true_energy_bins_per_decade'], config_dict['true_spatial_res'], 
                      config_dict['true_longitude_min'], config_dict['true_longitude_max'],
-                     config_dict['true_latitude_min'], config_dict['true_latitude_max'])
+                     config_dict['true_latitude_min'], config_dict['true_latitude_max'],
+                     custom_print_str="__________ TRUE EVENT AXIS PARAMETERS __________\n")
 
 def create_recon_axes_from_config(config_dict):
     return create_axes(config_dict['recon_energy_min'], config_dict['recon_energy_max'], 
                      config_dict['recon_energy_bins_per_decade'], config_dict['recon_spatial_res'], 
                      config_dict['recon_longitude_min'], config_dict['recon_longitude_max'],
-                     config_dict['recon_latitude_min'], config_dict['recon_latitude_max'])
+                     config_dict['recon_latitude_min'], config_dict['recon_latitude_max'],
+                     custom_print_str="__________ MEASURED/RECONSTRUCTED EVENT AXIS PARAMETERS __________\n")
 
 
 def construct_parameter_axes(construction_config):

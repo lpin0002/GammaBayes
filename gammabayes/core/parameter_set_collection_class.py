@@ -46,15 +46,9 @@ class ParameterSetCollection:
 
         self.shared_parameters = shared_parameters
 
-
-
         self.parameter_meta_data = parameter_meta_data
-        print(self.parameter_meta_data)
-
 
         self.mixture_parameter_set = mixture_parameter_set
-
-        print(self.mixture_parameter_set)
 
         self.setup_discrete_prior_parameter_transform_intermediaries()
 
@@ -167,7 +161,6 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
         dummy_parameter_transform_hyper_param_names = {}
         for param_idx, param_info in self.hyper_param_index_to_info_dict.items():
             if param_info['name'] in dummy_parameter_transform_hyper_param_names:
-                print(f"Assigning {param_info['name']} transform to dummy transform")
                 self.prior_transform_list[param_idx][0] = self._dummy_prior_transform
                 self.prior_transform_list[dummy_parameter_transform_hyper_param_names[param_info['name']]][1].append(param_idx)
             

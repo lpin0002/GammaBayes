@@ -43,12 +43,14 @@ def create_loguniform_axis(lower_bound: float, upper_bound: float, number_of_bin
 def create_axes(energy_min: float, energy_max: float, 
                     energy_bins_per_decade: int, spatial_res: float, 
                     longitude_min: float, longitude_max: float,
-                    latitude_min: float, latitude_max: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                    latitude_min: float, latitude_max: float,
+                    custom_print_str="") -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     
-    print(energy_min, energy_max, 
-                    energy_bins_per_decade, spatial_res, 
-                    longitude_min, longitude_max,
-                    latitude_min, latitude_max)
+    print(f"""{custom_print_str}
+Energy Min: {energy_min}, Energy Max: {energy_max}, Bins per decade: {energy_bins_per_decade}, 
+Spatial Resolution: {spatial_res}, 
+Longitude Min: {longitude_min}, Longitude Max: {longitude_max},
+Latitude Min: {latitude_min}, Latitude Max: {latitude_max}\n""")
     
     energy_axis = create_loguniform_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)
     longitude_axis = create_linear_axis(longitude_min, longitude_max, resolution=spatial_res)

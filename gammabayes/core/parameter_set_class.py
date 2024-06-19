@@ -46,40 +46,44 @@ class ParameterSet(object):
 
 
         if (type(parameter_specifications) == dict):
-            try:
-                initial_type = type(list(parameter_specifications.values())[0])
-            except IndexError as indexerr:
-                logging.warning(f"An error occurred: {indexerr}")
-                initial_type = None
+            
 
-
-            # Actually meant to be dict of parameter specifications by type->name->specifications?
-            if (initial_type is dict):
-
+            # Check if parameter_specifications is an empty dict (evaluates to False in python)
+            if parameter_specifications:
                 try:
-                    secondary_objects = list(list(parameter_specifications.values())[0].values())[0]
-                    secondary_type_is_dict = type(secondary_objects) == dict
+                    initial_type = type(list(parameter_specifications.values())[0])
                 except IndexError as indexerr:
                     logging.warning(f"An error occurred: {indexerr}")
-                    secondary_type_is_dict = False 
+                    initial_type = None
 
 
-                if secondary_type_is_dict:
-                    self.handle_plain_dict_input(parameter_specifications)
+                # Actually meant to be dict of parameter specifications by type->name->specifications?
+                if (initial_type is dict):
+
+                    try:
+                        secondary_objects = list(list(parameter_specifications.values())[0].values())[0]
+                        secondary_type_is_dict = type(secondary_objects) == dict
+                    except IndexError as indexerr:
+                        logging.warning(f"An error occurred: {indexerr}")
+                        secondary_type_is_dict = False 
+
+
+                    if secondary_type_is_dict:
+                        self.handle_plain_dict_input(parameter_specifications)
+
+                    else:
+                        self.handle_name_dict_input(parameter_specifications)
+                # Actually meant to be dict of parameter specifications by name->specifications?
+                elif (initial_type is Parameter):
+                    self.handle_dict_of_param_input(parameter_specifications)
+
+
+                elif isinstance(parameter_specifications, ParameterSet):
+                    self.append(parameter_specifications) 
+
 
                 else:
-                    self.handle_name_dict_input(parameter_specifications)
-            # Actually meant to be dict of parameter specifications by name->specifications?
-            elif (initial_type is Parameter):
-                self.handle_dict_of_param_input(parameter_specifications)
-
-
-            elif isinstance(parameter_specifications, ParameterSet):
-                self.append(parameter_specifications) 
-
-
-            else:
-                warnings.warn("Something went wrong when trying to access dictionary values.")
+                    warnings.warn("Something went wrong when trying to access dictionary values.")
 
         elif (type(parameter_specifications) == tuple):
             unformatted_parameter_specifications = list(parameter_specifications)

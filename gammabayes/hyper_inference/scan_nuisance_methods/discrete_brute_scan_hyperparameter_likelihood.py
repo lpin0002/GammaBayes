@@ -265,7 +265,8 @@ class DiscreteBruteScan(object):
 
             for _prior_idx, log_prior in tqdm(enumerate(self.log_priors), 
                                    total=len(self.log_priors), 
-                                   desc='Setting up prior matrices'):
+                                   desc='Setting up prior matrices',
+                                   leave=False):
                 
 
                 prior_parameter_specifications = self.prior_parameter_specifications[_prior_idx].scan_format
