@@ -152,7 +152,9 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
         
         if 'log_psf_norm_matrix_path' in self.config_dict:
+            self.log_psf_norm_matrix_path = self.config_dict['log_psf_norm_matrix_path']
             np.save(self.config_dict['log_psf_norm_matrix_path'], self.log_psf_norm_matrix)
+
         else:
             if self.save_path=="":
                 self.log_psf_norm_matrix_path = 'log_psf_norm_matrix.npy'
@@ -162,11 +164,14 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
             np.save(self.log_psf_norm_matrix_path, self.log_psf_norm_matrix)
             self.log_psf_norm_matrix_path = os.path.abspath(self.log_psf_norm_matrix_path)
+            self.config_dict['log_psf_norm_matrix_path'] = self.log_psf_norm_matrix_path
             
 
         
 
         if 'log_edisp_norm_matrix_path' in self.config_dict:
+            self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
+
             np.save(self.config_dict['log_edisp_norm_matrix_path'], self.log_edisp_norm_matrix)
         else:
             if self.save_path=="":
@@ -176,8 +181,8 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
                 
             np.save(self.log_edisp_norm_matrix_path, self.log_edisp_norm_matrix)
-            self.log_psf_norm_matrix_path = os.path.abspath(self.log_edisp_norm_matrix_path)
-
+            self.log_edisp_norm_matrix_path = os.path.abspath(self.log_edisp_norm_matrix_path)
+            self.config_dict['log_edisp_norm_matrix_path'] = self.log_edisp_norm_matrix_path
 
 
     def _handle_dm_specifications(self):
