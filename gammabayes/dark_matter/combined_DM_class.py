@@ -43,50 +43,13 @@ class CombineDMComps(TwoCompPrior):
             integrand = self.log_dist_mesh_efficient(*true_axes, 
                                                      spectral_parameters=spectral_parameters,
                                                      spatial_parameters=spatial_parameters)
-            
+        else:
+            true_axis_mesh = np.meshgrid(*true_axes, indexing='ij')
+            true_axis_mesh_flattened = [mesh.flatten() for mesh in true_axis_mesh]
 
-        # Splitting it up for easy debuggin
-        log_integrated_energy = logspace_simpson(
-                                    logy=integrand, x = true_axes[0], axis=0)
-        
-
-        
-        log_integrated_energy_longitude = logspace_simpson(
-                                logy=log_integrated_energy, 
-                                    x = true_axes[1], axis=0)
-        
-                        
-        logintegral = logspace_simpson(
-                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2]*np.pi/180), 
-                                    x = true_axes[2], axis=-1).T
-        
-
-        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
-
-        return np.exp(logsigmav)
-
-
-    def convert_param_to_logsigmav_integral_efficient(self,
-                                signal_fraction, 
-                                true_axes=None,
-                                spectral_parameters = {},
-                                spatial_parameters = {},
-                                totalnumevents=1e8, 
-                                tobs_seconds=525*60*60, symmetryfactor=1):
-        
-        update_with_defaults(spectral_parameters, self.default_spectral_parameters)
-        update_with_defaults(spatial_parameters, self.default_spatial_parameters)
-
-
-        if true_axes is None:
-            true_axes = self.axes
-        
-    
-        if self.mesh_efficient_exists:
-            integrand = self.log_dist_integral_mesh_efficient(*true_axes, 
+            integrand = self.log_dist(*true_axis_mesh_flattened, 
                                                      spectral_parameters=spectral_parameters,
-                                                     spatial_parameters=spatial_parameters)
-            
+                                                     spatial_parameters=spatial_parameters).reshape(true_axis_mesh[0].shape)
 
         # Splitting it up for easy debuggin
         log_integrated_energy = logspace_simpson(
@@ -101,13 +64,14 @@ class CombineDMComps(TwoCompPrior):
                         
         logintegral = logspace_simpson(
                             logy=log_integrated_energy_longitude.T*np.cos(true_axes[2]*np.pi/180), 
-                                    x = true_axes[2], axis=-1).T.reshape(signal_fraction.shape)
+                                    x = true_axes[2], axis=-1).T + 2*np.log(np.pi/180)
         
 
         logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
 
-
         return np.exp(logsigmav)
+
+
     
     def calc_ratios(self, kwd_parameters={}):
         update_with_defaults(kwd_parameters, self.default_spectral_parameters)

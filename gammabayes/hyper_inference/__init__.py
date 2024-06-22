@@ -9,6 +9,8 @@ from .scan_nuisance_methods import (
 #     StochasticReweighting
 # )
 
+from .resampling import reweight_samples
+
 from .core import (
     MTreeNode, 
     MTree,

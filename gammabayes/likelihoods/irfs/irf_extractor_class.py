@@ -166,7 +166,7 @@ class IRFExtractor(object):
                 detected by the CTA
 
         Returns:
-            float: The natural log of the effective area of the CTA in m^2
+            float: The natural log of the effective area of the CTA in cm^2
         """
         return np.log(self.aeff_default.evaluate(energy_true = energy*u.TeV, 
                                 offset=haversine(

@@ -55,6 +55,8 @@ class ParameterSetCollection:
 
     def setup_discrete_prior_parameter_transform_intermediaries(self):
         self.prior_transform_list = []
+        self.unique_parameter_list = []
+        
 
         # This dictionary is so that once you have a value for a given index in the unit
             # cube, you need to go back to the log nuisance marginalisation matrices
@@ -81,6 +83,7 @@ class ParameterSetCollection:
 
 
             self.prior_transform_list.append([mixture_param.unitcube_transform, [hyper_param_idx]])
+            self.unique_parameter_list.append([mixture_param, [hyper_param_idx]])
             hyper_param_idx+=1
 
 
@@ -105,7 +108,8 @@ class ParameterSetCollection:
                 self.hyper_param_index_to_info_dict[hyper_param_idx]['dependent'] = shared_param['dependent']
 
 
-            self.prior_transform_list.append([shared_param.transform, [hyper_param_idx]])
+            self.prior_transform_list.append([shared_param.unitcube_transform, [hyper_param_idx]])
+            self.unique_parameter_list.append([shared_param, [hyper_param_idx]])
             hyper_param_idx+=1
 
 
@@ -140,7 +144,9 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
 
                     
                 if not(is_shared):
-                    self.prior_transform_list.append([param.transform, [hyper_param_idx]])
+                    self.prior_transform_list.append([param.unitcube_transform, [hyper_param_idx]])
+                    self.unique_parameter_list.append([param, [hyper_param_idx]])
+
                     self.hyper_param_index_to_info_dict[hyper_param_idx] = {'name': param['name'], 
                                                                     'prior_identifiers': [prior_idx], 
                                                                     'prior_param_axes': [param['axis']],
@@ -157,16 +163,26 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
             self.prior_idx_to_param_idx_dict[prior_idx] = np.asarray(self.prior_idx_to_param_idx_dict[prior_idx])
 
 
-
+        remove_from_unique = set()
         dummy_parameter_transform_hyper_param_names = {}
         for param_idx, param_info in self.hyper_param_index_to_info_dict.items():
             if param_info['name'] in dummy_parameter_transform_hyper_param_names:
                 self.prior_transform_list[param_idx][0] = self._dummy_prior_transform
                 self.prior_transform_list[dummy_parameter_transform_hyper_param_names[param_info['name']]][1].append(param_idx)
+                self.unique_parameter_list[dummy_parameter_transform_hyper_param_names[param_info['name']]][1].append(param_idx)
+                remove_from_unique.add(param_idx)
             
             elif 'dependent' in param_info:
                 for dependent_param_name in param_info['dependent']:
                     dummy_parameter_transform_hyper_param_names[dependent_param_name] = param_idx
+
+        remove_from_unique = list(remove_from_unique)
+
+
+        # Remove repeated parameters
+        for index in sorted(remove_from_unique, reverse=True):
+            del self.unique_parameter_list[index]
+
 
 
 
@@ -203,6 +219,21 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
         for prior_transform, prior_transform_indices in self.prior_transform_list:
             u[prior_transform_indices] = prior_transform(u[prior_transform_indices])
         return u
+    
+    def logpdf(self, input):
+
+        output = np.zeros_like(input)
+
+        for parameter, input_indices in self.unique_parameter_list:
+            output[input_indices] = parameter.logpdf(input[input_indices])
+        
+
+
+        return np.sum(output)
+    
+
+    def pdf(self, input):
+        return np.exp(self.logpdf(input))
     
 
 

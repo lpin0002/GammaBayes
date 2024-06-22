@@ -105,8 +105,8 @@ class DM_Profile(object):
             for _ in rmin.ravel()
         ]
         integral_unit = u.Unit("TeV2 cm-5") if self.annihilation else u.Unit("TeV cm-2")
-        jfact = u.Quantity(val).to(integral_unit).reshape(rmin.shape)
-        return np.log(jfact.to("TeV2 cm-5").value)
+        jfact = u.Quantity(val).to(integral_unit).reshape(rmin.shape)/ u.steradian
+        return np.log(jfact.to("TeV2 cm-5 sr-1").value)
     
     def _radius(self, t: float | np.ndarray, 
                 angular_offset: float | np.ndarray, 

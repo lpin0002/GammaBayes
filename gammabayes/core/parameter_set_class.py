@@ -262,6 +262,28 @@ class ParameterSet(object):
                 parameter = self.create_parameter(parameter, param_name=param_name)
                 self.append(parameter)
 
+    def _reset_unique_input_methods(self):
+
+        self.parameter_logpdfs = {}
+
+        already_included_parameters = []
+        list_param_names = list(self.dict_of_parameters_by_name.keys())
+        
+        for param_idx, (parameter_name, parameter) in enumerate(self.dict_of_parameters_by_name.items()):
+
+
+            if not(parameter_name in already_included_parameters):
+                hyper_indices_for_param = [param_idx]
+
+                if 'dependent' in parameter:
+                    for dependent_parameter_name in parameter['dependent']:
+                        hyper_indices_for_param.append(list_param_names.index(dependent_parameter_name))
+                        already_included_parameters.append(dependent_parameter_name)
+
+
+                self.parameter_logpdfs[parameter_name] = [parameter.logpdf, hyper_indices_for_param]
+
+
 
     def __repr__(self):
         return str(self.dict_of_parameters_by_name)
@@ -563,3 +585,16 @@ default value. Place nan in position of default""")
             type_axes = self.axes_by_type[type_key]
             reordered_axes = {name: type_axes[name] for name in order_list if name in type_axes}
             self.axes_by_type[type_key] = reordered_axes
+
+
+    def logpdf(self, input):
+        
+        return np.sum([logpdf(input[input_indices]) for logpdf, input_indices in self.parameter_logpdfs])
+    
+
+    def pdf(self, input):
+        return np.exp(self.logpdf(input=input))
+
+
+
+
