@@ -979,36 +979,6 @@ class before the multiprocessing or make sure that it isn't part of the actual
             except Exception as err:
                 warnings.warn(f"Could not load mixture_parameter_specifications: {err}")
 
-
-        try:
-            posterior_exploration_group = h5f['hyper_analysis_instance']
-
-            try:
-
-                if class_input_dict['mixture_fraction_exploration_type'].lower() == 'scan':
-                    hyperspace_analysis_class = ScanOutput_ScanMixtureFracPosterior
-
-                elif class_input_dict['mixture_fraction_exploration_type'].lower() == 'sample':
-                    hyperspace_analysis_class = ScanOutput_StochasticStickingBreakingMixturePosterior
-
-
-                hyper_analysis_instance = hyperspace_analysis_class.load(posterior_exploration_group)
-
-            # In case the mixture fraction exploration type wasn't saved or is incorrect, then we just see what works!
-            except:
-                try:
-                    hyper_analysis_instance = ScanOutput_ScanMixtureFracPosterior.load(posterior_exploration_group)
-                except:
-                    hyper_analysis_instance = ScanOutput_StochasticStickingBreakingMixturePosterior.load(h5f=posterior_exploration_group)
-
-
-            class_input_dict['hyper_analysis_instance'] = hyper_analysis_instance
-
-        except Exception as err:
-            warnings.warn(f"Could not load hyper_analysis_instance data: {err}")
-        
-            update_with_defaults(overriding_class_input_dict, class_input_dict)
-            return overriding_class_input_dict
         
     @classmethod
     def load(cls, file_name:str, *args, **kwargs):
