@@ -153,9 +153,23 @@ class DiscreteLogLikelihood(object):
         num_non_axes = len(self.axes) + len(dependentvalues)
 
 
+
+        input_units = []
+
+        for axis in self.axes:
+            input_units.append(1)
+
+        for val_idx, dependent_val in enumerate(dependentvalues):
+            input_units.append(self.axes[val_idx].unit)
+
+        for parameter_val in parameters.values():
+            input_units.append(1)
+
+
+
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, *parameters.values(), indexing='ij')        
 
-        flattened_meshes = [inputaxis.flatten() for inputaxis in inputmesh]
+        flattened_meshes = [inputaxis.flatten()*unit for inputaxis, unit in zip(inputmesh, input_units)]
         
         loglikevals = np.squeeze(
             self(

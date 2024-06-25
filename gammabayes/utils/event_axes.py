@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.special import logsumexp
 from scipy.interpolate import interp1d
-
+from astropy import units as u
 
 
 
@@ -52,9 +52,9 @@ Spatial Resolution: {spatial_res},
 Longitude Min: {longitude_min}, Longitude Max: {longitude_max},
 Latitude Min: {latitude_min}, Latitude Max: {latitude_max}\n""")
     
-    energy_axis = create_loguniform_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)
-    longitude_axis = create_linear_axis(longitude_min, longitude_max, resolution=spatial_res)
-    latitude_axis = create_linear_axis(latitude_min, latitude_max, resolution=spatial_res)
+    energy_axis = create_loguniform_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)*u.TeV
+    longitude_axis = create_linear_axis(longitude_min, longitude_max, resolution=spatial_res)*u.deg
+    latitude_axis = create_linear_axis(latitude_min, latitude_max, resolution=spatial_res)*u.deg
 
     return energy_axis, longitude_axis, latitude_axis
 

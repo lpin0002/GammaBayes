@@ -1,11 +1,19 @@
 import numpy as np
 from scipy import special
-
+from astropy import units as u
 
 
 
 def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
+    try:
+        axis = axis.value
+    except:
+        pass
+
+
     dx = np.diff(axis)
+
+    
     
     # Isclose calculate with ``absolute(a - b) <= (atol + rtol * absolute(b))''
     # With the default values being atol=1e-8 and rtol=1e-5. Need to be careful
@@ -14,6 +22,7 @@ def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
         # Equal spacing, therefore the last dx can just be the same as the second last
         dx = np.append(dx, dx[-1])
     else:
+
         # Presuming log-uniform spacing
         dx = axis*(10**(np.log10(axis[1])-np.log10(axis[0])))
 
@@ -145,11 +154,10 @@ def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarr
     # (from one of the issues doesn't seem to be 64-bit?)
 
 def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
-    logintegrandvalues = logy
             
     if axisindices is None:
         for axis in axes:
-            logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=0)
+            logy = logspace_integrator(logy = logy, x=axis, axis=0)
     else:
         axisindices = np.asarray(axisindices)
 
@@ -158,11 +166,11 @@ def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_in
             # Assuming the indices are in order we subtract the loop idx from the axis index
             # print(loop_idx, axis_idx-loop_idx, axis.shape, logintegrandvalues.shape)
             try:
-                logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
+                logy = logspace_integrator(logy = logy, x=axis, axis=axis_idx-loop_idx)
             except Exception as excpt:
-                print(loop_idx, axis.shape, axis_idx, logintegrandvalues.shape)
+                print(loop_idx, axis.shape, axis_idx, logy.shape)
                 raise Exception(f"Error occurred during integration --> {excpt}")
 
 
 
-    return logintegrandvalues
+    return logy

@@ -104,7 +104,7 @@ class DM_ContinuousEmission_Spectrum(object):
                 # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
                 sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator(
                     (np.log10(atprod_mass_values), atprod_log10x_values), 
-                    np.sqrt(np.asarray(tempspectragrid)/1000), # 1000 is to convert to 1/TeV 
+                    np.sqrt(np.asarray(tempspectragrid)),
                     method='cubic', bounds_error=False, fill_value=0)
             except:
                 sqrtchannelfuncdictionary[darkSUSYchannel] = self.zero_output # inputs should be a tuple or list of log_10(mass) in TeV and log_10(x)
@@ -191,6 +191,11 @@ class DM_ContinuousEmission_Spectrum(object):
 
         update_with_defaults(kwargs, self.default_parameter_values)
 
+        try:
+            energy = energy.value
+        except:
+            pass
+
 
 
         for channel in self.sqrtchannelfuncdictionary.keys():
@@ -199,12 +204,18 @@ class DM_ContinuousEmission_Spectrum(object):
             channel_spectrum = (self.sqrtchannelfuncdictionary[channel]((np.log10(kwargs['mass']), 
                                                            np.log10(energy)-np.log10(kwargs['mass']))))**2 # Square is to enforce positivity
 
+            
+            
             channel_comp = channel_sigma*channel_spectrum 
+
+
+            # - np.log(energy) is to convert dN/dlogx to dN/dlogE = 1/(ln(E) E) dN/dlogx
+            log_channel_comp = np.log(channel_comp) - np.log(energy) - np.log(np.log(10))
 
 
             logspectra = np.logaddexp(
                 logspectra, 
-                np.log(channel_comp))
+                log_channel_comp)
             
         
         return logspectra
@@ -228,7 +239,7 @@ class DM_ContinuousEmission_Spectrum(object):
         Returns:
             np.ndarray | float: The log of the gamma-ray flux for the specified energies and dark matter model parameters.
         """
-        energy = np.asarray(energy)
+        energy = np.asarray(energy.value)
 
         for key, val in kwd_parameters.items():
             kwd_parameters[key] = np.asarray(val) 
@@ -314,7 +325,7 @@ class DM_ContinuousEmission_Spectrum(object):
             np.ndarray | float: The log of the gamma-ray flux for the specified energies and dark matter model parameters over the grid
                                 defined by the input parameters.
         """
-        energy = np.asarray(energy)
+        energy = np.asarray(energy.value)
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
 

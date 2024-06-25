@@ -19,6 +19,8 @@ from gammapy.modeling.models import (
 )
 from gammapy.catalog import SourceCatalogHGPS
 
+hess_rate_units = 1/u.TeV/u.s/u.sr/(u.cm**2)
+
 
 def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
     log_aeff: callable):
@@ -42,7 +44,7 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
 
     hess_models = hess_catalog.to_models()
     
-    trueenergyaxis = energy_axis*u.TeV
+    trueenergyaxis = energy_axis
 
     energy_axis_true_nodes = MapAxis.from_nodes(trueenergyaxis, interp='log', name="energy_true")
 
@@ -65,14 +67,14 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
     for idx, model in enumerate(hess_models):
         
         # We will store the longitude 'l' and latitude 'b' values of the source
-        temp_l_value = model.spatial_model.position.l.value
-        temp_b_value = model.spatial_model.position.b.value
+        temp_l_value = model.spatial_model.position.l
+        temp_b_value = model.spatial_model.position.b
         
         
         # The unit convention for the longitude works as 357, 358, 359, 0, 1, 2
             # we will make it so that it's -3, -2, -1, 0, 1, 2
-        if temp_l_value>180:
-            temp_l_value=temp_l_value-360
+        if temp_l_value>180*u.deg:
+            temp_l_value=temp_l_value-360*u.deg
             
             
         # If the location of the source satisfies the criteria above then we start to store it's flux values
@@ -109,13 +111,13 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
     hessgeom = HESSmap.geom
 
     # Extracting the longitudevalues
-    hesslonvals = hessgeom.get_coord().lon.value[0][0]
+    hesslonvals = hessgeom.get_coord().lon[0][0]
 
     # Reversing the order as the order is flipped by convention
     hesslonvals = hesslonvals[::-1]
 
     # Again converting the longitude axis from 357,358,359,0,1,2,3 to -3,-2,-1,0,1,2,3
-    hesslonvals[hesslonvals>180] = hesslonvals[hesslonvals>180]-360
+    hesslonvals[hesslonvals>180*u.deg] = hesslonvals[hesslonvals>180*u.deg]-360*u.deg
 
 
     energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')

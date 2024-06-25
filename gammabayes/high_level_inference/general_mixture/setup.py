@@ -147,7 +147,7 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
             np.save(self.log_irf_norm_matrix_path, self.log_irf_norm_matrix)
             self.log_psf_norm_matrix_path = os.path.abspath(self.log_irf_norm_matrix_path)
-
+ 
             print(f"Saving to {self.log_irf_norm_matrix_path}")
 
         

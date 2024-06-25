@@ -7,7 +7,7 @@ from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes.priors.core import TwoCompPrior
 from gammabayes import update_with_defaults
 from gammabayes.utils import logspace_simpson
-
+from astropy import units as u
 
 class CombineDMComps(TwoCompPrior):
 
@@ -43,6 +43,7 @@ class CombineDMComps(TwoCompPrior):
             integrand = self.log_dist_mesh_efficient(*true_axes, 
                                                      spectral_parameters=spectral_parameters,
                                                      spatial_parameters=spatial_parameters)
+            
         else:
             true_axis_mesh = np.meshgrid(*true_axes, indexing='ij')
             true_axis_mesh_flattened = [mesh.flatten() for mesh in true_axis_mesh]
@@ -53,21 +54,19 @@ class CombineDMComps(TwoCompPrior):
 
         # Splitting it up for easy debuggin
         log_integrated_energy = logspace_simpson(
-                                    logy=integrand, x = true_axes[0], axis=0)
-        
-
-        
+                                    logy=integrand, x = true_axes[0].value, axis=0)
+                
         log_integrated_energy_longitude = logspace_simpson(
                                 logy=log_integrated_energy, 
-                                    x = true_axes[1], axis=0)
-        
-                        
+                                    x = true_axes[1].value, axis=0)
+                                
         logintegral = logspace_simpson(
-                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2]*np.pi/180), 
-                                    x = true_axes[2], axis=-1).T + 2*np.log(np.pi/180)
+                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2].to(u.rad)), 
+                                    x = true_axes[2].value, axis=-1).T 
         
 
         logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
+
 
         return np.exp(logsigmav)
 

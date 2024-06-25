@@ -36,7 +36,7 @@ class SingleDMChannel(object):
         # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
         self.sqrtchannelfunc = interpolate.RegularGridInterpolator(
             (np.log10(atprod_mass_values), atprod_log10x_values), 
-            np.sqrt(np.asarray(tempspectragrid)/1000), # 1000 is to convert to 1/TeV 
+            np.sqrt(np.asarray(tempspectragrid)),
             method='cubic', bounds_error=False, fill_value=0)
 
 
@@ -54,11 +54,15 @@ class SingleDMChannel(object):
         update_with_defaults(kwargs, self.default_parameter_values)
 
 
-        log_channel_spectrum = (self.sqrtchannelfunc((np.log10(kwargs['mass']), 
+        channel_spectrum = (self.sqrtchannelfunc((np.log10(kwargs['mass']), 
                                                         np.log10(energy)-np.log10(kwargs['mass']))))**2 # Square is to enforce positivity
             
-        
-        return np.log(log_channel_spectrum)
+        log_channel_spectrum = np.log(channel_spectrum)
+
+        # Converting it from dN/dlog10x to dN/dlog10E
+        log_channel_spectrum =log_channel_spectrum - np.log(energy) - np.log(np.log(10))
+
+        return log_channel_spectrum
 
     
         
@@ -66,7 +70,7 @@ class SingleDMChannel(object):
                 energy: list | np.ndarray | float, 
                 kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
 
-        energy = np.asarray(energy)
+        energy = np.asarray(energy.to("TeV").value)
 
         for key, val in kwd_parameters.items():
             kwd_parameters[key] = np.asarray(val) 
@@ -96,6 +100,7 @@ class SingleDMChannel(object):
                                energy: list | np.ndarray | float, 
                                kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
 
+        energy = energy.to("TeV").value
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
 

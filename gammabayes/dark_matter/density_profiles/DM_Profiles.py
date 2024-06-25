@@ -24,15 +24,25 @@ class Einasto_Profile(DM_Profile):
     def log_profile(radius: float | np.ndarray , 
                     r_s: float, 
                     alpha: float, 
-                    rho_s: float) -> float | np.ndarray :
+                    rho_s: float, return_unit=False) -> float | np.ndarray :
+            
+        radius_unit = radius.unit
+        radius = radius.to(radius_unit).value
+        r_s = r_s.to(radius_unit).value
         rr = radius / r_s
+
         exponent = -(2 / alpha) * (rr**alpha - 1)
-        return np.log(rho_s) + exponent
+        if not(return_unit):
+            return np.log(rho_s.to("TeV / cm3").value) + exponent
+
+        return np.log(rho_s.to("TeV / cm3").value) + exponent, u.Unit("TeV / cm3")
+
+
 
     def __init__(self, 
                  default_alpha = 0.17, 
-                 default_rho_s: float = 1., 
-                 default_r_s: float = 28.44, 
+                 default_rho_s: float = 0.001 * u.Unit("TeV / cm3"), 
+                 default_r_s: float = 28.44* u.Unit("kpc"), 
                  *args, **kwargs):
         super().__init__(
             log_profile_func=self.log_profile, 
@@ -63,8 +73,9 @@ class GNFW_Profile(DM_Profile):
                  default_alpha: float | int = 1, 
                  default_beta: float | int = 3, 
                  default_gamma: float | int =1, 
-                 default_rho_s: float = 1., 
-                 default_r_s: float = 24.42, *args, **kwargs):
+                 default_rho_s: float = 0.001* u.Unit("TeV / cm3"), 
+                 default_r_s: float = 24.42* u.Unit("kpc"),
+                *args, **kwargs):
         super().__init__(
             log_profile_func=self.log_profile, 
             kwd_profile_default_vals = {'r_s': default_r_s, 
@@ -85,8 +96,9 @@ class Burkert_Profile(DM_Profile):
         return np.log(rho_s) - (np.log(1 + rr) + np.log(1 + rr**2))
     
     def __init__(self, 
-                 default_rho_s: float = 1., 
-                 default_r_s: float = 12.67, *args, **kwargs):
+                 default_rho_s: float = 0.001* u.Unit("TeV / cm3"), 
+                 default_r_s: float = 12.67* u.Unit("kpc"), 
+                 *args, **kwargs):
         super().__init__(
             log_profile_func=self.log_profile, 
             kwd_profile_default_vals = {'r_s': default_r_s, 
@@ -104,8 +116,9 @@ class Moore_Profile(DM_Profile):
         return np.log(rho_s) - 1.16*np.log(rr)  - 1.84* np.log(1 + rr)
     
     def __init__(self, 
-                 default_rho_s: float = 1., 
-                 default_r_s: float = 30.28, *args, **kwargs):
+                 default_rho_s: float = 0.001* u.Unit("TeV / cm3"), 
+                 default_r_s: float = 30.28* u.Unit("kpc"), 
+                 *args, **kwargs):
         super().__init__(
             log_profile_func=self.log_profile, 
             kwd_profile_default_vals = {'r_s': default_r_s, 

@@ -136,6 +136,8 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             of axes due to bounds.
         """
 
+
+
         temp_axes_and_indices = [
             bound_axis(
                 axis, 
@@ -146,10 +148,20 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
         
         temp_axes = [temp_axis_info[0] for temp_axis_info in temp_axes_and_indices]
 
+        unit_list = []
+        # Presuming that the units are the same for the events and the axes
+        for dim_idx, event_val in enumerate(event_vals):
+            unit_list.append(temp_axes[dim_idx].unit)
+
+        for temp_axis in temp_axes:
+            unit_list.append(1.)
+
+
         meshvalues  = np.meshgrid(*event_vals, *temp_axes, indexing='ij')
         index_meshes = np.ix_( *[temp_axis_info[1] for temp_axis_info in temp_axes_and_indices])
 
-        flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
+
+        flattened_meshvalues = [meshmatrix.flatten()*unit for meshmatrix, unit in zip(meshvalues, unit_list)]
         
         log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
 

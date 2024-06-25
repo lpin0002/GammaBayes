@@ -5,7 +5,7 @@ from tqdm import tqdm
 from scipy.stats import norm as norm1d
 import yaml, warnings, sys, os
 from scipy.interpolate import RegularGridInterpolator
-
+from astropy import units as u
 
 from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
@@ -25,8 +25,8 @@ def update_with_defaults(target_dict, default_dict):
 
 def haversine(lon1, lat1, lon2, lat2):
     # Convert degrees to radians
-    lon1, lat1 = lon1*np.pi/180, lat1*np.pi/180
-    lon2, lat2 = lon2*np.pi/180, lat2*np.pi/180
+    lon1, lat1 = lon1.to(u.rad), lat1.to(u.rad)
+    lon2, lat2 = lon2.to(u.rad), lat2.to(u.rad)
 
     # Haversine formula
     dlon = lon2 - lon1
@@ -35,7 +35,7 @@ def haversine(lon1, lat1, lon2, lat2):
     angular_separation_rad = 2 * np.arcsin(np.sqrt(a))
 
 
-    return angular_separation_rad*180/np.pi
+    return angular_separation_rad.to(u.deg)
 
 
 
@@ -199,6 +199,24 @@ def bound_axis(axis: np.ndarray,
                 bound_type: str, 
                 bound_radii: float, 
                 estimated_val: float):
+    
+    try:
+        axis_unit = axis.unit
+        axis = axis.value
+    except:
+        axis_unit = 1.
+
+
+    try:
+        bound_radii = bound_radii.to(axis_unit)
+        estimated_val = estimated_val.to(axis_unit)
+
+        bound_radii = bound_radii.value
+        estimated_val = estimated_val.value
+    except:
+        pass
+
+
 
     if bound_type=='linear':
         axis_indices = np.where(
@@ -208,7 +226,7 @@ def bound_axis(axis: np.ndarray,
         axis_indices = np.where(
         (np.log10(axis)>np.log10(estimated_val)-bound_radii) & (np.log10(axis)<np.log10(estimated_val)+bound_radii) )[0]
         
-    temp_axis = axis[axis_indices]
+    temp_axis = axis[axis_indices]*axis_unit
 
     return temp_axis, axis_indices
 

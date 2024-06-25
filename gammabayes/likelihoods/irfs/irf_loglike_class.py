@@ -5,7 +5,7 @@ from astropy import units as u
 import numpy as np
 class IRF_LogLikelihood(DiscreteLogLikelihood):
 
-    def __init__(self,pointing_direction=[0,0], zenith=20, hemisphere='South', prod_vers=5, *args, **kwargs):
+    def __init__(self,pointing_direction=[0*u.deg,0*u.deg], zenith=20, hemisphere='South', prod_vers=5, *args, **kwargs):
         """_summary_
 
         Args:

@@ -19,6 +19,8 @@ from astropy import units as u
 
 from gammabayes.priors.core import DiscreteLogPrior
 
+fermi_rate_units = 1/u.TeV/u.s/u.sr/(u.cm**2)
+
 
 def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
                                    log_aeff: callable, logspace_integrator:callable=logspace_riemann):
@@ -35,7 +37,7 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
         np.ndarray: A 3D array representing the observed event rate from the Fermi-Gaggero diffuse background over specified axes.
     """
 
-    energy_axis_true = MapAxis.from_nodes(energy_axis*u.TeV, interp='log', name="energy_true")
+    energy_axis_true = MapAxis.from_nodes(energy_axis, interp='log', name="energy_true")
 
     HESSgeom = WcsGeom.create(
         skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
@@ -57,7 +59,9 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
     )
 
     # Need to flip as convention goes positive to negative 
-    fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(1/u.TeV/u.s/u.sr/(u.cm**2))
+    fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(HESSgeom), axes=(0,2,1)), axis=1).to(fermi_rate_units)
+
+    fermievaluated = (fermievaluated/energy_axis.unit)*energy_axis.unit
 
     # Normalising so I can apply the normalisation of that in Gaggero et al.
     fermi_integral_values= logspace_integrator(logy=np.log(fermievaluated.value), x=energy_axis, axis=0)
@@ -66,7 +70,7 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
             logy=fermi_integral_values, x=longitudeaxis, axis=0), x=latitudeaxis, axis=0)
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
-    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis, index=-2.41, phi0=1.36*1e-8))[:, np.newaxis, np.newaxis])
+    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis, index=-2.41, phi0=1.36*1e-8).value)[:, np.newaxis, np.newaxis])
 
     energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
@@ -135,7 +139,7 @@ class construct_log_fermi_gaggero_bkg(object):
         # Have to interpolate actual probabilities as otherwise these maps include -inf
         self.fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
             (*axes,), 
-            np.exp(log_fermi_diffuse) 
+            np.exp(log_fermi_diffuse)*fermi_rate_units
             )
 
     # Then we make a wrapper to put the result of the function in log space
@@ -156,7 +160,7 @@ class construct_log_fermi_gaggero_bkg(object):
         return np.log(
         self.fermi_diffuse_interpolator(
             (energy, longitude, latitude)
-            ))
+            ).value)
     
 
 # Just a little helper class

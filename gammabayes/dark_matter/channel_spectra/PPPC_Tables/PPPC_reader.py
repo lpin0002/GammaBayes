@@ -73,8 +73,11 @@ class PPPCReader:
                         data_dict[header].append(value)
 
 
+
+
         for header in data_dict.keys():
             data_dict[header] = np.asarray(data_dict[header])
+
 
         if 'mDM' in data_dict.keys():
             data_dict['mDM']/=1000  # Turn into TeV

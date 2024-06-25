@@ -39,7 +39,7 @@ class high_level_mixture(hl_setup_from_config):
         true_events = sum(true_event_data)
 
 
-
+        
 
         measured_event_data = self.irf_loglike.sample(true_events)
 

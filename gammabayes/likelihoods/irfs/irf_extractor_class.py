@@ -141,10 +141,20 @@ class IRFExtractor(object):
             self.extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
 
 
+        self.psf_units = 1/u.deg**2
+        self.edisp_units = 1/u.TeV
+        self.aeff_units = u.cm**2
+        self.CCR_BKG_units = (u.TeV*u.deg**2*u.s)**(-1)
+
+
         self.edisp_default      = self.extracted_default_irfs['edisp']
+        self.edisp_default.normalize()
+
         self.psf_default        = self.extracted_default_irfs['psf']
 
         self.psf3d              = self.psf_default.to_psf3d()
+        self.psf3d.normalize()
+
         self.aeff_default       = self.extracted_default_irfs['aeff']
         self.CCR_BKG       = self.extracted_default_irfs['bkg'].to_2d()
 
@@ -152,9 +162,9 @@ class IRFExtractor(object):
 
     # Deprecated function that I need to get rid of eventually
     def aefffunc(self, energy, offset, parameters={}):
-        return self.aeff_default.evaluate(energy_true = energy*u.TeV, offset=offset*u.deg).to(u.cm**2).value
+        return self.aeff_default.evaluate(energy_true = energy, offset=offset).to(self.aeff_units)
 
-    def log_aeff(self, energy, longitude, latitude, pointing_direction=[0,0], parameters={}):
+    def log_aeff(self, energy, longitude, latitude, pointing_direction=[0*u.deg,0*u.deg], parameters={}):
         """Wrapper for the Gammapy interpretation of the log of 
             the CTA effective area function.
 
@@ -168,11 +178,11 @@ class IRFExtractor(object):
         Returns:
             float: The natural log of the effective area of the CTA in cm^2
         """
-        return np.log(self.aeff_default.evaluate(energy_true = energy*u.TeV, 
+        return np.log(self.aeff_default.evaluate(energy_true = energy, 
                                 offset=haversine(
-                                    longitude, latitude, pointing_direction[0], pointing_direction[1])*u.deg).to(u.cm**2).value)
+                                    longitude, latitude, pointing_direction[0], pointing_direction[1])).to(self.aeff_units).value)
         
-    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
+    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_direction=[0*u.deg,0*u.deg], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
         Args:
@@ -188,13 +198,15 @@ class IRFExtractor(object):
                 gamma-ray event data
         """
 
-        return np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
+        offset = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1])
+
+        # edisp output is dimensionless when it should have units of 1/TeV
+        return np.log(self.edisp_default.evaluate(energy_true=true_energy,
                                                         migra = recon_energy/true_energy, 
-                                                        offset=haversine(
-                                    true_lon, true_lat, pointing_direction[0], pointing_direction[1])*u.deg).value)
+                                                        offset=offset))
 
 
-    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0,0], parameters={}):
+    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_direction=[0*u.deg,0*u.deg], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA point spread function.
 
         Args:
@@ -216,9 +228,9 @@ class IRFExtractor(object):
 
         offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
 
-        output = np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
-                                                        rad = rad*u.deg, 
-                                                        offset=offset*u.deg).value)
+        output = np.log(self.psf_default.evaluate(energy_true=true_energy,
+                                                        rad = rad, 
+                                                        offset=offset).to(self.psf_units).value)
                 
         return output
 
@@ -226,7 +238,7 @@ class IRFExtractor(object):
     def single_loglikelihood(self, 
                              recon_energy, recon_lon, recon_lat, 
                              true_energy, true_lon, true_lat, 
-                             pointing_direction=[0,0], parameters={}):
+                             pointing_direction=[0*u.deg,0*u.deg], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
 
@@ -246,36 +258,23 @@ class IRFExtractor(object):
             float: natural log of the full CTA likelihood for the given gamma-ray 
                 event data
         """
-        offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
 
+        output = self.log_edisp(recon_energy, 
+                                true_energy, true_lon, true_lat, 
+                                pointing_direction)
+
+
+        output +=  self.log_psf(recon_lon, recon_lat, 
+                                true_energy, true_lon, true_lat, 
+                                pointing_direction)
         
-        # # Unique edisp input filtering
-        # flatten_edisp_param_vals = np.array([recon_energy.flatten(), true_energy.flatten(), offset])
-        # unique_param_vals = np.unique(flatten_edisp_param_vals, axis=1)
-
-        output = np.log(self.edisp_default.evaluate(energy_true=true_energy.flatten()*u.TeV,
-                                                        migra = recon_energy.flatten()/true_energy.flatten(), 
-                                                        offset=offset*u.deg).value)
-
-        # mask = np.all(unique_param_vals[:, None, :] == flatten_edisp_param_vals[:, :, None], axis=0)
-        # slices = np.where(mask, unique_edisp_output[None, :], 0.0)
-
-        # output = np.sum(slices, axis=-1).reshape(recon_energy.shape)
-                
-        
-        # Standard input method for psf (for now)
-        rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
-
-        output+=  np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
-                                                        rad = rad*u.deg, 
-                                                        offset=offset*u.deg).value)
         return output.reshape(true_lon.shape)
 
     # Made for the reverse convention of parameter order required by dynesty
     def dynesty_single_loglikelihood(self, 
                                      true_vals, 
                                      recon_energy, recon_lon, recon_lat, 
-                                     pointing_direction=[0,0], parameters={}):
+                                     pointing_direction=[0*u.deg,0*u.deg], parameters={}):
         """Wrapper for the Gammapy interpretation of the CTA IRFs to output the log 
             likelihood values for the given gamma-ray event data
 
@@ -298,15 +297,15 @@ class IRFExtractor(object):
         true_energy, true_lon, true_lat = true_vals
         offset  = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1])
 
-        output = np.log(self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
+        output = np.log(self.edisp_default.evaluate(energy_true=true_energy,
                                                         migra = recon_energy/true_energy, 
-                                                        offset=offset*u.deg).value)
+                                                        offset=offset))
 
         rad = haversine(recon_lon, recon_lat, true_lon, true_lat)
 
-        output+=  np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV,
-                                                        rad = rad*u.deg, 
-                                                        offset=offset*u.deg).value)
+        output+=  np.log(self.psf_default.evaluate(energy_true=true_energy,
+                                                        rad = rad, 
+                                                        offset=offset).to(self.psf_units))
         
         return output
     
@@ -331,4 +330,7 @@ class IRFExtractor(object):
 
 
 
-        return np.log(self.CCR_BKG.evaluate(energy=energy*u.TeV, offset=offset*u.deg).to((u.TeV*u.sr*u.s)**(-1)).value)
+        return np.log(self.CCR_BKG.evaluate(energy=energy, offset=offset).to(self.CCR_BKG_units).value)
+    
+
+    

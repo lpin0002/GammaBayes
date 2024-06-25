@@ -3,7 +3,7 @@ import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import update_with_defaults, EventData
-
+from astropy import units as u
 import matplotlib.pyplot as plt
 import warnings, logging
 import h5py, pickle
@@ -213,11 +213,13 @@ class DiscreteLogPrior(object):
 
             logdx = construct_log_dx_mesh(self.axes)
                         
-            simvals = integral_inverse_transform_sampler(log_prior_values+logdx, axes=self.axes, 
-                                                Nsamples=numsamples)
+            simvals = integral_inverse_transform_sampler(log_prior_values+logdx, axes=self.axes, Nsamples=numsamples)
+            
             
                 
-            return EventData(data=np.asarray(simvals).T, 
+            return EventData(energy=simvals[0], 
+                             glon=simvals[1], 
+                             glat=simvals[2], 
                              energy_axis=self.axes[0], 
                              glongitude_axis=self.axes[1], 
                              glatitude_axis=self.axes[2], 
