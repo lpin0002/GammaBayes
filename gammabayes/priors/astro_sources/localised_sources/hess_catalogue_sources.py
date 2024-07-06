@@ -19,11 +19,12 @@ from gammapy.modeling.models import (
 )
 from gammapy.catalog import SourceCatalogHGPS
 
-hess_rate_units = 1/u.TeV/u.s/u.sr/(u.cm**2)
+hess_rate_units = 1/u.TeV/u.s/u.deg**2/(u.cm**2)
+hess_obs_rate_units = 1/u.TeV/u.s/u.deg**2
 
 
 def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-    log_aeff: callable):
+    log_aeff: callable, aeff_unit=u.cm**2):
     """Constructs a map of HESS source fluxes based on the HGPS catalog.
 
     Args:
@@ -34,6 +35,8 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
         latitudeaxis (np.ndarray): Latitude axis for the map (degrees).
         
         log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
+
+        aeff_unit (optional): Units for effective area function
 
     Returns:
         np.ndarray: A 3D array representing the event rate from HESS catalog sources over the specified energy,
@@ -103,7 +106,7 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
                 
             count+=1
             
-    logging.info(f"The unit for the HESS map is {HESSmap.quantity.unit}")
+    print(f"The unit for the HESS map is {HESSmap.quantity.unit}")
     # Transposing the longitude and latitude values such that the order of indices goes [logenergy_index, longitude_index, latitude_index]
     full_hess_flux = np.transpose(full_hess_flux, axes=(0,2,1))
     full_hess_flux = np.flip(full_hess_flux, axis=1)
@@ -129,14 +132,15 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
 
     point_hess_background_event_rate = np.exp(log_point_hess_background_source_flux+log_aeff_table)
 
-    return point_hess_background_event_rate
+    return (point_hess_background_event_rate*HESSmap.quantity.unit*aeff_unit).to(hess_obs_rate_units)
                 
 
 
 class construct_hess_source_map_interpolation(object):
     
     def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-                 log_aeff: callable, normalise: bool = True, iterate_logspace_integrator: callable =iterate_logspace_integration):
+                 log_aeff: callable, normalise: bool = True, iterate_logspace_integrator: callable =iterate_logspace_integration,
+                 aeff_unit = u.cm**2):
         """Provides interpolated values from the HESS source map for given energy, longitude, and latitude points.
 
         Args:
@@ -161,7 +165,7 @@ class construct_hess_source_map_interpolation(object):
 
         log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_axis, 
             longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis,
-            log_aeff=log_aeff))
+            log_aeff=log_aeff, aeff_unit=aeff_unit).to(hess_obs_rate_units).value)
 
         if normalise:
             log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_integrator(log_astro_sourcemap, axes=axes)
@@ -222,7 +226,9 @@ class HESSCatalogueSources_Prior(DiscreteLogPrior):
         self.log_hess_class_instance = construct_hess_source_map_interpolation(energy_axis=energy_axis, 
                                                                             longitudeaxis=longitudeaxis, 
                                                                             latitudeaxis=latitudeaxis, 
-                                                                            log_aeff=irf.log_aeff,)
+                                                                            log_aeff=irf.log_aeff,
+                                                                            aeff_unit=irf.aeff_units)
+        
         
         DiscreteLogPrior.__init__(self,
             name='HESS Catalogue Sources Prior',
@@ -231,4 +237,7 @@ class HESSCatalogueSources_Prior(DiscreteLogPrior):
             logfunction=self.log_hess_class_instance.log_func, 
             *args, **kwargs
         )
+
+        self.unit = hess_obs_rate_units
+
 

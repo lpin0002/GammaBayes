@@ -61,7 +61,7 @@ class high_level_mixture(hl_setup_from_config):
             axes=self.recon_axes,
             prior_parameter_specifications=self.obs_prior_parameter_specifications, 
             log_likelihoodnormalisation=self.log_irf_norm_matrix,
-            bounds=[['log10', 0.5], ['linear', 0.5], ['linear', 0.5]],
+            bounds=self.config_dict['marginalisation_bounds'],
             mixture_fraction_exploration_type='sample')
 
 

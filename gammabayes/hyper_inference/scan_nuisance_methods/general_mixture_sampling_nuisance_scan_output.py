@@ -10,7 +10,6 @@ from itertools import islice
 import h5py
 
 
-
 class ScanOutput_StochasticTreeMixturePosterior(object):
     """
     A class designed to handle stochastic exploration of posterior distributions for general 
@@ -98,18 +97,18 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
         self.log_nuisance_marg_results = log_nuisance_marg_results
-        self.num_priors     = len(self.log_nuisance_marg_results)
-        self.num_events     = log_nuisance_marg_results[0].shape[0]
+        # self.num_priors     = len(self.log_nuisance_marg_results)
+        # self.num_events     = log_nuisance_marg_results[0].shape[0]
 
 
-        if not(len(self.mixture_bounds) +1 != len(log_nuisance_marg_results)):
-            warnings.warn("""Number of mixtures +1 does not match number of 
-priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for remaining mixtures.""")
+#         if not(len(self.mixture_bounds) +1 != len(log_nuisance_marg_results)):
+#             warnings.warn("""Number of mixtures +1 does not match number of 
+# priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for remaining mixtures.""")
             
-            assert len(log_nuisance_marg_results[0])>len(self.mixture_bounds) +1
+#             assert len(log_nuisance_marg_results[0])>len(self.mixture_bounds) +1
 
-            for missing_mix_idx in range(len(log_nuisance_marg_results)-(len(self.mixture_bounds) +1)):
-                self.mixture_bounds.append([0., 1.])
+#             for missing_mix_idx in range(len(log_nuisance_marg_results)-(len(self.mixture_bounds) +1)):
+#                 self.mixture_bounds.append([0., 1.])
 
         # -1 is to not count the root node, which is always 1.
         self.num_mixes   = len(self.mixture_tree.nodes)-1
@@ -201,7 +200,7 @@ priors indicated in log_nuisance_marg_results. Assigning min=0 and max=1 for rem
 
 
 
-        log_nuisance_param_matrix_slices = [[] for _ in range(self.num_priors)]
+        log_nuisance_param_matrix_slices = [[] for _ in range(len(log_nuisance_marg_results))]
 
 
         for hyper_param_idx, hyper_param_info in islice(self.parameter_set_collection.hyper_param_index_to_info_dict.items(), self.num_mixes, None):

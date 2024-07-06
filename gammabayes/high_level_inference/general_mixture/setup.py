@@ -283,6 +283,8 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
         else:
             self.DM_Annihilation_Ratios = None
 
+        if not('marginalisation_bounds' in self.config_dict):
+            self.config_dict['marginalisation_bounds'] = None
 
 
 
@@ -296,6 +298,8 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
 
         for model_idx, model_name in enumerate(self.observational_prior_model_names):
+
+            print(f"Setting up {model_name}")
             
             if not(model_name in ['DM', 'CCR_BKG', 'FG_HS_CCR']):
 
@@ -339,7 +343,7 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
                 log_CCR_matrix = self.irf_loglike.log_bkg_CCR(energy=true_meshes[0], longitude=true_meshes[1], latitude=true_meshes[2])
 
 
-                log_bkg_matrix = special.logsumexp([np.log(fermi_gaggero_rate_matrix), np.log(hess_source_rate_matrix), log_CCR_matrix], axis=0)
+                log_bkg_matrix = special.logsumexp([np.log(fermi_gaggero_rate_matrix.value), np.log(hess_source_rate_matrix.value), log_CCR_matrix], axis=0)
 
                 # Pseudo-normalisation to regularise/make calculations more numerically stable
                 log_bkg_matrix = log_bkg_matrix - special.logsumexp(log_bkg_matrix)

@@ -62,10 +62,10 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
         del SS_ratios_dict['lahS']
         
         parameter_interpolation_values = [mass_axis, lahS_axis]
-        parameter_axes_shapes = (mass_axis.size, lahS_axis.size)
+        parameter_axes_shapes = (lahS_axis.size, mass_axis.size)
 
         for channel in SS_ratios_dict.keys():
-            SS_ratios_dict[channel] = SS_ratios_dict[channel].reshape(parameter_axes_shapes)
+            SS_ratios_dict[channel] = SS_ratios_dict[channel].reshape(parameter_axes_shapes).T
 
 
         super().__init__(annihilation_fractions = SS_ratios_dict, 

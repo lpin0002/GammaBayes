@@ -158,22 +158,27 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
 
         meshvalues  = np.meshgrid(*event_vals, *temp_axes, indexing='ij')
-        index_meshes = np.ix_( *[temp_axis_info[1] for temp_axis_info in temp_axes_and_indices])
 
+        index_meshes = np.ix_( *[temp_axis_info[1] for temp_axis_info in temp_axes_and_indices])
 
         flattened_meshvalues = [meshmatrix.flatten()*unit for meshmatrix, unit in zip(meshvalues, unit_list)]
         
         log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
 
         log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation[*index_meshes]
-        
+
+        try:
+            for idx, axis in enumerate(temp_axes):
+                temp_axes[idx] = axis.value
+        except:
+            pass
+
         all_log_marg_results = []
 
         for log_prior_matrices in log_prior_matrix_list:
             # Transpose is because of the convention for where I place the 
                 # axes of the true values (i.e. first three indices of the prior matrices)
                 # and numpy doesn't support this kind of matrix addition nicely
-            
             logintegrandvalues = (
                 np.squeeze(log_prior_matrices).T[
                     ...,
@@ -181,8 +186,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
                     index_meshes[1].T,
                     index_meshes[0].T
                 ] + np.squeeze(log_likelihoodvalues).T).T
-            
-            
+                        
             single_parameter_log_margvals = iterate_logspace_integration(logintegrandvalues,   
                 axes=temp_axes, axisindices=[0,1,2])
 

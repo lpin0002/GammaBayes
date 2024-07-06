@@ -44,6 +44,13 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         )
         self.pointing_direction = pointing_direction
 
+
+        self.psf_units = self.irf_loglikelihood.psf_units
+        self.edisp_units = self.irf_loglikelihood.edisp_units
+        self.aeff_units = self.irf_loglikelihood.aeff_units
+        self.CCR_BKG_units = self.irf_loglikelihood.CCR_BKG_units
+
+
     def __call__(self, *args, **kwargs):
         """_summary_
 
