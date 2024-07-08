@@ -10,45 +10,32 @@ from astropy import units as u
 from scipy import special
 from scipy.integrate import simps
 import os, sys
+from astropy.units import Quantity
+from numpy import ndarray
 
 
-def irf_norm_setup(energy_true_axis, energy_recon_axis, 
-          longitudeaxistrue, longitudeaxis, 
-          latitudeaxistrue, latitudeaxis,
-          save_directory = resources_dir, log_psf=log_psf, log_edisp=log_edisp,
-          save_results=False):
-    """Produces default IRF normalisation matrices
+def irf_norm_setup(energy_true_axis:ndarray[Quantity], energy_recon_axis:ndarray[Quantity], 
+          longitudeaxistrue:ndarray[Quantity], longitudeaxis:ndarray[Quantity], 
+          latitudeaxistrue:ndarray[Quantity], latitudeaxis:ndarray[Quantity],
+          save_directory:str = resources_dir, log_psf:callable=log_psf, log_edisp:callable=log_edisp,
+          save_results:bool=False):
+    """
+    Produces default IRF normalization matrices.
 
     Args:
-        energy_true_axis (np.ndarray, optional): Dicrete true energy values
-            of CTA event data. Defaults to log10eaxistrue.
-
-        energy_recon_axis (np.ndarray, optional): Dicrete measured energy values
-            of CTA event data. Defaults to log10eaxis.
-
-        longitudeaxistrue (np.ndarray, optional): Dicrete true fov longitude values
-            of CTA event data. Defaults to longitudeaxistrue.
-
-        longitudeaxis (np.ndarray, optional): Dicrete measured fov longitude values
-            of CTA event data. Defaults to longitudeaxis.
-
-        latitudeaxistrue (np.ndarray, optional): Dicrete true fov latitude values
-            of CTA event data. Defaults to latitudeaxistrue.
-
-        latitudeaxis (np.ndarray, optional): Dicrete measured fov latitude values
-            of CTA event data. Defaults to latitudeaxis.
-
+        energy_true_axis (array[Quantity]): Discrete true energy values of CTA event data.
+        energy_recon_axis (array[Quantity]): Discrete measured energy values of CTA event data.
+        longitudeaxistrue (array[Quantity]): Discrete true FOV longitude values of CTA event data.
+        longitudeaxis (array[Quantity]): Discrete measured FOV longitude values of CTA event data.
+        latitudeaxistrue (array[Quantity]): Discrete true FOV latitude values of CTA event data.
+        latitudeaxis (array[Quantity]): Discrete measured FOV latitude values of CTA event data.
         save_directory (str, optional): Path to save results. Defaults to resources_dir.
+        log_psf (callable, optional): Function representing the log point spread function for the CTA. Defaults to log_psf.
+        log_edisp (callable, optional): Function representing the log energy dispersion for the CTA. Defaults to log_edisp.
+        save_results (bool, optional): Whether to save the results. Defaults to False.
 
-        logpsf (func, optional): Function representing the log point spread 
-        function for the CTA. Defaults to psf_test.
-
-        logedisp (func, optional): Function representing the log energy dispersion
-          for the CTA. Defaults to edisp_test.
-
-        save_results (bool, optional): _description_. Defaults to True.
-
-        outputresults (bool, optional): _description_. Defaults to False.
+    Returns:
+        tuple: psfnorm and edispnorm normalization matrices.
     """
 
     

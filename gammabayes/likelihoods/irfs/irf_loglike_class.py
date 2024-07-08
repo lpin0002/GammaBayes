@@ -2,10 +2,11 @@ from gammabayes.likelihoods.core import DiscreteLogLikelihood
 from gammabayes.likelihoods.irfs.irf_extractor_class import IRFExtractor
 from gammabayes.likelihoods.irfs.irf_normalisation_setup import irf_norm_setup
 from astropy import units as u
+from astropy.units import Quantity
 import numpy as np
 class IRF_LogLikelihood(DiscreteLogLikelihood):
 
-    def __init__(self,pointing_direction=[0*u.deg,0*u.deg], zenith=20, hemisphere='South', prod_vers=5, *args, **kwargs):
+    def __init__(self,pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], zenith:int=20, hemisphere:str='South', prod_vers=5, *args, **kwargs):
         """_summary_
 
         Args:
@@ -75,20 +76,82 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
     
 
     def log_edisp(self, *args, **kwargs):
+        """
+        Wrapper for the Gammapy interpretation of the CTA energy dispersion function.
+
+        Args:
+            recon_energy (Quantity): Measured energy value by the CTA.
+            true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
+            true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+
+        Returns:
+            float: Natural log of the CTA energy dispersion likelihood for the given gamma-ray event data.
+        """
         return self.irf_loglikelihood.log_edisp(pointing_direction=self.pointing_direction, *args, **kwargs)
     
     def log_psf(self, *args, **kwargs):
+        """
+        Wrapper for the Gammapy interpretation of the CTA point spread function.
+
+        Args:
+            recon_lon (Quantity): Measured FOV longitude of a gamma-ray event detected by the CTA.
+            recon_lat (Quantity): Measured FOV latitude of a gamma-ray event detected by the CTA.
+            true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
+            true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+
+        Returns:
+            float: Natural log of the CTA point spread function likelihood for the given gamma-ray event data.
+        """
         return self.irf_loglikelihood.log_psf(pointing_direction=self.pointing_direction, *args, **kwargs)
     
     def log_aeff(self, *args, **kwargs):
+        """
+        Wrapper for the Gammapy interpretation of the log of the CTA effective area function.
+
+        Args:
+            energy (Quantity): True energy of a gamma-ray event detected by the CTA.
+            longitude (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+
+        Returns:
+            float: The natural log of the effective area of the CTA in cm^2.
+        """
         return self.irf_loglikelihood.log_aeff(pointing_direction=self.pointing_direction, *args, **kwargs)
     
 
     def log_bkg_CCR(self, *args, **kwargs):
+        """
+        Wrapper for the Gammapy interpretation of the log of the CTA's background charged cosmic-ray mis-identification rate.
+
+        Args:
+            energy (Quantity): True energy of a gamma-ray event detected by the CTA.
+            longitude (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            spectral_parameters (dict, optional): Spectral parameters. Defaults to {}.
+            spatial_parameters (dict, optional): Spatial parameters. Defaults to {}.
+            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+
+        Returns:
+            float: Natural log of the charged cosmic ray mis-identification rate for the CTA.
+        """
         return self.irf_loglikelihood.log_bkg_CCR(pointing_direction=self.pointing_direction, *args, **kwargs)
 
 
     def create_log_norm_matrices(self, **kwargs):
+        """
+        Creates normalization matrices for the IRF log likelihood.
+
+        Args:
+            **kwargs: Additional parameters for the normalization setup.
+
+        Returns:
+            dict: Normalization matrices for the log likelihood.
+        """
         return irf_norm_setup(energy_true_axis=self.dependent_axes[0],
                             longitudeaxistrue=self.dependent_axes[1],
                             latitudeaxistrue=self.dependent_axes[2],

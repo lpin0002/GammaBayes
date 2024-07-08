@@ -235,7 +235,7 @@ class DiscreteLogLikelihood(object):
     
     
 
-    def save(self, file_name:str ):
+    def save(self, file_name:str , write_mode:str = 'wb'):
         """
         Saves the DiscreteLogLikelihood data to an HDF5 file.
 
@@ -246,8 +246,18 @@ class DiscreteLogLikelihood(object):
         if not(file_name.endswith('.pkl')):
             file_name = file_name+'.pkl'
 
-        pickle.dump(self, open(file_name,'wb'))
+        pickle.dump(self, open(file_name,write_mode))
 
     @classmethod
-    def load(cls, file_name):
-        return  pickle.load(open(file_name,'rb'))
+    def load(cls, file_name:str, read_mode:str = 'rb'):
+        """
+        Loads the DiscreteLogLikelihood data from a pickle file.
+
+        Parameters:
+            file_name (str): The name of the file to load the data from.
+
+        Returns:
+            DiscreteLogLikelihood: An instance of the class with the loaded data.
+        """
+
+        return  pickle.load(open(file_name,read_mode))
