@@ -24,9 +24,17 @@ from gammapy.utils.integrate import trapz_loglog
 
 
 class DM_Profile(object):
+    """Class for dark matter density profiles and related calculations."""
 
     def scale_density_profile(self, density, distance, 
                               **kwargs):
+        """
+        Scales the density profile to match a given density at a specific distance.
+
+        Args:
+            density (Quantity): The density to match.
+            distance (Quantity): The distance at which to match the density.
+        """
         scale = density / (np.exp(self.log_profile(distance, **kwargs))*u.Unit("TeV/cm3"))
         self.default_rho_s *= scale.to("")
 
@@ -42,6 +50,22 @@ class DM_Profile(object):
                  diffJ_units = u.Unit("TeV2 cm-5 deg-2"),
                  diffD_units = u.Unit("TeV cm-2 deg-2")
                  ):
+        """
+        Initializes the DM_Profile class with specified parameters.
+
+        Args:
+            log_profile_func (callable): Function to compute the logarithm of the density profile.
+            LOCAL_DENSITY (Quantity, optional): Local dark matter density. Defaults to 0.39 * u.Unit("GeV/cm3").
+            dist_to_source (Quantity, optional): Distance to the source. Defaults to 8.33 * u.kpc.
+            annihilation (int, optional): Annihilation flag. Defaults to 1 for annihilation.
+            default_rho_s (Quantity, optional): Default scale density. Defaults to 0.001 * u.Unit("TeV/cm3").
+            default_r_s (Quantity, optional): Default scale radius. Defaults to 28.44 * u.Unit("kpc").
+            angular_central_coords (Quantity, optional): Central coordinates. Defaults to np.array([0, 0]) * u.deg.
+            kwd_profile_default_vals (dict, optional): Default keyword parameters for the profile function.
+            gammapy_profile_class (class, optional): Gammapy profile class. Defaults to EinastoProfile.
+            diffJ_units (Quantity, optional): Units for differential J factor. Defaults to u.Unit("TeV2 cm-5 deg-2").
+            diffD_units (Quantity, optional): Units for differential D factor. Defaults to u.Unit("TeV cm-2 deg-2").
+        """
         self.log_profile_func           = log_profile_func
         self.LOCAL_DENSITY              = LOCAL_DENSITY
         self.DISTANCE                   = dist_to_source
@@ -67,9 +91,21 @@ class DM_Profile(object):
         self.gammapy_profile.scale_to_local_density()
 
     def __call__(self, *args, **kwargs) -> float | np.ndarray :
+        """
+        Enables using the DM_Profile instance as a callable, computing the log differential J factor.
+
+        Returns:
+            float | np.ndarray: The computed log differential J factor.
+        """
         return self.compute_logdifferential_jfactor(*args, **kwargs)
     
     def log_density(self, *args, **kwargs):
+        """
+        Computes the logarithm of the density profile.
+
+        Returns:
+            float | np.ndarray: The logarithm of the density.
+        """
         update_with_defaults(kwargs, self.kwd_profile_default_vals)
 
         return self.log_profile_func(*args, **kwargs)
@@ -78,15 +114,17 @@ class DM_Profile(object):
                                         longitude, 
                                         latitude, ndecade:int|float = 1e4, 
                                         kwd_parameters:dict={}):
-        r"""Compute differential J-Factor.
+        """
+        Computes the logarithm of the differential J factor.
 
-        .. math::
-            \frac{\mathrm d J_\text{ann}}{\mathrm d \Omega} =
-            \int_{\mathrm{LoS}} \mathrm d l \rho(l)^2
+        Args:
+            longitude (Quantity): Longitude values.
+            latitude (Quantity): Latitude values.
+            ndecade (int | float, optional): Number of points per decade for integration. Defaults to 1e4.
+            kwd_parameters (dict, optional): Additional parameters for the profile function.
 
-        .. math::
-            \frac{\mathrm d J_\text{decay}}{\mathrm d \Omega} =
-            \int_{\mathrm{LoS}} \mathrm d l \rho(l)
+        Returns:
+            float | np.ndarray: The computed log differential J factor.
         """
         separation = haversine(longitude, latitude, *self.angular_central_coords).to(u.rad)
 
@@ -123,6 +161,17 @@ class DM_Profile(object):
     def _radius(self, t: float | np.ndarray, 
                 angular_offset: float | np.ndarray, 
                 distance: float | np.ndarray) -> float | np.ndarray :
+        """
+        Computes the radius for given parameters.
+
+        Args:
+            t (float | np.ndarray): Parameter t.
+            angular_offset (Quantity): Angular offset.
+            distance (Quantity): Distance.
+
+        Returns:
+            float | np.ndarray: The computed radius.
+        """
         
         angular_offset = angular_offset.to(u.rad)
 
@@ -141,6 +190,19 @@ class DM_Profile(object):
               int_resolution: int = 1001, 
               integration_method: callable = logspace_riemann, 
               kwd_parameters = {}) -> float | np.ndarray :
+        """
+        Computes the logarithm of the differential J factor.
+
+        Args:
+            longitude (float | np.ndarray): Longitude values.
+            latitude (float | np.ndarray): Latitude values.
+            int_resolution (int, optional): Integration resolution. Defaults to 1001.
+            integration_method (callable, optional): Integration method. Defaults to logspace_riemann.
+            kwd_parameters (dict, optional): Additional parameters for the profile function.
+
+        Returns:
+            float | np.ndarray: The computed log differential J factor.
+        """
         
         angular_offset = haversine(longitude, 
                                    latitude, 
@@ -163,6 +225,17 @@ class DM_Profile(object):
     
 
     def mesh_efficient_logfunc(self, longitude, latitude, kwd_parameters={}, *args, **kwargs) -> float | np.ndarray :
+        """
+        Computes the log differential J factor efficiently using a mesh grid.
+
+        Args:
+            longitude (Quantity): Longitude values.
+            latitude (Quantity): Latitude values.
+            kwd_parameters (dict, optional): Additional parameters for the profile function.
+
+        Returns:
+            float | np.ndarray: The computed log differential J factor.
+        """
 
         longitude_units = longitude.unit
         latitude_units = latitude.unit

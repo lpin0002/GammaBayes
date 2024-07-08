@@ -29,6 +29,17 @@ from gammabayes import (
 
 
 class CustomDMRatiosModel(object):
+    """
+    A class to model custom dark matter (DM) ratios for different channels.
+
+    Attributes:
+        irf_loglike (DiscreteLogLikelihood): The likelihood function based on instrument response functions (IRFs).
+        axes (list | tuple | np.ndarray): The axes for the likelihood function.
+        spatial_class (DM_Profile): The spatial profile class for dark matter density.
+        channels (list[str] | str): The list of channels or 'all' for all available channels.
+        default_spectral_parameters (dict): Default spectral parameters.
+        default_spatial_parameters (dict): Default spatial parameters.
+    """
 
     def __init__(self, 
                  irf_loglike:DiscreteLogLikelihood, 
@@ -40,6 +51,20 @@ class CustomDMRatiosModel(object):
                  default_spatial_parameters: dict = {},
                  *args, **kwargs
                  ):
+        """
+        Initializes the CustomDMRatiosModel object.
+
+        Args:
+            irf_loglike (DiscreteLogLikelihood): The likelihood function based on IRFs.
+            axes (list | tuple | np.ndarray): The axes for the likelihood function.
+            spatial_class (DM_Profile, optional): The spatial profile class. Defaults to Einasto_Profile.
+            channels (list[str] | str, optional): The list of channels or 'all'. Defaults to 'all'.
+            default_spectral_parameters (dict, optional): Default spectral parameters. Defaults to {}.
+            default_spatial_parameters (dict, optional): Default spatial parameters. Defaults to {}.
+
+        Raises:
+            ValueError: If an invalid channel input is provided.
+        """
         
         # Getting all possible channels as in the PPPC tables
         all_channels = list(PPPCReader.darkSUSY_to_PPPC_converter.keys())
@@ -111,6 +136,15 @@ class CustomDMRatiosModel(object):
 
 
     def generate_parameter_specifications(self, set_specifications_to_duplicate: dict = {}) -> dict:
+        """
+        Generates parameter specifications for all channels.
+
+        Args:
+            set_specifications_to_duplicate (dict, optional): Specifications to duplicate. Defaults to {}.
+
+        Returns:
+            dict: The parameter specifications for all channels.
+        """
 
         input_set = set_specifications_to_duplicate
 
@@ -125,21 +159,54 @@ class CustomDMRatiosModel(object):
 
         
     def __iter__(self):
+        """
+        Returns an iterator for the channel prior dictionary.
+
+        Returns:
+            iterator: An iterator for the channel prior dictionary.
+        """
         return self.channel_prior_dict.__iter__()
     
     def items(self):
+        """
+        Returns the items of the channel prior dictionary.
+
+        Returns:
+            dict_items: The items of the channel prior dictionary.
+        """
         return self.channel_prior_dict.items()
     
     def keys(self):
+        """
+        Returns the keys of the channel prior dictionary.
+
+        Returns:
+            dict_keys: The keys of the channel prior dictionary.
+        """
         return self.channel_prior_dict.keys()
     
     def values(self):
+        """
+        Returns the values of the channel prior dictionary.
+
+        Returns:
+            dict_values: The values of the channel prior dictionary.
+        """
         return self.channel_prior_dict.values()
     
 
     def sample(self, 
                numevents: int| list = None,
                ) -> dict[str, EventData]:
+        """
+        Samples events from the channel priors.
+
+        Args:
+            numevents (int | list): The number of events to sample. Defaults to None.
+
+        Returns:
+            dict[str, EventData]: The sampled event data.
+        """
         
         if type(numevents) == int:
             if self.is_single_channel:
@@ -177,6 +244,18 @@ class CustomDMRatiosModel(object):
                             input_weights: list[float] | dict[float], 
                             stick_breaking: bool = False, 
                             exhaustive_fractions=False) -> dict[str, EventData]:
+        """
+        Samples events from the channel priors based on input weights.
+
+        Args:
+            num_events (int): The total number of events to sample.
+            input_weights (list[float] | dict[float]): The weights for each channel.
+            stick_breaking (bool, optional): Whether to use stick-breaking for the weights. Defaults to False.
+            exhaustive_fractions (bool, optional): Whether the weights are exhaustive fractions. Defaults to False.
+
+        Returns:
+            dict[str, EventData]: The sampled event data.
+        """
         
 
 

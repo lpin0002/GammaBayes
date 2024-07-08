@@ -32,15 +32,26 @@ for channel in PPPCReader.darkSUSY_to_PPPC_converter:
 
 # SS_DM_dist(longitudeaxis, latitudeaxis, density_profile=profiles.EinastoProfile())
 class DM_ContinuousEmission_Spectrum(object):
+    """
+    Class to compute the continuous emission spectrum from dark matter annihilation across various channels.
+
+    Attributes:
+        ratios (bool): Indicates if the cross-sections should be interpreted as ratios.
+        sqrtchannelfuncdictionary (dict): Dictionary of interpolated functions for each darkSUSY channel spectrum (needs to be squared).
+        partial_sqrt_sigmav_interpolator_dictionary (dict): Dictionary of interpolated functions for annihilation ratios (needs to be squared).
+        parameter_interpolation_values (list): List of parameter values for interpolation.
+        parameter_axes (list): List of unique parameter values.
+        annihilation_fractions (dict): Dictionary of annihilation fractions.
+        default_parameter_values (dict): Default values for parameters.
+    """
 
 
     def zero_output(self, inputval):
         """
-        A helper method that returns a zero value for any given input. Primarily used as a fallback interpolation function for channels
-        that do not have spectral data available.
+        A helper method that returns a zero value for any given input.
 
         Args:
-            inputval: Input value or array. The specific value(s) are not used by the function.
+            inputval: Input value or array.
 
         Returns:
             The zero value of the same shape as the input.
@@ -48,11 +59,10 @@ class DM_ContinuousEmission_Spectrum(object):
         return inputval[0]*0
     def one_output(self, inputval):
         """
-        A helper method that returns a one value for any given input. Similar to `zero_output`, but returns one instead of zero, useful
-        for certain default or fallback behaviors.
+        A helper method that returns a one value for any given input.
 
         Args:
-            inputval: Input value or array. The specific value(s) are not used by the function.
+            inputval: Input value or array.
 
         Returns:
             A value or array of ones of the same shape as the input.
@@ -66,20 +76,13 @@ class DM_ContinuousEmission_Spectrum(object):
                  default_parameter_values = {'mass':1.0,},
                  ):
         """
-        Initialize the DM_ContinuousEmission_Spectrum class to compute the continuous emission spectrum from dark matter annihilation across various channels. This class utilizes precomputed spectral data for different annihilation channels and interpolates these data to provide gamma-ray flux predictions for any given dark matter mass and energy.
+        Initialize the DMContinuousEmissionSpectrum class.
 
         Args:
-            annihilation_fractions (dict): A dictionary mapping dark matter annihilation channels to their respective fraction of total annihilation events. This parameter defines the contribution of each channel to the overall annihilation spectrum.
-            
-            parameter_interpolation_values (dict | list): A structure specifying the parameter values over which interpolation should be performed. If a dictionary, keys should match the expected parameter names (e.g., 'mass'), with values being arrays of parameter values. If a list, it is expected to contain arrays of parameter values directly, assuming the order matches `parameter_names` if provided.
-            
-            ratios (bool, optional): Indicates whether the provided annihilation fractions are to be interpreted as ratios (True) or absolute values (False). When True, fractions will be normalized to sum to 1 across all channels. Defaults to True.
-            
-            default_parameter_values (dict, optional): A dictionary specifying default values for any parameters required for generating the spectrum but not included in `parameter_interpolation_values`. This could include parameters like 'mass' if not otherwise specified.
-            
-            parameter_names (list, optional): An optional list of parameter names corresponding to the arrays provided in `parameter_interpolation_values` when it is a list. This is used to ensure proper mapping of values to parameters during interpolation. If `parameter_interpolation_values` is a dictionary, this argument is ignored.
-
-        This class supports the interpolation of spectral data across a range of dark matter masses and other parameters, allowing for flexible and dynamic spectral analysis. It handles both single and multidimensional interpolation based on the provided `parameter_interpolation_values`, adjusting automatically to the complexity of the input parameter space.
+            annihilation_fractions (dict): Dictionary mapping annihilation channels to their fractions.
+            parameter_interpolation_values (list[np.ndarray]): List of parameter values for interpolation of annihilation_fractions.
+            ratios (bool, optional): Indicates if the fractions are ratios. Defaults to True.
+            default_parameter_values (dict, optional): Default values for parameters. Defaults to {'mass': 1.0}.
         """
         self.ratios = ratios
     
@@ -158,8 +161,7 @@ class DM_ContinuousEmission_Spectrum(object):
     
     def __call__(self, *args, **kwargs) -> np.ndarray | float:
         """
-        Allows the instance to be called as a function, which delegates to the `logfunc` method, facilitating easy and intuitive
-        usage for calculating the spectrum.
+        Allows the instance to be called as a function, delegating to the `logfunc` method.
 
         Args and Returns:
             See `logfunc` method for detailed argument and return value descriptions.
@@ -170,21 +172,14 @@ class DM_ContinuousEmission_Spectrum(object):
     def spectral_gen(self, energy: float | np.ndarray | list, 
                            **kwargs) -> np.ndarray | float:
         """
-        Generates the dark matter annihilation gamma-ray spectrum for given energy and mass parameters and given dark matter model.
-
-        This method calculates the gamma-ray flux for specified dark matter masses and energy levels by interpolating pre-calculated
-        spectral data. The interpolation is performed on the square root of the spectral data to maintain the non-negativity of the flux.
+        Generates the dark matter annihilation gamma-ray spectrum.
 
         Args:
-            energy (float | np.ndarray | list): Gamma-ray energies for which to calculate the spectrum, in TeV.
-            
-            mass (float | np.ndarray | list, optional): Dark matter mass in TeV. Defaults to 1.0 TeV.
-            
-            **kwargs: Additional keyword arguments that can be used to specify other model parameters.
+            energy (float | np.ndarray | list): Gamma-ray energies in TeV.
+            **kwargs: Additional keyword arguments for model parameters.
 
         Returns:
-            np.ndarray | float: The gamma-ray flux for the specified energies and dark matter mass, potentially including additional
-                                model parameters.
+            np.ndarray | float: Gamma-ray flux for the specified energies and parameters.
         """
         
         logspectra = -np.inf
@@ -226,18 +221,14 @@ class DM_ContinuousEmission_Spectrum(object):
                 energy: list | np.ndarray | float, 
                 kwd_parameters: dict = {'mass':1.0, 'coupling': 0.1}) -> np.ndarray | float:
         """
-        Calculates the logarithm of the gamma-ray flux for specified energy values and keyword parameters defining the dark matter model.
-
-        This method serves as a wrapper around `spectral_gen`, facilitating easy calculation of the gamma-ray flux's logarithm. It is
-        designed to work with a flexible number of keyword arguments that define the dark matter model parameters.
+        Calculates the logarithm of the gamma-ray flux.
 
         Args:
-            energy (list | np.ndarray | float): Gamma-ray energies for which to calculate the log flux, in TeV.
-            kwd_parameters (dict, optional): A dictionary of keyword parameters for the dark matter model, including mass and coupling values.
-                                             Defaults to {'mass':1.0, 'coupling': 0.1}.
+            energy (list | np.ndarray | float): Gamma-ray energies in TeV.
+            kwd_parameters (dict, optional): Parameters for the dark matter model. Defaults to {'mass': 1.0, 'coupling': 0.1}.
 
         Returns:
-            np.ndarray | float: The log of the gamma-ray flux for the specified energies and dark matter model parameters.
+            np.ndarray | float: Logarithm of the gamma-ray flux.
         """
         energy = np.asarray(energy.value)
 
@@ -273,20 +264,14 @@ class DM_ContinuousEmission_Spectrum(object):
                                energy: list | np.ndarray | float, 
                                kwd_parameters: dict = {'mass':1.0, 'coupling': 0.1}) -> np.ndarray | float:
         """
-        An mesh efficient version of `logfunc` that utilizes meshgrid computations for generating the dark matter annihilation gamma-ray spectrum.
-
-        This method is optimized for scenarios where computations over a grid of model parameters are required, reducing the computational
-        overhead by leveraging numpy's meshgrid functionality. It calculates the gamma-ray flux for each combination of energy and model
-        parameters specified in `kwd_parameters`.
+        Efficiently computes the log spectrum over a mesh of parameters.
 
         Args:
-            energy (list | np.ndarray | float): Gamma-ray energies for which to calculate the log flux, in TeV.
-            kwd_parameters (dict, optional): A dictionary of keyword parameters for the dark matter model, including mass and coupling values.
-                                             Defaults to {'mass':1.0, 'coupling': 0.1}.
+            energy (list | np.ndarray | float): Gamma-ray energies in TeV.
+            kwd_parameters (dict, optional): Parameters for the dark matter model. Defaults to {'mass': 1.0, 'coupling': 0.1}.
 
         Returns:
-            np.ndarray | float: The log of the gamma-ray flux for the specified energies and dark matter model parameters over the grid
-                                defined by the input parameters.
+            np.ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
         """
 
 
@@ -310,20 +295,14 @@ class DM_ContinuousEmission_Spectrum(object):
                                energy: list | np.ndarray | float, 
                                kwd_parameters: dict = {'mass':1.0, 'coupling': 0.1}) -> np.ndarray | float:
         """
-        An mesh efficient version of `logfunc` that utilizes meshgrid computations for generating the dark matter annihilation gamma-ray spectrum.
-
-        This method is optimized for scenarios where computations over a grid of model parameters are required, reducing the computational
-        overhead by leveraging numpy's meshgrid functionality. It calculates the gamma-ray flux for each combination of energy and model
-        parameters specified in `kwd_parameters`.
+        Efficiently computes the log spectrum for integration over a mesh of parameters.
 
         Args:
-            energy (list | np.ndarray | float): Gamma-ray energies for which to calculate the log flux, in TeV.
-            kwd_parameters (dict, optional): A dictionary of keyword parameters for the dark matter model, including mass and coupling values.
-                                             Defaults to {'mass':1.0, 'coupling': 0.1}.
+            energy (list | np.ndarray | float): Gamma-ray energies in TeV.
+            kwd_parameters (dict, optional): Parameters for the dark matter model. Defaults to {'mass': 1.0, 'coupling': 0.1}.
 
         Returns:
-            np.ndarray | float: The log of the gamma-ray flux for the specified energies and dark matter model parameters over the grid
-                                defined by the input parameters.
+            np.ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
         """
         energy = np.asarray(energy.value)
 
@@ -361,7 +340,15 @@ class DM_ContinuousEmission_Spectrum(object):
     
 
     def calc_ratios(self, kwd_parameters):
+        """
+        Calculates the ratios of the annihilation cross-section for each channel.
 
+        Args:
+            kwd_parameters (dict): Keyword parameters for the dark matter model.
+
+        Returns:
+            dict: Dictionary of ratios for each channel.
+        """
         update_with_defaults(kwd_parameters, self.default_parameter_values)
 
         sigma_dict = {}

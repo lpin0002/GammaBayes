@@ -10,12 +10,19 @@ from gammabayes import update_with_defaults
 
 
 class SingleDMChannel(object):
-    """Function that allows for efficient single channel dark matter spectra calculations."""
+    """Class for efficient single channel dark matter spectra calculations."""
 
     
     def __init__(self, channel='W+W-',
                  default_parameter_values = {'mass':1.0,},
                  ):
+        """
+        Initializes the SingleDMChannel class with specified parameters.
+
+        Args:
+            channel (str, optional): The dark matter channel to use. Defaults to 'W+W-'.
+            default_parameter_values (dict, optional): Default parameter values. Defaults to {'mass': 1.0}.
+        """
     
         self.channel = channel
         atprod_gammas = PPPCReader(single_channel_spectral_data_path+"/PPPC_Tables/AtProduction_gamma_EW_corrections.dat")
@@ -45,11 +52,26 @@ class SingleDMChannel(object):
 
     
     def __call__(self, *args, **kwargs) -> np.ndarray | float:
+        """
+        Allows the instance to be called as a function.
+
+        Returns:
+            np.ndarray | float: The result of the log function.
+        """
         return self.logfunc(*args, **kwargs)
 
 
     def spectral_gen(self, energy: float | np.ndarray | list, 
                            **kwargs) -> np.ndarray | float:
+        """
+        Generates the spectral values for the given energy and parameters.
+
+        Args:
+            energy (float | np.ndarray | list): Energy values to calculate the spectrum for.
+
+        Returns:
+            np.ndarray | float: The calculated log spectrum values.
+        """
         
         update_with_defaults(kwargs, self.default_parameter_values)
 
@@ -69,6 +91,16 @@ class SingleDMChannel(object):
     def logfunc(self, 
                 energy: list | np.ndarray | float, 
                 kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+        """
+        Calculates the log spectrum values for given energy and parameters.
+
+        Args:
+            energy (list | np.ndarray | float): Energy values to calculate the spectrum for.
+            kwd_parameters (dict, optional): Keyword parameters for the calculation. Defaults to {'mass': 1.0}.
+
+        Returns:
+            np.ndarray | float: The calculated log spectrum values.
+        """
 
         energy = np.asarray(energy.to("TeV").value)
 
@@ -99,6 +131,16 @@ class SingleDMChannel(object):
     def mesh_efficient_logfunc(self, 
                                energy: list | np.ndarray | float, 
                                kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+        """
+        Calculates the log spectrum values using a mesh grid for efficiency.
+
+        Args:
+            energy (list | np.ndarray | float): Energy values to calculate the spectrum for.
+            kwd_parameters (dict, optional): Keyword parameters for the calculation. Defaults to {'mass': 1.0}.
+
+        Returns:
+            np.ndarray | float: The calculated log spectrum values.
+        """
 
         energy = energy.to("TeV").value
 
@@ -119,6 +161,16 @@ class SingleDMChannel(object):
     def mesh_integral_efficient_logfunc(self, 
                                energy: list | np.ndarray | float, 
                                kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+        """
+        Calculates the log spectrum values using a mesh grid and integrates for efficiency.
+
+        Args:
+            energy (list | np.ndarray | float): Energy values to calculate the spectrum for.
+            kwd_parameters (dict, optional): Keyword parameters for the calculation. Defaults to {'mass': 1.0}.
+
+        Returns:
+            np.ndarray | float: The calculated log spectrum values.
+        """
 
         energy = np.asarray(energy)
 
@@ -154,6 +206,12 @@ class SingleDMChannel(object):
     
 
     def calc_ratios(self, *args, **kwargs):
+        """
+        Calculates the ratios for the specified channel.
+
+        Returns:
+            dict: The ratio for the specified channel.
+        """
 
         return {self.channel, 1.0}
 

@@ -6,6 +6,14 @@ from scipy import interpolate
 import numpy as np
 
 class multi_comp_dm_spectrum(object):
+    """
+    Class to handle multi-component dark matter spectra calculations.
+
+    Attributes:
+        micrOMEGAs_to_darkSUSY (dict): Dictionary to convert micrOMEGAs channels to darkSUSY channels.
+    """
+
+
     micrOMEGAs_to_darkSUSY = {
         'AA':'gammagamma',
         'AW+W-':['gamma', 'W+W-'],
@@ -27,7 +35,14 @@ class multi_comp_dm_spectrum(object):
     }
 
 
-    def __init__(self, annihilation_ratios_nested_dict:dict, parameter_interpolation_values:list, ratios=None):
+    def __init__(self, annihilation_ratios_nested_dict:dict, parameter_interpolation_values:list):
+        """
+        Initializes the multi-component dark matter spectrum class.
+
+        Args:
+            annihilation_ratios_nested_dict (dict): Nested dictionary of annihilation ratios.
+            parameter_interpolation_values (list): List of parameter interpolation values.
+        """
 
         # Extracting unique values
         atprod_gammas = PPPCReader(single_channel_spectral_data_path+"/PPPC_Tables/AtProduction_gamma_EW_corrections.dat")
@@ -91,8 +106,7 @@ class multi_comp_dm_spectrum(object):
 
     def __call__(self, *args, **kwargs) -> np.ndarray | float:
         """
-        Allows the instance to be called as a function, which delegates to the `logfunc` method, facilitating easy and intuitive
-        usage for calculating the spectrum.
+        Allows the instance to be called as a function, delegating to the `logfunc` method.
 
         Args and Returns:
             See `logfunc` method for detailed argument and return value descriptions.
@@ -102,13 +116,42 @@ class multi_comp_dm_spectrum(object):
 
     
     def zero_output(self, inputval):
+        """
+        Returns zero for given input.
+
+        Args:
+            inputval: Input value.
+
+        Returns:
+            Zero value.
+        """
         return inputval[0]*0
 
     def one_output(self, inputval):
+        """
+        Returns one for given input.
+
+        Args:
+            inputval: Input value.
+
+        Returns:
+            One value.
+        """
         return inputval[0]*0 + 1
     
 
     def logfunc(self, energy, mDM1, mDM2):
+        """
+        Computes the log spectrum for the given energy and dark matter masses.
+
+        Args:
+            energy: Energy values.
+            mDM1: Mass of the first dark matter particle.
+            mDM2: Mass of the second dark matter particle.
+
+        Returns:
+            Log spectrum values.
+        """
 
         log_spectrum = -np.inf
 
@@ -142,6 +185,16 @@ class multi_comp_dm_spectrum(object):
     def mesh_efficient_logfunc(self, 
                                energy: list | np.ndarray | float, 
                                kwd_parameters: dict = {'mDM1':5.0, 'mDM2': 7.0}) -> np.ndarray | float:
+        """
+        Efficiently computes the log spectrum over a mesh of parameters.
+
+        Args:
+            energy (list | np.ndarray | float): Energy values.
+            kwd_parameters (dict, optional): Dictionary of keyword parameters, defaults to {'mDM1': 5.0, 'mDM2': 7.0}.
+
+        Returns:
+            np.ndarray | float: Log spectrum values.
+        """
 
         kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
 

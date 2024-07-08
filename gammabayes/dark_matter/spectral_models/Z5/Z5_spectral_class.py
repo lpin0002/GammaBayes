@@ -13,9 +13,26 @@ import h5py, numpy as np, matplotlib.pyplot as plt
 
 
 class extract_Z5_h5_results():
+    """
+    A class to extract Z5 dark matter results from HDF5 files.
+
+    Methods:
+        extract(file_name): Extracts the annihilation ratios and parameter values from the HDF5 file.
+    """
 
     @classmethod
     def extract(self, file_name):
+        """
+        Extracts the annihilation ratios and parameter values from the HDF5 file.
+
+        Args:
+            file_name (str): The path to the HDF5 file.
+
+        Returns:
+            tuple: A tuple containing:
+                - result_dict (dict): A nested dictionary with initial and final state keys and their corresponding ratios.
+                - list: A list containing the unique mass values for mdm1 and mdm2.
+        """
         with h5py.File(file_name, 'r') as h5f:
             initial_state_options   = list(h5f['initial_state_options'])
             initial_state_options   = [keystr.decode('ascii') for keystr in initial_state_options]
@@ -46,7 +63,24 @@ class extract_Z5_h5_results():
 
 
 class Z5_DM_spectra(multi_comp_dm_spectrum):
+    """
+    A class to handle Z5 dark matter spectra using multi-component dark matter spectrum.
+
+    Inherits from:
+        multi_comp_dm_spectrum
+
+    Methods:
+        __init__(self, annihilation_ratios_nested_dict=None, parameter_interpolation_values=None, **kwargs)
+    """
     def __init__(self, annihilation_ratios_nested_dict=None, parameter_interpolation_values=None, **kwargs):
+        """
+        Initializes the Z5_DM_spectra object with annihilation ratios and parameter interpolation values.
+
+        Args:
+            annihilation_ratios_nested_dict (dict, optional): Nested dictionary containing annihilation ratios. Defaults to None.
+            parameter_interpolation_values (list, optional): List of parameter interpolation values. Defaults to None.
+            **kwargs: Additional keyword arguments to pass to the parent class.
+        """
 
         if annihilation_ratios_nested_dict is None or (parameter_interpolation_values is None):
             file_name = Z5_Folder_Path+'/annihilation_ratio_data/z5_101x101_ratios.h5'
