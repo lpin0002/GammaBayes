@@ -200,15 +200,11 @@ class Parameter(dict):
 
 
 
-    def unitcube_transform(self, unitcube):
-        if not(self.rvs_sampling):
-            return self.ppf(unitcube)
-
-        return self.rvs()
-        
-
-
     def update_distribution(self):
+        """
+        Updates the parameter's distribution based on specified attributes.
+        Supports custom distributions with optional keyword arguments.
+        """
         self.custom_dist = False
         self.distribution = None
         
@@ -243,11 +239,30 @@ class Parameter(dict):
 
     @property
     def default(self):
+        """
+        Retrieves the default value of the parameter.
+
+        Returns:
+            float: The default value of the parameter.
+        """
         return self["default_value"]
 
 
 
     def construct_dynamic_bounds(self, centre, scaling, dynamic_multiplier, num_events, absolute_bounds=None):
+        """
+        Constructs dynamic bounds for the parameter based on the number of events.
+
+        Args:
+            centre (float): Central value for the bounds.
+            scaling (str): Scaling type ('linear' or 'log10').
+            dynamic_multiplier (float): Multiplier for the dynamic adjustment.
+            num_events (float): Number of events influencing the bounds.
+            absolute_bounds (list, optional): Absolute bounds to constrain the dynamic bounds. Defaults to None.
+
+        Returns:
+            list: Computed dynamic bounds.
+        """
         if scaling=='linear':
             bounds = [centre-dynamic_multiplier/np.sqrt(num_events), 
                             centre+dynamic_multiplier/np.sqrt(num_events)]
@@ -328,36 +343,123 @@ class Parameter(dict):
     
 
     def pdf(self, x):
+        """
+        Computes the probability density function (PDF) at a given value (using 
+        self.distribution.pdf, a scipy dist)
+
+        Args:
+            x (float or array-like): Value(s) at which to evaluate the PDF.
+
+        Returns:
+            float or array-like: PDF value(s).
+        """
         return self.distribution.pdf(x)
     
 
     def logpdf(self, x):
+        """
+        Computes the log of the probability density function (logPDF) at a given value
+        using `self.distribution.logpdf(x)`.
+
+        Args:
+            x (float or array-like): Value(s) at which to evaluate the logPDF.
+
+        Returns:
+            float or array-like: logPDF value(s).
+        """
         return self.distribution.logpdf(x)
     
     def cdf(self, x):
+        """
+        Computes the cumulative distribution function (CDF) at a given value
+        using `self.distribution.cdf(x)`.
+
+        Args:
+            x (float or array-like): Value(s) at which to evaluate the CDF.
+
+        Returns:
+            float or array-like: CDF value(s).
+        """
         return self.distribution.cdf(x)
     
     def logcdf(self, x):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         return self.distribution.logcdf(x)
     
     @property
     def median(self, x):
+        """
+        Computes the median of the distribution using 
+        `self.distribution.median()`.
+
+        Returns:
+            float: Median value.
+        """
         return self.distribution.median()
+    
     @property
     def mean(self, x):
+        """
+        Computes the mean of the distribution using `self.distribution.mean()`.
+
+        Returns:
+            float: Mean value.
+        """
         return self.distribution.mean()
+    
     @property
     def var(self):
+        """
+        Computes the variance of the distribution using
+        `self.distribution.var()`.
+
+        Returns:
+            float: Variance value.
+        """
         return self.distribution.var()
     
     @property
     def std(self, x):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         return self.distribution.std()
     
     def interval(self, confidence):
+        """
+        Computes the confidence interval for the distribution using
+        `self.distribution.interval(confidence)`.
+
+        Args:
+            confidence (float): Confidence level.
+
+        Returns:
+            tuple: Lower and upper bounds of the confidence interval.
+        """
         return self.distribution.interval(confidence)
 
     def _adjusted_ppf(self, q):
+        """
+        Adjusted percent point function (PPF) to return the smallest discrete value for q=0.
+
+        Args:
+            q (float or array-like): Quantile(s) at which to evaluate the PPF.
+
+        Returns:
+            float or array-like: Adjusted PPF value(s).
+        """
         q = np.asarray(q)  
         # Making it so that if a 0 input is given then it returns the smallest discrete value
         result = np.where(q == 0, self.distribution.xk[0], self.distribution.transform(q))
@@ -365,10 +467,29 @@ class Parameter(dict):
     
 
     def ppf(self, q):
+        """
+        Computes the percent point function (PPF) at a given quantile.
+
+        Args:
+            q (float or array-like): Quantile(s) at which to evaluate the PPF.
+
+        Returns:
+            float or array-like: PPF value(s).
+        """
         return self.distribution.ppf(q)
     
 
     def unitcube_transform(self, u):
+        """
+        Transforms a unit cube sample into the parameter space using the parameter's 
+        inverse cumulative distribution function (ppf) or random variate sampling.
+
+        Args:
+            u (array-like): Sample from a unit cube.
+
+        Returns:
+            array-like: Transformed sample in the parameter space.
+        """
 
         if self.rvs_sampling:
 

@@ -33,6 +33,34 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                            single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
                            single_dim_logspace_integrator=logspace_riemann, axes_scale=None,
                            **kwargs):
+    """
+    Plots a matrix of log-density plots, including 1D and 2D marginal distributions.
+
+    Args:
+        axes (list[np.ndarray]): List of axis values.
+        log_dist_matrix (np.ndarray): Logarithm of the distribution matrix.
+        truevals (list[float], optional): True values to be marked on the plots. Defaults to None.
+        sigmalines_1d (bool, optional): Whether to plot sigma lines on 1D plots. Defaults to True.
+        sigmas (range, optional): Range of sigma values to plot. Defaults to range(0, 6).
+        cmap (matplotlib.colors.Colormap, optional): Colormap for the plots. Defaults to cm.get_cmap('Blues_r').
+        contours2d (bool, optional): Whether to plot 2D contours. Defaults to False.
+        levels (np.ndarray, optional): Contour levels for 2D plots. Defaults to specific values.
+        axis_names (list[str], optional): Names of the axes. Defaults to None.
+        suptitle (str, optional): Suptitle for the entire plot. Defaults to ''.
+        suptitlesize (int, optional): Font size of the suptitle. Defaults to 12.
+        plot_density (bool, optional): Whether to plot density instead of raw values. Defaults to False.
+        norm (str, optional): Scale for the y-axis. Defaults to 'linear'.
+        single_dim_ylabel (str, optional): Y-label for single dimension plots. Defaults to ''.
+        vmin (float, optional): Minimum value for color scaling. Defaults to None.
+        vmax (float, optional): Maximum value for color scaling. Defaults to None.
+        iteratable_logspace_integrator (callable, optional): Function for log-space integration over multiple axes. Defaults to iterate_logspace_integration.
+        single_dim_logspace_integrator (callable, optional): Function for log-space integration over a single axis. Defaults to logspace_riemann.
+        axes_scale (list[str], optional): Scale for each axis ('linear' or 'log'). Defaults to None.
+        **kwargs: Additional keyword arguments for the plot.
+
+    Returns:
+        tuple: Figure and axes objects for the plot.
+    """
     numaxes = len(axes)
     n = 1000
 

@@ -19,6 +19,8 @@ class ParameterSet(object):
             parameter_specifications (dict | list | ParameterSet | tuple, optional): A dictionary, list, tuple, or another
                 ParameterSet instance containing the specifications for initializing the parameter set.
                 This can include parameter names, types, prior names, and their specifications or instances.
+            set_name (str, optional): Name of the parameter set. Defaults to "UnnamedSet".
+            prior_name (str, optional): Name of the prior associated with the parameter set. Defaults to 'UnknownPrior'.
         """
 
 
@@ -204,11 +206,8 @@ class ParameterSet(object):
 
         Args:
             param_specification (dict): Specifications for the parameter.
-            
             param_name (str, optional): Name of the parameter.
-            
             type_key (str, optional): Type of the parameter (e.g., 'spectral_parameters').
-            
             prior_name (str, optional): Name of the prior associated with the parameter.
 
         Returns:
@@ -263,6 +262,9 @@ class ParameterSet(object):
                 self.append(parameter)
 
     def _reset_unique_input_methods(self):
+        """
+        Resets the unique input methods for the parameters in the set.
+        """
 
         self.parameter_logpdfs = {}
 
@@ -286,6 +288,12 @@ class ParameterSet(object):
 
 
     def __repr__(self):
+        """
+        Returns a string representation of the ParameterSet.
+
+        Returns:
+            str: String representation of the parameter set.
+        """
         return str(self.dict_of_parameters_by_name)
 
 
@@ -370,6 +378,12 @@ class ParameterSet(object):
 
     @property
     def bounds(self):
+        """
+        Retrieves the bounds for all parameters in the set.
+
+        Returns:
+            list: A list of bounds for the parameters.
+        """
         bounds = []
         for param in self.dict_of_parameters_by_name.values():
             bounds.append(param['bounds'])
@@ -390,6 +404,12 @@ class ParameterSet(object):
     
     @property
     def sampling_format(self):
+        """
+        Alias for the stochastic_format property.
+
+        Returns:
+            dict: A dictionary representation of the parameter set suitable for stochastic sampling.
+        """
         return self.stochastic_format
     
     # Method specifically when all parameters are discrete and have a defined 'axis' method
@@ -424,7 +444,16 @@ default value. Place nan in position of default""")
         return default_values
     
 
-    def fetch_defaults(self, param_type):
+    def _fetch_defaults(self, param_type):
+        """
+        Retrieves the default values for parameters of a specific type.
+
+        Args:
+            param_type (str): The type of parameters to retrieve defaults for.
+
+        Returns:
+            dict: A dictionary of parameter names and their default values.
+        """
         default_values = {}
         for parameter in self.dict_of_parameters_by_type[param_type].values():
             default_values[parameter['name']] = parameter['default_value']
@@ -432,13 +461,25 @@ default value. Place nan in position of default""")
      
     @property
     def spectral_defaults(self):
-        return self.fetch_defaults('spectral_parameters')
+        """
+        Retrieves the default values for spectral parameters.
+
+        Returns:
+            dict: A dictionary of spectral parameter names and their default values.
+        """
+        return self._fetch_defaults('spectral_parameters')
     
 
         
     @property
     def spatial_defaults(self):
-        return self.fetch_defaults('spatial_parameters')
+        """
+        Retrieves the default values for spatial parameters.
+
+        Returns:
+            dict: A dictionary of spatial parameter names and their default values.
+        """
+        return self._fetch_defaults('spatial_parameters')
     
 
 
@@ -506,6 +547,16 @@ default value. Place nan in position of default""")
 
     @classmethod
     def load(cls, h5f=None, file_name=None,):
+        """
+        Loads a ParameterSet from an HDF5 file.
+
+        Args:
+            h5f (h5py.File, optional): An HDF5 file object. If None, the file specified by file_name will be opened.
+            file_name (str, optional): The name of the file to load the data from.
+
+        Returns:
+            ParameterSet: A new ParameterSet instance containing the loaded data.
+        """
         new_parameter_set = cls()  # Instantiate a new ParameterSet
 
         if h5f is None:
@@ -588,11 +639,28 @@ default value. Place nan in position of default""")
 
 
     def logpdf(self, input):
-        
+        """
+        Computes the log of the overall sets' probability density function (logPDF) for the given input.
+
+        Args:
+            input (array-like): Input values for which to compute the logPDF.
+
+        Returns:
+            float: The computed logPDF value.
+        """
         return np.sum([logpdf(input[input_indices]) for logpdf, input_indices in self.parameter_logpdfs])
     
 
     def pdf(self, input):
+        """
+        Computes the probability density function (PDF) for the given input.
+
+        Args:
+            input (array-like): Input values for which to compute the PDF.
+
+        Returns:
+            float: The computed PDF value.
+        """
         return np.exp(self.logpdf(input=input))
 
 

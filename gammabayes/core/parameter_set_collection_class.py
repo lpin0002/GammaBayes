@@ -4,15 +4,21 @@ from .core_utils import update_with_defaults
 import numpy as np
 
 class ParameterSetCollection:
-    """A class for storing multiple ParameterSet instances and to handle mixture parameters
+    """
+    A class for storing multiple ParameterSet instances and to handle mixture parameters
     and shared parameters between priors when doing analysis.
 
-        Args:
-            parameter_sets (list[ParameterSet]): _description_
-            mixture_parameter_set (ParameterSet): _description_
-            shared_parameters (dict[str, list[list[str], Parameter]]): _description_
-            parameter_meta_data (dict, optional): _description_. Defaults to {}.
-            collection_name (str, optional): _description_. Defaults to "".
+    Attributes:
+        collection_name (str): The name of the collection.
+        parameter_sets (list[ParameterSet]): List of ParameterSet instances.
+        prior_ids_to_idx (dict): Mapping from prior IDs to their indices in the parameter_sets list.
+        shared_parameters (dict): Dictionary of shared parameters between priors.
+        parameter_meta_data (dict): Meta-data for parameters.
+        mixture_parameter_set (ParameterSet): ParameterSet for mixture parameters.
+        prior_transform_list (list): List of prior transforms for the parameters.
+        unique_parameter_list (list): List of unique parameters.
+        hyper_param_index_to_info_dict (dict): Dictionary mapping hyperparameter indices to their info.
+        prior_idx_to_param_idx_dict (dict): Dictionary mapping prior indices to parameter indices.
     """
 
     def __init__(self, 
@@ -22,14 +28,15 @@ class ParameterSetCollection:
                  parameter_meta_data: dict = {},
                  collection_name = "",
                  ):
-        """_summary_
+        """
+        Initializes a ParameterSetCollection instance.
 
         Args:
-            parameter_sets (list[ParameterSet]): _description_
-            mixture_parameter_set (ParameterSet): _description_
-            shared_parameters (dict[str, list[list[str], Parameter]]): _description_
-            parameter_meta_data (dict, optional): _description_. Defaults to {}.
-            collection_name (str, optional): _description_. Defaults to "".
+            parameter_sets (list[ParameterSet]): List of ParameterSet instances.
+            mixture_parameter_set (ParameterSet): ParameterSet for mixture parameters.
+            shared_parameters (dict[str, list[list[str], Parameter]], optional): Dictionary of shared parameters between priors. Defaults to {}.
+            parameter_meta_data (dict, optional): Meta-data for parameters. Defaults to {}.
+            collection_name (str, optional): Name of the collection. Defaults to "".
         """
         self.collection_name = collection_name
         self.parameter_sets = []
@@ -54,6 +61,9 @@ class ParameterSetCollection:
 
 
     def setup_discrete_prior_parameter_transform_intermediaries(self):
+        """
+        Sets up intermediaries for discrete prior parameter transformations.
+        """
         self.prior_transform_list = []
         self.unique_parameter_list = []
         
@@ -189,11 +199,26 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
 
 
     def _dummy_prior_transform(self, u):
+        """
+        Dummy prior transform function.
+
+        Args:
+            u (array-like): Input values.
+
+        Returns:
+            array-like: The same input values.
+        """
         return u
 
 
 
     def __repr__(self):
+        """
+        Returns a string representation of the ParameterSetCollection.
+
+        Returns:
+            str: String representation of the ParameterSetCollection.
+        """
         string_val = "ParameterSetCollection Instance:\n"
         string_val+= f"Name:                {self.collection_name}\n"
         string_val+= f"Num Priors:          {len(self.parameter_sets)}\n"
@@ -215,12 +240,30 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
 
 
     def prior_transform(self, u):
+        """
+        Transforms the input values using the prior transformations.
+
+        Args:
+            u (array-like): Input values.
+
+        Returns:
+            array-like: Transformed values.
+        """
 
         for prior_transform, prior_transform_indices in self.prior_transform_list:
             u[prior_transform_indices] = prior_transform(u[prior_transform_indices])
         return u
     
     def logpdf(self, input):
+        """
+        Computes the log of the probability density function (logPDF) for the given input.
+
+        Args:
+            input (array-like): Input values for which to compute the logPDF.
+
+        Returns:
+            float: The computed logPDF value.
+        """
 
         output = np.zeros_like(input)
 
@@ -233,6 +276,15 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
     
 
     def pdf(self, input):
+        """
+        Computes the probability density function (PDF) for the given input.
+
+        Args:
+            input (array-like): Input values for which to compute the PDF.
+
+        Returns:
+            float: The computed PDF value.
+        """
         return np.exp(self.logpdf(input))
     
 

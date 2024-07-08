@@ -6,7 +6,7 @@ from scipy.stats import norm as norm1d
 import yaml, warnings, sys, os
 from scipy.interpolate import RegularGridInterpolator
 from astropy import units as u
-
+from astropy.units import Quantity
 from os import path
 resources_dir = path.join(path.dirname(__file__), '../package_data')
 
@@ -24,9 +24,26 @@ def update_with_defaults(target_dict, default_dict):
 
 
 def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculates the distance between two points on a sphere specified by longitude and latitude using the 
+    Haversine formula.
+
+    Args:
+        lon1 (float or Quantity): Longitude of the first point.
+        lat1 (float or Quantity): Latitude of the first point.
+        lon2 (float or Quantity): Longitude of the second point.
+        lat2 (float or Quantity): Latitude of the second point.
+
+    Returns:
+        Quantity: Angular separation between the two points in degrees.
+    """
     # Convert degrees to radians
-    lon1, lat1 = lon1.to(u.rad), lat1.to(u.rad)
-    lon2, lat2 = lon2.to(u.rad), lat2.to(u.rad)
+    try:
+        lon1, lat1 = lon1.to(u.rad), lat1.to(u.rad)
+        lon2, lat2 = lon2.to(u.rad), lat2.to(u.rad)
+    except:
+        # If the coordinates do not have astropy units then they must be in radians
+        pass
 
     # Haversine formula
     dlon = lon2 - lon1
@@ -38,53 +55,18 @@ def haversine(lon1, lat1, lon2, lat2):
     return angular_separation_rad.to(u.deg)
 
 
-
-# def convertlonlat_to_offset(angular_coord: np.ndarray, pointing_direction: np.ndarray=np.array([0,0])) -> float|np.ndarray:
-#     """Takes a coordinate and translates that into an offset
-
-#     Args:
-#         angular_coord (np.ndarray): Angular coordinates
-#         point_direction (np.ndarray): Pointing direction of telescope
-
-#     Returns:
-#         np.ndarray or float: The corresponding offset values for the given fov coordinates
-#             assuming small angles
-#     """
-#     delta_y = angular_coord[1, :] - pointing_direction[1]
-#     delta_x = angular_coord[0, :] - pointing_direction[0]
-
-#     # Calculate the angular separation using arctangent
-#     angles = np.arctan2(delta_y, delta_x)
-
-#     return angles * 180 / np.pi
-
-
-
-# def angularseparation(coord1: np.ndarray, coord2: np.ndarray|None =None) -> float|np.ndarray:
-#     """Takes a coordinate and translates that into an offset
-
-#     Args:
-#         angular_coord (np.ndarray): Angular coordinates
-#         point_direction (np.ndarray): Pointing direction of telescope
-
-#     Returns:
-#         np.ndarray or float: The corresponding offset values for the given fov coordinates
-#             assuming small angles
-#     """
-    
-#     delta_y = coord1[1, :] - coord2[1, :]
-#     delta_x = coord1[0, :] - coord2[0, :]
-
-#     # Calculate the angular separation using arctangent
-#     angles = np.arctan2(delta_y, delta_x)
-
-#     return angles * 180 / np.pi
-
-
-
-
-
 def hdp_credible_interval_1d(y: np.ndarray, sigma: np.ndarray|list, x: np.ndarray) -> list[float, float]|list[float]:
+    """
+    Computes the highest density posterior credible interval for a 1D distribution.
+
+    Args:
+        y (np.ndarray): Probability density function values.
+        sigma (np.ndarray | list): Standard deviation for credible interval calculation.
+        x (np.ndarray): Points at which the pdf is evaluated.
+
+    Returns:
+        list[float, float] | list[float]: Credible interval or a single point for sigma=0.
+    """
     y = y/integrate.simps(y=y, x=x)
     levels = np.linspace(0, y.max(),1000)
 
@@ -109,20 +91,49 @@ def hdp_credible_interval_1d(y: np.ndarray, sigma: np.ndarray|list, x: np.ndarra
         return [x[probidx]]
 
 
-def power_law(energy: np.ndarray|float, index: float, phi0: int =1) -> np.ndarray|float:
+def power_law(energy: float|Quantity, index: float, phi0: int|Quantity =1) -> float|Quantity:
+    """
+    Evaluates a power law function.
+
+    Args:
+        energy (float | Quantity): Energy values.
+        index (float): Power law index.
+        phi0 (int | Quantity, optional): Normalization constant. Defaults to 1.
+
+    Returns:
+        float | Quantity: Computed power law values.
+    """
     return phi0*energy**(index)
 
 
 
 
 
-def save_to_pickle(filename, object_to_save):
-    with open(filename, 'wb') as file:
+def save_to_pickle(filename, object_to_save, write_mode='wb'):
+    """
+    Saves an object to a file using pickle with a specified write mode.
+
+    Args:
+        filename (str): The name of the file to save the object.
+        object_to_save (object): The object to be saved.
+        write_mode (str, optional): The mode in which the file is opened. Defaults to 'wb'.
+    """
+    with open(filename, write_mode) as file:
         pickle.dump(object_to_save, file)
 
 
-def load_pickle(filename):
-    with open(filename, 'rb') as file:
+def load_pickle(filename, load_mode='rb'):
+    """
+    Loads an object from a pickle file with a specified load mode.
+
+    Args:
+        filename (str): The name of the file to load the object from.
+        load_mode (str, optional): The mode in which the file is opened. Defaults to 'rb'.
+
+    Returns:
+        object: The loaded object.
+    """
+    with open(filename, load_mode) as file:
         loaded_object = pickle.load(file)
 
     return loaded_object
@@ -130,6 +141,15 @@ def load_pickle(filename):
 
 
 def generate_unique_int_from_string(string):
+    """
+    Generates a pseudo-unique integer from a given string using a predefined list of prime numbers.
+
+    Args:
+        string (str): The input string.
+
+    Returns:
+        int: A unique integer generated from the string.
+    """
     nums = []
     for character in string:
         num  = ord(character)
@@ -154,6 +174,16 @@ def generate_unique_int_from_string(string):
 
 
 def extract_axes(axes_config):
+    """
+    Applies the stick-breaking process for Dirichlet distributions directly.
+
+    Args:
+        mixtures_fractions (list | tuple): Mixture fractions for the Dirichlet process.
+        depth (int): The depth of the stick-breaking process.
+
+    Returns:
+        np.ndarray | float: Resulting mixture component.
+    """
     axes = {}
 
     for prior_axes in axes_config.values():
@@ -166,6 +196,15 @@ def extract_axes(axes_config):
 
 def apply_dirichlet_stick_breaking_direct(mixtures_fractions: list | tuple, 
                                             depth: int) -> np.ndarray | float:
+    """_summary_
+
+    Args:
+        mixtures_fractions (list | tuple): _description_
+        depth (int): _description_
+
+    Returns:
+        np.ndarray | float: _description_
+    """
 
     dirichletmesh = 1
 
@@ -180,25 +219,23 @@ def apply_dirichlet_stick_breaking_direct(mixtures_fractions: list | tuple,
     return dirichletmesh
 
 
-def _event_ratios_to_sticking_breaking_ratios(event_ratios: list | tuple) -> np.ndarray | float:
-    event_ratios = np.asarray(event_ratios)
-
-
-    stick_ratios = []
-
-    for depth, event_ratio in enumerate(event_ratios):
-        stick_ratio = event_ratio/(1-np.sum(event_ratios[:depth]))
-        stick_ratios.append(stick_ratio)
-
-
-    return np.asarray(stick_ratios)
-
-
 
 def bound_axis(axis: np.ndarray, 
                 bound_type: str, 
                 bound_radii: float, 
                 estimated_val: float):
+    """
+    Bounds an axis within specified radii around an estimated value.
+
+    Args:
+        axis (np.ndarray): Axis values.
+        bound_type (str): Type of bounding ('linear' or 'log10').
+        bound_radii (float): Bounding radii.
+        estimated_val (float): Estimated value around which to bound.
+
+    Returns:
+        tuple: Bounded axis and indices.
+    """
     
     try:
         axis_unit = axis.unit
@@ -234,6 +271,15 @@ def bound_axis(axis: np.ndarray,
 
 
 def bin_centres_to_edges(axis: np.ndarray) -> np.ndarray:
+    """
+    Converts bin centers to bin edges for a given axis.
+
+    Args:
+        axis (np.ndarray): Bin centers.
+
+    Returns:
+        np.ndarray: Bin edges.
+    """
     return np.append(axis-np.diff(axis)[0]/2, axis[-1]+np.diff(axis)[0]/2)
 
 # Currently unused
