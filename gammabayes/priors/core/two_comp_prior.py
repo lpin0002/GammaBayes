@@ -7,6 +7,37 @@ import time
 
 
 class TwoCompPrior(DiscreteLogPrior):
+    """
+    A two-component prior model combining both spectral and spatial components.
+    
+    This class inherits from DiscreteLogPrior and combines a spectral and spatial model component 
+    to calculate a log-prior distribution over a defined parameter space. Optionally, efficient 
+    mesh-based log function computations for both spectral and spatial components can be specified.
+    
+    Args:
+        spectral_class: A class representing the spectral model component. It must implement a method 
+                        for calculating log values given parameters.
+        
+        spatial_class: A class representing the spatial model component. Similar to spectral_class, 
+                       it must provide a method for calculating log values.
+        
+        irf_loglike: An instance of a class representing the Instrument Response Function (IRF) log-likelihood.
+                     This is used to calculate the log-likelihood of the data given the model parameters.
+        
+        spectral_mesh_efficient_logfunc (optional): A function for efficient log computation over a mesh grid for the spectral component. 
+                                                     Defaults to None, indicating that the default method on spectral_class is used.
+        
+        spatial_mesh_efficient_logfunc (optional): Similar to spectral_mesh_efficient_logfunc, but for the spatial component.
+                                                   Defaults to None.
+        
+        spectral_class_kwds (dict, optional): Keyword arguments to be passed to the spectral_class during initialization. Defaults to {}.
+        
+        spatial_class_kwds (dict, optional): Keyword arguments to be passed to the spatial_class during initialization. Defaults to {}.
+        
+        name (str, optional): A name for the two-component prior model. Defaults to 'UnknownTwoComp'.
+    """
+
+
 
     def __init__(self, 
                  spectral_class, 

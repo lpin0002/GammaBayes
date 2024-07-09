@@ -9,6 +9,20 @@ import warnings, logging
 import h5py, pickle
 
 class DiscreteLogPrior(object):
+    """
+    A class representing a discrete log prior distribution.
+
+    Args:
+        name (str, optional): Name of the instance. Defaults to '[None]'.
+        inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
+        logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
+        log_mesh_efficient_func (callable, optional): A function for efficient computation of log prior values on a mesh grid.
+        axes (tuple[np.ndarray], optional): A tuple containing np.ndarray objects for each axis over which the prior is defined.
+        axes_names (list[str] | tuple[str], optional): Names of the axes. Defaults to ['None'].
+        default_spectral_parameters (dict, optional): Default spectral parameters for the prior. Defaults to an empty dict.
+        default_spatial_parameters (dict, optional): Default spatial parameters for the prior. Defaults to an empty dict.
+        iterative_logspace_integrator (callable, optional): Function used for integrations in log space. Defaults to iterate_logspace_integration.
+    """
     
     def __init__(self, name: str='[None]', 
                  inputunits: str=None, 
@@ -23,28 +37,18 @@ class DiscreteLogPrior(object):
         """
         Initializes a DiscreteLogPrior object, which represents a discrete log prior distribution.
 
-        Parameters:
-        - name (str, optional): Name of the instance. Defaults to '[None]'.
-        
-        - inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
-        
-        - logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
-          The function should accept arguments in the order of axis values followed by hyperparameter values.
-        
-        - log_mesh_efficient_func (callable, optional): A function for efficient computation of log prior values on a mesh grid.
-          If not provided, a warning is raised about the lack of efficient computation.
-        
-        - axes (tuple[np.ndarray], optional): A tuple containing np.ndarray objects for each axis over which the prior is defined.
-          Generally represents energy and sky position axes.
-        
-        - axes_names (list[str] | tuple[str], optional): Names of the axes. Defaults to ['None'].
-        
-        - default_spectral_parameters (dict, optional): Default spectral parameters for the prior. Defaults to an empty dict.
-        
-        - default_spatial_parameters (dict, optional): Default spatial parameters for the prior. Defaults to an empty dict.
-        
-        - iterative_logspace_integrator (callable, optional): Function used for integrations in log space. Defaults to iterate_logspace_integration.
+        Args:
+            name (str, optional): Name of the instance. Defaults to '[None]'.
+            inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
+            logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
+            log_mesh_efficient_func (callable, optional): A function for efficient computation of log prior values on a mesh grid.
+            axes (tuple[np.ndarray], optional): A tuple containing np.ndarray objects for each axis over which the prior is defined.
+            axes_names (list[str] | tuple[str], optional): Names of the axes. Defaults to ['None'].
+            default_spectral_parameters (dict, optional): Default spectral parameters for the prior. Defaults to an empty dict.
+            default_spatial_parameters (dict, optional): Default spatial parameters for the prior. Defaults to an empty dict.
+            iterative_logspace_integrator (callable, optional): Function used for integrations in log space. Defaults to iterate_logspace_integration.
 
+            
         Note:
         - This class assumes the prior is defined in a discrete log space along specified axes.
         - The axes should correspond to physical quantities over which the prior is distributed, such as energy and sky coordinates.
@@ -88,7 +92,7 @@ class DiscreteLogPrior(object):
         String representation of the DiscreteLogPrior instance.
 
         Returns:
-        - str: A description of the instance including its name, logfunction type, input units, and axes names.
+            str: A description of the instance including its name, logfunction type, input units, and axes names.
         """
         description = f"Discrete log prior class\n{'-' * 20}\n" \
                       f"Name: {self.name}\n" \
@@ -102,13 +106,12 @@ class DiscreteLogPrior(object):
         """
         Allows the instance to be called like a function, passing arguments directly to the logfunction.
 
-        Parameters:
-        - *args: Arguments for the logfunction.
-        
-        - **kwargs: Keyword arguments for the logfunction.
+        Args:
+            *args: Arguments for the logfunction.
+            **kwargs: Keyword arguments for the logfunction.
 
         Returns:
-        - np.ndarray | float: The result from the logfunction, which is the log prior value(s) for the given input(s).
+            np.ndarray | float: The result from the logfunction, which is the log prior value(s) for the given input(s).
         """
         return self.logfunction(*args, **kwargs)
 
@@ -120,14 +123,14 @@ class DiscreteLogPrior(object):
         """
         Calculates the normalisation constant of the log prior over specified axes.
 
-        Parameters:
-        - log_prior_values (np.ndarray, optional): Pre-computed log prior values. If None, they will be computed using default or provided hyperparameters.
-        - spectral_parameters (dict, optional): Spectral parameters to be used if log_prior_values is not provided. Defaults to instance's default spectral parameters.
-        - spatial_parameters (dict, optional): Spatial parameters to be used if log_prior_values is not provided. Defaults to instance's default spatial parameters.
-        - axisindices (list, optional): Indices of the axes over which to integrate. Defaults to [0, 1, 2].
+        Args:
+            log_prior_values (np.ndarray, optional): Pre-computed log prior values. If None, they will be computed using default or provided hyperparameters.
+            spectral_parameters (dict, optional): Spectral parameters to be used if log_prior_values is not provided. Defaults to instance's default spectral parameters.
+            spatial_parameters (dict, optional): Spatial parameters to be used if log_prior_values is not provided. Defaults to instance's default spatial parameters.
+            axisindices (list, optional): Indices of the axes over which to integrate. Defaults to [0, 1, 2].
 
         Returns:
-        - np.ndarray | float: The normalisation constant for the log prior, either as a scalar or an array depending on the integration over multiple axes.
+            np.ndarray | float: The normalisation constant for the log prior, either as a scalar or an array depending on the integration over multiple axes.
         """
         
 
@@ -305,7 +308,15 @@ class DiscreteLogPrior(object):
         pickle.dump(self, open(file_name,write_method))
 
     @classmethod
-    def load(cls, file_name):
+    def load(cls, file_name:str):
+        """_summary_
+
+        Args:
+            file_name (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
         if not(file_name.endswith(".pkl")):
             file_name = file_name + ".pkl"
         return  pickle.load(open(file_name,'rb'))

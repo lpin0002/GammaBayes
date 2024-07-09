@@ -25,7 +25,8 @@ fermi_obs_rate_units = 1/u.TeV/u.s/u.deg**2
 
 def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
                                    log_aeff: callable, logspace_integrator:callable=logspace_riemann):
-    """Constructs the Fermi-Gaggero diffuse background event rate matrix (using Gammapy).
+    """
+    Constructs the Fermi-Gaggero diffuse background event rate matrix (using Gammapy).
 
     Args:
         energy_axis (np.ndarray): Energy axis for the matrix (TeV).
@@ -83,18 +84,15 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
     return diffuse_background_observed_event_rate*fermi_obs_rate_units
 
 class construct_log_fermi_gaggero_bkg(object):
-    """        
+    """
+    Constructs and interpolates the log of the Fermi-Gaggero diffuse background model.
+
     Args:
         energy_axis (np.ndarray): Energy axis for the model (TeV).
-        
         longitudeaxis (np.ndarray): Longitude axis for the model (degrees).
-        
         latitudeaxis (np.ndarray): Latitude axis for the model (degrees).
-        
         log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
-        
         normalise (bool, optional): Whether to normalize the model over the specified axes. Defaults to True.
-        
         logspace_integrator (callable, optional): Function used for normalization in log space. Defaults to logspace_riemann.
 
     This class generates a regular grid interpolator for the Fermi-Gaggero diffuse background model,
@@ -144,7 +142,8 @@ class construct_log_fermi_gaggero_bkg(object):
     # Then we make a wrapper to put the result of the function in log space
     def log_func(self, energy, longitude, latitude, 
                  spectral_parameters={}, spatial_parameters={}): 
-        """Computes the log of the interpolated Fermi-Gaggero model at given energy, longitude, and latitude.
+        """
+        Computes the log of the interpolated Fermi-Gaggero model at given energy, longitude, and latitude.
 
         Args:
             energy (float): Energy value for evaluation (TeV).
@@ -164,19 +163,15 @@ class construct_log_fermi_gaggero_bkg(object):
 
 # Just a little helper class
 class FermiGaggeroDiffusePrior(DiscreteLogPrior):
-    """A subclass of DiscreteLogPrior for modeling the Fermi-Gaggero diffuse astrophysical background prior.
+    """
+    A subclass of DiscreteLogPrior for modeling the Fermi-Gaggero diffuse astrophysical background prior.
 
     Args:
         energy_axis (np.ndarray): The energy axis for the prior (TeV).
-        
         longitudeaxis (np.ndarray): The longitude axis for the prior (degrees).
-        
         latitudeaxis (np.ndarray): The latitude axis for the prior (degrees).
-        
         irf (IRF_LogLikelihood): Instrument Response Function log likelihood instance, providing `log_aeff`.
-        
         normalise (bool, optional): Whether to normalize the prior. Defaults to True.
-        
         logspace_integrator (callable, optional): Integrator function for normalization in log space. Defaults to logspace_riemann.
 
     This class constructs a prior based on the Fermi-Gaggero diffuse background model, incorporating instrument
