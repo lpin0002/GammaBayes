@@ -23,22 +23,22 @@ def inverse_transform_sampler(logpmf, Nsamples=1):
     return indices
 
 # Need to figure out a more rigorous solution. Stable for up to ...
-# def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples: int = 1):
+def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples: int = 1):
 
-#     Nsamples = int(round(Nsamples))
+    Nsamples = int(round(Nsamples))
 
-#     logpmf_flattened = logpmf.flatten()
+    logpmf_flattened = logpmf.flatten()
 
-#     logpmf_flattened = logpmf_flattened - logsumexp(logpmf_flattened)
+    logpmf_flattened = logpmf_flattened - logsumexp(logpmf_flattened)
 
-#     flat_logcdf = np.logaddexp.accumulate(logpmf_flattened)
+    flat_logcdf = np.logaddexp.accumulate(logpmf_flattened)
 
-#     flat_cdf = np.exp(flat_logcdf-flat_logcdf[-1])  
+    flat_cdf = np.exp(flat_logcdf-flat_logcdf[-1])  
 
-#     randvals = [random.random() for xkcd in range(Nsamples)]
-#     indices = [np.searchsorted(flat_cdf, u) for u in randvals]
+    randvals = [random.random() for xkcd in range(Nsamples)]
+    indices = [np.searchsorted(flat_cdf, u) for u in randvals]
 
-#     reshaped_simulated_indices = np.unravel_index(indices, np.squeeze(logpmf).shape)
+    reshaped_simulated_indices = np.unravel_index(indices, np.squeeze(logpmf).shape)
 
-#     return [axis[index] for axis, index in zip(axes, reshaped_simulated_indices)]
+    return [axis[index] for axis, index in zip(axes, reshaped_simulated_indices)]
     
