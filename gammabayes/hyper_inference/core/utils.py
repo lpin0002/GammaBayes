@@ -10,12 +10,15 @@ def _handle_parameter_specification(
 
     Parameters:
         parameter_specifications (dict | ParameterSet): Parameter specifications.
-        
-        log_target_priors (list[ParameterSet] | dict[dict], optional): Target priors.
+        num_required_sets (int, optional): Number of required sets of parameter specifications. Defaults to None.
+        _no_required_num (bool, optional): If True, skips the required number check. Defaults to False.
 
     Raises:
         ValueError: If the number of hyperparameter axes specified exceeds the number of priors unless
         'self.no_priors_on_init' is True.
+
+    Returns:
+        list[ParameterSet]: Formatted list of parameter sets.
     """
     _num_parameter_specifications = len(parameter_specifications)
     formatted_parameter_specifications = []*_num_parameter_specifications
@@ -73,14 +76,16 @@ def _handle_nuisance_axes(nuisance_axes: list[np.ndarray],
 
     Args:
         nuisance_axes (list[np.ndarray]): A list of numpy arrays representing the nuisance axes.
+        log_likelihood (optional): Object containing the log likelihood information. Defaults to None.
+        log_prior (optional): Object containing the log prior information. Defaults to None.
 
     Raises:
         Exception: Raised if `nuisance_axes` is not provided and cannot be retrieved from either 
-                `log_likelihood` or `log_proposal_prior` OR `log_target_priors`.
+                   `log_likelihood` or `log_prior`.
 
     Returns:
         list[np.ndarray]: The list of numpy arrays representing the nuisance axes. This can be either the 
-                        provided `nuisance_axes`, or retrieved from `log_likelihood` or `log_priors`.
+                          provided `nuisance_axes`, or retrieved from `log_likelihood` or `log_prior`.
     """
     if nuisance_axes is None:
         try:

@@ -3,12 +3,18 @@ import dynesty
 import numpy as np
 
 def reweight_samples(sampler_results, original_parameter_collection, target_parameter_collection, mixture_tree=None):
+    """
+    Reweight the samples from a sampler's results to target a new parameter distribution.
 
+    Args:
+        sampler_results (SamplerResults): The results from the original sampling.
+        original_parameter_collection (ParameterCollection): The original parameter collection used for sampling.
+        target_parameter_collection (ParameterCollection): The target parameter collection to reweight the samples to.
+        mixture_tree (MTree, optional): A mixture tree to ensure the order of mixture parameters is consistent. Defaults to None.
 
-
-
-
-
+    Returns:
+        SamplerResults: The resampled results, reweighted according to the target parameter distribution.
+    """
 
     if not(mixture_tree is None):
 

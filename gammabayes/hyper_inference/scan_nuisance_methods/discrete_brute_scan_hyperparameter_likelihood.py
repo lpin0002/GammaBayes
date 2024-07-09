@@ -16,6 +16,73 @@ from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
 
 class DiscreteBruteScan(object):
+    """
+    A class for performing discrete brute scan hyperparameter likelihood analysis.
+
+    Args:
+        log_priors (list[DiscreteLogPrior] | tuple[DiscreteLogPrior], optional): 
+            Priors for the log probabilities of discrete input values. Defaults to None.
+        
+        log_likelihood (callable, optional): A callable object to compute 
+            the log likelihood. Defaults to None.
+        
+        axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): Axes 
+            that the measured event data can take. Defaults to None.
+        
+        nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            Axes that the nuisance parameters can take. Defaults to None.
+        
+        prior_parameter_specifications (dict | list[ParameterSet] | dict[ParameterSet], optional): 
+            Specifications for parameters involved in the likelihood estimation. Defaults to an empty dictionary.
+        
+        log_likelihoodnormalisation (np.ndarray | float, optional): 
+            Normalization for the log likelihood. Defaults to 0.
+        
+        log_nuisance_marg_results (np.ndarray | None, optional): Results of 
+            marginalization, expressed in log form. Defaults to None.
+        
+        mixture_parameter_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            Specifications for the mixture fraction parameters. Defaults to None.
+        
+        log_hyperparameter_likelihood (np.ndarray | float, optional): 
+            Log likelihood of hyperparameters (penultimate result). Defaults to 0.
+        
+        log_posterior (np.ndarray | float, optional): Log of the 
+            hyperparameter posterior probability (final result of class). 
+            Defaults to 0.
+        
+        iterative_logspace_integrator (callable, optional): A callable 
+            function for iterative integration in log space. 
+            Defaults to iterate_logspace_integration.
+        
+        logspace_integrator (callable, optional): A callable function for 
+            performing single dimension integration in log space. 
+            Defaults to logspace_riemann.
+        
+        log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray], optional): 
+            List or tuple of matrices representing the log of the prior matrices
+            for the given hyperparameters over the nuisance parameter axes. 
+            Defaults to None.
+        
+        log_marginalisation_regularisation (float, optional): Regularisation 
+            parameter for log marginalisation, should not change normalisation
+            of final result but will minimise effects of numerical instability. Defaults to None.
+        
+        no_priors_on_init (bool, optional): Flag to initialize without priors. Defaults to False.
+        
+        no_likelihood_on_init (bool, optional): Flag to initialize without likelihood. Defaults to False.
+        
+        mixture_fraction_exploration_type (str, optional): Type of exploration for mixture fractions. Defaults to None.
+        
+        applied_priors (bool, optional): Flag to indicate if priors have been applied. Defaults to False.
+        
+        sampler_results (optional): Results from the sampler. Defaults to None.
+        
+        hyper_analysis_instance (optional): Instance for hyperparameter analysis. Defaults to None.
+    """
+
+
+
     def __init__(self, log_priors: list[DiscreteLogPrior] | tuple[DiscreteLogPrior] = None, 
                  log_likelihood: callable = None, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
@@ -341,6 +408,22 @@ class before the multiprocessing or make sure that it isn't part of the actual
                                              prior_marged_shapes: list[np.ndarray] | list[list] | list[tuple],
                                              nans: int
                                              ):
+        """
+        Handles inefficient construction of prior matrices by generating them one-by-one for each combination 
+        of hyperparameter values.
+
+        Args:
+            log_prior (DiscreteLogPrior): The log prior object.
+            prior_idx (int): Index of the prior.
+            prior_spectral_params (dict): Spectral parameters for the prior.
+            prior_spatial_params (dict): Spatial parameters for the prior.
+            Nevents (int): Number of events.
+            prior_marged_shapes (list[np.ndarray] | list[list] | list[tuple]): Shapes of the non-flattened prior matrices.
+            nans (int): Counter for NaN values.
+
+        Returns:
+            tuple: The generated prior matrices and updated NaN count.
+        """
         
         num_spec_params         = len(prior_spectral_params)
 
@@ -409,6 +492,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Returns:
             list: A list of reshaped marginalisation results, each corresponding to a different prior.
 
+            
         Notes:
             - The method first generates prior shapes and matrices using the `prior_gen` method.
             - It calculates marginalisation results for each event in the measured data using `observation_nuisance_marg`.
@@ -466,6 +550,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
                                             array corresponds to and will be appended to the respective array in 
                                             `self.log_nuisance_marg_results`.
 
+                                            
         Notes:
             - It's assumed that `self.log_nuisance_marg_results` is a list of lists (or arrays) where each sublist corresponds 
             to a set of log marginalisation results.
@@ -485,12 +570,9 @@ class before the multiprocessing or make sure that it isn't part of the actual
                                             parameter_meta_data: dict | list[dict] = None,
                                             *args, **kwargs):
         """
-        Selects and initializes (the class, not the process it contains) the appropriate exploration class based on the 
+        Selects and initializes the appropriate exploration class based on the 
         specified mixture fraction exploration type.
-        
-        This method dynamically selects and initializes a class for exploring the posterior of mixture fractions. It supports
-        either deterministic scanning ('scan') or stochastic sampling ('sample') methods for posterior exploration.
-        
+
         Args:
             mixture_parameter_specifications (ParameterSet, list[Parameter], dict): Specifications for the mixture parameters involved in the exploration.
             
@@ -545,11 +627,11 @@ class before the multiprocessing or make sure that it isn't part of the actual
     def init_posterior_exploration(self, *args, **kwargs):
         """
         Initiates the posterior exploration process.
-        
+
         This method delegates the initiation of exploration to the instance of the exploration class selected by the 
         `select_scan_output_exploration_class` method. It prepares the exploration environment and parameters 
         based on the class instance's configuration.
-        
+
         *args, **kwargs: Arguments and keyword arguments to be passed to the initiation method of the exploration class.
         """
         self.hyper_analysis_instance.initiate_exploration(*args, **kwargs)
@@ -557,12 +639,12 @@ class before the multiprocessing or make sure that it isn't part of the actual
     def run_posterior_exploration(self, *args, **kwargs):
         """
         Runs the posterior exploration process and returns the results.
-        
+
         This method triggers the actual exploration process using the selected and initialized exploration class instance. 
         It runs the exploration based on the configured parameters and returns the exploration results.
-        
+
         *args, **kwargs: Arguments and keyword arguments to be passed to the run method of the exploration class.
-        
+
         Returns:
             The results of the posterior exploration, the format and content of which depend on the exploration method used.
         """
@@ -583,19 +665,16 @@ class before the multiprocessing or make sure that it isn't part of the actual
         return self._posterior_exploration_output
     
 
-    def ln_hyperlike(self, inputs):
-        return 0
-
 
     @property
     def posterior_exploration_results(self):
         """
         Returns the results of the posterior exploration.
-        
+
         This property provides access to the results of the posterior exploration. The nature of the results depends on the 
         mixture fraction exploration type. For 'scan', it directly returns the exploration output, while for other types, 
         it accesses the results through the sampler's `results` attribute of the exploration class instance.
-        
+
         Returns:
             The results of the posterior exploration, which may include posterior distributions, samples, or other statistics,
             depending on the exploration type.
@@ -634,6 +713,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Returns:
             np.ndarray: The updated log hyperparameter likelihood after adding the new values.
 
+            
         Notes:
             - This method is used to cumulatively update the log hyperparameter likelihood.
             - The method assumes that `self.log_hyperparameter_likelihood` has been initialized and is in a compatible 
@@ -645,7 +725,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
     
 
     def apply_hyperparameter_priors(self, 
-                                    log_hyperparameter_likelihood_matrix=None,
+                                    log_hyperparameter_likelihood_matrix:np.ndarray=None,
                                     prior_parameter_specifications: list[ParameterSet] | dict[dict[dict[dict]]] | list[dict[dict[dict]]] = None, 
                                     mixture_parameter_specifications: list[Parameter] | ParameterSet = None,
                                     log_hyper_priormesh: np.ndarray = None, 
@@ -655,17 +735,22 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Applies uniform priors to hyperparameters and calculates the posterior using the updated likelihood and prior mesh.
 
         Assumes hyperparameter likelihood is a scan output/matrix ____not samples____, sample outputs are presumed to have priors
-        inerherently applied with the use of the relevant sampler.
+        inherently applied with the use of the relevant sampler.
 
         This method is designed to compute the posterior distribution of hyperparameters by applying uniform priors, 
         generating a meshgrid of log prior values, and combining it with the log hyperparameter likelihood.
 
         Args:
-            priorinfos (list[dict] | tuple[dict]): Information about the priors, such as range and resolution.
-            hyper_param_axes (list[np.ndarray] | tuple[np.ndarray], optional): Axes for the hyperparameters, used to 
-                generate the meshgrid for priors. If None, it must be computed from `priorinfos`.
+            log_hyperparameter_likelihood_matrix (np.ndarray, optional): An array representing the log hyperparameter likelihood matrix. Defaults to None.
+            
+            prior_parameter_specifications (list[ParameterSet] | dict[dict[dict[dict]]] | list[dict[dict[dict]]], optional): Specifications for prior 
+            parameters involved in the exploration. If not provided, defaults to the class attribute `prior_parameter_specifications`.
+            
+            mixture_parameter_specifications (list[Parameter] | ParameterSet, optional): Specifications for the mixture parameters involved in the exploration. Defaults to None.
+            
             log_hyper_priormesh (np.ndarray, optional): Pre-computed log prior meshgrid. If None, it is computed from 
                 `priorinfos` and `hyper_param_axes`.
+            
             integrator (callable, optional): Integrator function to be used for calculating the posterior. Defaults to 
                 `self.logspace_integrator` if None.
 
@@ -729,7 +814,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
     # Private method for classes that inherit this classes behaviour åto use
         # and don't have to re-write many of the same lines again
-    def _pack_data(self, reduce_mem_consumption: bool = True, h5f=None, file_name='temporary_file.h5') -> dict:
+    def _pack_data(self, h5f=None, file_name:str='temporary_file.h5',reduce_mem_consumption: bool = True) -> dict:
         """
         Packs class data into an HDF5 file format for efficient storage and retrieval.
 
@@ -745,9 +830,6 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         Returns:
             dict: The h5py.File object, which acts as a dictionary, containing all the stored data.
-        
-        Notes:
-            - Users should ensure that `h5f` is properly closed after use to prevent data corruption.
         """
         if h5f is None:
             h5f = h5py.File(file_name, 'w-')  # Replace 'temporary_file.h5' with desired file name
@@ -864,7 +946,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         return self._pack_data(reduce_mem_consumption, file_name=file_name)
 
     
-    def save(self, file_name):
+    def save(self, file_name:str):
         """
         Saves the class data to an HDF5 file.
 
@@ -876,7 +958,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
 
     @classmethod
-    def unpack(cls, h5f=None, file_name=None, overriding_class_input_dict = {}):
+    def unpack(cls, h5f=None, file_name:str=None, overriding_class_input_dict:dict = {}):
         """
         Class method that loads class data from an HDF5 file, creating a class instance with the loaded data.
 
@@ -1003,7 +1085,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         return instance
     
 
-    def save_to_pickle(self, file_name: str, reduce_memory_consumption=True):
+    def save_to_pickle(self, file_name: str, reduce_memory_consumption:bool=True):
         """
         Saves the parameter object to an pickle file.
 
@@ -1033,12 +1115,13 @@ class before the multiprocessing or make sure that it isn't part of the actual
                 self.log_prior_matrix_list = original_log_prior_matrix_list
 
     @classmethod
-    def load_from_pickle(cls, file_name: str, read_mode='rb'):
+    def load_from_pickle(cls, file_name: str, read_mode:str='rb'):
         """
-        Saves the parameter object to an pickle file.
+        Loads the parameter object from a pickle file.
 
         Args:
-            file_name (str): The name of the file to save the parameter data.
+            file_name (str): The name of the file to load the parameter data from.
+            read_mode (str): The read mode for loading the file, defaults to 'rb'.
         """
 
 

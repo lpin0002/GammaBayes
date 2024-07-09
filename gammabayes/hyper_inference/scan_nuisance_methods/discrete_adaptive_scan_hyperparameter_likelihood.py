@@ -17,13 +17,89 @@ import os, warnings, logging, time, functools, numpy as np, h5py
 
 
 class DiscreteAdaptiveScan(DiscreteBruteScan):
+    """
+    A class that extends DiscreteBruteScan to implement adaptive bounding for nuisance parameters.
+
+    Args:
+        log_priors (list[DiscreteLogPrior] | tuple[DiscreteLogPrior], optional): 
+            Priors for the log probabilities of discrete input values. Defaults to None.
+        
+        log_likelihood (callable, optional): A callable object to compute 
+            the log likelihood. Defaults to None.
+        
+        axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): Axes 
+            that the measured event data can take. Defaults to None.
+        
+        nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            Axes that the nuisance parameters can take. Defaults to None.
+        
+        parameter_specifications (dict, optional): Specifications for 
+            parameters involved in the likelihood estimation. Defaults to an empty dictionary.
+        
+        log_likelihoodnormalisation (np.ndarray | float, optional): 
+            Normalization for the log likelihood. Defaults to 0.
+        
+        log_margresults (np.ndarray | None, optional): Results of 
+            marginalization, expressed in log form. Defaults to None.
+        
+        mixture_param_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            Specifications for the mixture fraction parameters. Defaults to None.
+        
+        log_hyperparameter_likelihood (np.ndarray | float, optional): 
+            Log likelihood of hyperparameters (penultimate result). Defaults to 0.
+        
+        log_posterior (np.ndarray | float, optional): Log of the 
+            hyperparameter posterior probability (final result of class). 
+            Defaults to 0.
+        
+        iterative_logspace_integrator (callable, optional): A callable 
+            function for iterative integration in log space. 
+            Defaults to iterate_logspace_integration.
+        
+        logspace_integrator (callable, optional): A callable function for 
+            performing single dimension integration in log space. 
+            Defaults to logspace_riemann.
+        
+        log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray], optional): 
+            List or tuple of matrices representing the log of the prior matrices
+            for the given hyperparameters over the nuisance parameter axes. 
+            Defaults to None.
+        
+        log_marginalisation_regularisation (float, optional): Regularisation 
+            parameter for log marginalisation, should not change normalisation
+            of final result but will minimise effects of numerical instability. Defaults to None.
+
+        bounds (list[ str, float], optional): Radii for bounding of nuisance 
+            parameter axes. Defaults to None.
+
+        bounding_percentiles (list[float], optional): If bounds is not given then
+            these values, the sigmas the given likelihood are used to produce the 
+            bounds. This parameter indicates the number of samples over the 
+            measured value parameter space are included by the specified 
+            number of sigmas
+            (e.g. if 4 sigma and 90 are given 90% of the distributions restricted 
+            by the bounds contain their respective 4 sigma contours)
+            Defaults to [90 ,90].
+
+        bounding_sigmas (list[int], optional):  If bounds is not given then
+            these the sigmas, the percentiles and the given likelihood are 
+            used to produce the bounds. This parameter indicates the number 
+            of sigma values to be contained. 
+            (e.g. if 4 sigma and 90 are given 90% of the distributions restricted 
+            by the bounds contain their respective 4 sigma contours)
+            Defaults to [4,4].
+    """
+
+
+
+
     def __init__(self, *args, 
                  bounds: list[ str, float] = None,
                  bounding_percentiles: list[float]      = [95 ,95],
                  bounding_sigmas: list[int]     = [5,5],
                  **kwargs):
         """
-        Initializes a discrete brute scan hyperparameter likelihood object.
+        Initializes a discrete adaptive scan hyperparameter likelihood object.
 
         Args:
             log_priors (list[DiscreteLogPrior] | tuple[DiscreteLogPrior], optional): 
@@ -128,12 +204,12 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
         Notes:
             - This method first adjusts the nuisance parameter axes explored based on the bounds specified 
-                in the class (using the `bound_axis` method).
+              in the class (using the `bound_axis` method).
             - It creates a meshgrid of event values and restricted axes, considering the bounds.
-            - Computes log likelihood values, adjusting them with there respective normalisations considering the indices 
-            from the bounds.
+            - Computes log likelihood values, adjusting them with their respective normalizations considering the indices 
+              from the bounds.
             - The method then integrates these values with the log prior matrices, accounting for the rearrangement 
-            of axes due to bounds.
+              of axes due to bounds.
         """
 
 
@@ -206,16 +282,18 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             reduce_mem_consumption (bool, optional): A boolean parameter indicating whether to omit the input 
                                                     prior and likelihoods in order to save on memory consumption. 
                                                     Defaults to True, which means these large objects will not be saved.
+            h5f (h5py.File, optional): An open h5py file object to save the data into. Defaults to None, in which 
+                                       case a new file is created with the specified file_name.
+            file_name (str, optional): The name of the file to save the data into. Defaults to 'temporary_file.h5'.
 
         Returns:
-            dict: A dictionary containing the packed data of the class instance. It includes all the attributes 
-                saved by the base class's `_pack_data` method, along with the `bounds` specific to this class.
-        
+            h5py.File: An h5py file object containing the packed data of the class instance.
+
         Notes:
             - The base class method `_pack_data` is utilized to save common attributes into the dictionary.
             - This method specifically adds the `bounds` attribute, which is unique to this class.
             - The `reduce_mem_consumption` parameter is passed down to the base class method to control whether 
-            large objects like input priors and likelihoods are included in the packed data.
+              large objects like input priors and likelihoods are included in the packed data.
         """
         if h5f is None:
             h5f = h5py.File(file_name, 'w-')  # Replace 'temporary_file.h5' with desired file name
@@ -246,7 +324,19 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
     
     @classmethod
-    def load(cls, file_name, overriding_class_input_dict = {}, *args, **kwargs):
+    def load(cls, file_name:str, overriding_class_input_dict:dict = {}, *args, **kwargs):
+        """
+        Loads a DiscreteAdaptiveScan instance from a file.
+
+        Args:
+            file_name (str): The name of the file to load the data from.
+            overriding_class_input_dict (dict, optional): A dictionary to override the class input parameters.
+                                                         Defaults to an empty dictionary.
+
+        Returns:
+            DiscreteAdaptiveScan: An instance of the DiscreteAdaptiveScan class with the loaded data.
+        """
+        
         class_input_dict = cls.unpack(file_name, overriding_class_input_dict=overriding_class_input_dict)
 
         logging.info("Unpacking of stem class parameters successful")

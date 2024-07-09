@@ -17,29 +17,17 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
     Attributes:
         prior_parameter_specifications (list | dict | ParameterSet): Specifications for prior parameters.
-
         mixture_tree (MTree): Tree handling the layout/structure of the mixture.
-        
         mixture_parameter_specifications (ParameterSet): Specifications for mixture parameters.
-        
         log_nuisance_marg_results (np.array): Logarithm of marginal results for the parameters.
-        
         log_nuisance_marg_regularisation (float): Regularisation parameter for nuisance marginalisation.
-        
         num_priors (int): The number of prior distributions provided.
-        
         num_events (int): The number of events in the log marginal results.
-        
         mixture_bounds (list): Bounds for the mixture parameters.
-        
         num_mixes (int): The number of mixture components.
-        
         hyperparameter_axes (list): Axes for hyperparameters, derived from prior parameter specifications.
-        
         index_to_hyper_parameter_info (dict): Mapping of hyperparameter indices to their specifications.
-        
         ndim (int): The number of dimensions for the sampler, including mixture components and hyperparameters.
-        
         sampler (dynesty.NestedSampler): The Dynesty sampler object used for exploration.
     """
     def __init__(self, 
@@ -52,16 +40,17 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
                 parameter_meta_data: dict = {},
                 _sampler_results={}):
         """
-        Initializes the ScanOutput_StochasticMixtureFracPosterior class with necessary parameters and configurations.
+        Initializes the ScanOutput_StochasticTreeMixturePosterior class with necessary parameters and configurations.
 
         Args:
-            log_nuisance_marg_results (np.array): Logarithm of marginal results for the parameters.
-            
+            log_nuisance_marg_results (list[np.ndarray] | np.ndarray): Logarithm of marginal results for the parameters.
+            mixture_tree (MTree): Tree handling the layout/structure of the mixture.
             mixture_parameter_specifications (list | dict | ParameterSet): Specifications for mixture parameters.
-            
             log_nuisance_marg_regularisation (float, optional): Regularisation parameter for nuisance marginalisation.
-            
             prior_parameter_specifications (list | dict | ParameterSet, optional): Specifications for prior parameters.
+            shared_parameters (list | dict | ParameterSet, optional): Shared parameters across the model. Defaults to {}.
+            parameter_meta_data (dict, optional): Metadata for the parameters. Defaults to {}.
+            _sampler_results (dict, optional): Initial results for the sampler. Defaults to {}.
         """
         self.prior_parameter_specifications = _handle_parameter_specification(
             prior_parameter_specifications,
@@ -127,7 +116,12 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
     def set_hyper_axis_info(self):
+        """
+        Sets the hyperparameter axis information.
 
+        This method initializes the number of hyperparameter axes and creates a mapping of hyperparameter indices
+        to their specifications.
+        """
 
         # Counter for hyperparameter axes, mostly for 'index_to_hyper_parameter_info'
         hyper_idx = 0
@@ -163,15 +157,37 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
         
-    def prior_transform(self, u):
+    def prior_transform(self, u:float|np.ndarray):
+        """
+        Transforms unit cube values to prior parameter values based on self.parameter_set_collection prior_transform.
+
+        Args:
+            u (float | np.ndarray): Unit cube values.
+
+        Returns:
+            np.ndarray: Transformed prior parameter values.
+        """
+
+
+
         unitcube = np.squeeze(self.parameter_set_collection.prior_transform(u))
 
         self.unit_cube_cache.append(unitcube)
         
         return unitcube
     
-    def ln_likelihood(self, inputs, log_nuisance_marg_results=None):
-        
+    def ln_likelihood(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
+        """
+        Calculates the log likelihood of the given inputs.
+
+        Args:
+            inputs (list | np.ndarray): Input values for the parameters.
+            log_nuisance_marg_results (list[np.ndarray], optional): Logarithm of marginal results for the parameters.
+
+        Returns:
+            float: The log likelihood value.
+        """
+
         if log_nuisance_marg_results is None:
             log_nuisance_marg_results = self.log_nuisance_marg_results
         
@@ -245,16 +261,10 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         return result
 
 
-    def _zero_likelihood(self, inputs):
-        return inputs[0]*0
-
-
-
 
 
     # Note: When allocating live points it's lower than the norm due to the discrete nature of the prior parameters
     def initiate_exploration(self, **kwargs):
-
         """
         Initiates the exploration process by setting up the Dynesty sampler with the class's likelihood and prior transform functions.
 
@@ -291,14 +301,19 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
 
-    def _pack_data(self, h5f=None, file_name=None, save_log_marg_results=True):
+    def _pack_data(self, h5f=None, file_name:str=None, save_log_marg_results:bool=True):
         """
         Private method that packs the class data into an HDF5 format.
 
         Equivalent to the public method for use in sub-classes.
 
         Args:
-        h5f (h5py.File): An open HDF5 file object for writing data.
+            h5f (h5py.File): An open HDF5 file object for writing data.
+            file_name (str): The name of the HDF5 file to create or write to if `h5f` is None.
+            save_log_marg_results (bool): Whether to save log marginal results.
+
+        Returns:
+            h5py.File: The HDF5 file object containing the packed data.
         """
 
         if h5f is None:
@@ -364,11 +379,25 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
         return h5f
     
-    def pack_data(self, h5f=None, file_name=None, save_log_marg_results=False):
+    def pack_data(self, h5f=None, file_name:str=None, save_log_marg_results:bool=False):
+        """
+        Packs the class data into an HDF5 format.
+
+        Args:
+            h5f (h5py.File, optional): An open HDF5 file object for writing data.
+            file_name (str, optional): The name of the HDF5 file to create or write to if `h5f` is None.
+            save_log_marg_results (bool, optional): Whether to save log marginalisation results.
+
+        Returns:
+            h5py.File: The HDF5 file object containing the packed data.
+        """
+
+
+
         return self._pack_data(h5f=h5f, file_name=file_name, save_log_marg_results=save_log_marg_results)
     
 
-    def save(self, file_name):
+    def save(self, file_name:str):
         """
         Saves the class data to an HDF5 file.
 
@@ -381,25 +410,40 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
     @property
     def results(self):
+        """
+        Retrieves the results from the sampler.
+
+        Returns:
+            dict: The results from the sampler.
+        """
+
         if self._results == {}:
             self._results = self.sampler.results
         return self._results
     
     @results.setter
     def results(self, value):
+        """
+        Sets the results for the sampler.
+
+        Args:
+            value (dict): The results to set.
+        """
         self._results = value
 
 
     @classmethod
-    def load(cls, h5f=None, file_name=None, log_nuisance_marg_results=[]):
+    def load(cls, h5f=None, file_name:str=None, log_nuisance_marg_results:list[np.ndarray]=[]):
         """
         Loads the class data from an HDF5 file.
 
         Args:
-            file_name (str): The path to the HDF5 file to load.
+            h5f (h5py.File, optional): An open HDF5 file object for reading data.
+            file_name (str, optional): The path to the HDF5 file to load.
+            log_nuisance_marg_results (list[np.ndarray], optional): Logarithm of marginal results for the parameters.
 
         Returns:
-            An instance of the class reconstructed from the file.
+            ScanOutput_StochasticTreeMixturePosterior: An instance of the class reconstructed from the file.
         """
         if isinstance(h5f, str):
             file_name = h5f
