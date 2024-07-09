@@ -10,13 +10,35 @@ from .setup import hl_setup_from_config
 
 
 class high_level_mixture(hl_setup_from_config):
+    """
+    High-level mixture model class that extends `hl_setup_from_config` for setting up and simulating mixture models.
+
+    Args:
+        hl_setup_from_config (_type_): Base class for setup from configuration.
+    """
 
     def __init__(self, config):
+        """
+        Initializes the high-level mixture model with the provided configuration.
+
+        Args:
+            config (_type_): Configuration settings for the mixture model.
+        """
 
         super().__init__(config=config)
 
 
     def simulate(self, Nevents=None, tree_node_values=None):
+        """
+        Simulates the mixture model to generate true and measured event data.
+
+        Args:
+            Nevents (int, optional): Number of events to simulate. Defaults to the configured number of events per job.
+            tree_node_values (dict, optional): Values to overwrite in the mixture tree. Defaults to None.
+
+        Returns:
+            tuple: True event data and measured event data.
+        """
 
         sample_mixture_tree = self.mixture_tree.copy()
         true_event_data = []
@@ -47,6 +69,15 @@ class high_level_mixture(hl_setup_from_config):
     
 
     def nuisance_marginalisation(self, measured_event_data):
+        """
+        Performs nuisance parameter marginalisation on the measured event data.
+
+        Args:
+            measured_event_data (_type_): The measured event data.
+
+        Returns:
+            _type_: Reshaped log marginal results.
+        """
 
         self.discrete_scan_hyperparameter_likelihood = dynamic_import(
             'gammabayes.hyper_inference',  

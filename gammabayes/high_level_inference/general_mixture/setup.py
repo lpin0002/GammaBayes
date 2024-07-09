@@ -39,11 +39,35 @@ from scipy.interpolate import RegularGridInterpolator
 
 
 class log_obs_interpolator:
+    """
+    Class for creating a log-space interpolator for observational data.
+
+    Args:
+        real_space_interpolator (callable): A function for real-space interpolation.
+    """
 
     def __init__(self, real_space_interpolator):
+        """_summary_
+
+        Args:
+            real_space_interpolator (_type_): _description_
+        """
         self.real_space_interpolator = real_space_interpolator
 
     def log_func(self, energy, lon, lat, spectral_parameters={}, spatial_parameters={}):
+        """
+        Logarithmic interpolation function.
+
+        Args:
+            energy (_type_): Energy values for interpolation.
+            lon (_type_): Longitude values for interpolation.
+            lat (_type_): Latitude values for interpolation.
+            spectral_parameters (dict, optional): Spectral parameters. Defaults to {}.
+            spatial_parameters (dict, optional): Spatial parameters. Defaults to {}.
+
+        Returns:
+            _type_: Interpolated log-space values.
+        """
 
         output = np.log(self.real_space_interpolator( (energy, lon, lat) ))
 
@@ -51,8 +75,19 @@ class log_obs_interpolator:
 
 
 class hl_setup_from_config:
+    """
+    High-level setup class from configuration file.
+
+    Args:
+        config (_type_): Configuration file or dictionary.
+    """
 
     def __init__(self, config):
+        """_summary_
+
+        Args:
+            config (_type_): _description_
+        """
 
         print("\n\n")
         if isinstance(config, dict):
@@ -84,6 +119,10 @@ class hl_setup_from_config:
 
         
     def _setup_irfs(self):
+        """
+        Sets up the Instrument Response Functions (IRFs).
+        """
+        
 
         if 'IRF_kwarg_Specifications' in self.config_dict:
             IRF_kwarg_Specifications = self.config_dict['IRF_kwarg_Specifications']
@@ -186,6 +225,9 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
 
     def _handle_dm_specifications(self):
+        """
+        Handles dark matter specifications.
+        """
 
         if 'dark_matter_density_profile' in self.config_dict:
             density_profile_string = self.config_dict['dark_matter_density_profile']
@@ -263,7 +305,9 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
 
     def _handle_missing_true_specifications(self):
-
+        """
+        Handles missing true parameter specifications.
+        """
         if 'true_mixture_fractions' in self.config_dict:
             self.true_mixture_fractions = self.config_dict['prior_parameter_specifications']
         else:
@@ -289,6 +333,11 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
 
     def _setup_observational_prior_models(self):
+        """
+        Sets up observational prior models.
+        """
+
+
         self.observational_prior_model_names = self.config_dict['observational_prior_models']
 
         self.observational_prior_models = ['Not Set']*len(self.observational_prior_model_names)
@@ -388,6 +437,9 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
 
     def _setup_parameter_specifications(self):
+        """
+        Sets up parameter specifications for the priors.
+        """
 
         num_obs_priors = len(self.observational_prior_models)
 
@@ -425,7 +477,13 @@ EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
 
 
 
-    def _setup_mixture_tree_values(self, values=None):
+    def _setup_mixture_tree_values(self, values:list=None):
+        """
+        Sets up the mixture tree values.
+
+        Args:
+            values (iterable): Values to set up in the mixture tree. Defaults to None.
+        """
 
         self.mixture_layout = self.config_dict['mixture_layout']
 
