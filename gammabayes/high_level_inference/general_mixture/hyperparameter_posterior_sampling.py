@@ -17,7 +17,7 @@ class high_level_mixture(hl_setup_from_config):
         hl_setup_from_config (_type_): Base class for setup from configuration.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, **kwargs):
         """
         Initializes the high-level mixture model with the provided configuration.
 
@@ -25,7 +25,7 @@ class high_level_mixture(hl_setup_from_config):
             config (_type_): Configuration settings for the mixture model.
         """
 
-        super().__init__(config=config)
+        super().__init__(config=config, **kwargs)
 
 
     def simulate(self, Nevents=None, tree_node_values=None):

@@ -82,7 +82,7 @@ class hl_setup_from_config:
         config (_type_): Configuration file or dictionary.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, skip_irf_norm_setup=False):
         """_summary_
 
         Args:
@@ -108,7 +108,7 @@ class hl_setup_from_config:
 
         self._setup_mixture_tree_values()
 
-        self._setup_irfs()
+        self._setup_irfs(skip_irf_norm_setup=skip_irf_norm_setup)
         self._handle_missing_true_specifications()
         self._handle_dm_specifications()
         self._setup_observational_prior_models()
@@ -118,7 +118,7 @@ class hl_setup_from_config:
 
 
         
-    def _setup_irfs(self):
+    def _setup_irfs(self, skip_irf_norm_setup=False):
         """
         Sets up the Instrument Response Functions (IRFs).
         """
@@ -133,95 +133,95 @@ class hl_setup_from_config:
                                 **IRF_kwarg_Specifications)
         
 
+        if not(skip_irf_norm_setup):
+            if 'log_irf_norm_matrix_path' in self.config_dict:
+                self.log_irf_norm_matrix_path = self.config_dict['log_irf_norm_matrix_path']
 
-        if 'log_irf_norm_matrix_path' in self.config_dict:
-            self.log_irf_norm_matrix_path = self.config_dict['log_irf_norm_matrix_path']
+                print(f"\n__Log IRF Matrix loaded from specified path__: {self.log_irf_norm_matrix_path}\n")
 
-            print(f"\n__Log IRF Matrix loaded from specified path__: {self.log_irf_norm_matrix_path}\n")
+                try:
+                    self.log_irf_norm_matrix = np.load(self.log_irf_norm_matrix_path)
 
-            try:
-                self.log_irf_norm_matrix = np.load(self.log_irf_norm_matrix_path)
-
-            except:
+                except:
+                    self.log_irf_norm_matrix = None
+            else:
                 self.log_irf_norm_matrix = None
-        else:
-            self.log_irf_norm_matrix = None
 
 
-        if ('log_edisp_norm_matrix_path' in self.config_dict) and ('log_psf_norm_matrix_path' in self.config_dict):
-            self.log_psf_norm_matrix_load_path = self.config_dict['log_psf_norm_matrix_path']
-            self.log_psf_norm_matrix = np.load(self.log_psf_norm_matrix_load_path)
+            if ('log_edisp_norm_matrix_path' in self.config_dict) and ('log_psf_norm_matrix_path' in self.config_dict):
+                self.log_psf_norm_matrix_load_path = self.config_dict['log_psf_norm_matrix_path']
+                self.log_psf_norm_matrix = np.load(self.log_psf_norm_matrix_load_path)
 
-            self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
-            self.log_edisp_norm_matrix = np.load(self.log_edisp_norm_matrix_path)
+                self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
+                self.log_edisp_norm_matrix = np.load(self.log_edisp_norm_matrix_path)
 
-            print(f"""\n__Log IRF energy dispersion and PSF matrices loaded from specified paths__:\n
-PSF: {self.log_psf_norm_matrix_load_path}
-EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
-            
-        else:
-
-            self.log_psf_norm_matrix = None
-            self.log_edisp_norm_matrix = None
-
-
-
-        if self.log_irf_norm_matrix is None:
-            if self.log_psf_norm_matrix is None:
-                self.log_psf_norm_matrix, self.log_edisp_norm_matrix = self.irf_loglike.create_log_norm_matrices()
-
-            self.log_irf_norm_matrix = self.log_psf_norm_matrix + self.log_edisp_norm_matrix
-
-
-        
-        
-        if 'log_irf_norm_matrix_path' in self.config_dict:
-            np.save(self.config_dict['log_irf_norm_matrix_path'], self.log_irf_norm_matrix)
-        else:
-            if self.save_path=="":
-                self.log_irf_norm_matrix_path = 'irf_norm_matrix.npy'
-            else:
-                self.log_irf_norm_matrix_path = self.save_path+'/irf_norm_matrix.npy'
-
-
-            np.save(self.log_irf_norm_matrix_path, self.log_irf_norm_matrix)
-            self.log_psf_norm_matrix_path = os.path.abspath(self.log_irf_norm_matrix_path)
- 
-            print(f"Saving to {self.log_irf_norm_matrix_path}")
-
-        
-        if 'log_psf_norm_matrix_path' in self.config_dict:
-            self.log_psf_norm_matrix_path = self.config_dict['log_psf_norm_matrix_path']
-            np.save(self.config_dict['log_psf_norm_matrix_path'], self.log_psf_norm_matrix)
-
-        else:
-            if self.save_path=="":
-                self.log_psf_norm_matrix_path = 'log_psf_norm_matrix.npy'
-            else:
-                self.log_psf_norm_matrix_path = self.save_path+'/log_psf_norm_matrix.npy'
-
-
-            np.save(self.log_psf_norm_matrix_path, self.log_psf_norm_matrix)
-            self.log_psf_norm_matrix_path = os.path.abspath(self.log_psf_norm_matrix_path)
-            self.config_dict['log_psf_norm_matrix_path'] = self.log_psf_norm_matrix_path
-            
-
-        
-
-        if 'log_edisp_norm_matrix_path' in self.config_dict:
-            self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
-
-            np.save(self.config_dict['log_edisp_norm_matrix_path'], self.log_edisp_norm_matrix)
-        else:
-            if self.save_path=="":
-                self.log_edisp_norm_matrix_path = 'log_edisp_norm_matrix.npy'
-            else:
-                self.log_edisp_norm_matrix_path = self.save_path+'/log_edisp_norm_matrix.npy'
-
+                print(f"""\n__Log IRF energy dispersion and PSF matrices loaded from specified paths__:\n
+    PSF: {self.log_psf_norm_matrix_load_path}
+    EDISP: {self.log_edisp_norm_matrix_path}\n\n\n""")
                 
-            np.save(self.log_edisp_norm_matrix_path, self.log_edisp_norm_matrix)
-            self.log_edisp_norm_matrix_path = os.path.abspath(self.log_edisp_norm_matrix_path)
-            self.config_dict['log_edisp_norm_matrix_path'] = self.log_edisp_norm_matrix_path
+            else:
+
+                self.log_psf_norm_matrix = None
+                self.log_edisp_norm_matrix = None
+
+
+
+            if self.log_irf_norm_matrix is None:
+                if self.log_psf_norm_matrix is None:
+                    self.log_psf_norm_matrix, self.log_edisp_norm_matrix = self.irf_loglike.create_log_norm_matrices()
+
+                self.log_irf_norm_matrix = self.log_psf_norm_matrix + self.log_edisp_norm_matrix
+
+
+            
+            
+            if 'log_irf_norm_matrix_path' in self.config_dict:
+                np.save(self.config_dict['log_irf_norm_matrix_path'], self.log_irf_norm_matrix)
+            else:
+                if self.save_path=="":
+                    self.log_irf_norm_matrix_path = 'irf_norm_matrix.npy'
+                else:
+                    self.log_irf_norm_matrix_path = self.save_path+'/irf_norm_matrix.npy'
+
+
+                np.save(self.log_irf_norm_matrix_path, self.log_irf_norm_matrix)
+                self.log_psf_norm_matrix_path = os.path.abspath(self.log_irf_norm_matrix_path)
+    
+                print(f"Saving to {self.log_irf_norm_matrix_path}")
+
+            
+            if 'log_psf_norm_matrix_path' in self.config_dict:
+                self.log_psf_norm_matrix_path = self.config_dict['log_psf_norm_matrix_path']
+                np.save(self.config_dict['log_psf_norm_matrix_path'], self.log_psf_norm_matrix)
+
+            else:
+                if self.save_path=="":
+                    self.log_psf_norm_matrix_path = 'log_psf_norm_matrix.npy'
+                else:
+                    self.log_psf_norm_matrix_path = self.save_path+'/log_psf_norm_matrix.npy'
+
+
+                np.save(self.log_psf_norm_matrix_path, self.log_psf_norm_matrix)
+                self.log_psf_norm_matrix_path = os.path.abspath(self.log_psf_norm_matrix_path)
+                self.config_dict['log_psf_norm_matrix_path'] = self.log_psf_norm_matrix_path
+                
+
+            
+
+            if 'log_edisp_norm_matrix_path' in self.config_dict:
+                self.log_edisp_norm_matrix_path = self.config_dict['log_edisp_norm_matrix_path']
+
+                np.save(self.config_dict['log_edisp_norm_matrix_path'], self.log_edisp_norm_matrix)
+            else:
+                if self.save_path=="":
+                    self.log_edisp_norm_matrix_path = 'log_edisp_norm_matrix.npy'
+                else:
+                    self.log_edisp_norm_matrix_path = self.save_path+'/log_edisp_norm_matrix.npy'
+
+                    
+                np.save(self.log_edisp_norm_matrix_path, self.log_edisp_norm_matrix)
+                self.log_edisp_norm_matrix_path = os.path.abspath(self.log_edisp_norm_matrix_path)
+                self.config_dict['log_edisp_norm_matrix_path'] = self.log_edisp_norm_matrix_path
 
 
     def _handle_dm_specifications(self):
