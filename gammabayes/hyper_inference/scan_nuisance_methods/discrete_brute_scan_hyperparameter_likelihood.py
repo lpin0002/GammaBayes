@@ -502,12 +502,12 @@ class before the multiprocessing or make sure that it isn't part of the actual
             - Sets `log_marginalisation_regularisation` to the mean difference between log marginalisation maximums and minimums.
         """
 
-        prior_marged_shapes, _ = self.prior_gen(Nevents=measured_event_data.Nevents)
+        prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data))
 
 
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 
-            event_vals=event_data) for event_data in measured_event_data.data]
+            event_vals=event_data) for event_data in measured_event_data]
                 
         marg_results = np.asarray(marg_results)
 

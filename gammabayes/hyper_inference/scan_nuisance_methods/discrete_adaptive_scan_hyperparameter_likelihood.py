@@ -213,7 +213,6 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
         """
 
 
-
         temp_axes_and_indices = [
             bound_axis(
                 axis, 

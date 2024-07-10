@@ -103,7 +103,6 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
                 
             count+=1
             
-    print(f"The unit for the HESS map is {HESSmap.quantity.unit}")
     # Transposing the longitude and latitude values such that the order of indices goes [logenergy_index, longitude_index, latitude_index]
     full_hess_flux = np.transpose(full_hess_flux, axes=(0,2,1))
     full_hess_flux = np.flip(full_hess_flux, axis=1)

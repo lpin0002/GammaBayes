@@ -38,6 +38,7 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
                 prior_parameter_specifications: list | dict | ParameterSet = None,
                 shared_parameters: list | dict | ParameterSet = {},
                 parameter_meta_data: dict = {},
+                event_weights:np.ndarray=None,
                 _sampler_results={}):
         """
         Initializes the ScanOutput_StochasticTreeMixturePosterior class with necessary parameters and configurations.
@@ -102,6 +103,11 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         # -1 is to not count the root node, which is always 1.
         self.num_mixes   = len(self.mixture_tree.nodes)-1
 
+        if event_weights is None:
+            event_weights = np.ones(shape=(len(log_nuisance_marg_results[0]),))
+        
+        self.event_weights = event_weights
+
         self.results = _sampler_results
 
         self.ndim = len(self.parameter_set_collection.prior_transform_list)
@@ -109,8 +115,6 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
         self.set_hyper_axis_info()
 
-        self.ln_cache = []
-        self.unit_cube_cache = []
 
 
 
@@ -169,11 +173,8 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         """
 
 
-
         unitcube = np.squeeze(self.parameter_set_collection.prior_transform(u))
 
-        self.unit_cube_cache.append(unitcube)
-        
         return unitcube
     
     def ln_likelihood(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
@@ -253,10 +254,8 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
             ln_like = np.logaddexp(ln_like, np.squeeze(ln_component))
 
-        result = np.sum(ln_like)
 
-        self.ln_cache.append(result)
-
+        result = np.dot(ln_like, self.event_weights)
 
         return result
 
