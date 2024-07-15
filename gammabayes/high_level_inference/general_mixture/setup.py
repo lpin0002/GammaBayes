@@ -256,7 +256,7 @@ class hl_setup_from_config:
             
 
             self.dark_matter_model = CombineDMComps(
-                name=f'DarkMatter_{dm_spectral_model_string}_{density_profile_string}',
+                name=f'DM',
 
                 spectral_class = self.dark_matter_spectral_class,
                 spatial_class = self.dark_matter_density_profile,

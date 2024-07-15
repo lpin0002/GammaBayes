@@ -250,8 +250,10 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
             array-like: Transformed values.
         """
 
-        for prior_transform, prior_transform_indices in self.prior_transform_list:
+        for prior_idx, (prior_transform, prior_transform_indices) in enumerate(self.prior_transform_list):
+
             u[prior_transform_indices] = prior_transform(u[prior_transform_indices])
+
         return u
     
     def logpdf(self, input):

@@ -115,7 +115,6 @@ class Parameter(dict):
                 # will try to improve the performance of the more expandable reweighting method
 
 
-
             if self['discrete']:
 
                 if not('bins' in self) and (self['scaling'] == 'linear'):  
@@ -149,7 +148,12 @@ class Parameter(dict):
 
                 self['transform_scale'] = self['bins']
 
+
+
+
                 if self.distribution is None:
+
+
                     self.distribution = rv_discrete(values=(self['axis'], np.ones_like(self['axis'])/len(self['axis'])))
 
                     # Making it so that if a "0" is given to the ppf it outputs the first discrete value
@@ -160,6 +164,7 @@ class Parameter(dict):
                     self.distribution.logpdf = self.distribution.logpmf
 
                     self.rvs_sampling = False
+
 
             else:
 
@@ -197,6 +202,10 @@ class Parameter(dict):
             super().__init__()
             if initial_data is not None:  # This ensures compatibility with empty or default init.
                 raise TypeError("Initial data must be of type dict or Parameter")
+            
+
+            
+
 
 
 
@@ -206,9 +215,24 @@ class Parameter(dict):
         Supports custom distributions with optional keyword arguments.
         """
         self.custom_dist = False
-        self.distribution = None
+
+
+
+        if ('distribution' in self):
+            if self['distribution'] is None:
+                _setup=True
+                self.distribution = None
+            else:
+                _setup=False
+                self.distribution = self['distribution']
+        else:
+            _setup=True
+            self.distribution = None
+
+
+
         
-        if ('custom_dist_name' in self):
+        if ('custom_dist_name' in self) and _setup:
             self.custom_dist         = True
 
             dist_name = self['custom_dist_name']
@@ -216,7 +240,7 @@ class Parameter(dict):
 
             self.distribution = getattr(stats, dist_name)(**dist_kwargs)
 
-        elif 'custom_distribution' in self:
+        elif ('custom_distribution' in self) and _setup:
             
             self.custom_dist         = True
 
@@ -233,7 +257,21 @@ class Parameter(dict):
             elif 'custom_dist_kwargs' in self:
                 dist_kwargs = self['custom_dist_kwargs']
                 self.distribution = self.distribution(**dist_kwargs)
+                
 
+        # if self['discrete'] and (self['distribution'] is None):
+        #     self.distribution = rv_discrete(values=(self['axis'], np.ones_like(self['axis'])/len(self['axis'])))
+
+        #     # Making it so that if a "0" is given to the ppf it outputs the first discrete value
+        #     self.distribution.transform = self.distribution.ppf
+        #     self.distribution.ppf = self._adjusted_ppf
+        #     # pdf and pmf are essentially the same for the purposes of GammaBayes
+        #     self.distribution.pdf = self.distribution.pmf
+        #     self.distribution.logpdf = self.distribution.logpmf
+
+        #     self.rvs_sampling = False
+        
+        
 
 
 
