@@ -10,7 +10,7 @@ from gammabayes.utils import (
 from gammabayes.utils.config_utils import save_config_file
 from gammabayes.hyper_inference.core.utils import _handle_parameter_specification, _handle_nuisance_axes
 from gammabayes.hyper_inference.scan_nuisance_methods import ScanOutput_StochasticTreeMixturePosterior
-from gammabayes import EventData, Parameter, ParameterSet, update_with_defaults, bound_axis
+from gammabayes import GammaObs, Parameter, ParameterSet, update_with_defaults, bound_axis
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
@@ -479,14 +479,14 @@ class before the multiprocessing or make sure that it isn't part of the actual
         
 
 
-    def nuisance_log_marginalisation(self, measured_event_data: EventData) -> list:
+    def nuisance_log_marginalisation(self, measured_event_data: GammaObs) -> list:
         """
         Performs log marginalisation over nuisance parameters for measured event data. This method generates 
         marginalisation results for each event in the measured data and then reshapes these results to align with 
         the prior shapes. It also calculates the log marginalisation regularisation value.
 
         Args:
-            measured_event_data (EventData): The measured event data containing information such as the number of 
+            measured_event_data (GammaObs): The measured event data containing information such as the number of 
                                             events and event-specific data.
 
         Returns:
@@ -512,12 +512,14 @@ class before the multiprocessing or make sure that it isn't part of the actual
         marg_results = np.asarray(marg_results)
 
 
+
         # Making the output iterable around the priors, not the events.
             # Much easier to work with.
         reshaped_marg_results = []
         for _prior_idx in range(len(self.log_priors)):
 
             stacked_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
+
 
             logging.info('\nstacked_marg_results shape: ', stacked_marg_results.shape)
 

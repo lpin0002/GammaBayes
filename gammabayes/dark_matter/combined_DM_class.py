@@ -2,6 +2,7 @@ import numpy as np, time
 from gammabayes.dark_matter.spectral_models import (
     DM_ContinuousEmission_Spectrum
 )
+from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from os import path
 from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes.priors.core import TwoCompPrior
@@ -25,6 +26,7 @@ class CombineDMComps(TwoCompPrior):
     def __init__(self, 
                  spectral_class: DM_ContinuousEmission_Spectrum, 
                  spatial_class: DM_Profile, 
+                 irf_loglike: IRF_LogLikelihood,
                  *args, **kwargs
                  ):
         """
@@ -40,10 +42,11 @@ class CombineDMComps(TwoCompPrior):
 
         super().__init__(spectral_class=spectral_class, 
                          spatial_class =spatial_class,
+                         irf_loglike=irf_loglike,
                          *args, **kwargs
         )
 
-    def convert_param_to_logsigmav(self,
+    def convert_param_to_sigmav(self,
                             signal_fraction, 
                             true_axes=None,
                             spectral_parameters = {},
@@ -51,7 +54,7 @@ class CombineDMComps(TwoCompPrior):
                             totalnumevents=1e8, 
                             tobs_seconds=525*60*60, symmetryfactor=1):
         """
-        Converts signal fraction parameters to the logarithm of the annihilation cross-section.
+        Converts signal fraction parameters to the anihilation/decay cross-section.
 
         Args:
             signal_fraction (float): The fraction of the signal.
@@ -63,7 +66,7 @@ class CombineDMComps(TwoCompPrior):
             symmetryfactor (int, optional): The symmetry factor. Defaults to 1.
 
         Returns:
-            np.ndarray: The annihilation cross-section values.
+            np.ndarray: The cross-section values.
         """
         
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
@@ -73,7 +76,7 @@ class CombineDMComps(TwoCompPrior):
         if true_axes is None:
             true_axes = self.axes
         
-    
+        print("Starting evaluation")
         if self.mesh_efficient_exists:
             integrand = self.log_dist_mesh_efficient(*true_axes, 
                                                      spectral_parameters=spectral_parameters,
@@ -86,7 +89,7 @@ class CombineDMComps(TwoCompPrior):
             integrand = self.log_dist(*true_axis_mesh_flattened, 
                                                      spectral_parameters=spectral_parameters,
                                                      spatial_parameters=spatial_parameters).reshape(true_axis_mesh[0].shape)
-
+        print("Starting integration")
         # Splitting it up for easy debuggin
         log_integrated_energy = logspace_simpson(
                                     logy=integrand, x = true_axes[0].value, axis=0)
@@ -99,10 +102,10 @@ class CombineDMComps(TwoCompPrior):
                             logy=log_integrated_energy_longitude.T*np.cos(true_axes[2].to(u.rad)), 
                                     x = true_axes[2].value, axis=-1).T 
         
+        print("Starting final flux rearrangement")
+        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
 
-        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
-
-
+        print("Finished!")
         return np.exp(logsigmav)
 
 

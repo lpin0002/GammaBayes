@@ -280,7 +280,6 @@ class hl_setup_from_config:
             else:
                 self.DM_Annihilation_Ratios = None
 
-
             self.custom_ratios_model = CustomDMRatiosModel(
                 name='DM',
                 channels=self.DM_Channels,
@@ -377,7 +376,7 @@ class hl_setup_from_config:
             elif model_name=='CCR_BKG':
                 ccr_bkg_prior = DiscreteLogPrior(logfunction=self.irf_loglike.log_bkg_CCR, name='CCR_BKG',
                             axes=self.true_axes, 
-                            axes_names=['energy', 'lon', 'lat'], )
+                            )
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = ccr_bkg_prior
 
 
@@ -405,8 +404,7 @@ class hl_setup_from_config:
 
 
                 bkg_prior = DiscreteLogPrior(logfunction=log_obs_interpolator_bkgs.log_func, name='FG_HS_CCR',
-                            axes=self.true_axes, 
-                            axes_names=['energy', 'lon', 'lat'], )
+                            axes=self.true_axes, )
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = bkg_prior
 
 
@@ -429,8 +427,7 @@ class hl_setup_from_config:
 
 
                 FG_HS_bkg_prior = DiscreteLogPrior(logfunction=log_obs_interpolator_bkgs.log_func, name='FG_HS',
-                            axes=self.true_axes, 
-                            axes_names=['energy', 'lon', 'lat'], )
+                            axes=self.true_axes, )
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = FG_HS_bkg_prior
 
         warnings.filterwarnings("default", category=RuntimeWarning)

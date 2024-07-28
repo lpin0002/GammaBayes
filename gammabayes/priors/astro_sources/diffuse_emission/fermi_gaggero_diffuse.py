@@ -213,7 +213,6 @@ class FermiGaggeroDiffusePrior(DiscreteLogPrior):
         )
         super().__init__(
             name='Fermi-Gaggero Diffuse',
-            axes_names=['energy', 'lon', 'lat'],
             axes=(energy_axis, longitudeaxis, latitudeaxis),
             logfunction=self.construct_log_fermi_gaggero_bkg_func_class.log_func, 
             *args, **kwargs

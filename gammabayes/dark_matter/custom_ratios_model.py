@@ -2,9 +2,12 @@ import numpy as np, copy
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 from collections.abc import Iterable   # import directly from collections for Python < 3.3
+from collections import OrderedDict
 
 from gammabayes.dark_matter.spectral_models.core import DM_ContinuousEmission_Spectrum, CSVDictionary
 import time
+from gammabayes.utils import logspace_simpson
+from astropy import units as u
 
 from gammabayes.dark_matter.channel_spectra import (
     single_channel_spectral_data_path,
@@ -15,17 +18,21 @@ from gammabayes.dark_matter import CombineDMComps
 from gammabayes.dark_matter.density_profiles import Einasto_Profile
 from gammabayes.dark_matter.channel_spectra import (
     single_channel_spectral_data_path,
+    
     PPPCReader, 
     SingleDMChannel
 )
 from gammabayes.likelihoods import DiscreteLogLikelihood
 
-
+from tqdm import tqdm
 from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes import (
-    ParameterSet, EventData, 
+    GammaObs,
+    ParameterSet, 
     apply_dirichlet_stick_breaking_direct, update_with_defaults
 )
+
+from scipy import special
 
 
 class CustomDMRatiosModel(object):
@@ -49,6 +56,7 @@ class CustomDMRatiosModel(object):
                  channels: list[str] | str = 'all',
                  default_spectral_parameters: dict = {},
                  default_spatial_parameters: dict = {},
+                 ratios: dict = None,
                  *args, **kwargs
                  ):
         """
@@ -127,7 +135,6 @@ class CustomDMRatiosModel(object):
                         spatial_class = spatial_class,
                         irf_loglike=irf_loglike, 
                         axes=axes, 
-                        axes_names=['energy', 'lon', 'lat'],
                         spectral_class_kwds = spectral_class_kwds,
                         default_spectral_parameters=default_spectral_parameters,
                         default_spatial_parameters=default_spatial_parameters,
@@ -197,7 +204,8 @@ class CustomDMRatiosModel(object):
 
     def sample(self, 
                numevents: int| list = None,
-               ) -> dict[str, EventData]:
+               ratios:dict = None,
+               ) -> dict[str, GammaObs]:
         """
         Samples events from the channel priors.
 
@@ -205,7 +213,7 @@ class CustomDMRatiosModel(object):
             numevents (int | list): The number of events to sample. Defaults to None.
 
         Returns:
-            dict[str, EventData]: The sampled event data.
+            dict[str, GammaObs]: The sampled event data.
         """
         
         if type(numevents) == int:
@@ -243,7 +251,7 @@ class CustomDMRatiosModel(object):
                             num_events: int, 
                             input_weights: list[float] | dict[float], 
                             stick_breaking: bool = False, 
-                            exhaustive_fractions=False) -> dict[str, EventData]:
+                            exhaustive_fractions=False) -> dict[str, GammaObs]:
         """
         Samples events from the channel priors based on input weights.
 
@@ -254,7 +262,7 @@ class CustomDMRatiosModel(object):
             exhaustive_fractions (bool, optional): Whether the weights are exhaustive fractions. Defaults to False.
 
         Returns:
-            dict[str, EventData]: The sampled event data.
+            dict[str, GammaObs]: The sampled event data.
         """
         
 
@@ -277,6 +285,86 @@ class CustomDMRatiosModel(object):
             formatted_weights = input_weights
 
         return {channel: prior.sample(int(round(weight*num_events))) for weight, [channel, prior] in zip(formatted_weights, self.channel_prior_dict.items())}
+    
+
+
+
+    def convert_sample_param_to_sigmav(self,
+                            overall_signal_fraction, 
+                            ratios:dict = None,
+                            true_axes=None,
+                            spectral_parameters = {},
+                            spatial_parameters = {},
+                            totalnumevents=1e8, 
+                            tobs_seconds=525*60*60, symmetryfactor=1, chunk_size=2):
+        """
+        Converts samples of dark matter parameters to the annihilation/decay cross-section.
+
+        Args:
+            signal_fraction (float): The fraction of the signal.
+            true_axes (list, optional): The true axes values. Defaults to None.
+            spectral_parameters (dict, optional): Spectral parameters. Defaults to {}.
+            spatial_parameters (dict, optional): Spatial parameters. Defaults to {}.
+            totalnumevents (float, optional): The total number of events. Defaults to 1e8.
+            tobs_seconds (float, optional): The observation time in seconds. Defaults to 525*60*60.
+            symmetryfactor (int, optional): The symmetry factor. Defaults to 1.
+
+        Returns:
+            np.ndarray: The annihilation cross-section values.
+        """
+        
+        # update_with_defaults(spectral_parameters, self.default_spectral_parameters)
+        # update_with_defaults(spatial_parameters, self.default_spatial_parameters)
+
+
+        if true_axes is None:
+            true_axes = self.axes
+
+        all_parameters = list(spectral_parameters.values()) + list(spatial_parameters.values())
+        parameter_values = [item.value for item in all_parameters]
+
+        # OrderedDict.fromkeys acts the same as "set" would here, but it preserves the order making it
+            # easier to debug issues in the future
+
+        # unique_parameter_sample_combinations = [np.array(list(item)) for item in OrderedDict.fromkeys(list(zip(*parameter_values)))]
+
+        dummy_samples = np.ones(shape=len(overall_signal_fraction))
+
+
+        axis_meshes = np.meshgrid(*true_axes, dummy_samples, indexing='ij')
+        num_true_axes = len(true_axes)
+
+
+
+        individual_integrands = {}
+
+
+        for channel, channel_prior in self.channel_prior_dict.items():
+            individual_integrands[channel] = channel_prior.log_dist_mesh_efficient(*true_axes[:num_true_axes], 
+                                                    spectral_parameters=spectral_parameters,
+                                                    spatial_parameters=spatial_parameters).reshape(axis_meshes[0].shape)
+            
+        # Splitting it up for easy debuggin
+        log_integrated_energies = {channel: logspace_simpson(
+                                    logy=integrand, x = true_axes[0].value, axis=0) for channel, integrand in individual_integrands.items()}
+        
+                
+        log_integrated_energy_longitudes = {channel: logspace_simpson(
+                                    logy=integrand, x = true_axes[1].value, axis=0) for channel, integrand in log_integrated_energies.items()}
+        
+        log_integrals = {}
+        for channel, integrand in log_integrated_energy_longitudes.items():
+            log_integrals[channel] = logspace_simpson(
+                                logy=integrand.T*np.cos(true_axes[2].to(u.rad)), 
+                                        x = true_axes[2].value, axis=-1)
+
+                
+        logintegral = special.logsumexp([np.log(ratios[channel])+log_integral for channel, log_integral in log_integrals.items()], axis=0)
+
+        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*overall_signal_fraction) - logintegral - np.log(tobs_seconds)
+
+
+        return np.exp(logsigmav)
 
 
 

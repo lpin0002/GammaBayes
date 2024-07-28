@@ -29,7 +29,7 @@ def find_file_in_parent(parent_folder:str, end_of_filename:str):
 
 
 
-def find_irf_file_path(zenith_angle:int=20, hemisphere:str='South', prod_vers=5, subarray:str=None):
+def find_irf_file_path(zenith_angle:int=20, hemisphere:str='South', prod_vers=5, irf_time_seconds = 18000, subarray:str=None):
     """
     Finds the file path for the CTA IRF file based on given parameters.
 
@@ -48,6 +48,7 @@ def find_irf_file_path(zenith_angle:int=20, hemisphere:str='South', prod_vers=5,
 
     prod5_variations = [5,'prod5', '5', 'prod5-v0.1']
     prod3_variations = [3,'prod3', '3', '3b', 'prod3b']
+
 
     if prod_vers in prod5_variations:
         parent_irf_folder = resources_dir+"/irf_fits_files/prod5/"
@@ -89,10 +90,15 @@ def find_irf_file_path(zenith_angle:int=20, hemisphere:str='South', prod_vers=5,
     else:
         subarray = ''
 
+    irf_times = np.array([1800, 18000, 180000])
+
+    time = irf_times[np.abs(irf_time_seconds-irf_times).argmin()]
+
+
 
     if prod_vers == 'prod5-v0.1':
         untarred_parent_folder= parent_irf_folder+f"CTA-Performance-{prod_vers}-{hemisphere}-{subarray}{zenith_angle}deg.FITS"
-        end_of_filename = '180000s-v0.1.fits.gz'
+        end_of_filename = f'{time}s-v0.1.fits.gz'
 
         filename = find_file_in_parent(untarred_parent_folder, end_of_filename)
 
@@ -146,19 +152,32 @@ def find_irf_file_path(zenith_angle:int=20, hemisphere:str='South', prod_vers=5,
 
 
 class IRFExtractor(object):
-    def __init__(self, zenith_angle:int, hemisphere:str, prod_vers=5, file_path:str=None):
-        """
-        Initializes an IRFExtractor object to extract and manage CTA IRFs.
+    def __init__(self, 
+                 zenith_angle:int, 
+                 hemisphere:str, 
+                 prod_vers=5, 
+                 observation_time: float|u.Quantity = 50*u.hr,
+                 file_path: str=None,
+                 psf_units: u.Unit = 1/u.deg**2,
+                 edisp_units: u.Unit = 1/u.TeV,
+                 aeff_units: u.Unit = u.cm**2,
+                 CCR_BKG_units: u.Unit = 1/(u.deg**2*u.TeV*u.s)):
 
-        Args:
-            zenith_angle (int): Zenith angle of the IRF.
-            hemisphere (str): Hemisphere ('North' or 'South').
-            prod_vers (int, optional): Production version (3 or 5). Defaults to 5.
-            file_path (str, optional): Path to the IRF file. Defaults to None.
-        """
+
+
+
         self.file_path = file_path
+        self.observation_time = observation_time
+        if hasattr(self.observation_time, "unit"):
+            irf_time_in_seconds = self.observation_time.to(u.s)
+
+
+        else:
+            irf_time_in_seconds = 180000
+
+
         if self.file_path is None:
-            self.file_path = resources_dir+'/irf_fits_files/Prod5-South-20deg-AverageAz-14MSTs37SSTs.180000s-v0.1.fits'
+            # self.file_path = resources_dir+f'/irf_fits_files/Prod5-South-20deg-AverageAz-14MSTs37SSTs.{irf_time_in_seconds}s-v0.1.fits'
 
             if (zenith_angle is None) and (hemisphere is None):
                 self.extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
@@ -178,10 +197,10 @@ class IRFExtractor(object):
             self.extracted_default_irfs  = load_irf_dict_from_file(self.file_path)
 
 
-        self.psf_units = 1/u.deg**2
-        self.edisp_units = 1/u.TeV
-        self.aeff_units = u.cm**2
-        self.CCR_BKG_units = (u.TeV*u.deg**2*u.s)**(-1)
+        self.psf_units = psf_units
+        self.edisp_units = edisp_units
+        self.aeff_units = aeff_units
+        self.CCR_BKG_units = CCR_BKG_units
 
 
         self.edisp_default      = self.extracted_default_irfs['edisp']
@@ -211,7 +230,7 @@ class IRFExtractor(object):
         """
         return self.aeff_default.evaluate(energy_true = energy, offset=offset).to(self.aeff_units)
 
-    def log_aeff(self, energy, longitude, latitude, pointing_direction=[0*u.deg,0*u.deg], parameters={}):
+    def log_aeff(self, energy, longitude, latitude, pointing_dir=[0*u.deg,0*u.deg], parameters={}):
         """
         Wrapper for the Gammapy interpretation of the log of the CTA effective area function.
 
@@ -219,18 +238,18 @@ class IRFExtractor(object):
             energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             longitude (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: The natural log of the effective area of the CTA in cm^2.
         """
         return np.log(self.aeff_default.evaluate(energy_true = energy, 
                                 offset=haversine(
-                                    longitude, latitude, pointing_direction[0], pointing_direction[1])).to(self.aeff_units).value)
+                                    longitude, latitude, pointing_dir[0], pointing_dir[1])).to(self.aeff_units).value)
         
     def log_edisp(self, recon_energy:Quantity, 
                   true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                  pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+                  pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
         """
         Wrapper for the Gammapy interpretation of the CTA energy dispersion function.
 
@@ -239,13 +258,13 @@ class IRFExtractor(object):
             true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the CTA energy dispersion likelihood for the given gamma-ray event data.
         """
 
-        offset = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1])
+        offset = haversine(true_lon, true_lat, pointing_dir[0], pointing_dir[1])
 
         # edisp output is dimensionless when it should have units of 1/TeV
         return np.log(self.edisp_default.evaluate(energy_true=true_energy,
@@ -255,7 +274,7 @@ class IRFExtractor(object):
 
     def log_psf(self, recon_lon:Quantity, recon_lat:Quantity, 
                 true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+                pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
         """
         Wrapper for the Gammapy interpretation of the CTA point spread function.
 
@@ -265,14 +284,14 @@ class IRFExtractor(object):
             true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the CTA point spread function likelihood for the given gamma-ray event data.
         """
         rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
 
-        offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_direction[0], pointing_direction[1]).flatten()
+        offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_dir[0], pointing_dir[1]).flatten()
 
         output = np.log(self.psf_default.evaluate(energy_true=true_energy,
                                                         rad = rad, 
@@ -284,7 +303,7 @@ class IRFExtractor(object):
     def single_loglikelihood(self, 
                              recon_energy:Quantity, recon_lon:Quantity, recon_lat:Quantity, 
                              true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                             pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
         """
         Wrapper for the Gammapy interpretation of the CTA IRFs to output the log likelihood values 
         for the given gamma-ray event datum.
@@ -296,7 +315,7 @@ class IRFExtractor(object):
             true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the full CTA likelihood for the given gamma-ray event data.
@@ -304,12 +323,12 @@ class IRFExtractor(object):
 
         output = self.log_edisp(recon_energy, 
                                 true_energy, true_lon, true_lat, 
-                                pointing_direction)
+                                pointing_dir)
 
 
         output +=  self.log_psf(recon_lon, recon_lat, 
                                 true_energy, true_lon, true_lat, 
-                                pointing_direction)
+                                pointing_dir)
         
         return output.reshape(true_lon.shape)
 
@@ -317,7 +336,7 @@ class IRFExtractor(object):
     def dynesty_single_loglikelihood(self, 
                                      true_vals: list[Quantity]|tuple[Quantity], 
                                      recon_energy:Quantity, recon_lon:Quantity, recon_lat:Quantity, 
-                                     pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+                                     pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
         """
         Wrapper for the Gammapy interpretation of the CTA IRFs to output the log likelihood values 
         for the given gamma-ray event data for use with dynesty as a likelihood.
@@ -327,13 +346,13 @@ class IRFExtractor(object):
             recon_energy (Quantity): Measured energy value by the CTA.
             recon_lon (Quantity): Measured FOV longitude of a gamma-ray event detected by the CTA.
             recon_lat (Quantity): Measured FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the full CTA likelihood for the given gamma-ray event data.
         """
         true_energy, true_lon, true_lat = true_vals
-        offset  = haversine(true_lon, true_lat, pointing_direction[0], pointing_direction[1])
+        offset  = haversine(true_lon, true_lat, pointing_dir[0], pointing_dir[1])
 
         output = np.log(self.edisp_default.evaluate(energy_true=true_energy,
                                                         migra = recon_energy/true_energy, 
@@ -349,7 +368,7 @@ class IRFExtractor(object):
     
     def log_bkg_CCR(self, energy:Quantity, longitude:Quantity, latitude:Quantity, 
                     spectral_parameters:dict={}, spatial_parameters:dict={},
-                    pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], ):
+                    pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], ):
         """
         Wrapper for the Gammapy interpretation of the log of the CTA's background charged cosmic-ray mis-identification rate.
 
@@ -359,13 +378,13 @@ class IRFExtractor(object):
             latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
             spectral_parameters (dict, optional): Spectral parameters. Defaults to {}.
             spatial_parameters (dict, optional): Spatial parameters. Defaults to {}.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the charged cosmic ray mis-identification rate for the CTA.
         """
 
-        offset  = haversine(longitude, latitude, pointing_direction[0], pointing_direction[1])
+        offset  = haversine(longitude, latitude, pointing_dir[0], pointing_dir[1])
 
 
 

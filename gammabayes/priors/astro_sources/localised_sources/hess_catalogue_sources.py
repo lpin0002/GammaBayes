@@ -251,7 +251,6 @@ class HESSCatalogueSources_Prior(DiscreteLogPrior):
         
         DiscreteLogPrior.__init__(self,
             name='HESS Catalogue Sources Prior',
-            axes_names=['energy', 'lon', 'lat'],
             axes=(energy_axis, longitudeaxis, latitudeaxis),
             logfunction=self.log_hess_class_instance.log_func, 
             *args, **kwargs

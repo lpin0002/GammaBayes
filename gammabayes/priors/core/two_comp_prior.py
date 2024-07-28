@@ -96,14 +96,17 @@ class TwoCompPrior(DiscreteLogPrior):
         
         self.mesh_efficient_exists = spatial_mesh_efficient_exist & spectral_mesh_efficient_exist
 
+
         if self.mesh_efficient_exists:
             super().__init__(logfunction=self.log_dist, 
                             log_mesh_efficient_func=self.log_dist_mesh_efficient,
+                            irf_loglike=irf_loglike,
                             name=name,
                             *args, **kwargs
                             )
         else:
             super().__init__(logfunction=self.log_dist, 
+                             irf_loglike=irf_loglike,
                             name=name,
                             *args, **kwargs
                             )
@@ -134,10 +137,32 @@ class TwoCompPrior(DiscreteLogPrior):
         Returns:
             np.ndarray: The calculated log prior values as a numpy array.
         """
+        
+        spectral_axes = energy, *spectral_parameters.values()
 
+        spectral_units = []
+        for axis in spectral_axes:
+            if hasattr(axis, 'unit'):
+                spectral_units.append(axis.unit)
+            else:
+                spectral_units.append(1.)
+
+
+
+        spatial_axes = longitude, latitude, *spatial_parameters.values()
+
+        spatial_units = []
+        for axis in spatial_axes:
+            if hasattr(axis, 'unit'):
+                spatial_units.append(axis.unit)
+            else:
+                spatial_units.append(1.)
+        
+            
         energy, longitude, latitude = np.asarray(energy), np.asarray(longitude), np.asarray(latitude)
 
         spectral_parameters = {param_key: np.asarray(param_val) for param_key, param_val in spectral_parameters.items()}
+
 
         
         flatten_spectral_param_values = np.array([energy.flatten(), 
@@ -146,11 +171,12 @@ class TwoCompPrior(DiscreteLogPrior):
         #1 So what we're doing here is to pick out the unique combinations of the energy and spectral parameters
         unique_spectral_param_values = np.unique(flatten_spectral_param_values, axis=1)
 
+
         #2 We then only have to evaluate on these values for the spectral component
         logspectralvals = self.spectral_comp(
-             unique_spectral_param_values[0], 
+             unique_spectral_param_values[0]*spectral_units[0], 
              kwd_parameters = {
-                  spectral_param_key : unique_spectral_param_values[1+val_idx] for val_idx, spectral_param_key in enumerate(spectral_parameters.keys())
+                  spectral_param_key : unique_spectral_param_values[1+val_idx]*spectral_units[1+val_idx] for val_idx, spectral_param_key in enumerate(spectral_parameters.keys())
                   },
                   )
         
@@ -176,10 +202,10 @@ class TwoCompPrior(DiscreteLogPrior):
         unique_spatial_param_vals = np.unique(flatten_spatial_param_vals, axis=1)
 
         logspatialvals = self.spatial_comp(
-             unique_spatial_param_vals[0], 
-             unique_spatial_param_vals[1], 
+             unique_spatial_param_vals[0]*spatial_units[0], 
+             unique_spatial_param_vals[1]*spatial_units[1], 
              kwd_parameters = {
-                  param_key : unique_spatial_param_vals[2+val_idx] for val_idx, param_key in enumerate(spatial_parameters.keys())
+                  param_key : unique_spatial_param_vals[2+val_idx]*spatial_units[2+val_idx] for val_idx, param_key in enumerate(spatial_parameters.keys())
                   }
                   )
 
@@ -190,7 +216,9 @@ class TwoCompPrior(DiscreteLogPrior):
         logspatialvals = np.sum(spatial_slices, axis=-1).reshape(energy.shape)
 
         ####################
-        log_aeffvals = self.irf_loglike.log_aeff(energy.flatten(), longitude.flatten(), latitude.flatten()).reshape(energy.shape)
+        log_aeffvals = self.irf_loglike.log_aeff(energy.flatten()*spectral_units[0], 
+                                                 longitude.flatten()*spatial_units[0], 
+                                                 latitude.flatten()*spatial_units[1]).reshape(energy.shape)
     
         logpdfvalues = logspectralvals+logspatialvals+log_aeffvals
 

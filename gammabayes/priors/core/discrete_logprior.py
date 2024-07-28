@@ -2,7 +2,9 @@ from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
-from gammabayes import update_with_defaults, EventData
+from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExposure
+# from gammabayes import EventData
+
 from astropy import units as u
 import matplotlib.pyplot as plt
 import warnings, logging
@@ -29,10 +31,12 @@ class DiscreteLogPrior(object):
                  logfunction: callable=None, 
                  log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
-                 axes_names: list[str] | tuple[str] = ['None'], 
+                 binning: GammaBinning = None,
                  default_spectral_parameters: dict = {},  
                  default_spatial_parameters: dict = {},  
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
+                 irf_loglike=None,
+                 exposure_map=None,
                  ):
         """
         Initializes a DiscreteLogPrior object, which represents a discrete log prior distribution.
@@ -56,10 +60,11 @@ class DiscreteLogPrior(object):
         self.name = name
         self.inputunits = inputunits
         self.logfunction = logfunction
-        self.axes_names = axes_names
-        
-        self.axes = axes
-        self.num_axes = len(axes)
+        self.irf_loglike = irf_loglike
+
+        self._create_geometry(axes=axes, binning=binning)
+
+
 
         if not(log_mesh_efficient_func is None):
             self.efficient_exist = True
@@ -67,11 +72,7 @@ class DiscreteLogPrior(object):
         else:
             self.efficient_exist = False
 
-        if self.num_axes==1:
-            self.axes_mesh = (axes,)
-        else:
-            self.axes_mesh = np.meshgrid(*axes, indexing='ij')
-
+    
             
         self.default_spectral_parameters = default_spectral_parameters
         self.default_spatial_parameters = default_spatial_parameters
@@ -83,8 +84,18 @@ class DiscreteLogPrior(object):
         self.logspace_integrator = iterative_logspace_integrator
             
 
-            
-    
+    def _create_geometry(self, axes, binning):
+
+
+        if not(axes is None):
+            self.binning_geometry = GammaBinning(energy_axis=axes[0], lon_axis=axes[1], lat_axis=axes[2])
+        elif not(binning is None):
+            self.binning_geometry = binning
+        else:
+            self.binning_geometry = None
+
+        
+
     
     
     def __repr__(self) -> str:
@@ -97,8 +108,7 @@ class DiscreteLogPrior(object):
         description = f"Discrete log prior class\n{'-' * 20}\n" \
                       f"Name: {self.name}\n" \
                       f"Logfunction type: {type(self.logfunction).__name__}\n" \
-                      f"Input units: {self.inputunits}\n" \
-                      f"Axes: {self.axes_names}\n"
+                      f"Input units: {self.inputunits}\n" 
         return description
     
     
@@ -140,19 +150,19 @@ class DiscreteLogPrior(object):
             update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 
             if self.efficient_exist:
-                log_prior_values = self.log_mesh_efficient_func(*self.axes, 
+                log_prior_values = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
                                                                 spectral_parameters = spectral_parameters,
                                                                 spatial_parameters = spatial_parameters)
             else:
-                inputmesh = np.meshgrid(*self.axes, 
+                inputmesh = np.meshgrid(*self.binning_geometry.axes, 
                                 *spectral_parameters.values(),
                                 *spatial_parameters.values(), indexing='ij') 
         
-                log_prior_values = self.logfunction(*inputmesh[:self.num_axes], 
-                                                spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                                spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                log_prior_values = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
+                                                spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
                                                 )    
-        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.axes, axisindices=axisindices)
+        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.binning_geometry.axes, axisindices=axisindices)
 
         return log_prior_norms
     
@@ -191,18 +201,18 @@ class DiscreteLogPrior(object):
         if numsamples>0:
             if log_prior_values is None:
                 if self.efficient_exist:
-                    log_prior_values = self.log_mesh_efficient_func(*self.axes, 
+                    log_prior_values = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
                                                                   spectral_parameters = spectral_parameters,
                                                                   spatial_parameters = spatial_parameters)
 
                 else:
-                    inputmesh = np.meshgrid(*self.axes, 
+                    inputmesh = np.meshgrid(*self.binning_geometry.axes, 
                                     *spectral_parameters.values(),
                                     *spatial_parameters.values(), indexing='ij') 
             
-                    log_prior_values = self.logfunction(*inputmesh[:self.num_axes], 
-                                                    spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                                    spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                    log_prior_values = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
+                                                    spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                    spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
                                                     )
         
             log_prior_values = np.asarray(log_prior_values)
@@ -214,26 +224,23 @@ class DiscreteLogPrior(object):
                 # So we will double check the normalisation
             log_prior_values = np.squeeze(log_prior_values) - self.normalisation(log_prior_values=log_prior_values)
 
-            logdx = construct_log_dx_mesh(self.axes)
+            logdx = construct_log_dx_mesh(self.binning_geometry.axes)
                         
-            simvals = integral_inverse_transform_sampler(log_prior_values+logdx, axes=self.axes, Nsamples=numsamples)
+            simvals = integral_inverse_transform_sampler(log_prior_values+logdx, axes=self.binning_geometry.axes, Nsamples=numsamples)
             
             
                 
-            return EventData(energy=simvals[0], 
-                             glon=simvals[1], 
-                             glat=simvals[2], 
-                             energy_axis=self.axes[0], 
-                             glongitude_axis=self.axes[1], 
-                             glatitude_axis=self.axes[2], 
-                             _source_ids=[self.name]*numsamples,
-                             _true_vals = True
+            return GammaObs(energy=simvals[0], 
+                             lon=simvals[1], 
+                             lat=simvals[2], 
+                             binning=self.binning_geometry,
+                             meta={'source':self.name},
+                             irf_loglike=self.irf_loglike,
                              )
         else:
-            return  EventData(energy_axis=self.axes[0], 
-                             glongitude_axis=self.axes[1], 
-                             glatitude_axis=self.axes[2], 
-                             _true_vals = True
+            return  GammaObs(binning=self.binning_geometry,
+                             meta={'source':self.name},
+                             irf_loglike=self.irf_loglike,
                              )
     
     def construct_prior_array(self, 
@@ -263,19 +270,19 @@ class DiscreteLogPrior(object):
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 
         if self.efficient_exist:
-            outputarray = self.log_mesh_efficient_func(*self.axes, 
+            outputarray = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
                                                        spectral_parameters=spectral_parameters, 
                                                        spatial_parameters=spatial_parameters)
             
 
         else:
-            inputmesh = np.meshgrid(*self.axes, 
+            inputmesh = np.meshgrid(*self.binning_geometry.axes, 
                                     *spectral_parameters.values(),
                                     *spatial_parameters.values(), indexing='ij') 
             
-            outputarray = self.logfunction(*inputmesh[:self.num_axes], 
-                                            spectral_parameters = {hyper_key: inputmesh[self.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                            spatial_parameters = {hyper_key: inputmesh[self.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+            outputarray = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
+                                            spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                            spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
                                             )
     
         if normalise:

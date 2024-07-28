@@ -6,13 +6,16 @@ from astropy.units import Quantity
 import numpy as np
 class IRF_LogLikelihood(DiscreteLogLikelihood):
 
-    def __init__(self,pointing_direction:list[Quantity]=[0*u.deg,0*u.deg], zenith:int=20, hemisphere:str='South', prod_vers=5, *args, **kwargs):
+    def __init__(self,pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], 
+                 zenith:int=20, hemisphere:str='South', 
+                 observation_time: float|u.Quantity = 50*u.hr,
+                 prod_vers=5, *args, **kwargs):
         """_summary_
 
         Args:
             name (list[str] | tuple[str], optional): Identifier name(s) for the likelihood instance.
 
-            pointing_direction (list, optional): Pointing direction of the telescope in galactic 
+            pointing_dir (list, optional): Pointing direction of the telescope in galactic 
             coordinates (e.g. Directly pointing at the Galactic Centre is the default). Defaults to [0,0].
 
             zenith (int, optional): Zenith angle of the telescope (can be 20, 40 or 60 degrees). 
@@ -38,12 +41,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             
             parameters (dict | ParameterSet, optional): Parameters for the log likelihood function.
         """
-        self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, prod_vers=prod_vers)
+        self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, prod_vers=prod_vers, observation_time=observation_time)
         super().__init__(
             logfunction=self.irf_loglikelihood.single_loglikelihood, 
             *args, **kwargs
         )
-        self.pointing_direction = pointing_direction
+        self.pointing_dir = pointing_dir
 
 
         self.psf_units = self.irf_loglikelihood.psf_units
@@ -72,7 +75,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                 event data
         """
         
-        return self.logfunction(pointing_direction=self.pointing_direction, *args, **kwargs)
+        return self.logfunction(pointing_dir=self.pointing_dir, *args, **kwargs)
     
 
     def log_edisp(self, *args, **kwargs):
@@ -84,12 +87,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the CTA energy dispersion likelihood for the given gamma-ray event data.
         """
-        return self.irf_loglikelihood.log_edisp(pointing_direction=self.pointing_direction, *args, **kwargs)
+        return self.irf_loglikelihood.log_edisp(pointing_dir=self.pointing_dir, *args, **kwargs)
     
     def log_psf(self, *args, **kwargs):
         """
@@ -101,12 +104,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the CTA point spread function likelihood for the given gamma-ray event data.
         """
-        return self.irf_loglikelihood.log_psf(pointing_direction=self.pointing_direction, *args, **kwargs)
+        return self.irf_loglikelihood.log_psf(pointing_dir=self.pointing_dir, *args, **kwargs)
     
     def log_aeff(self, *args, **kwargs):
         """
@@ -116,12 +119,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             energy (Quantity): True energy of a gamma-ray event detected by the CTA.
             longitude (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
             latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: The natural log of the effective area of the CTA in cm^2.
         """
-        return self.irf_loglikelihood.log_aeff(pointing_direction=self.pointing_direction, *args, **kwargs)
+        return self.irf_loglikelihood.log_aeff(pointing_dir=self.pointing_dir, *args, **kwargs)
     
 
     def log_bkg_CCR(self, *args, **kwargs):
@@ -134,12 +137,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
             spectral_parameters (dict, optional): Spectral parameters. Defaults to {}.
             spatial_parameters (dict, optional): Spatial parameters. Defaults to {}.
-            pointing_direction (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
             float: Natural log of the charged cosmic ray mis-identification rate for the CTA.
         """
-        return self.irf_loglikelihood.log_bkg_CCR(pointing_direction=self.pointing_direction, *args, **kwargs)
+        return self.irf_loglikelihood.log_bkg_CCR(pointing_dir=self.pointing_dir, *args, **kwargs)
 
 
     def create_log_norm_matrices(self, **kwargs):
@@ -165,6 +168,17 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                             
                             **kwargs
                             )
+    
+    def to_dict(self):
+        data_dict = {}
+        data_dict["pointing_dir"] = self.pointing_dir
+        data_dict["zenith"] = self.zenith
+        data_dict["hemisphere"] = self.hemisphere
+        data_dict["prod_vers"] = self.prod_vers
+        data_dict["observation_time"] = self.observation_time
+
+        return data_dict
+
 
 
     

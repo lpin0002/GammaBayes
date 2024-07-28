@@ -8,7 +8,7 @@ from gammabayes.utils import (
 
 from gammabayes.utils.event_axes import derive_edisp_bounds, derive_psf_bounds
 from gammabayes.utils.config_utils import save_config_file
-from gammabayes import EventData, update_with_defaults, bound_axis
+from gammabayes import GammaObs, update_with_defaults, bound_axis
 
 import numpy as np
 from tqdm import tqdm
@@ -187,15 +187,15 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
     
 
     def observation_nuisance_marg(self, 
-                                  event_vals: np.ndarray | EventData, 
+                                  event_vals: np.ndarray | GammaObs, 
                                   log_prior_matrix_list: list[np.ndarray]):
         """
         Calculates the marginal log likelihoods for observations by integrating over nuisance parameters with 
         additional bound handling specific to this class.
 
         Args:
-            event_vals (np.ndarray | EventData): The event values for which the marginal log likelihoods are to be 
-                                                computed. Can be either a numpy ndarray or an EventData object.
+            event_vals (np.ndarray | GammaObs): The event values for which the marginal log likelihoods are to be 
+                                                computed. Can be either a numpy ndarray or an GammaObs object.
             log_prior_matrix_list (list[np.ndarray]): A list of numpy ndarrays representing log prior matrices.
 
         Returns:
