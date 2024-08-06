@@ -190,7 +190,7 @@ def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarr
     # Also tried lintegrate library but couldn't get it to work
     # (from one of the issues doesn't seem to be 64-bit?)
 
-def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
+def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray|tuple|list, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
     """
     Iteratively integrates in integrand logspace over multiple axes.
 

@@ -5,12 +5,12 @@ from gammabayes.dark_matter.spectral_models import (
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from os import path
 from gammabayes.dark_matter.density_profiles import DM_Profile
-from gammabayes.priors.core import TwoCompPrior
+from gammabayes.priors.core import TwoCompFluxPrior
 from gammabayes import update_with_defaults
 from gammabayes.utils import logspace_simpson
 from astropy import units as u
 
-class CombineDMComps(TwoCompPrior):
+class CombineDMComps(TwoCompFluxPrior):
     """
     A class to combine dark matter spectral and spatial components for analysis.
 
@@ -74,7 +74,7 @@ class CombineDMComps(TwoCompPrior):
 
 
         if true_axes is None:
-            true_axes = self.axes
+            true_axes = self.binning_geometry.axes
         
         print("Starting evaluation")
         if self.mesh_efficient_exists:

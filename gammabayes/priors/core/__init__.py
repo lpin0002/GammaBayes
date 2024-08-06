@@ -1,2 +1,3 @@
 from .discrete_logprior import DiscreteLogPrior
-from .two_comp_prior import TwoCompPrior
+from .two_comp_prior import TwoCompFluxPrior
+from .source_flux_prior import SourceFluxDiscreteLogPrior

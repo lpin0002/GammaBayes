@@ -6,7 +6,7 @@ import pickle
 import pkg_resources
 
 from .exposure import GammaLogExposure
-
+from icecream import ic
 
 
 class GammaObs:
@@ -30,7 +30,7 @@ class GammaObs:
 
         self.meta.update(kwargs)
 
-        if not(pointing_dir is None):
+        if not(pointing_dir is None) and hasattr(self.irf_loglike, "pointing_dir"):
             self.pointing_dir = pointing_dir
             self.irf_loglike.pointing_dir = pointing_dir
 
@@ -117,15 +117,19 @@ class GammaObs:
     
 
 
-    def peek(self, count_scaling='linear', cmap='afmhot',hist1dcolor ='tab:orange', grid=True, grid_kwargs={}, **kwargs):
-        
-        
+    def peek(self, axs=None, count_scaling='linear', cmap='afmhot', hist1dcolor='tab:orange', grid=True, grid_kwargs={}, figsize=(12,6), **kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.colors import LogNorm        
+        import numpy as np
+
+
+
+        if axs is None:
+            fig, axs = plt.subplots(1, 2, figsize=figsize, **kwargs)
         
-        
-        fig, axs = plt.subplots(1, 2, figsize=(12, 6), **kwargs)
-        
+
+
+        ic(axs.shape, axs)
         axs[0].hist(self.energy_axis, bins=self.binning.energy_edges, weights=self.binned_energy[0], color=hist1dcolor, log=True)
         axs[0].set_xlabel(r'Energy ['+ self.binning.energy_axis.unit.to_string('latex_inline')+']')
         axs[0].set_ylabel('Counts')
@@ -154,9 +158,11 @@ class GammaObs:
         axs[1].set_xlabel(r'Longitude ['+self.binning.lon_axis.unit.to_string('latex_inline')+']')
         axs[1].set_ylabel(r'Latitude ['+self.binning.lat_axis.unit.to_string('latex_inline')+']')
         
-        fig.tight_layout()
+        # Apply tight_layout to the figure associated with the axs
+        axs[0].figure.tight_layout()
 
-        return fig, axs
+
+        return axs
     
 
     @property

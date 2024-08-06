@@ -331,7 +331,7 @@ class CustomDMRatiosModel(object):
         dummy_samples = np.ones(shape=len(overall_signal_fraction))
 
 
-        axis_meshes = np.meshgrid(*true_axes, dummy_samples, indexing='ij')
+        axis_mesh_shape = (*(len(axis) for axis in true_axes), len(dummy_samples))
         num_true_axes = len(true_axes)
 
 
@@ -342,7 +342,7 @@ class CustomDMRatiosModel(object):
         for channel, channel_prior in self.channel_prior_dict.items():
             individual_integrands[channel] = channel_prior.log_dist_mesh_efficient(*true_axes[:num_true_axes], 
                                                     spectral_parameters=spectral_parameters,
-                                                    spatial_parameters=spatial_parameters).reshape(axis_meshes[0].shape)
+                                                    spatial_parameters=spatial_parameters).reshape(axis_mesh_shape)
             
         # Splitting it up for easy debuggin
         log_integrated_energies = {channel: logspace_simpson(

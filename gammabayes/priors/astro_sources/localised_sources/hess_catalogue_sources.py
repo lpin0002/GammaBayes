@@ -1,5 +1,5 @@
 # Necessary imports for the script functionality
-from gammabayes import resources_dir, haversine
+from gammabayes import resources_dir, haversine, GammaBinning, GammaLogExposure
 from gammabayes.utils import iterate_logspace_integration
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from gammabayes.priors.core import DiscreteLogPrior
@@ -20,11 +20,12 @@ from gammapy.modeling.models import (
 from gammapy.catalog import SourceCatalogHGPS
 
 hess_rate_units = 1/u.TeV/u.s/u.deg**2/(u.cm**2)
-hess_obs_rate_units = 1/u.TeV/u.s/u.deg**2
+hess_obs_rate_units = 1/u.TeV/u.deg**2
 
 
 def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-    log_aeff: callable, aeff_unit=u.cm**2):
+                              binning_geometry:GammaBinning=None,
+                              log_exposure_map:GammaLogExposure = None, exposure_unit=u.cm**2*u.s):
     """
     Constructs a map of HESS source fluxes based on the HGPS catalog.
 
@@ -39,6 +40,12 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
         np.ndarray: A 3D array representing the event rate from HESS catalog sources over the specified energy,
                     longitude, and latitude axes.
     """
+
+    if binning_geometry is None:
+        binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis)
+    else:
+        binning_geometry = binning_geometry
+        
 
     hess_catalog = SourceCatalogHGPS(resources_dir+"/hgps_catalog_v1.fits.gz")
 
@@ -121,14 +128,14 @@ def construct_hess_source_map(energy_axis: np.ndarray, longitudeaxis: np.ndarray
 
     energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
-    log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
+    log_exposure_matrix = log_exposure_map.log_exposure_map
     # log_aeff_table = 0
 
     log_point_hess_background_source_flux = np.log(full_hess_flux)
 
-    point_hess_background_event_rate = np.exp(log_point_hess_background_source_flux+log_aeff_table)
+    point_hess_background_event_rate = np.exp(log_point_hess_background_source_flux+log_exposure_matrix)
 
-    return (point_hess_background_event_rate*HESSmap.quantity.unit*aeff_unit).to(hess_obs_rate_units)
+    return (point_hess_background_event_rate*HESSmap.quantity.unit*exposure_unit).to(hess_obs_rate_units)
                 
 
 
@@ -147,8 +154,10 @@ class construct_hess_source_map_interpolation(object):
     """
     
     def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-                 log_aeff: callable, normalise: bool = True, iterate_logspace_integrator: callable =iterate_logspace_integration,
-                 aeff_unit = u.cm**2):
+                 binning_geometry:GammaBinning=None,
+                 log_exposure_map:GammaLogExposure = None, exposure_unit=u.cm**2*u.s,
+                 normalise:bool = True,
+                 iterate_logspace_integrator: callable =iterate_logspace_integration):
         """Provides interpolated values from the HESS source map for given energy, longitude, and latitude points.
 
         Args:
@@ -167,20 +176,26 @@ class construct_hess_source_map_interpolation(object):
         This class constructs an interpolation function for the HESS source map, allowing for the evaluation of the
         map at arbitrary points within the defined axes.
         """
+
+        if binning_geometry is None:
+            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis)
+        else:
+            self.binning_geometry = binning_geometry
+
         
-        axes = [energy_axis, longitudeaxis, latitudeaxis]
 
 
         log_astro_sourcemap = np.log(construct_hess_source_map(energy_axis=energy_axis, 
             longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis,
-            log_aeff=log_aeff, aeff_unit=aeff_unit).to(hess_obs_rate_units).value)
+            binning_geometry=self.binning_geometry,
+            log_exposure_map= log_exposure_map, exposure_unit=exposure_unit).to(hess_obs_rate_units).value)
 
         if normalise:
-            log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_integrator(log_astro_sourcemap, axes=axes)
+            log_astro_sourcemap = log_astro_sourcemap - iterate_logspace_integrator(log_astro_sourcemap, axes=self.binning_geometry.axes)
 
         # Have to interpolate actual probabilities as otherwise these maps include -inf
         self.hess_grid_interpolator = interpolate.RegularGridInterpolator(
-            (*axes,), 
+            (*self.binning_geometry.axes,), 
             np.exp(log_astro_sourcemap))
 
     # Then we make a wrapper to put the result of the function in log space
@@ -220,6 +235,8 @@ class HESSCatalogueSources_Prior(DiscreteLogPrior):
     
     def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
                  irf: IRF_LogLikelihood, 
+                 binning_geometry: GammaBinning = None,
+                 log_exposure_map: GammaLogExposure = None,
                  normalise: bool = True, iterate_logspace_integrator: callable =iterate_logspace_integration,
                  *args, **kwargs):
         """Defines a prior based on HESS catalogue sources over specified energy, longitude, and latitude axes.
@@ -240,18 +257,30 @@ class HESSCatalogueSources_Prior(DiscreteLogPrior):
         This class utilizes an interpolation of the HESS source map to define a prior distribution for Bayesian analysis,
         integrating the map's flux values with the instrument's effective area.
         """
-        
+
+
+        if binning_geometry is None:
+            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis)
+        else:
+            self.binning_geometry = binning_geometry
+
+
+        self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
+                                                 irfs=irf, log_exposure_map=log_exposure_map)
 
         self.log_hess_class_instance = construct_hess_source_map_interpolation(energy_axis=energy_axis, 
                                                                             longitudeaxis=longitudeaxis, 
                                                                             latitudeaxis=latitudeaxis, 
-                                                                            log_aeff=irf.log_aeff,
-                                                                            aeff_unit=irf.aeff_units)
+                                                                            binning_geometry=self.binning_geometry,
+                                                                            log_exposure_map=log_exposure_map,
+                                                                            exposure_unit= self.log_exposure_map.unit,
+                                                                            normalise=normalise)
         
         
         DiscreteLogPrior.__init__(self,
             name='HESS Catalogue Sources Prior',
             axes=(energy_axis, longitudeaxis, latitudeaxis),
+            binning_geometry=self.binning_geometry,
             logfunction=self.log_hess_class_instance.log_func, 
             *args, **kwargs
         )

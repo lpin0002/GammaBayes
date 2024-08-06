@@ -2,6 +2,7 @@ from gammabayes import resources_dir, power_law, haversine, power_law
 from gammabayes.utils import iterate_logspace_integration, logspace_riemann
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
+
 import numpy as np
 from gammapy.modeling.models import (
     PowerLawSpectralModel,
@@ -18,13 +19,16 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from gammabayes.priors.core import DiscreteLogPrior
+from gammabayes import GammaLogExposure, GammaBinning
 
 fermi_rate_units = 1/u.TeV/u.s/u.deg**2/(u.cm**2)
 fermi_obs_rate_units = 1/u.TeV/u.s/u.deg**2
 
 
 def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-                                   log_aeff: callable, logspace_integrator:callable=logspace_riemann):
+                                   log_exposure_map:GammaLogExposure,
+                                   binning_geometry:GammaBinning=None,
+                                   logspace_integrator:callable=logspace_riemann):
     """
     Constructs the Fermi-Gaggero diffuse background event rate matrix (using Gammapy).
 
@@ -32,14 +36,20 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
         energy_axis (np.ndarray): Energy axis for the matrix (TeV).
         longitudeaxis (np.ndarray): Longitude axis for the matrix (degrees).
         latitudeaxis (np.ndarray): Latitude axis for the matrix (degrees).
-        log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
+        log_exposure_map (callable): Logarithm of the exposure as a function of energy, longitude, and latitude.
         logspace_integrator (callable, optional): Function used for integration over log space. Defaults to logspace_riemann.
 
     Returns:
         np.ndarray: A 3D array representing the observed event rate from the Fermi-Gaggero diffuse background over specified axes.
     """
 
+    if not(binning_geometry is None):
+        binning_geometry = binning_geometry
+    else:
+        binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis) 
+
     energy_axis_true = MapAxis.from_nodes(energy_axis, interp='log', name="energy_true")
+
 
     geom = WcsGeom.create(
         skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
@@ -49,6 +59,7 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
         proj="CAR",
         axes=[energy_axis_true],
     )
+
 
     template_diffuse_skymap = TemplateSpatialModel.read(
         filename=resources_dir+"/gll_iem_v06_gc.fits.gz", normalize=True
@@ -71,15 +82,13 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
     fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis.to(u.TeV).value, index=-2.41, phi0=1.36*1e-8*u.Unit("TeV-1 cm-2 s-1 sr-1")).to(fermi_rate_units).value)[:, np.newaxis, np.newaxis])
-
-    energymesh, lonmesh, latmesh = np.meshgrid(energy_axis, longitudeaxis, latitudeaxis, indexing='ij')
     
-    log_aeff_table = log_aeff(energymesh.flatten(), lonmesh.flatten(), latmesh.flatten()).reshape(energymesh.shape)
+    log_exposure_matrix = log_exposure_map.log_exposure_map
 
 
     log_diffuse_background_source_flux = np.log(fermi_gaggero)
 
-    diffuse_background_observed_event_rate = np.exp(log_diffuse_background_source_flux+log_aeff_table)
+    diffuse_background_observed_event_rate = np.exp(log_diffuse_background_source_flux+log_exposure_matrix)
 
     return diffuse_background_observed_event_rate*fermi_obs_rate_units
 
@@ -100,7 +109,9 @@ class construct_log_fermi_gaggero_bkg(object):
     """
 
     def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-    log_aeff: callable, normalise: bool=True, logspace_integrator: callable=logspace_riemann):
+                 log_exposure_map:GammaLogExposure,
+                 binning_geometry:GammaBinning=None,
+                 normalise: bool=True, logspace_integrator: callable=logspace_riemann):
         """Constructs and interpolates the log of the Fermi-Gaggero diffuse background model.
 
         Args:
@@ -120,9 +131,17 @@ class construct_log_fermi_gaggero_bkg(object):
         allowing for log-space evaluation of the model at arbitrary points.
         """
     
-        axes = [energy_axis, longitudeaxis, latitudeaxis]
+        if not(binning_geometry is None):
+            self.binning_geometry = binning_geometry
+        else:
+            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis) 
+
+        
+        self.log_exposure_map = log_exposure_map
+
+
         log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(energy_axis=energy_axis, 
-        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_aeff=log_aeff).to(fermi_obs_rate_units).value)
+        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_exposure_map=self.log_exposure_map).to(fermi_obs_rate_units).value)
 
         if normalise:
             log_fermi_diffuse = log_fermi_diffuse - logspace_integrator(
@@ -135,9 +154,12 @@ class construct_log_fermi_gaggero_bkg(object):
 
         # Have to interpolate actual probabilities as otherwise these maps include -inf
         self.fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
-            (*axes,), 
+            (*self.binning_geometry.axes,), 
             np.exp(log_fermi_diffuse)
             )
+        
+
+
 
     # Then we make a wrapper to put the result of the function in log space
     def log_func(self, energy, longitude, latitude, 
@@ -180,6 +202,8 @@ class FermiGaggeroDiffusePrior(DiscreteLogPrior):
 
     def __init__(self, energy_axis:np.ndarray, longitudeaxis:np.ndarray, latitudeaxis:np.ndarray,  
                  irf: IRF_LogLikelihood, 
+                 log_exposure_map: GammaLogExposure = None, 
+                 binning_geometry: GammaBinning = None,
                  normalise: bool=True, 
                  logspace_integrator: callable = logspace_riemann, 
                  *args, **kwargs):
@@ -203,11 +227,21 @@ class FermiGaggeroDiffusePrior(DiscreteLogPrior):
         """
 
 
+        if not(binning_geometry is None):
+            self.binning_geometry = binning_geometry
+        else:
+            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis) 
+
+
+        self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
+                                                 irfs=irf, log_exposure_map=log_exposure_map)
+
         self.construct_log_fermi_gaggero_bkg_func_class = construct_log_fermi_gaggero_bkg(
             energy_axis=energy_axis, 
             longitudeaxis=longitudeaxis, 
             latitudeaxis=latitudeaxis,  
-            log_aeff= irf.log_aeff, 
+            log_exposure_map= self.log_exposure_map,
+            binning_geometry=self.binning_geometry,
             normalise=normalise, 
             logspace_integrator=logspace_integrator
         )

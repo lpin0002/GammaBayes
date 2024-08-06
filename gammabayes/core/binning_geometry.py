@@ -30,7 +30,7 @@ Axis values represent bin centres. Bin edges can be extracted with the 'axis nam
     
     @property
     def axes_dim(self):
-        return (len(axis) for axis in self.axes)
+        return (*(len(axis) for axis in self.axes), )
     
     @property
     def spatial_axes(self):

@@ -1,2 +1,2 @@
-from .core import DiscreteLogPrior, TwoCompPrior
+from .core import DiscreteLogPrior, TwoCompFluxPrior, SourceFluxDiscreteLogPrior
 from .astro_sources import HESSCatalogueSources_Prior, FermiGaggeroDiffusePrior

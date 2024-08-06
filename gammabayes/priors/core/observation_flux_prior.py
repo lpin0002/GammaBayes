@@ -11,35 +11,28 @@ import warnings, logging
 import h5py, pickle
 
 
-class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
+class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
 
 
-    def __init__(self, name: str='[None]', 
+    def __init__(self,
+                 name: str=None, 
                  inputunits: str=None, 
-                 log_flux_function: callable=None, 
-                 log_mesh_efficient_flux_func: callable = None,
+                 logfunction: callable=None, 
+                 log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
                  binning_geometry: GammaBinning = None,
                  default_spectral_parameters: dict = {},  
                  default_spatial_parameters: dict = {},  
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
                  irf_loglike=None,
-                 log_exposure_map=None, 
-                 pointing_dir:np.ndarray[u.Quantity]=np.array([0.,0.])*u.deg,
+                 log_scaling_factor: int|float =0.,
                  observation_times=None,
                  observation_times_unit=None,
-                 log_scaling_factor=0.,
                  ):
                 
-        
-        self.log_flux_function = log_flux_function
-        self.log_mesh_efficient_flux_func = log_mesh_efficient_flux_func
 
-        if not(self.log_mesh_efficient_flux_func is None):
-            self.log_mesh_efficient_func = self._log_mesh_efficient_func
-        else:
-            self.log_mesh_efficient_func = None
-        
+        self._logfunction = logfunction
+        self._log_mesh_efficient_func = log_mesh_efficient_func
 
         
         super().__init__(name=name, 
@@ -54,10 +47,10 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
                  irf_loglike=irf_loglike,
                  log_scaling_factor=log_scaling_factor,)
         
+
+        # self.log_exposure_map basically is just for possibly complicated observation time maps
         self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
                                                  irfs=self.irf_loglike,
-                                                 log_exposure_map=log_exposure_map, 
-                                                 pointing_dir=pointing_dir, 
                                                  observation_times=observation_times,
                                                  observation_times_unit=observation_times_unit)
 
@@ -68,7 +61,7 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
             log_exposure_map = self.log_exposure_map
 
 
-        return self.log_flux_function(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy, lon, lat)
+        return self._logfunction(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy, lon, lat)
 
     def _log_mesh_efficient_func(self, energy, lon, lat, log_exposure_map:GammaLogExposure = None, *args, **kwargs):
 
@@ -80,20 +73,7 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
 
 
 
-        return self.log_mesh_efficient_flux_func(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten()).reshape(energy_mesh.shape)
+        return self._log_mesh_efficient_func(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten()).reshape(energy_mesh.shape)
 
     
-    def log_source_flux(self, energy, lon, lat, log_scaling_factor:float=None, *args, **kwargs):
-
-        if log_scaling_factor is None:
-            log_scaling_factor = self.log_scaling_factor
-
-        return log_scaling_factor+self.log_flux_function(energy, lon, lat, *args, **kwargs)
-
-    def log_source_flux_mesh_efficient(self, energy, lon, lat, log_scaling_factor:float=None, *args, **kwargs):
-
-        if log_scaling_factor is None:
-            log_scaling_factor = self.log_scaling_factor
-
-        return log_scaling_factor+self.log_mesh_efficient_flux_func(energy, lon, lat, *args, **kwargs) 
             

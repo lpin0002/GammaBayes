@@ -22,6 +22,7 @@ from gammabayes.utils import (
 from gammabayes.hyper_inference import MTree
 
 from gammabayes import (
+    GammaBinning, GammaLogExposure, GammaObs, GammaObsCube,
     Parameter, ParameterSet, ParameterSetCollection,
     apply_dirichlet_stick_breaking_direct,
     update_with_defaults
@@ -105,6 +106,9 @@ class hl_setup_from_config:
 
         self.true_axes       = create_true_axes_from_config(self.config_dict)
         self.recon_axes      = create_recon_axes_from_config(self.config_dict)
+
+        self.true_binning = GammaBinning(*self.true_axes)
+        self.recon_binning = GammaBinning(*self.recon_axes)
 
         self._setup_mixture_tree_values()
 
@@ -222,6 +226,12 @@ class hl_setup_from_config:
                 np.save(self.log_edisp_norm_matrix_path, self.log_edisp_norm_matrix)
                 self.log_edisp_norm_matrix_path = os.path.abspath(self.log_edisp_norm_matrix_path)
                 self.config_dict['log_edisp_norm_matrix_path'] = self.log_edisp_norm_matrix_path
+
+
+        
+        
+        self.log_exposure_map = GammaLogExposure(binning_geometry = self.true_binning, 
+                                             irfs=self.irf_loglike,)
 
 
     def _handle_dm_specifications(self):
@@ -385,9 +395,9 @@ class hl_setup_from_config:
                 true_meshes = np.meshgrid(*self.true_axes, indexing='ij')
 
                 fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
-                                                log_aeff = self.irf_loglike.log_aeff)
+                                                log_exposure_map=self.log_exposure_map)
                 hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
-                                                log_aeff = self.irf_loglike.log_aeff)
+                                                log_exposure_map=self.log_exposure_map)
                 log_CCR_matrix = self.irf_loglike.log_bkg_CCR(energy=true_meshes[0], longitude=true_meshes[1], latitude=true_meshes[2])
 
 
@@ -412,12 +422,10 @@ class hl_setup_from_config:
 
 
 
-                true_meshes = np.meshgrid(*self.true_axes, indexing='ij')
-
                 fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
-                                                log_aeff = self.irf_loglike.log_aeff)
+                                                log_exposure_map=self.log_exposure_map)
                 hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
-                                                log_aeff = self.irf_loglike.log_aeff)
+                                                log_exposure_map=self.log_exposure_map)
 
                 fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=fermi_gaggero_rate_matrix+hess_source_rate_matrix)
 

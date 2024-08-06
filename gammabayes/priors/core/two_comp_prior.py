@@ -1,14 +1,14 @@
 import numpy as np
 from os import path
 from gammabayes.priors.core.discrete_logprior import DiscreteLogPrior
-
+from gammabayes.core import GammaLogExposure, GammaBinning
 import time
 
 
 
-class TwoCompPrior(DiscreteLogPrior):
+class TwoCompFluxPrior(DiscreteLogPrior):
     """
-    A two-component prior model combining both spectral and spatial components.
+    A two-component prior model combining both spectral and spatial components adding exposure to source flux model.
     
     This class inherits from DiscreteLogPrior and combines a spectral and spatial model component 
     to calculate a log-prior distribution over a defined parameter space. Optionally, efficient 
@@ -47,7 +47,9 @@ class TwoCompPrior(DiscreteLogPrior):
                  spatial_mesh_efficient_logfunc=None, 
                  spectral_class_kwds: dict = {},
                  spatial_class_kwds: dict = {},
+                 binning_geometry: GammaBinning = None,
                  name='UnknownTwoComp',
+                 log_exposure_map=None,
                  *args, **kwargs
                  ):
         """
@@ -98,24 +100,30 @@ class TwoCompPrior(DiscreteLogPrior):
 
 
         if self.mesh_efficient_exists:
-            super().__init__(logfunction=self.log_dist, 
-                            log_mesh_efficient_func=self.log_dist_mesh_efficient,
+            super().__init__(logfunction=self.logfunction, 
+                            log_mesh_efficient_func=self.log_mesh_efficient_func,
                             irf_loglike=irf_loglike,
                             name=name,
+                            binning_geometry = binning_geometry,
                             *args, **kwargs
                             )
         else:
-            super().__init__(logfunction=self.log_dist, 
+            super().__init__(logfunction=self.logfunction, 
                              irf_loglike=irf_loglike,
+                             binning_geometry=binning_geometry,
                             name=name,
                             *args, **kwargs
                             )
+            
+        self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, irfs=self.irf_loglike, log_exposure_map=log_exposure_map)
 
-    def log_dist(self, energy: float | np.ndarray | list, 
-                       longitude: float | np.ndarray | list,  
-                       latitude: float | np.ndarray | list,  
+
+    def logfunction(self, energy: float | np.ndarray | list, 
+                       lon: float | np.ndarray | list,  
+                       lat: float | np.ndarray | list,  
                        spectral_parameters: dict = {},
-                       spatial_parameters: dict = {}, ) -> np.ndarray:
+                       spatial_parameters: dict = {}, 
+                       log_exposure_map: GammaLogExposure = None) -> np.ndarray:
         """
         Calculate the log prior distribution for given energy, longitude, and latitude values, 
         along with optional spectral and spatial parameters.
@@ -126,9 +134,9 @@ class TwoCompPrior(DiscreteLogPrior):
         Args:
             energy (float | np.ndarray | list): The energy values for which the log prior distribution is calculated.
             
-            longitude (float | np.ndarray | list): The longitude values for the spatial component.
+            lon (float | np.ndarray | list): The longitude values for the spatial component.
             
-            latitude (float | np.ndarray | list): The latitude values for the spatial component.
+            lat (float | np.ndarray | list): The latitude values for the spatial component.
             
             spectral_parameters (dict, optional): A dictionary of parameters specific to the spectral component. Defaults to {}.
             
@@ -137,7 +145,10 @@ class TwoCompPrior(DiscreteLogPrior):
         Returns:
             np.ndarray: The calculated log prior values as a numpy array.
         """
-        
+        if log_exposure_map is None:
+            log_exposure_map = self.log_exposure_map
+
+
         spectral_axes = energy, *spectral_parameters.values()
 
         spectral_units = []
@@ -149,7 +160,7 @@ class TwoCompPrior(DiscreteLogPrior):
 
 
 
-        spatial_axes = longitude, latitude, *spatial_parameters.values()
+        spatial_axes = lon, lat, *spatial_parameters.values()
 
         spatial_units = []
         for axis in spatial_axes:
@@ -159,7 +170,7 @@ class TwoCompPrior(DiscreteLogPrior):
                 spatial_units.append(1.)
         
             
-        energy, longitude, latitude = np.asarray(energy), np.asarray(longitude), np.asarray(latitude)
+        energy, lon, lat = np.asarray(energy), np.asarray(lon), np.asarray(lat)
 
         spectral_parameters = {param_key: np.asarray(param_val) for param_key, param_val in spectral_parameters.items()}
 
@@ -197,7 +208,7 @@ class TwoCompPrior(DiscreteLogPrior):
             # operations here
         spatial_parameters = {param_key: np.asarray(param_val) for param_key, param_val in spatial_parameters.items()}
 
-        flatten_spatial_param_vals = np.array([longitude.flatten(), latitude.flatten(), *[spatial_param_val.flatten() for spatial_param_val in spatial_parameters.values()]])
+        flatten_spatial_param_vals = np.array([lon.flatten(), lat.flatten(), *[spatial_param_val.flatten() for spatial_param_val in spatial_parameters.values()]])
         
         unique_spatial_param_vals = np.unique(flatten_spatial_param_vals, axis=1)
 
@@ -216,38 +227,43 @@ class TwoCompPrior(DiscreteLogPrior):
         logspatialvals = np.sum(spatial_slices, axis=-1).reshape(energy.shape)
 
         ####################
-        log_aeffvals = self.irf_loglike.log_aeff(energy.flatten()*spectral_units[0], 
-                                                 longitude.flatten()*spatial_units[0], 
-                                                 latitude.flatten()*spatial_units[1]).reshape(energy.shape)
+        # log_aeffvals = self.irf_loglike.log_aeff(energy.flatten()*spectral_units[0], 
+        #                                          longitude.flatten()*spatial_units[0], 
+        #                                          latitude.flatten()*spatial_units[1]).reshape(energy.shape)
+
+        log_exposure_vals = log_exposure_map(energy.flatten()*spectral_units[0], 
+                                                 lon.flatten()*spatial_units[0], 
+                                                 lat.flatten()*spatial_units[1]).reshape(energy.shape)
     
-        logpdfvalues = logspectralvals+logspatialvals+log_aeffvals
+        logpdfvalues = logspectralvals+logspatialvals+log_exposure_vals
 
         
         return logpdfvalues
     
     def __call__(self, *args, **kwargs) -> np.ndarray:
         """
-        Enable the class instance to be called as a function, directly invoking the `log_dist` method.
+        Enable the class instance to be called as a function, directly invoking the `logfunction` method.
         
         This allows for a more intuitive use of the class instance for calculating log distributions.
         
         Returns:
-            np.ndarray: The log prior values calculated by `log_dist`.
+            np.ndarray: The log prior values calculated by `logfunction`.
         """
         
-        return self.log_dist(*args, **kwargs)
+        return self.logfunction(*args, **kwargs)
     
 
-    def log_dist_mesh_efficient(self, 
+    def log_mesh_efficient_func(self, 
                                 energy: float | np.ndarray | list,
-                                longitude: float | np.ndarray | list, 
-                                latitude: float | np.ndarray | list,
+                                lon: float | np.ndarray | list, 
+                                lat: float | np.ndarray | list,
                                 spatial_parameters: dict = {}, 
                                 spectral_parameters: dict = {}, 
+                                log_exposure_map: GammaLogExposure = None,
                                 ) -> np.ndarray:
         
         """
-        An efficient version of `log_dist` that utilizes mesh grid computations for the spectral and spatial components.
+        An efficient version of `logfunction` that utilizes mesh grid computations for the spectral and spatial components.
         
         This method is designed to be used when `spectral_mesh_efficient_logfunc` and/or `spatial_mesh_efficient_logfunc` 
         are provided during class initialization, allowing for more efficient computation over grid meshes.
@@ -255,9 +271,9 @@ class TwoCompPrior(DiscreteLogPrior):
         Args:
             energy (float | np.ndarray | list): The energy values for which the log distribution is calculated.
             
-            longitude (float | np.ndarray | list): The longitude values for the spatial component.
+            lon (float | np.ndarray | list): The longitude values for the spatial component.
             
-            latitude (float | np.ndarray | list): The latitude values for the spatial component.
+            lat (float | np.ndarray | list): The latitude values for the spatial component.
             
             spatial_parameters (dict, optional): Parameters specific to the spatial component. Defaults to {}.
             
@@ -266,7 +282,12 @@ class TwoCompPrior(DiscreteLogPrior):
         Returns:
             np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
-            
+        if log_exposure_map is None:
+            log_exposure_map = self.log_exposure_map
+
+
+
+
         num_spectral_params     = len(spectral_parameters)
 
         num_spatial_params      = len(spatial_parameters)
@@ -281,15 +302,15 @@ class TwoCompPrior(DiscreteLogPrior):
 
         ####################
 
-        logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
+        logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(lon, lat, kwd_parameters=spatial_parameters)
 
         ####################
 
-        aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, longitude, latitude, indexing='ij')
+        aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, lon, lat, indexing='ij')
 
         # Flattening the meshes helps the IRFs evaluate
-        log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
-        
+        # log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
+        log_exposure_vals = log_exposure_map(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
         ####################
 
         # Convention is Energy, Lon, Lat, Mass, [Spectral_Params], [Spatial_Params]
@@ -311,26 +332,26 @@ class TwoCompPrior(DiscreteLogPrior):
 
         
         # Expanding along all the spectral and spatial parameters
-        expand_aeff_axes = list(range(3, num_total_params))
-        log_aeff_vals = np.expand_dims(log_aeffvals, 
-                                        axis=expand_aeff_axes)
+        expand_exposure_axes = list(range(3, num_total_params))
+        log_exposure_vals = np.expand_dims(log_exposure_vals, 
+                                        axis=expand_exposure_axes)
         
-        logpdfvalues = logpdfvalues + log_aeff_vals
+        logpdfvalues = logpdfvalues + log_exposure_vals
 
 
         return np.squeeze(logpdfvalues)
 
     
-    def log_dist_integral_mesh_efficient(self, 
+    def log_mesh_integral_efficient_func(self, 
                                 energy: float | np.ndarray | list,
-                                longitude: float | np.ndarray | list, 
-                                latitude: float | np.ndarray | list,
+                                lon: float | np.ndarray | list, 
+                                lat: float | np.ndarray | list,
                                 spatial_parameters: dict = {}, 
                                 spectral_parameters: dict = {}, 
                                 ) -> np.ndarray:
         
         """
-        An efficient version of `log_dist` that utilizes mesh grid computations for the spectral and spatial components.
+        An efficient version of `logfunction` that utilizes mesh grid computations for the spectral and spatial components.
         
         This method is designed to be used when `spectral_mesh_efficient_logfunc` and/or `spatial_mesh_efficient_logfunc` 
         are provided during class initialization, allowing for more efficient computation over grid meshes.
@@ -338,9 +359,9 @@ class TwoCompPrior(DiscreteLogPrior):
         Args:
             energy (float | np.ndarray | list): The energy values for which the log distribution is calculated.
             
-            longitude (float | np.ndarray | list): The longitude values for the spatial component.
+            lon (float | np.ndarray | list): The longitude values for the spatial component.
             
-            latitude (float | np.ndarray | list): The latitude values for the spatial component.
+            lat (float | np.ndarray | list): The latitude values for the spatial component.
             
             spatial_parameters (dict, optional): Parameters specific to the spatial component. Defaults to {}.
             
@@ -350,6 +371,9 @@ class TwoCompPrior(DiscreteLogPrior):
             np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
             
+        if log_exposure_map is None:
+            log_exposure_map = self.log_exposure_map
+
         num_spectral_params     = len(spectral_parameters)
 
         num_spatial_params      = len(spatial_parameters)
@@ -370,19 +394,19 @@ class TwoCompPrior(DiscreteLogPrior):
 
         times.append(time.perf_counter())
 
-        logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(longitude, latitude, kwd_parameters=spatial_parameters)
+        logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(lon, lat, kwd_parameters=spatial_parameters)
 
         times.append(time.perf_counter())
 
 
         ####################
 
-        aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, longitude, latitude, indexing='ij')
+        exposure_energy_mesh, exposure_lon_mesh, exposure_lat_mesh = self.binning_geometry.axes_mesh
 
         times.append(time.perf_counter())
 
         # Flattening the meshes helps the IRFs evaluate
-        log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
+        log_exposure_vals = log_exposure_map(exposure_energy_mesh.flatten(), exposure_lon_mesh.flatten(), exposure_lat_mesh.flatten()).reshape(exposure_energy_mesh.shape)
         
         times.append(time.perf_counter())
 
@@ -412,12 +436,12 @@ class TwoCompPrior(DiscreteLogPrior):
         
         # Expanding along all the spectral and spatial parameters
         expand_aeff_axes = list(range(3, num_total_params))
-        log_aeff_vals = np.expand_dims(log_aeffvals, 
+        log_exposure_vals = np.expand_dims(log_exposure_vals, 
                                         axis=expand_aeff_axes)
         
         times.append(time.perf_counter())
 
-        logpdfvalues = logpdfvalues + log_aeff_vals
+        logpdfvalues = logpdfvalues + log_exposure_vals
 
         times.append(time.perf_counter())
 

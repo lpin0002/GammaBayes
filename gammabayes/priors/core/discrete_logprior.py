@@ -1,5 +1,5 @@
 from scipy.special import logsumexp
-import numpy as np
+import numpy as np, time, warnings, logging, pickle
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExposure
@@ -7,8 +7,6 @@ from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExp
 
 from astropy import units as u
 import matplotlib.pyplot as plt
-import warnings, logging
-import h5py, pickle
 
 class DiscreteLogPrior(object):
     """
@@ -26,23 +24,24 @@ class DiscreteLogPrior(object):
         iterative_logspace_integrator (callable, optional): Function used for integrations in log space. Defaults to iterate_logspace_integration.
     """
     
-    def __init__(self, name: str='[None]', 
+    def __init__(self, 
+                 name: str=None, 
                  inputunits: str=None, 
                  logfunction: callable=None, 
                  log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
-                 binning: GammaBinning = None,
+                 binning_geometry: GammaBinning = None,
                  default_spectral_parameters: dict = {},  
                  default_spatial_parameters: dict = {},  
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
                  irf_loglike=None,
-                 exposure_map=None,
+                 log_scaling_factor: int|float =0.,
                  ):
         """
         Initializes a DiscreteLogPrior object, which represents a discrete log prior distribution.
 
         Args:
-            name (str, optional): Name of the instance. Defaults to '[None]'.
+            name (str, optional): Name of the instance. Defaults to None.
             inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
             logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
             log_mesh_efficient_func (callable, optional): A function for efficient computation of log prior values on a mesh grid.
@@ -57,18 +56,24 @@ class DiscreteLogPrior(object):
         - This class assumes the prior is defined in a discrete log space along specified axes.
         - The axes should correspond to physical quantities over which the prior is distributed, such as energy and sky coordinates.
         """
+
+        if name is None:
+            name = time.strftime("discrete_log_prior_%f")
         self.name = name
+        self.log_scaling_factor = log_scaling_factor
+
         self.inputunits = inputunits
-        self.logfunction = logfunction
+        self._logfunction = logfunction
         self.irf_loglike = irf_loglike
 
-        self._create_geometry(axes=axes, binning=binning)
+        self._create_geometry(axes=axes, binning_geometry=binning_geometry)
 
-
+            
 
         if not(log_mesh_efficient_func is None):
             self.efficient_exist = True
-            self.log_mesh_efficient_func = log_mesh_efficient_func
+            self._log_mesh_efficient_func = log_mesh_efficient_func
+            self.log_mesh_efficient_func = self._scaled_log_mesh_efficient_func
         else:
             self.efficient_exist = False
 
@@ -84,17 +89,23 @@ class DiscreteLogPrior(object):
         self.logspace_integrator = iterative_logspace_integrator
             
 
-    def _create_geometry(self, axes, binning):
+    def _create_geometry(self, axes, binning_geometry):
 
 
         if not(axes is None):
             self.binning_geometry = GammaBinning(energy_axis=axes[0], lon_axis=axes[1], lat_axis=axes[2])
-        elif not(binning is None):
-            self.binning_geometry = binning
+        elif not(binning_geometry is None):
+            self.binning_geometry = binning_geometry
         else:
             self.binning_geometry = None
 
         
+    def logfunction(self, *args, **kwargs):
+        return  self.log_scaling_factor + self._logfunction(*args, **kwargs)
+    
+    
+    def _scaled_log_mesh_efficient_func(self, *args, **kwargs):
+        return  self.log_scaling_factor + self._log_mesh_efficient_func(*args, **kwargs)
 
     
     
@@ -123,7 +134,7 @@ class DiscreteLogPrior(object):
         Returns:
             np.ndarray | float: The result from the logfunction, which is the log prior value(s) for the given input(s).
         """
-        return self.logfunction(*args, **kwargs)
+        return  self.log_scaling_factor+self.logfunction(*args, **kwargs)
 
     
     def normalisation(self, log_prior_values: np.ndarray = None, 
@@ -280,7 +291,7 @@ class DiscreteLogPrior(object):
                                     *spectral_parameters.values(),
                                     *spatial_parameters.values(), indexing='ij') 
             
-            outputarray = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
+            outputarray = self.log_scaling_factor+self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
                                             spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
                                             spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
                                             )
@@ -331,3 +342,6 @@ class DiscreteLogPrior(object):
 
 
 
+
+    def rescale(self, log_factor:float|int=0.):
+        self.log_scaling_factor = self.log_scaling_factor+log_factor
