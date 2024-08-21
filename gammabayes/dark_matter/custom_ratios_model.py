@@ -340,7 +340,7 @@ class CustomDMRatiosModel(object):
 
 
         for channel, channel_prior in self.channel_prior_dict.items():
-            individual_integrands[channel] = channel_prior.log_dist_mesh_efficient(*true_axes[:num_true_axes], 
+            individual_integrands[channel] = channel_prior.log_mesh_efficient_func(*true_axes[:num_true_axes], 
                                                     spectral_parameters=spectral_parameters,
                                                     spatial_parameters=spatial_parameters).reshape(axis_mesh_shape)
             

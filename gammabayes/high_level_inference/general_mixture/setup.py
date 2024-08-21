@@ -7,7 +7,8 @@ from gammabayes.dark_matter.channel_spectra import (
     PPPCReader, 
 )
 from gammabayes.dark_matter.density_profiles import Einasto_Profile
-from gammabayes.priors import DiscreteLogPrior
+from gammabayes.priors import DiscreteLogPrior, SourceFluxDiscreteLogPrior
+from gammabayes.priors.core.observation_flux_prior import ObsFluxDiscreteLogPrior
 
 # $$
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
@@ -30,7 +31,7 @@ from gammabayes import (
 from matplotlib import pyplot as plt
 from gammabayes.dark_matter import CustomDMRatiosModel, CombineDMComps
 
-from gammabayes.priors.astro_sources import construct_fermi_gaggero_matrix, construct_hess_source_map
+from gammabayes.priors.astro_sources import construct_fermi_gaggero_flux_matrix, construct_hess_flux_matrix
 from gammabayes.utils.integration import iterate_logspace_integration, logspace_simpson
 
 
@@ -363,10 +364,8 @@ class hl_setup_from_config:
 
                 prior_model_class = dynamic_import('gammabayes.priors', model_name)
                 prior_model = prior_model_class(
-                    energy_axis=self.true_axes[0], 
-                    longitudeaxis=self.true_axes[1], 
-                    latitudeaxis=self.true_axes[2], 
-                    irf=self.irf_loglike)
+                    axes=self.true_axes,
+                    irf_loglike=self.irf_loglike)
                 
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = prior_model
 
@@ -384,9 +383,12 @@ class hl_setup_from_config:
 
 
             elif model_name=='CCR_BKG':
-                ccr_bkg_prior = DiscreteLogPrior(logfunction=self.irf_loglike.log_bkg_CCR, name='CCR_BKG',
-                            axes=self.true_axes, 
-                            )
+                ccr_bkg_prior = ObsFluxDiscreteLogPrior(
+                    logfunction=self.irf_loglike.log_bkg_CCR, 
+                    name='CCR_BKG',
+                    axes=self.true_axes, 
+                    pointing_dir=self.irf_loglike.pointing_dir)
+                
                 self.observational_prior_models[model_idx+nested_model_idx_offset] = ccr_bkg_prior
 
 
@@ -394,10 +396,8 @@ class hl_setup_from_config:
 
                 true_meshes = np.meshgrid(*self.true_axes, indexing='ij')
 
-                fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
-                                                log_exposure_map=self.log_exposure_map)
-                hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
-                                                log_exposure_map=self.log_exposure_map)
+                fermi_gaggero_rate_matrix = construct_fermi_gaggero_flux_matrix(binning_geometry = self.true_binning)
+                hess_source_rate_matrix = construct_hess_flux_matrix(binning_geometry = self.true_binning,)
                 log_CCR_matrix = self.irf_loglike.log_bkg_CCR(energy=true_meshes[0], longitude=true_meshes[1], latitude=true_meshes[2])
 
 
@@ -422,7 +422,7 @@ class hl_setup_from_config:
 
 
 
-                fermi_gaggero_rate_matrix =construct_fermi_gaggero_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
+                fermi_gaggero_rate_matrix =construct_fermi_gaggero_flux_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
                                                 log_exposure_map=self.log_exposure_map)
                 hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
                                                 log_exposure_map=self.log_exposure_map)

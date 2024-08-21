@@ -14,7 +14,7 @@ from gammabayes import GammaObs, Parameter, ParameterSet, update_with_defaults, 
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
-
+from icecream import ic
 class DiscreteBruteScan(object):
     """
     A class for performing discrete brute scan hyperparameter likelihood analysis.
@@ -356,6 +356,8 @@ class DiscreteBruteScan(object):
                             normalise=True)
                             )
                     
+                    ic(log_prior_matrices.shape)
+                    
                     
                     # Computation is more efficient/faster of the arrays 
                         # are as flattened as possible. Also minimises memory
@@ -386,7 +388,8 @@ class DiscreteBruteScan(object):
             logging.debug(f"Total cumulative number of nan values within all prior matrices: {nans}")
             
 
-            # If 
+
+            self._prior_marged_shapes = prior_marged_shapes
             self.log_prior_matrix_list = log_prior_matrix_list
             logging.debug(f"""If debugging, check how you are treating your 
 prior matrices. Generally they are saved as an attribute of the class, but this 
@@ -395,8 +398,16 @@ of this function for the subsequent steps directly. Otherwise, initialise the
 class before the multiprocessing or make sure that it isn't part of the actual 
 'multi' in the processing.""")
 
-
             return prior_marged_shapes, log_prior_matrix_list
+        else:
+            # TODO: #TechDebt
+            new_prior_marged_shapes = []
+            for shape in self._prior_marged_shapes:
+
+                new_prior_marged_shapes.append((Nevents, *shape[1:]))
+
+
+            return new_prior_marged_shapes, self.log_prior_matrix_list
         
 
     def _mesh_inefficient_prior_construction(self, 
@@ -446,10 +457,16 @@ class before the multiprocessing or make sure that it isn't part of the actual
             parameter_matrix_shape = ()
             flattened_hyper_parameter_coords = [[]]
 
+        squeezed_loglike = np.squeeze(self.log_likelihoodnormalisation)
+
+
+
+
+        loglike_norm_shape = squeezed_loglike.shape
 
         log_prior_matrices  = np.empty(shape = (
             num_prior_values,
-            *np.squeeze(self.log_likelihoodnormalisation).shape,
+            *loglike_norm_shape,
             )
             )
 
@@ -472,6 +489,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
                     )
             
             nans +=     np.sum(np.isnan(prior_matrix))
+
             log_prior_matrices[_inner_idx,...] =    prior_matrix
 
         return log_prior_matrices, nans

@@ -17,7 +17,7 @@ from numpy import ndarray
 def irf_norm_setup(energy_true_axis:ndarray[Quantity], energy_recon_axis:ndarray[Quantity], 
           longitudeaxistrue:ndarray[Quantity], longitudeaxis:ndarray[Quantity], 
           latitudeaxistrue:ndarray[Quantity], latitudeaxis:ndarray[Quantity],
-          save_directory:str = resources_dir, log_psf:callable=log_psf, log_edisp:callable=log_edisp,
+          save_directory:str = '', log_psf:callable=log_psf, log_edisp:callable=log_edisp,
           save_results:bool=False):
     """
     Produces default IRF normalization matrices.

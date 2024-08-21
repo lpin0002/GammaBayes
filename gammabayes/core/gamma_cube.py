@@ -7,11 +7,13 @@ import pkg_resources
 
 from .exposure import GammaLogExposure
 from icecream import ic
-
+from astropy import units as u
 
 class GammaObs:
-    def __init__(self, binning: GammaBinning, energy=[], lon=[], lat=[], 
+    def __init__(self, binning: GammaBinning, 
+                 energy=[], lon=[], lat=[], 
                  pointing_dir:np.ndarray = None, 
+                 observation_time: u.Quantity=None,
                  irf_loglike = None,
                  logexposure: GammaLogExposure = None,
                  meta:dict = {}, **kwargs):
@@ -25,10 +27,22 @@ class GammaObs:
         else:
             self.binned_data = np.zeros(shape=(*self.binning.axes_dim,))
 
-        self.meta = meta
+
+
         self.irf_loglike = irf_loglike
 
+
+        self.meta = meta
+        if 'observation_time' in self.meta:
+            observation_time = self.meta['observation_time']
+
+        if 'pointing_dir' in self.meta:
+            pointing_dir = self.meta['pointing_dir']
+
         self.meta.update(kwargs)
+
+        self.observation_time = observation_time
+
 
         if not(pointing_dir is None) and hasattr(self.irf_loglike, "pointing_dir"):
             self.pointing_dir = pointing_dir
@@ -51,13 +65,6 @@ class GammaObs:
             self.irfs = {self.meta[irf_str] for irf_str in ['edisp', 'psf', 'ccr_bkg', 'aeff']}
         else:
             self.irfs = {}
-
-
-        if 'obs_time' in self.meta:
-            self.obs_time = self.meta['obs_time']
-
-        else:
-            self.obs_time = np.nan
 
 
         if 'hemisphere' in self.meta:
@@ -128,8 +135,6 @@ class GammaObs:
             fig, axs = plt.subplots(1, 2, figsize=figsize, **kwargs)
         
 
-
-        ic(axs.shape, axs)
         axs[0].hist(self.energy_axis, bins=self.binning.energy_edges, weights=self.binned_energy[0], color=hist1dcolor, log=True)
         axs[0].set_xlabel(r'Energy ['+ self.binning.energy_axis.unit.to_string('latex_inline')+']')
         axs[0].set_ylabel('Counts')
@@ -294,7 +299,7 @@ it is assumed that the binning geometries are the same.""")
             ndarray: The next data item in the sequence.
         """
         if self._current_datum_idx < len(self):
-            current_data = self[self._current_datum_idx]
+            current_data = self[self._current_datum_idx][0]
             self._current_datum_idx += 1
             return current_data
         else:
@@ -372,12 +377,19 @@ class GammaObsCube:
     def __init__(self,
                  binning: GammaBinning, 
                  observations: list[GammaObs],  
+                 pointing_dirs=None,
+                 observation_times=None,
                  name:str='NoName', 
-                 meta:dict = {}):
+                 meta:dict = {},
+                 **kwargs):
+        
         self.name = name
         self.binning = binning
         self.observations = observations
         self.meta = meta
+
+        self.meta.update(kwargs)
+
 
     def add_observation(self, gamma_obs: GammaObs):
         if not np.array_equal(gamma_obs.binning.energy_edges, self.binning.energy_edges) or \

@@ -25,6 +25,14 @@ Axis values represent bin centres. Bin edges can be extracted with the 'axis nam
         return [self.energy_axis, self.lon_axis, self.lat_axis]
     
     @property
+    def lon_res(self):
+        return np.diff(self.lon_axis)[0]
+    
+    @property
+    def lat_res(self):
+        return np.diff(self.lat_axis)[0]
+    
+    @property
     def axes_mesh(self):
         return np.meshgrid(self.energy_axis, self.lon_axis, self.lat_axis, indexing='ij')
     
@@ -35,7 +43,12 @@ Axis values represent bin centres. Bin edges can be extracted with the 'axis nam
     @property
     def spatial_axes(self):
         return [self.lon_axis, self.lat_axis]
+    
 
+    @property
+    def spatial_centre(self):
+        return np.asarray([np.mean(self.lon_axis.value), np.mean(self.lat_axis.value)])*self.lon_axis.unit
+    
 
 
     @classmethod

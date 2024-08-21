@@ -18,15 +18,14 @@ from scipy.special import logsumexp
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
-from gammabayes.priors.core import DiscreteLogPrior
+from gammabayes.priors.core import DiscreteLogPrior, SourceFluxDiscreteLogPrior
 from gammabayes import GammaLogExposure, GammaBinning
 
-fermi_rate_units = 1/u.TeV/u.s/u.deg**2/(u.cm**2)
+fermi_flux_units = 1/u.TeV/u.s/u.deg**2/(u.cm**2)
 fermi_obs_rate_units = 1/u.TeV/u.s/u.deg**2
 
 
-def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-                                   log_exposure_map:GammaLogExposure,
+def construct_fermi_gaggero_flux_matrix(energy_axis: np.ndarray=None, longitudeaxis: np.ndarray=None, latitudeaxis: np.ndarray=None,
                                    binning_geometry:GammaBinning=None,
                                    logspace_integrator:callable=logspace_riemann):
     """
@@ -42,8 +41,10 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
     Returns:
         np.ndarray: A 3D array representing the observed event rate from the Fermi-Gaggero diffuse background over specified axes.
     """
+    if (binning_geometry is None) and (energy_axis is None):
+        raise ValueError("Either a binning geometry or the energy, longitude and latitude axes.")
 
-    if not(binning_geometry is None):
+    elif not(binning_geometry is None):
         binning_geometry = binning_geometry
     else:
         binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis) 
@@ -72,7 +73,7 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
     )
 
     # Need to flip as convention goes positive to negative 
-    fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(geom).to(fermi_rate_units), axes=(0,2,1)), axis=1)
+    fermievaluated = np.flip(np.transpose(diffuse_iem.evaluate_geom(geom).to(fermi_flux_units), axes=(0,2,1)), axis=1)
 
     # Normalising so I can apply the normalisation of that in Gaggero et al.
     fermi_integral_values= logspace_integrator(logy=np.log(fermievaluated.value), x=energy_axis, axis=0)
@@ -81,16 +82,14 @@ def construct_fermi_gaggero_matrix(energy_axis: np.ndarray, longitudeaxis: np.nd
             logy=fermi_integral_values, x=longitudeaxis, axis=0), x=latitudeaxis, axis=0)
 
     # Slight change in normalisation due to the use of m^2 not cm^2 so there is a 10^4 change in the normalisation
-    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(energy_axis.to(u.TeV).value, index=-2.41, phi0=1.36*1e-8*u.Unit("TeV-1 cm-2 s-1 sr-1")).to(fermi_rate_units).value)[:, np.newaxis, np.newaxis])
+    fermi_gaggero = np.exp(fermi_integral_values+np.log(power_law(
+        energy_axis.to(u.TeV).value, 
+        index=-2.41, 
+        phi0=1.36*1e-8*u.Unit("TeV-1 cm-2 s-1 sr-1")
+        ).to(fermi_flux_units).value)[:, np.newaxis, np.newaxis])
     
-    log_exposure_matrix = log_exposure_map.log_exposure_map
 
-
-    log_diffuse_background_source_flux = np.log(fermi_gaggero)
-
-    diffuse_background_observed_event_rate = np.exp(log_diffuse_background_source_flux+log_exposure_matrix)
-
-    return diffuse_background_observed_event_rate*fermi_obs_rate_units
+    return fermi_gaggero*fermi_flux_units
 
 class construct_log_fermi_gaggero_bkg(object):
     """
@@ -100,18 +99,13 @@ class construct_log_fermi_gaggero_bkg(object):
         energy_axis (np.ndarray): Energy axis for the model (TeV).
         longitudeaxis (np.ndarray): Longitude axis for the model (degrees).
         latitudeaxis (np.ndarray): Latitude axis for the model (degrees).
-        log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
-        normalise (bool, optional): Whether to normalize the model over the specified axes. Defaults to True.
         logspace_integrator (callable, optional): Function used for normalization in log space. Defaults to logspace_riemann.
 
     This class generates a regular grid interpolator for the Fermi-Gaggero diffuse background model,
     allowing for log-space evaluation of the model at arbitrary points.
     """
 
-    def __init__(self, energy_axis: np.ndarray, longitudeaxis: np.ndarray, latitudeaxis: np.ndarray,
-                 log_exposure_map:GammaLogExposure,
-                 binning_geometry:GammaBinning=None,
-                 normalise: bool=True, logspace_integrator: callable=logspace_riemann):
+    def __init__(self, binning_geometry:GammaBinning=None,):
         """Constructs and interpolates the log of the Fermi-Gaggero diffuse background model.
 
         Args:
@@ -130,30 +124,17 @@ class construct_log_fermi_gaggero_bkg(object):
         This class generates a regular grid interpolator for the Fermi-Gaggero diffuse background model,
         allowing for log-space evaluation of the model at arbitrary points.
         """
-    
-        if not(binning_geometry is None):
-            self.binning_geometry = binning_geometry
-        else:
-            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis) 
 
-        
-        self.log_exposure_map = log_exposure_map
+        self.binning_geometry = binning_geometry
+            
+        energy_axis, longitudeaxis, latitudeaxis = binning_geometry.axes
 
+        log_fermi_diffuse = np.log(construct_fermi_gaggero_flux_matrix(energy_axis=energy_axis, 
+        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis).to(fermi_flux_units).value)
 
-        log_fermi_diffuse = np.log(construct_fermi_gaggero_matrix(energy_axis=energy_axis, 
-        longitudeaxis=longitudeaxis, latitudeaxis=latitudeaxis, log_exposure_map=self.log_exposure_map).to(fermi_obs_rate_units).value)
-
-        if normalise:
-            log_fermi_diffuse = log_fermi_diffuse - logspace_integrator(
-                logy = logspace_integrator(
-                    logy =logspace_integrator(
-                        logy=log_fermi_diffuse, 
-                        x=energy_axis, axis=0), 
-                    x=longitudeaxis, axis=0), 
-                x=latitudeaxis, axis=0)
 
         # Have to interpolate actual probabilities as otherwise these maps include -inf
-        self.fermi_diffuse_interpolator = interpolate.RegularGridInterpolator(
+        self.fermi_diffuse_flux_interpolator = interpolate.RegularGridInterpolator(
             (*self.binning_geometry.axes,), 
             np.exp(log_fermi_diffuse)
             )
@@ -162,7 +143,7 @@ class construct_log_fermi_gaggero_bkg(object):
 
 
     # Then we make a wrapper to put the result of the function in log space
-    def log_func(self, energy, longitude, latitude, 
+    def log_flux_func(self, energy, longitude, latitude, 
                  spectral_parameters={}, spatial_parameters={}): 
         """
         Computes the log of the interpolated Fermi-Gaggero model at given energy, longitude, and latitude.
@@ -178,15 +159,15 @@ class construct_log_fermi_gaggero_bkg(object):
             float: The log of the Fermi-Gaggero diffuse background model at the specified location.
         """
         return np.log(
-        self.fermi_diffuse_interpolator(
+        self.fermi_diffuse_flux_interpolator(
             (energy, longitude, latitude)
             ))
     
 
 # Just a little helper class
-class FermiGaggeroDiffusePrior(DiscreteLogPrior):
+class FermiGaggeroDiffusePrior(SourceFluxDiscreteLogPrior):
     """
-    A subclass of DiscreteLogPrior for modeling the Fermi-Gaggero diffuse astrophysical background prior.
+    A subclass of SourceFluxDiscreteLogPrior for modeling the Fermi-Gaggero diffuse astrophysical background prior.
 
     Args:
         energy_axis (np.ndarray): The energy axis for the prior (TeV).
@@ -200,12 +181,9 @@ class FermiGaggeroDiffusePrior(DiscreteLogPrior):
     response functions and allowing for normalization over the specified energy, longitude, and latitude axes.
     """
 
-    def __init__(self, energy_axis:np.ndarray, longitudeaxis:np.ndarray, latitudeaxis:np.ndarray,  
-                 irf: IRF_LogLikelihood, 
-                 log_exposure_map: GammaLogExposure = None, 
+    def __init__(self, 
+                 axes: list[np.ndarray[u.Quantity]]| tuple[np.ndarray[u.Quantity]]=None,
                  binning_geometry: GammaBinning = None,
-                 normalise: bool=True, 
-                 logspace_integrator: callable = logspace_riemann, 
                  *args, **kwargs):
         """Initializes an instance of FermiGaggeroDiffusePrior, a subclass of DiscreteLogPrior, 
         designed for modeling the Fermi-Gaggero diffuse astrophysical background prior with respect 
@@ -227,31 +205,21 @@ class FermiGaggeroDiffusePrior(DiscreteLogPrior):
         """
 
 
-        if not(binning_geometry is None):
-            self.binning_geometry = binning_geometry
-        else:
-            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis) 
-
-
-        self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
-                                                 irfs=irf, log_exposure_map=log_exposure_map)
+        self._create_geometry(axes=axes, binning_geometry=binning_geometry)
 
         self.construct_log_fermi_gaggero_bkg_func_class = construct_log_fermi_gaggero_bkg(
-            energy_axis=energy_axis, 
-            longitudeaxis=longitudeaxis, 
-            latitudeaxis=latitudeaxis,  
-            log_exposure_map= self.log_exposure_map,
             binning_geometry=self.binning_geometry,
-            normalise=normalise, 
-            logspace_integrator=logspace_integrator
         )
         super().__init__(
-            name='Fermi-Gaggero Diffuse',
-            axes=(energy_axis, longitudeaxis, latitudeaxis),
-            logfunction=self.construct_log_fermi_gaggero_bkg_func_class.log_func, 
+            name='FermiGaggeroDiffusePrior',
+            axes=self.binning_geometry.axes,
+            binning_geometry=self.binning_geometry,
+            log_flux_function=self.construct_log_fermi_gaggero_bkg_func_class.log_flux_func, 
             *args, **kwargs
         )
         
 
-        self.unit = fermi_rate_units
+        self.unit = fermi_obs_rate_units
+
+    
 

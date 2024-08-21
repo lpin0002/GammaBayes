@@ -1,1 +1,1 @@
-from .hess_catalogue_sources import construct_hess_source_map, construct_hess_source_map_interpolation, HESSCatalogueSources_Prior
+from .hess_catalogue_sources import construct_hess_flux_matrix, construct_hess_source_map_interpolation, HESSCatalogueSources_Prior

@@ -14,7 +14,7 @@ import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
 import os, warnings, logging, time, functools, numpy as np, h5py
-
+from icecream import ic
 
 class DiscreteAdaptiveScan(DiscreteBruteScan):
     """
@@ -211,6 +211,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             - The method then integrates these values with the log prior matrices, accounting for the rearrangement 
               of axes due to bounds.
         """
+
 
 
         temp_axes_and_indices = [

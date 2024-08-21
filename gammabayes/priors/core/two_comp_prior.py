@@ -1,12 +1,13 @@
 import numpy as np
 from os import path
 from gammabayes.priors.core.discrete_logprior import DiscreteLogPrior
+from gammabayes.priors.core.source_flux_prior import SourceFluxDiscreteLogPrior
 from gammabayes.core import GammaLogExposure, GammaBinning
 import time
 
 
 
-class TwoCompFluxPrior(DiscreteLogPrior):
+class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
     """
     A two-component prior model combining both spectral and spatial components adding exposure to source flux model.
     
@@ -21,9 +22,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
         spatial_class: A class representing the spatial model component. Similar to spectral_class, 
                        it must provide a method for calculating log values.
         
-        irf_loglike: An instance of a class representing the Instrument Response Function (IRF) log-likelihood.
-                     This is used to calculate the log-likelihood of the data given the model parameters.
-        
         spectral_mesh_efficient_logfunc (optional): A function for efficient log computation over a mesh grid for the spectral component. 
                                                      Defaults to None, indicating that the default method on spectral_class is used.
         
@@ -33,23 +31,17 @@ class TwoCompFluxPrior(DiscreteLogPrior):
         spectral_class_kwds (dict, optional): Keyword arguments to be passed to the spectral_class during initialization. Defaults to {}.
         
         spatial_class_kwds (dict, optional): Keyword arguments to be passed to the spatial_class during initialization. Defaults to {}.
-        
-        name (str, optional): A name for the two-component prior model. Defaults to 'UnknownTwoComp'.
-    """
+        """
 
 
 
     def __init__(self, 
                  spectral_class, 
                  spatial_class, 
-                 irf_loglike, #: IRF_LogLikelihood,
                  spectral_mesh_efficient_logfunc=None, 
                  spatial_mesh_efficient_logfunc=None, 
                  spectral_class_kwds: dict = {},
                  spatial_class_kwds: dict = {},
-                 binning_geometry: GammaBinning = None,
-                 name='UnknownTwoComp',
-                 log_exposure_map=None,
                  *args, **kwargs
                  ):
         """
@@ -65,10 +57,7 @@ class TwoCompFluxPrior(DiscreteLogPrior):
             
             spatial_class: A class representing the spatial model component. Similar to spectral_class, 
                            it must provide a method for calculating log values.
-            
-            irf_loglike: An instance of a class representing the Instrument Response Function (IRF) log-likelihood.
-                         This is used to calculate the log-likelihood of the data given the model parameters.
-            
+                        
             spectral_mesh_efficient_logfunc (optional): A function for efficient log computation over a mesh grid for the spectral component. 
                                                          Defaults to None, indicating that the default method on spectral_class is used.
             
@@ -84,7 +73,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
 
         self.spectral_comp    = spectral_class(**spectral_class_kwds)
         self.spatial_comp     = spatial_class(**spatial_class_kwds)
-        self.irf_loglike       = irf_loglike
 
         if spectral_mesh_efficient_logfunc is None:
             spectral_mesh_efficient_exist = hasattr(self.spectral_comp, 'mesh_efficient_logfunc')
@@ -100,30 +88,24 @@ class TwoCompFluxPrior(DiscreteLogPrior):
 
 
         if self.mesh_efficient_exists:
-            super().__init__(logfunction=self.logfunction, 
-                            log_mesh_efficient_func=self.log_mesh_efficient_func,
-                            irf_loglike=irf_loglike,
-                            name=name,
-                            binning_geometry = binning_geometry,
-                            *args, **kwargs
-                            )
+            super().__init__(
+                log_flux_function = self.log_flux_function, 
+                log_mesh_efficient_flux_func = self.log_mesh_efficient_flux_func,
+                *args, **kwargs
+                )
         else:
-            super().__init__(logfunction=self.logfunction, 
-                             irf_loglike=irf_loglike,
-                             binning_geometry=binning_geometry,
-                            name=name,
-                            *args, **kwargs
-                            )
+            super().__init__(
+                log_flux_function = self.log_flux_function, 
+                *args, **kwargs
+                )
             
-        self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, irfs=self.irf_loglike, log_exposure_map=log_exposure_map)
 
-
-    def logfunction(self, energy: float | np.ndarray | list, 
+    def log_flux_function(self, energy: float | np.ndarray | list, 
                        lon: float | np.ndarray | list,  
                        lat: float | np.ndarray | list,  
                        spectral_parameters: dict = {},
                        spatial_parameters: dict = {}, 
-                       log_exposure_map: GammaLogExposure = None) -> np.ndarray:
+                       ) -> np.ndarray:
         """
         Calculate the log prior distribution for given energy, longitude, and latitude values, 
         along with optional spectral and spatial parameters.
@@ -145,8 +127,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
         Returns:
             np.ndarray: The calculated log prior values as a numpy array.
         """
-        if log_exposure_map is None:
-            log_exposure_map = self.log_exposure_map
 
 
         spectral_axes = energy, *spectral_parameters.values()
@@ -227,39 +207,19 @@ class TwoCompFluxPrior(DiscreteLogPrior):
         logspatialvals = np.sum(spatial_slices, axis=-1).reshape(energy.shape)
 
         ####################
-        # log_aeffvals = self.irf_loglike.log_aeff(energy.flatten()*spectral_units[0], 
-        #                                          longitude.flatten()*spatial_units[0], 
-        #                                          latitude.flatten()*spatial_units[1]).reshape(energy.shape)
-
-        log_exposure_vals = log_exposure_map(energy.flatten()*spectral_units[0], 
-                                                 lon.flatten()*spatial_units[0], 
-                                                 lat.flatten()*spatial_units[1]).reshape(energy.shape)
     
-        logpdfvalues = logspectralvals+logspatialvals+log_exposure_vals
+        logpdfvalues = logspectralvals+logspatialvals
 
         
         return logpdfvalues
-    
-    def __call__(self, *args, **kwargs) -> np.ndarray:
-        """
-        Enable the class instance to be called as a function, directly invoking the `logfunction` method.
         
-        This allows for a more intuitive use of the class instance for calculating log distributions.
-        
-        Returns:
-            np.ndarray: The log prior values calculated by `logfunction`.
-        """
-        
-        return self.logfunction(*args, **kwargs)
-    
 
-    def log_mesh_efficient_func(self, 
+    def log_mesh_efficient_flux_func(self, 
                                 energy: float | np.ndarray | list,
                                 lon: float | np.ndarray | list, 
                                 lat: float | np.ndarray | list,
                                 spatial_parameters: dict = {}, 
                                 spectral_parameters: dict = {}, 
-                                log_exposure_map: GammaLogExposure = None,
                                 ) -> np.ndarray:
         
         """
@@ -282,8 +242,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
         Returns:
             np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
-        if log_exposure_map is None:
-            log_exposure_map = self.log_exposure_map
 
 
 
@@ -306,13 +264,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
 
         ####################
 
-        aeff_energy_mesh, aeff_lon_mesh, aeff_lat_mesh = np.meshgrid(energy, lon, lat, indexing='ij')
-
-        # Flattening the meshes helps the IRFs evaluate
-        # log_aeffvals = self.irf_loglike.log_aeff(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
-        log_exposure_vals = log_exposure_map(aeff_energy_mesh.flatten(), aeff_lon_mesh.flatten(), aeff_lat_mesh.flatten()).reshape(aeff_energy_mesh.shape)
-        ####################
-
         # Convention is Energy, Lon, Lat, Mass, [Spectral_Params], [Spatial_Params]
 
         # Expanding along Lon, Lat, and spatial param dims
@@ -329,14 +280,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
                                         axis=expand_spatial_axes)
         
         logpdfvalues = logpdfvalues + log_spatial_vals
-
-        
-        # Expanding along all the spectral and spatial parameters
-        expand_exposure_axes = list(range(3, num_total_params))
-        log_exposure_vals = np.expand_dims(log_exposure_vals, 
-                                        axis=expand_exposure_axes)
-        
-        logpdfvalues = logpdfvalues + log_exposure_vals
 
 
         return np.squeeze(logpdfvalues)
@@ -371,9 +314,6 @@ class TwoCompFluxPrior(DiscreteLogPrior):
             np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
             
-        if log_exposure_map is None:
-            log_exposure_map = self.log_exposure_map
-
         num_spectral_params     = len(spectral_parameters)
 
         num_spatial_params      = len(spatial_parameters)
@@ -384,31 +324,12 @@ class TwoCompFluxPrior(DiscreteLogPrior):
 
         ####################
 
-        times = []
-
-        times.append(time.perf_counter())
-
         logspectralvals     = self.spectral_comp.mesh_integral_efficient_logfunc(energy, kwd_parameters=spectral_parameters)
 
         ####################
 
-        times.append(time.perf_counter())
-
         logspatialvals      = self.spatial_comp.mesh_efficient_logfunc(lon, lat, kwd_parameters=spatial_parameters)
 
-        times.append(time.perf_counter())
-
-
-        ####################
-
-        exposure_energy_mesh, exposure_lon_mesh, exposure_lat_mesh = self.binning_geometry.axes_mesh
-
-        times.append(time.perf_counter())
-
-        # Flattening the meshes helps the IRFs evaluate
-        log_exposure_vals = log_exposure_map(exposure_energy_mesh.flatten(), exposure_lon_mesh.flatten(), exposure_lat_mesh.flatten()).reshape(exposure_energy_mesh.shape)
-        
-        times.append(time.perf_counter())
 
         ####################
 
@@ -427,25 +348,8 @@ class TwoCompFluxPrior(DiscreteLogPrior):
         log_spatial_vals = np.expand_dims(logspatialvals, 
                                         axis=expand_spatial_axes)
         
-        times.append(time.perf_counter())
 
         logpdfvalues = logpdfvalues + log_spatial_vals
 
-        times.append(time.perf_counter())
-
         
-        # Expanding along all the spectral and spatial parameters
-        expand_aeff_axes = list(range(3, num_total_params))
-        log_exposure_vals = np.expand_dims(log_exposure_vals, 
-                                        axis=expand_aeff_axes)
-        
-        times.append(time.perf_counter())
-
-        logpdfvalues = logpdfvalues + log_exposure_vals
-
-        times.append(time.perf_counter())
-
-
-        print(np.diff(times))
-
         return np.squeeze(logpdfvalues)

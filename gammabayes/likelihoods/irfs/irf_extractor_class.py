@@ -366,7 +366,7 @@ class IRFExtractor(object):
         
         return output
     
-    def log_bkg_CCR(self, energy:Quantity, longitude:Quantity, latitude:Quantity, 
+    def log_bkg_CCR(self, energy:Quantity, lon:Quantity, lat:Quantity, 
                     spectral_parameters:dict={}, spatial_parameters:dict={},
                     pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], ):
         """
@@ -374,8 +374,8 @@ class IRFExtractor(object):
 
         Args:
             energy (Quantity): True energy of a gamma-ray event detected by the CTA.
-            longitude (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
-            latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
             spectral_parameters (dict, optional): Spectral parameters. Defaults to {}.
             spatial_parameters (dict, optional): Spatial parameters. Defaults to {}.
             pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
@@ -384,7 +384,7 @@ class IRFExtractor(object):
             float: Natural log of the charged cosmic ray mis-identification rate for the CTA.
         """
 
-        offset  = haversine(longitude, latitude, pointing_dir[0], pointing_dir[1])
+        offset  = haversine(lon, lat, pointing_dir[0], pointing_dir[1])
 
 
 

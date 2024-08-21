@@ -111,7 +111,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         """
         return self.irf_loglikelihood.log_psf(pointing_dir=self.pointing_dir, *args, **kwargs)
     
-    def log_aeff(self, *args, **kwargs):
+    def log_aeff(self, *args, pointing_dir =None, **kwargs):
         """
         Wrapper for the Gammapy interpretation of the log of the CTA effective area function.
 
@@ -124,10 +124,13 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         Returns:
             float: The natural log of the effective area of the CTA in cm^2.
         """
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
+
         return self.irf_loglikelihood.log_aeff(pointing_dir=self.pointing_dir, *args, **kwargs)
     
 
-    def log_bkg_CCR(self, *args, **kwargs):
+    def log_bkg_CCR(self, *args, pointing_dir=None, **kwargs):
         """
         Wrapper for the Gammapy interpretation of the log of the CTA's background charged cosmic-ray mis-identification rate.
 
@@ -142,7 +145,11 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         Returns:
             float: Natural log of the charged cosmic ray mis-identification rate for the CTA.
         """
-        return self.irf_loglikelihood.log_bkg_CCR(pointing_dir=self.pointing_dir, *args, **kwargs)
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
+
+            
+        return self.irf_loglikelihood.log_bkg_CCR(pointing_dir=pointing_dir, *args, **kwargs)
 
 
     def create_log_norm_matrices(self, **kwargs):

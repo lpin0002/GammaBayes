@@ -10,70 +10,90 @@ import matplotlib.pyplot as plt
 import warnings, logging
 import h5py, pickle
 
-
+# TODO: #TechDebt
 class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
 
 
     def __init__(self,
-                 name: str=None, 
-                 inputunits: str=None, 
                  logfunction: callable=None, 
                  log_mesh_efficient_func: callable = None,
-                 axes: tuple[np.ndarray] | None = None, 
                  binning_geometry: GammaBinning = None,
                  default_spectral_parameters: dict = {},  
                  default_spatial_parameters: dict = {},  
-                 iterative_logspace_integrator: callable = iterate_logspace_integration,
                  irf_loglike=None,
-                 log_scaling_factor: int|float =0.,
-                 observation_times=None,
-                 observation_times_unit=None,
+                 observation_time=None,
+                 observation_time_unit=None,
+                 pointing_dir=np.array([0., 0.])*u.deg,
+                 *args, 
+                 **kwargs,
                  ):
-                
+        self.pointing_dir = pointing_dir
+        self.observation_time = observation_time
+        self.observation_time_unit = observation_time_unit
 
-        self._logfunction = logfunction
-        self._log_mesh_efficient_func = log_mesh_efficient_func
+        self._obs_logfunction = logfunction
+        self._obs_log_mesh_efficient_func = log_mesh_efficient_func
+
+        if log_mesh_efficient_func is None:
+            self.log_mesh_efficient_func_input = None
+        else:
+            self.log_mesh_efficient_func_input = self.obs_log_mesh_efficient_func
+        
 
         
-        super().__init__(name=name, 
-                 inputunits=inputunits, 
-                 logfunction=self.logfunction, 
-                 log_mesh_efficient_func=self.log_mesh_efficient_func,
-                 axes=axes, 
+        super().__init__(
+                 logfunction=self.obs_logfunction, 
+                 log_mesh_efficient_func=self.log_mesh_efficient_func_input,
                  binning_geometry=binning_geometry,
                  default_spectral_parameters=default_spectral_parameters,  
                  default_spatial_parameters=default_spatial_parameters,  
-                 iterative_logspace_integrator=iterative_logspace_integrator,
                  irf_loglike=irf_loglike,
-                 log_scaling_factor=log_scaling_factor,)
+                 *args,
+                 **kwargs)
         
 
         # self.log_exposure_map basically is just for possibly complicated observation time maps
         self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
                                                  irfs=self.irf_loglike,
-                                                 observation_times=observation_times,
-                                                 observation_times_unit=observation_times_unit)
+                                                 observation_time=observation_time,
+                                                 observation_time_unit=observation_time_unit,
+                                                 pointing_dir=pointing_dir)
 
         
 
-    def logfunction(self, energy, lon, lat, log_exposure_map:GammaLogExposure=None, *args, **kwargs):
+    def obs_logfunction(self, energy, lon, lat, 
+                    log_exposure_map:GammaLogExposure=None, pointing_dir = None, observation_time = None, *args, **kwargs):
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
+        if observation_time is None:
+            observation_time = self.observation_time
+        
+        
+        
+        if log_exposure_map is None:
+            log_exposure_map = self.log_exposure_map
+            log_exposure_map.observation_time = observation_time
+            
+
+
+        return self._obs_logfunction(energy, lon, lat, pointing_dir=pointing_dir, *args, **kwargs) \
+            + log_exposure_map(energy, lon, lat, pointing_dir=pointing_dir, observation_time=observation_time)
+
+    def obs_log_mesh_efficient_func(self, energy, lon, lat, 
+                                 log_exposure_map:GammaLogExposure = None, pointing_dir = None, observation_time=None, *args, **kwargs):
+
         if log_exposure_map is None:
             log_exposure_map = self.log_exposure_map
 
-
-        return self._logfunction(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy, lon, lat)
-
-    def _log_mesh_efficient_func(self, energy, lon, lat, log_exposure_map:GammaLogExposure = None, *args, **kwargs):
-
-        if log_exposure_map is None:
-            log_exposure_map = self.log_exposure_map
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
 
 
         energy_mesh, lon_mesh, lat_mesh = np.meshgrid(energy, lon, lat, indexing='ij')
 
-
-
-        return self._log_mesh_efficient_func(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten()).reshape(energy_mesh.shape)
+        # Not a fan of hitting maximum recursion depth? Me neither funnily enough
+        return self._obs_log_mesh_efficient_func(energy, lon, lat, pointing_dir=pointing_dir, *args, **kwargs) \
+            + log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten(), pointing_dir=pointing_dir, observation_time=observation_time).reshape(energy_mesh.shape)
 
     
             

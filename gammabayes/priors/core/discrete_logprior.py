@@ -4,7 +4,7 @@ from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExposure
 # from gammabayes import EventData
-
+from icecream import ic
 from astropy import units as u
 import matplotlib.pyplot as plt
 
@@ -105,6 +105,7 @@ class DiscreteLogPrior(object):
     
     
     def _scaled_log_mesh_efficient_func(self, *args, **kwargs):
+
         return  self.log_scaling_factor + self._log_mesh_efficient_func(*args, **kwargs)
 
     
@@ -134,15 +135,17 @@ class DiscreteLogPrior(object):
         Returns:
             np.ndarray | float: The result from the logfunction, which is the log prior value(s) for the given input(s).
         """
-        return  self.log_scaling_factor+self.logfunction(*args, **kwargs)
+        output = self.logfunction(*args, **kwargs)
+        return output
 
     
-    def normalisation(self, log_prior_values: np.ndarray = None, 
+    def log_normalisation(self, log_prior_values: np.ndarray = None, 
                       spectral_parameters: dict = {}, 
                       spatial_parameters: dict = {},
-                      axisindices: list = [0,1,2]) -> np.ndarray | float:
+                      axisindices: list = [0,1,2],
+                      *args, **kwargs) -> np.ndarray | float:
         """
-        Calculates the normalisation constant of the log prior over specified axes.
+        Calculates the log normalisation constant of the log prior over specified axes.
 
         Args:
             log_prior_values (np.ndarray, optional): Pre-computed log prior values. If None, they will be computed using default or provided hyperparameters.
@@ -163,7 +166,8 @@ class DiscreteLogPrior(object):
             if self.efficient_exist:
                 log_prior_values = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
                                                                 spectral_parameters = spectral_parameters,
-                                                                spatial_parameters = spatial_parameters)
+                                                                spatial_parameters = spatial_parameters,
+                                                                *args, **kwargs)
             else:
                 inputmesh = np.meshgrid(*self.binning_geometry.axes, 
                                 *spectral_parameters.values(),
@@ -171,7 +175,8 @@ class DiscreteLogPrior(object):
         
                 log_prior_values = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
                                                 spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                                spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
+                                                spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())},
+                                                *args, **kwargs
                                                 )    
         log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.binning_geometry.axes, axisindices=axisindices)
 
@@ -180,10 +185,12 @@ class DiscreteLogPrior(object):
     
     
     def sample(self, 
-               numsamples: int, 
+               numsamples: int=None, 
                log_prior_values: np.ndarray = None, 
                spectral_parameters: dict = None, 
-               spatial_parameters: dict = None)  -> np.ndarray:
+               spatial_parameters: dict = None,
+               *args, **kwargs,
+               )  -> np.ndarray:
         """
         Generates samples from the prior distribution using inverse transform sampling.
 
@@ -206,34 +213,50 @@ class DiscreteLogPrior(object):
 
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
+            
+        
+            
+        
+        if log_prior_values is None:
+            if self.efficient_exist:
+                log_prior_values = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
+                                                                spectral_parameters = spectral_parameters,
+                                                                spatial_parameters = spatial_parameters,
+                                                                *args, **kwargs)
+
+            else:
+                inputmesh = np.meshgrid(*self.binning_geometry.axes, 
+                                *spectral_parameters.values(),
+                                *spatial_parameters.values(), indexing='ij') 
+        
+                log_prior_values = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
+                                                spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
+                                                spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())},
+                                                *args, **kwargs
+                                                )
+    
+        log_prior_values = np.asarray(log_prior_values)
+                
+                
+                
+        # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
+            # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
+            # So we will double check the normalisation
+        log_normalisation = self.log_normalisation(log_prior_values=log_prior_values, *args, **kwargs)
+
+
+        if numsamples is None:
+            # If no samples are given it is presumed that the prior function corresponds to the observed flux rate
+                # In which case the normalisation corresponds to the number of events for the given exposure
+            numsamples = np.exp(log_normalisation)
+
 
         numsamples = int(round(numsamples))
-        
-        if numsamples>0:
-            if log_prior_values is None:
-                if self.efficient_exist:
-                    log_prior_values = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
-                                                                  spectral_parameters = spectral_parameters,
-                                                                  spatial_parameters = spatial_parameters)
 
-                else:
-                    inputmesh = np.meshgrid(*self.binning_geometry.axes, 
-                                    *spectral_parameters.values(),
-                                    *spatial_parameters.values(), indexing='ij') 
-            
-                    log_prior_values = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
-                                                    spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
-                                                    spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())}
-                                                    )
         
-            log_prior_values = np.asarray(log_prior_values)
-                
-                
-                
-            # This code is presuming a large number of events. This can cause a lot of numerical instability issues down the line 
-                # of a hierarchical models (especially without the use of samplers which is currently the case for this code)
-                # So we will double check the normalisation
-            log_prior_values = np.squeeze(log_prior_values) - self.normalisation(log_prior_values=log_prior_values)
+        if numsamples>=1:
+
+            log_prior_values = np.squeeze(log_prior_values) - log_normalisation
 
             logdx = construct_log_dx_mesh(self.binning_geometry.axes)
                         
@@ -249,7 +272,11 @@ class DiscreteLogPrior(object):
                              irf_loglike=self.irf_loglike,
                              )
         else:
-            return  GammaObs(binning=self.binning_geometry,
+            return  GammaObs(
+                energy=[], 
+                lon=[], 
+                lat=[], 
+                binning=self.binning_geometry,
                              meta={'source':self.name},
                              irf_loglike=self.irf_loglike,
                              )
@@ -276,11 +303,11 @@ class DiscreteLogPrior(object):
         Returns:
         - np.ndarray: An array of log prior values for the specified parameters and axes.
         """
-        
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 
         if self.efficient_exist:
+
             outputarray = self.log_mesh_efficient_func(*self.binning_geometry.axes, 
                                                        spectral_parameters=spectral_parameters, 
                                                        spatial_parameters=spatial_parameters)
@@ -298,11 +325,11 @@ class DiscreteLogPrior(object):
     
         if normalise:
             # Normalisation is done twice to reduce numerical instability issues
-            normalisation = self.normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
+            log_normalisation = self.log_normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
 
-            logging.info(f"normalisation.shape: {normalisation.shape}")
-            normalisation = np.where(np.isinf(normalisation), 0, normalisation)
-            outputarray = outputarray - normalisation
+            logging.info(f"normalisation.shape: {log_normalisation.shape}")
+            log_normalisation = np.where(np.isinf(log_normalisation), 0, log_normalisation)
+            outputarray = outputarray - log_normalisation
 
             # normalisation = self.normalisation(log_prior_values = outputarray, axisindices=normalisation_axes)
             # normalisation = np.where(np.isneginf(normalisation), 0, normalisation)
