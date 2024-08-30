@@ -200,7 +200,7 @@ class DiscreteBruteScan(object):
         self.iterative_logspace_integrator      = iterative_logspace_integrator
 
         # Single dimension log-space integrator (fully vectorised)
-        self.logspace_integrator            = logspace_integrator
+        self.logspace_integrator                = logspace_integrator
 
         # Doesn't have to be initialised here, but you can do it if you want
         self.mixture_parameter_specifications   = ParameterSet(mixture_parameter_specifications)

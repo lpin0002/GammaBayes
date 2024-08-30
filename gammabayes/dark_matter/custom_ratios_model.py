@@ -52,10 +52,12 @@ class CustomDMRatiosModel(object):
                  irf_loglike:DiscreteLogLikelihood, 
                  axes: list | tuple | np.ndarray,
                  spatial_class: DM_Profile = Einasto_Profile, 
-
+                 
+                 name='DM',
                  channels: list[str] | str = 'all',
                  default_spectral_parameters: dict = {},
                  default_spatial_parameters: dict = {},
+
                  ratios: dict = None,
                  *args, **kwargs
                  ):
@@ -75,6 +77,7 @@ class CustomDMRatiosModel(object):
         """
         
         # Getting all possible channels as in the PPPC tables
+        self.name = name
         all_channels = list(PPPCReader.darkSUSY_to_PPPC_converter.keys())
         self.is_single_channel = False
 
@@ -138,6 +141,7 @@ class CustomDMRatiosModel(object):
                         spectral_class_kwds = spectral_class_kwds,
                         default_spectral_parameters=default_spectral_parameters,
                         default_spatial_parameters=default_spatial_parameters,
+                        *args, **kwargs
                         )
                 
 

@@ -235,11 +235,11 @@ class HESSCatalogueSources_Prior(SourceFluxDiscreteLogPrior):
         self.log_hess_class_instance = construct_hess_source_map_interpolation(binning_geometry=self.binning_geometry,)
         
         
-        DiscreteLogPrior.__init__(self,
+        super().__init__(
             name='HESSCatalogueSources_Prior',
             axes=self.binning_geometry.axes,
             binning_geometry=self.binning_geometry,
-            logfunction=self.log_hess_class_instance.log_func, 
+            log_flux_function=self.log_hess_class_instance.log_func, 
             *args, **kwargs
         )
 

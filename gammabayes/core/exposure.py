@@ -19,7 +19,7 @@ class GammaLogExposure:
                  log_exposure_map: np.ndarray = None,
                  pointing_dir: np.ndarray = None,
                  observation_time: float | np.ndarray=None, 
-                 observation_time_unit: u.Unit = None,
+                 observation_time_unit: u.Unit = u.s,
                  use_log_aeff: bool = True
                  ):
         
@@ -29,14 +29,13 @@ class GammaLogExposure:
         self.use_log_aeff = use_log_aeff
 
         if isinstance(log_exposure_map, GammaLogExposure):
-            self = copy.deepcopy(log_exposure_map)
+            for attr, value in log_exposure_map.__dict__.items():
+                setattr(self, attr, copy.deepcopy(value))
         else:
             self.binning_geometry = binning_geometry
 
             if observation_time is None:
                 observation_time = 1.*u.hr
-            if observation_time_unit is None:
-                observation_time_unit = 1*u.hr
 
             self.irfs = irfs
             self.pointing_dir = pointing_dir
@@ -64,8 +63,9 @@ class GammaLogExposure:
             else:
                 self.time_unit = observation_time_unit
 
+            self.observation_time_unit = observation_time_unit
 
-            self.unit = self.time_unit*self.aeff_units
+            self.unit = self.observation_time_unit*self.aeff_units
 
 
 
@@ -92,38 +92,36 @@ class GammaLogExposure:
 
     def __add__(self, other):
 
-        # if isinstance(other, GammaLogExposure):
+        if isinstance(other, GammaLogExposure):
 
-        #     if self.binning_geometry!=other.binning_geometry:
-        #         raise NotImplemented("Adding exposures for different binning geometries is currently not supported.")
-
-
-        #     other_unit_scaling = (self.aeff_units/other.aeff_units).to("")
-
-        #     new_exposure_map = np.logaddexp(self.log_exposure_map, np.log(other_unit_scaling)+other.log_exposure_map)
+            if self.binning_geometry!=other.binning_geometry:
+                raise NotImplemented("Adding exposures for different binning geometries is currently not supported.")
 
 
-        #     return GammaLogExposure(binning_geometry=self.binning_geometry, 
-        #                             log_exposure_map=new_exposure_map,
-        #                             irfs=self.irfs,
-        #                             pointing_dir=np.mean([self.pointing_dir, other.pointing_dir], axis=0),
-        #                             observation_time=self.observation_time+other.observation_time,
-        #                             )
-        # else:
+            other_unit_scaling = (self.aeff_units/other.aeff_units).to("")
 
-        if not(self._same_as_cached()):
-            self.refresh()
+            new_exposure_map = np.logaddexp(self.log_exposure_map, np.log(other_unit_scaling)+other.log_exposure_map)
 
-        return other+self.log_exposure_map
+
+            return GammaLogExposure(binning_geometry=self.binning_geometry, 
+                                    log_exposure_map=new_exposure_map,
+                                    irfs=self.irfs,
+                                    pointing_dir=np.mean([self.pointing_dir, other.pointing_dir], axis=0)*u.deg,
+                                    observation_time=self.observation_time+other.observation_time,
+                                    )
+        else:
+
+            return other+self.log_exposure_map
         
 
 
-    def _same_as_cached(self, pointing_dir=None, observation_time=None):
+    def _same_as_cached(self, pointing_dir:np.ndarray[u.Quantity]=None, observation_time:u.Quantity=None):
 
         if pointing_dir is None:
             pointing_dir = self.pointing_dir
         if observation_time is None:
             observation_time = self.observation_time
+        observation_time = observation_time.to(self.observation_time_unit)
 
         same_as_cached = True
 
@@ -158,7 +156,7 @@ class GammaLogExposure:
         else:
             log_exposure_vals = self.binning_geometry.axes_mesh[0].value*0
         
-        log_exposure_vals+=np.log(self.observation_time.to(self.time_unit).value)
+        log_exposure_vals+=np.log(self.observation_time.to(self.observation_time_unit).value)
 
 
         self.log_exposure_map = log_exposure_vals
@@ -175,10 +173,10 @@ class GammaLogExposure:
         if self._same_as_cached(pointing_dir, observation_time):
             return self._exp_interpolator((energy, lon , lat), *args, **kwargs)*self.unit
         else:
-            return np.exp(self.log_aeff(energy, lon, lat, pointing_dir=pointing_dir)+np.log(observation_time.to(self.time_unit).value))*self.unit
+            return np.exp(self.log_aeff(energy, lon, lat, pointing_dir=pointing_dir)+np.log(observation_time.to(self.observation_time_unit).value))*self.unit
         
 
-    def peek(self, fig_kwargs={}, pcolormesh_kwargs={}, **kwargs):
+    def peek(self, fig_kwargs={}, pcolormesh_kwargs={}, plot_kwargs={}, **kwargs):
 
         from matplotlib import pyplot as plt
         from matplotlib import patches
@@ -186,20 +184,70 @@ class GammaLogExposure:
         from gammabayes.utils.integration import iterate_logspace_integration
 
         fig_kwargs.update(kwargs)
-        integrated_exposure = iterate_logspace_integration(logy = self.log_exposure_map, 
+        integrated_energy_exposure = iterate_logspace_integration(logy = self.log_exposure_map, 
                                                         axes=(self.binning_geometry.energy_axis.value,), 
                                                         axisindices=[0])
+        
+
+        integrated_spatial_exposure = iterate_logspace_integration(logy = self.log_exposure_map, 
+                                                axes=(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value,), 
+                                                axisindices=[1, 2])
+
+
+
+        energy_slice = np.abs(self.binning_geometry.energy_axis.value-1).argmin()
+        lon_slice = np.abs(self.binning_geometry.lon_axis.value-self.pointing_dir[0].value).argmin()
+        lat_slice = np.abs(self.binning_geometry.lat_axis.value-self.pointing_dir[1].value).argmin()
+
+        energy_slice_val = self.binning_geometry.energy_axis.value[energy_slice]
+        lon_slice_val = self.binning_geometry.lon_axis.value[lon_slice]
+        lat_slice_val = self.binning_geometry.lon_axis.value[lat_slice]
+
+
+        slice_coord_str = f"({lon_slice_val:.2g}, {lat_slice_val:.2g})"
         
         if 'norm' not in pcolormesh_kwargs:
             pcolormesh_kwargs['norm'] = 'log'
 
-        plt.figure(**fig_kwargs)
-        plt.pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, integrated_exposure, **pcolormesh_kwargs)
-        plt.colorbar(label=r"Exposure ["+self.unit.to_string('latex')+"]")
-        plt.xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
-        plt.ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
+        fig, ax = plt.subplots(2, 2, **fig_kwargs)
 
-        plt.show()
+
+        ax[0,0].plot(self.binning_geometry.energy_axis.value, np.exp(self.log_exposure_map[:, lon_slice, lat_slice].T), label=f'Exposure at {slice_coord_str}', **plot_kwargs)
+        ax[0,0].set_xscale('log')
+        ax[0,0].set_xlabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
+        ax[0,0].set_ylabel(r"Exposure ["+(self.unit).to_string('latex')+"]",)
+        ax[0,0].legend()
+
+
+        ax[0,1].plot(self.binning_geometry.energy_axis.value, np.exp(integrated_spatial_exposure.T), **plot_kwargs)
+        ax[0,1].set_xscale('log')
+        ax[0,1].set_xlabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
+        ax[0,1].set_ylabel(r"Integrated Exposure ["+(self.unit*self.binning_geometry.lon_axis.unit*self.binning_geometry.lon_axis.unit).to_string('latex')+"]",)
+
+        pcm = ax[1,0].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, 
+                                 np.exp(self.log_exposure_map[energy_slice, :, :].T),
+                                 **pcolormesh_kwargs)
+        ax[1,0].legend(title="Slice at 1 TeV")
+        plt.colorbar(mappable=pcm, label=r"Exposure ["+(self.unit).to_string('latex')+"]", ax= ax[1,0])
+        ax[1,0].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
+        ax[1,0].set_ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
+        ax[1,0].set_aspect('equal', adjustable='box')
+
+
+        int_pcm = ax[1,1].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, np.exp(integrated_energy_exposure.T), **pcolormesh_kwargs)
+        plt.colorbar(mappable=int_pcm, label=r"Integrated Exposure ["+(self.unit*self.binning_geometry.energy_axis.unit).to_string('latex')+"]", ax= ax[1,1])
+        ax[1,1].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
+        ax[1,1].set_ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
+        ax[1,1].set_aspect('equal', adjustable='box')
+
+
+        plt.tight_layout()
+
+        return fig, ax
+
+    @property
+    def log_obs_time_map(self):
+        return np.log(self.observation_time.to(self.observation_time_unit).value)
             
 
         

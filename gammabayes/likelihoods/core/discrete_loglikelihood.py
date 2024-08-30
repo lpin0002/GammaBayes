@@ -208,7 +208,7 @@ class DiscreteLogLikelihood(object):
         return GammaObs(energy=simvals[0], 
                         lon=simvals[1], 
                         lat=simvals[2], 
-                        binning=self.binning_geometry,
+                        binning_geometry=self.binning_geometry,
                         irf_loglike=self,
                         pointing_dir=pointing_dir
                         )
@@ -231,7 +231,7 @@ class DiscreteLogLikelihood(object):
         """
 
         measured_event_data = GammaObs(energy=[], lon=[], lat=[], pointing_dir=eventdata.pointing_dir, 
-                                        binning=self.binning_geometry, irf_loglike=self)
+                                        binning_geometry=self.binning_geometry, irf_loglike=self)
         for datum_coord, num_datum in zip(*eventdata.nonzero_bin_data):
             measured_event_data+=self.raw_sample(
                 dependentvalues=datum_coord, 

@@ -186,7 +186,7 @@ class IRFExtractor(object):
                                                     hemisphere=hemisphere, 
                                                     prod_vers=prod_vers)
                 
-                print(f"\nPath to irf fits file: {fits_file_path}\n")
+                # print(f"\nPath to irf fits file: {fits_file_path}\n")
                 if prod_version=='prod5':
                     self.extracted_default_irfs  = load_irf_dict_from_file(fits_file_path)
                 elif prod_version=='prod3b':

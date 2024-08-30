@@ -267,7 +267,7 @@ class DiscreteLogPrior(object):
             return GammaObs(energy=simvals[0], 
                              lon=simvals[1], 
                              lat=simvals[2], 
-                             binning=self.binning_geometry,
+                             binning_geometry=self.binning_geometry,
                              meta={'source':self.name},
                              irf_loglike=self.irf_loglike,
                              )
@@ -276,7 +276,7 @@ class DiscreteLogPrior(object):
                 energy=[], 
                 lon=[], 
                 lat=[], 
-                binning=self.binning_geometry,
+                binning_geometry=self.binning_geometry,
                              meta={'source':self.name},
                              irf_loglike=self.irf_loglike,
                              )

@@ -37,4 +37,12 @@ A stable python package version of the code exists on `PyPi` that can be install
 
 `pip install gammabayes`.
 
-This will also take care of the required dependencies for the project.
+This will also take care of the required dependencies for the project. 
+
+We recommend to look through the tutorials for an overview of the functionality of the code however, the figure below shows the main classes of `GammaBayes` in a UML diagram. The main information that one can glean from this are the main classes to understand and what classes need what other `GammaBayes` classes to function. So for example if you just want to use `DiscreteLogPrior` there is a little to understand but not a lot, but if you want to fully understand `ScanOuput_StochasticTreeMixturePosterior` then you essentially need to know everything else in the package to some degree.
+
+For those unfamiliar with UML the diamonds mean that the object that has the diamond next to it has instances of the other connected class, arrows point at classes dependent on the other class (with the other class not necessarily impact by the one pointed at) and clear arrows point at the class that a parent class. However, all I'm trying to show here are the main classes, methods and attributes involved with `GammaBayes` and what classes they are at least related to in some way. 
+
+<p align="center">
+    <img src="misc/GammaBayes_UML.png" alt="drawing" class="center"/>
+</p>

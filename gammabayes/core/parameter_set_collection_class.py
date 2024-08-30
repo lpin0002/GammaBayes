@@ -290,5 +290,7 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
         return np.exp(self.logpdf(input))
     
 
+    
+
 
 

@@ -10,61 +10,69 @@ from icecream import ic
 from astropy import units as u
 
 class GammaObs:
-    def __init__(self, binning: GammaBinning, 
+    def __init__(self, 
+                 binning_geometry: GammaBinning, 
                  energy=[], lon=[], lat=[], 
                  pointing_dir:np.ndarray = None, 
                  observation_time: u.Quantity=None,
                  irf_loglike = None,
-                 logexposure: GammaLogExposure = None,
+                 log_exposure: GammaLogExposure = None,
                  meta:dict = {}, **kwargs):
         
         self.energy = energy
         self.lon = lon
         self.lat = lat
-        self.binning = binning
+        self.log_exposure = log_exposure
+        self.binning_geometry = binning_geometry
         if len(energy):
             self.binned_data, _ = self._bin_data()
         else:
-            self.binned_data = np.zeros(shape=(*self.binning.axes_dim,))
+            self.binned_data = np.zeros(shape=(*self.binning_geometry.axes_dim,))
 
 
 
-        self.irf_loglike = irf_loglike
 
 
         self.meta = meta
-        if 'observation_time' in self.meta:
-            observation_time = self.meta['observation_time']
-
-        if 'pointing_dir' in self.meta:
-            pointing_dir = self.meta['pointing_dir']
 
         self.meta.update(kwargs)
 
         self.observation_time = observation_time
 
 
-        if not(pointing_dir is None) and hasattr(self.irf_loglike, "pointing_dir"):
+        if self.observation_time is None:
+            self.observation_time =  self.meta.get('observation_time', None)
+
+
+        if not(pointing_dir is None):
             self.pointing_dir = pointing_dir
-            self.irf_loglike.pointing_dir = pointing_dir
-
-
-        elif (pointing_dir is None) and 'pointing_dir' in self.meta:
-            self.pointing_dir = self.meta['pointing_dir']
-        else:
-            # If pointing direction not given, the centre of the spatial axes is presumed and
-            self.pointing_dir = np.array([np.mean(self.binning.lon_axis.value), np.mean(self.binning.lat_axis.to(self.binning.lon_axis.unit).value)])*self.binning.lon_axis.unit
         
-        if 'irf_loglike' in self.meta:
-            self.irfs = self.meta['irf_loglike']
+        elif pointing_dir is None:
+            self.pointing_dir = self.meta.get('pointing_dir')
+
+        if self.pointing_dir is None:
+            # If pointing direction not given, the centre of the spatial axes is presumed and
+            self.pointing_dir = np.array([
+                np.mean(self.binning_geometry.lon_axis.value), 
+                np.mean(self.binning_geometry.lat_axis.to(self.binning_geometry.lon_axis.unit).value)
+                ])*self.binning_geometry.lon_axis.unit
+        
+        if not(irf_loglike is None):
+            self.irf_loglike = irf_loglike
+            
+        elif ('irf_loglike' in self.meta):
+            self.irf_loglike = self.meta['irf_loglike']
 
         # If any one of these is not within the meta-data given that the irf_loglike is not contained, 
             # then it will return a False ==> a 0, so the product will be 0. Must either have all or 
             # none will be used as all are necessary.
         elif np.prod([irf_str in self.meta for irf_str in ['edisp', 'psf', 'ccr_bkg', 'aeff']]):
-            self.irfs = {self.meta[irf_str] for irf_str in ['edisp', 'psf', 'ccr_bkg', 'aeff']}
+            self.irf_loglike = {self.meta[irf_str] for irf_str in ['edisp', 'psf', 'ccr_bkg', 'aeff']}
         else:
-            self.irfs = {}
+            self.irf_loglike = {}
+
+        if hasattr(self.irf_loglike, 'pointing_dir'):
+            self.irf_loglike.pointing_dir = pointing_dir
 
 
         if 'hemisphere' in self.meta:
@@ -76,15 +84,15 @@ class GammaObs:
 
     @property
     def energy_axis(self):
-        return self.binning.energy_axis
+        return self.binning_geometry.energy_axis
     
     @property
     def lon_axis(self):
-        return self.binning.lon_axis
+        return self.binning_geometry.lon_axis
     
     @property
     def lat_axis(self):
-        return self.binning.lat_axis
+        return self.binning_geometry.lat_axis
 
     @property
     def spatial_axes(self):
@@ -96,7 +104,7 @@ class GammaObs:
 
 
     def _bin_data(self):
-        binned_data, edges = np.histogramdd([self.energy, self.lon, self.lat], bins=[self.binning.energy_edges, self.binning.lon_edges, self.binning.lat_edges])
+        binned_data, edges = np.histogramdd([self.energy, self.lon, self.lat], bins=[self.binning_geometry.energy_edges, self.binning_geometry.lon_edges, self.binning_geometry.lat_edges])
 
         return binned_data, edges
 
@@ -106,21 +114,21 @@ class GammaObs:
 
     @property
     def binned_energy(self):
-        return np.sum(self.binned_data, axis=(1, 2)), self.binning.energy_axis
+        return np.sum(self.binned_data, axis=(1, 2)), self.binning_geometry.energy_axis
 
 
     @property
     def binned_spatial(self):
-        return np.sum(self.binned_data, axis=0), (self.binning.lon_axis, self.binning.lat_axis)
+        return np.sum(self.binned_data, axis=0), (self.binning_geometry.lon_axis, self.binning_geometry.lat_axis)
 
     @property
     def binned_longitude(self):
-        return np.sum(self.binned_data, axis=(0, 2)), self.binning.lon_axis
+        return np.sum(self.binned_data, axis=(0, 2)), self.binning_geometry.lon_axis
 
 
     @property
     def binned_latitude(self):
-        return np.sum(self.binned_data, axis=(0, 1)), self.binning.lat_axis
+        return np.sum(self.binned_data, axis=(0, 1)), self.binning_geometry.lat_axis
     
 
 
@@ -135,10 +143,10 @@ class GammaObs:
             fig, axs = plt.subplots(1, 2, figsize=figsize, **kwargs)
         
 
-        axs[0].hist(self.energy_axis, bins=self.binning.energy_edges, weights=self.binned_energy[0], color=hist1dcolor, log=True)
-        axs[0].set_xlabel(r'Energy ['+ self.binning.energy_axis.unit.to_string('latex_inline')+']')
+        axs[0].hist(self.energy_axis, bins=self.binning_geometry.energy_edges, weights=self.binned_energy[0], color=hist1dcolor, log=True)
+        axs[0].set_xlabel(r'Energy ['+ self.binning_geometry.energy_axis.unit.to_string('latex_inline')+']')
         axs[0].set_ylabel('Counts')
-        axs[0].set_xlim(np.array([self.binning.energy_edges[0].value, self.binning.energy_edges[-1].value]))
+        axs[0].set_xlim(np.array([self.binning_geometry.energy_edges[0].value, self.binning_geometry.energy_edges[-1].value]))
         axs[0].set_yscale(count_scaling)
         axs[0].set_xscale('log')
 
@@ -150,18 +158,18 @@ class GammaObs:
             axs[0].grid(**full_grid_kwargs)
         
         im = axs[1].imshow(self.binned_spatial[0].T, origin='lower', aspect='auto', extent=[
-            self.binning.lon_edges[0].value, 
-            self.binning.lon_edges[-1].value,
-            self.binning.lat_edges[0].value,
-            self.binning.lat_edges[-1].value,
+            self.binning_geometry.lon_edges[0].value, 
+            self.binning_geometry.lon_edges[-1].value,
+            self.binning_geometry.lat_edges[0].value,
+            self.binning_geometry.lat_edges[-1].value,
             ], 
             norm=count_scaling,
             cmap=cmap)
         plt.colorbar(im, ax=axs[1], label='Counts')
 
 
-        axs[1].set_xlabel(r'Longitude ['+self.binning.lon_axis.unit.to_string('latex_inline')+']')
-        axs[1].set_ylabel(r'Latitude ['+self.binning.lat_axis.unit.to_string('latex_inline')+']')
+        axs[1].set_xlabel(r'Longitude ['+self.binning_geometry.lon_axis.unit.to_string('latex_inline')+']')
+        axs[1].set_ylabel(r'Latitude ['+self.binning_geometry.lat_axis.unit.to_string('latex_inline')+']')
         
         # Apply tight_layout to the figure associated with the axs
         axs[0].figure.tight_layout()
@@ -212,7 +220,7 @@ class GammaObs:
         if not np.array_equal(self.pointing_dir, other.pointing_dir):
             raise ValueError("""When combining multiple sets of data into a single observation, 
 it is assumed the pointing direction of said observation is the same.""")
-        if self.binning!=other.binning:
+        if self.binning_geometry!=other.binning_geometry:
             raise ValueError("""When combining multiple sets of data into a single observation, 
 it is assumed that the binning geometries are the same.""")
 
@@ -228,7 +236,7 @@ it is assumed that the binning geometries are the same.""")
         return GammaObs(energy=new_energy, lon=new_lon, lat=new_lat, 
                         pointing_dir=self.pointing_dir, 
                         irf_loglike=self.irf_loglike,
-                        binning=self.binning
+                        binning_geometry=self.binning_geometry
 )
             
     def __radd__(self, other):
@@ -244,7 +252,7 @@ it is assumed that the binning geometries are the same.""")
         Returns:
             int: The total number of events in the dataset, equivalent to Nevents.
         """
-        return len(self.nonzero_bin_indices[0])
+        return len(self.nonzero_bin_data[0])
     
 
     @property
@@ -307,7 +315,7 @@ it is assumed that the binning geometries are the same.""")
         
     def to_dict(self):
         return {
-            'binning': self.binning.to_dict(),
+            'binning_geometry': self.binning_geometry.to_dict(),
             'binned_data': self.binned_data,
             'meta': self.meta,
             'pointing_dir': self.pointing_dir,
@@ -326,7 +334,7 @@ it is assumed that the binning geometries are the same.""")
             data = pickle.load(f)
             
         # Create an empty instance
-        instance = cls(binning=GammaBinning.from_dict(data['binning']), 
+        instance = cls(binning_geometry=GammaBinning.from_dict(data['binning_geometry']), 
                     energy=[], lon=[], lat=[],  # Empty raw samples
                     meta=data['meta'],
                     pointing_dir=data['pointing_dir'],
@@ -346,9 +354,9 @@ it is assumed that the binning geometries are the same.""")
 
     def _recreate_samples_from_binned_data(self):
         # Extract bin centers
-        energy_centers = self.binning.energy_axis.value
-        lon_centers = self.binning.lon_axis.value
-        lat_centers = self.binning.lat_axis.value
+        energy_centers = self.binning_geometry.energy_axis.value
+        lon_centers = self.binning_geometry.lon_axis.value
+        lat_centers = self.binning_geometry.lat_axis.value
         
         # Prepare lists to hold the recreated samples
         energy_samples = []
@@ -367,15 +375,15 @@ it is assumed that the binning geometries are the same.""")
                         lat_samples.extend([lat_centers[k]] * int(count))
         
         # Convert to numpy arrays and return
-        return np.array(energy_samples) * self.binning.energy_axis.unit, \
-            np.array(lon_samples) * self.binning.lon_axis.unit, \
-            np.array(lat_samples) * self.binning.lat_axis.unit
+        return np.array(energy_samples) * self.binning_geometry.energy_axis.unit, \
+            np.array(lon_samples) * self.binning_geometry.lon_axis.unit, \
+            np.array(lat_samples) * self.binning_geometry.lat_axis.unit
 
 
 
 class GammaObsCube:
     def __init__(self,
-                 binning: GammaBinning, 
+                 binning_geometry: GammaBinning, 
                  observations: list[GammaObs],  
                  pointing_dirs=None,
                  observation_times=None,
@@ -384,17 +392,19 @@ class GammaObsCube:
                  **kwargs):
         
         self.name = name
-        self.binning = binning
+        self.binning_geometry = binning_geometry
         self.observations = observations
         self.meta = meta
+        self.pointing_dirs = pointing_dirs
+        self.observation_times = observation_times
 
         self.meta.update(kwargs)
 
 
     def add_observation(self, gamma_obs: GammaObs):
-        if not np.array_equal(gamma_obs.binning.energy_edges, self.binning.energy_edges) or \
-           not np.array_equal(gamma_obs.binning.lon_edges, self.binning.lon_edges) or \
-           not np.array_equal(gamma_obs.binning.lat_edges, self.binning.lat_edges):
+        if not np.array_equal(gamma_obs.binning_geometry.energy_edges, self.binning_geometry.energy_edges) or \
+           not np.array_equal(gamma_obs.binning_geometry.lon_edges, self.binning_geometry.lon_edges) or \
+           not np.array_equal(gamma_obs.binning_geometry.lat_edges, self.binning_geometry.lat_edges):
             raise ValueError("The binning of the observation does not match the binning of the GammaCube.")
         
         self.observations.append(gamma_obs)
@@ -404,18 +414,27 @@ class GammaObsCube:
     def get_data(self):
         combined_data = sum(obs.get_binned_data() for obs in self.observations)
         return combined_data
+    
+
+    @property
+    def log_exposures(self):
+        return [obs.log_exposure for obs in self.observations]
+    
+    @property
+    def irf_loglikes(self):
+        return [obs.irf_loglike for obs in self.observations]
 
     @property
     def energy_axis(self):
-        return self.binning.energy_axis
+        return self.binning_geometry.energy_axis
     
     @property
     def lon_axis(self):
-        return self.binning.lon_axis
+        return self.binning_geometry.lon_axis
     
     @property
     def lat_axis(self):
-        return self.binning.lat_axis
+        return self.binning_geometry.lat_axis
 
     @property
     def spatial_axes(self):
@@ -427,27 +446,56 @@ class GammaObsCube:
 
     @property
     def collapsed_energy(self):
-        return np.sum(self.get_data(), axis=(1, 2)), self.binning.energy_axis
+        return np.sum(self.get_data(), axis=(1, 2)), self.binning_geometry.energy_axis
 
 
     @property
     def collapsed_spatial(self):
-        return np.sum(self.get_data(), axis=(0)), (self.binning.lon_axis, self.binning.lat_axis)
+        return np.sum(self.get_data(), axis=(0)), (self.binning_geometry.lon_axis, self.binning_geometry.lat_axis)
 
 
     @property
     def collapsed_longitude(self):
-        return np.sum(self.get_data(), axis=(0, 2)), self.binning.lon_axis
+        return np.sum(self.get_data(), axis=(0, 2)), self.binning_geometry.lon_axis
 
 
 
     @property
     def collapsed_latitude(self):
-        return np.sum(self.get_data(), axis=(0, 1)), self.binning.lat_axis
+        return np.sum(self.get_data(), axis=(0, 1)), self.binning_geometry.lat_axis
 
     @property
     def collapsed_data(self):
-        return self.get_data(), self.binning.axes
+        return self.get_data(), self.binning_geometry.axes
+    
+
+    @property
+    def lon_pointing_dirs(self):
+        return [pointing[0] for pointing in self.pointing_dirs]
+    
+
+    @property
+    def lat_pointing_dirs(self):
+        return [pointing[1] for pointing in self.pointing_dirs]
+    
+
+    @property
+    def central_pointing(self):
+
+        # Calculate the mean point (center of mass)
+        mean_point = np.mean(self.pointing_dirs, axis=0)
+
+        # Calculate the Euclidean distance from each coordinate to the mean point
+        distances = np.linalg.norm(self.pointing_dirs - mean_point, axis=1)
+
+        # Find the index of the coordinate with the minimum distance
+        most_central_index = np.argmin(distances)
+
+        # Get the most central coordinate
+        most_central_coordinate = self.pointing_dirs[most_central_index]
+
+        return most_central_coordinate
+
 
 
 
@@ -462,10 +510,10 @@ class GammaObsCube:
         
         fig, axs = plt.subplots(1, 2, figsize=(12, 6), **kwargs)
         
-        axs[0].hist(self.energy_axis, bins=self.binning.energy_edges, weights=self.collapsed_energy[0], log=True, color=hist1dcolor)
-        axs[0].set_xlabel(r'Energy ['+ self.binning.energy_axis.unit.to_string('latex_inline')+']')
+        axs[0].hist(self.energy_axis, bins=self.binning_geometry.energy_edges, weights=self.collapsed_energy[0], log=True, color=hist1dcolor)
+        axs[0].set_xlabel(r'Energy ['+ self.binning_geometry.energy_axis.unit.to_string('latex_inline')+']')
         axs[0].set_ylabel('Counts')
-        axs[0].set_xlim(np.array([self.binning.energy_edges[0].value, self.binning.energy_edges[-1].value]))
+        axs[0].set_xlim(np.array([self.binning_geometry.energy_edges[0].value, self.binning_geometry.energy_edges[-1].value]))
         axs[0].set_xscale('log')
         axs[0].set_yscale(count_scaling)
 
@@ -473,10 +521,10 @@ class GammaObsCube:
             axs[0].grid(**grid_kwargs)
 
         im = axs[1].imshow(self.collapsed_spatial[0].T, origin='lower', aspect='auto', extent=[
-            self.binning.lon_edges[0].value, 
-            self.binning.lon_edges[-1].value,
-            self.binning.lat_edges[0].value,
-            self.binning.lat_edges[-1].value,
+            self.binning_geometry.lon_edges[0].value, 
+            self.binning_geometry.lon_edges[-1].value,
+            self.binning_geometry.lat_edges[0].value,
+            self.binning_geometry.lat_edges[-1].value,
             ], 
             cmap=cmap,
             norm=count_scaling)
@@ -484,8 +532,8 @@ class GammaObsCube:
 
 
         plt.colorbar(im, ax=axs[1], label='Counts')
-        axs[1].set_xlabel(r'Longitude ['+self.binning.lon_axis.unit.to_string('latex_inline')+']')
-        axs[1].set_ylabel(r'Latitude ['+self.binning.lat_axis.unit.to_string('latex_inline')+']')
+        axs[1].set_xlabel(r'Longitude ['+self.binning_geometry.lon_axis.unit.to_string('latex_inline')+']')
+        axs[1].set_ylabel(r'Latitude ['+self.binning_geometry.lat_axis.unit.to_string('latex_inline')+']')
         axs[1].invert_xaxis()
         
         fig.tight_layout()
@@ -500,7 +548,7 @@ class GammaObsCube:
     
 
     def __repr__(self):
-        return f"GammaCube(name={self.name}, \nbinning={self.binning}, \nobservations={len(self.observations)}, \nmeta={self.meta})"
+        return f"GammaCube(name={self.name}, \nbinning={self.binning_geometry}, \nNum observations={len(self.observations)}, \nmeta={self.meta})"
 
 
     
@@ -522,24 +570,24 @@ class GammaObsCube:
             if energy_max is not None:
                 mask &= (obs.energy <= energy_max)
             if np.any(mask):
-                new_obs.append(GammaObs(obs.energy[mask], obs.lon[mask], obs.lat[mask], obs.binning))
-        return GammaObsCube(name=self.name, binning=self.binning, observations=new_obs, meta=self.meta)
+                new_obs.append(GammaObs(obs.energy[mask], obs.lon[mask], obs.lat[mask], obs.binning_geometry))
+        return GammaObsCube(name=self.name, binning=self.binning_geometry, observations=new_obs, meta=self.meta)
 
     @classmethod
     def from_fits(cls, file_name: str):
         # Placeholder for actual implementation
-        pass
+        raise NotImplemented()
 
     @classmethod
     def from_dir(cls, dir_name: str):
         # Placeholder for actual implementation
-        pass
+        raise NotImplemented()
 
 
     def to_dict(self):
         return {
             'name': self.name,
-            'binning': self.binning.to_dict(),
+            'binning_geometry': self.binning_geometry.to_dict(),
             'meta': self.meta,
             'observations': [obs.to_dict() for obs in self.observations]
         }
@@ -557,14 +605,14 @@ class GammaObsCube:
         with open(filename, 'rb') as f:
             data = pickle.load(f)
         
-        binning = GammaBinning.from_dict(data['binning'])
+        binning = GammaBinning.from_dict(data['binning_geometry'])
         name = data['name']
         meta = data['meta']
         
         observations = []
         for obs_dict in data['observations']:
             obs = GammaObs(
-                binning=GammaBinning.from_dict(obs_dict['binning']),
+                binning=GammaBinning.from_dict(obs_dict['binning_geometry']),
                 meta=obs_dict['meta'],
                 pointing_dir=obs_dict['pointing_dir'],
                 irf_loglike=obs_dict['irf_loglike']
@@ -580,6 +628,67 @@ class GammaObsCube:
             observations.append(obs)
         
         return cls(binning=binning, observations=observations, name=name, meta=meta)
+    
+
+        # Iterator support to enable looping over the dataset
+    def __iter__(self):
+        """
+        Resets the internal counter and returns the iterator object (self) to enable looping over the dataset.
+
+        Returns:
+            self: The instance itself to be used as an iterator.
+        """
+        self._current_datum_idx = 0  # Reset the index each time iter is called
+        return self
+
+    # Next method for iterator protocol
+    def __next__(self):
+        """
+        Advances to the next item in the dataset. If the end of the dataset is reached, it raises a StopIteration.
+
+        Raises:
+            StopIteration: Indicates that there are no further items to return.
+
+        Returns:
+            ndarray: The next data item in the sequence.
+        """
+        if self._current_datum_idx < len(self):
+            current_obs = self.observations[self._current_datum_idx]
+            self._current_datum_idx += 1
+            return current_obs
+        else:
+            raise StopIteration
+        
+
+    # Support for indexing like a list or array
+    def __getitem__(self, key: int | slice):
+        """
+        Enables indexing into the GammaObsCube instance like a list or array, 
+        allowing access to individual observations.
+
+        Args:
+            key (int, slice): The index or slice of the data array to retrieve.
+
+        Returns:
+            ndarray: The observation at the specified index or slice.
+        """
+        return self.observations[key]
+    
+
+    def __len__(self):
+        """
+        Enables the use of the len() function on an EventData instance to obtain the number of events.
+
+        Returns:
+            int: The total number of events in the dataset, equivalent to Nevents.
+        """
+        return len(self.observations)
+    
+    
+
+
+
+
 
 
 

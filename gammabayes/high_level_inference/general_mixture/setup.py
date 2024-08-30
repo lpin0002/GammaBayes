@@ -111,8 +111,7 @@ class hl_setup_from_config:
         self.true_binning = GammaBinning(*self.true_axes)
         self.recon_binning = GammaBinning(*self.recon_axes)
 
-        self._setup_mixture_tree_values()
-
+        self._setup_mixture_tree_values() 
         self._setup_irfs(skip_irf_norm_setup=skip_irf_norm_setup)
         self._handle_missing_true_specifications()
         self._handle_dm_specifications()
@@ -424,7 +423,7 @@ class hl_setup_from_config:
 
                 fermi_gaggero_rate_matrix =construct_fermi_gaggero_flux_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
                                                 log_exposure_map=self.log_exposure_map)
-                hess_source_rate_matrix = construct_hess_source_map(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
+                hess_source_rate_matrix = construct_hess_flux_matrix(energy_axis=self.true_axes[0], longitudeaxis=self.true_axes[1], latitudeaxis=self.true_axes[2],
                                                 log_exposure_map=self.log_exposure_map)
 
                 fixed_background_interpolator = RegularGridInterpolator(points=self.true_axes, values=fermi_gaggero_rate_matrix+hess_source_rate_matrix)

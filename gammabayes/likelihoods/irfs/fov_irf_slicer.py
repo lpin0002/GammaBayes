@@ -26,11 +26,11 @@ class FOV_IRF_Norm:
         self.original_norm_matrix_pointing_dir = original_norm_matrix_pointing_dir
         self.pointing_dirs=pointing_dirs
         self.irf_loglike = irf_loglike
-        self.pointing = new_pointing
+        self.pointing_dir = new_pointing
 
 
-        if self.pointing not in self.pointing_dirs:
-            self.pointing_dirs.append(self.pointing)
+        if not(any(np.array_equal(self.pointing_dir, arr) for arr in list(self.pointing_dirs))):
+            self.pointing_dirs.append(self.pointing_dir)
 
 
 
@@ -82,11 +82,11 @@ class FOV_IRF_Norm:
 
 
 
-    def refresh(self, pointing=None):
+    def refresh(self, pointing_dir=None):
         "Used to reset the default pointing direction (and thus observation window) of normalisation matrices"
 
-        if pointing is not None:
-            self.pointing = pointing
+        if pointing_dir is not None:
+            self.pointing_dir = pointing_dir
 
 
         self.left_longitude_buffer, self.right_longitude_buffer, self.lower_latitude_buffer, self.upper_latitude_buffer = self._define_buffers()
@@ -119,6 +119,7 @@ class FOV_IRF_Norm:
             self.buffered_log_edisp_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
             self.buffered_log_psf_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
             if not self.empty_input:
+                ic(not self.empty_input)
                 self.buffered_log_psf_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val] = self.original_log_psf_norm_matrix
                 self.buffered_log_edisp_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val] = self.original_log_edisp_norm_matrix
             
@@ -163,7 +164,8 @@ class FOV_IRF_Norm:
                 
 
                 if not(self.use_irf_norm_matrix) and (np.sum(nan_index_energy_lon_slice)>0):
-                    true_lat_vals = self.buffered_true_binning_geometry.lon_axis[nan_index_energy_lon_slice]
+
+                    true_lat_vals = self.buffered_true_binning_geometry.lat_axis[nan_index_energy_lon_slice]
                     
                     normed_psf_values = self._psf_normalisation(self.recon_binning_geometry,  true_energy_val, true_lon_val, true_lat_vals,)
 
@@ -260,12 +262,12 @@ class FOV_IRF_Norm:
 
         left_buffer_values  = np.arange(new_min_longitude.value, binning_geometry.lon_axis[0].value, lon_res.value)*lon_res.unit
 
-        if binning_geometry.lon_axis[0].value not in left_buffer_values.value:
+        if not np.isclose(left_buffer_values.value, binning_geometry.lon_axis[0].value).any():
             left_buffer_values = np.append(left_buffer_values.value, binning_geometry.lon_axis[0].value)*lon_res.unit
 
         right_buffer_values = np.arange(binning_geometry.lon_axis[-1].value, new_max_longitude.value, lon_res.value)*lon_res.unit
 
-        if new_max_longitude.value not in right_buffer_values.value:
+        if not np.isclose(right_buffer_values.value, new_max_longitude.value).any():
             right_buffer_values = np.append(right_buffer_values.value, new_max_longitude.value)*lon_res.unit
         
 
@@ -278,11 +280,11 @@ class FOV_IRF_Norm:
         upper_buffer_values = np.arange(binning_geometry.lat_axis[-1].value, new_max_latitude.value, lat_res.value)*lat_res.unit
 
 
-        if binning_geometry.lat_axis[0].value not in lower_buffer_values.value:
+        if not np.isclose(lower_buffer_values.value, binning_geometry.lat_axis[0].value).any():
             lower_buffer_values = np.append(lower_buffer_values.value, binning_geometry.lat_axis[0].value)*lat_res.unit
 
 
-        if new_max_latitude.value not in upper_buffer_values.value:
+        if not np.isclose(upper_buffer_values.value, new_max_latitude.value).any():
             upper_buffer_values = np.append(upper_buffer_values.value, new_max_latitude.value)*lat_res.unit
 
 
@@ -296,16 +298,17 @@ class FOV_IRF_Norm:
         new_longitude_axis = np.arange(new_min_longitude.value, new_max_longitude.value, lon_res.value)*lon_res.unit
         new_latitude_axis = np.arange(new_min_latitude.value, new_max_latitude.value, lat_res.value)*lat_res.unit
 
-        if new_max_longitude.value not in new_longitude_axis.value:
+        if not np.isclose(new_longitude_axis.value, new_max_longitude.value).any():
             new_longitude_axis = np.sort(np.append(new_longitude_axis.value, new_max_longitude.value)*lon_res.unit)
 
-        if new_min_longitude.value not in new_longitude_axis.value:
+        if not np.isclose(new_longitude_axis.value, new_min_longitude.value).any():
             new_longitude_axis = np.sort(np.append(new_longitude_axis.value, new_min_longitude.value)*lon_res.unit)
 
-        if new_min_latitude.value not in new_latitude_axis.value:
+        if not np.isclose(new_latitude_axis.value, new_min_latitude.value).any():
             new_latitude_axis = np.sort(np.append(new_latitude_axis.value, new_min_latitude.value)*lat_res.unit)
 
-        if new_max_latitude.value not in new_latitude_axis.value:
+        if not np.isclose(new_latitude_axis.value, new_max_latitude.value).any():
+            ic(new_max_latitude.value, new_latitude_axis.value)
             new_latitude_axis = np.sort(np.append(new_latitude_axis.value, new_max_latitude.value)*lat_res.unit)
 
         return (new_longitude_axis, new_latitude_axis), (left_buffer_indices, right_buffer_indices, lower_buffer_indices, upper_buffer_indices), (left_buffer_values, right_buffer_values, lower_buffer_values, upper_buffer_values)
@@ -313,8 +316,8 @@ class FOV_IRF_Norm:
 
     def _refresh_buffer_window(self):
 
-        lon_offset = int(round((self.original_norm_matrix_pointing_dir[0].value-self.pointing[0].value)/self.buffered_true_binning_geometry.lon_res.value))
-        lat_offset = int(round((self.original_norm_matrix_pointing_dir[1].value-self.pointing[1].value)/self.buffered_true_binning_geometry.lat_res.value))
+        lon_offset = int(round((self.original_norm_matrix_pointing_dir[0].value-self.pointing_dir[0].value)/self.buffered_true_binning_geometry.lon_res.value))
+        lat_offset = int(round((self.original_norm_matrix_pointing_dir[1].value-self.pointing_dir[1].value)/self.buffered_true_binning_geometry.lat_res.value))
 
 
 
@@ -446,7 +449,7 @@ class FOV_IRF_Norm:
             for pointing_dir in self.pointing_dirs:
                 axis.scatter(*pointing_dir, c='tab:red')
             
-            axis.scatter(*self.pointing, c='tab:orange', marker='x', s=20)
+            axis.scatter(*self.pointing_dir, c='tab:orange', marker='x', s=20)
 
 
             default_longitude_start, default_longitude_end, default_latitude_start, default_latitude_end = *self.buffered_true_binning_geometry.lon_axis[[*self.default_buffer_window_values[1]]], *self.buffered_true_binning_geometry.lat_axis[[*self.default_buffer_window_values[2]]]

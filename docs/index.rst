@@ -10,12 +10,22 @@ Welcome to GammaBayes's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   tutorials/DataClassesEventData
-   tutorials/DataClassesParameters
-   tutorials/ProbabilityClasses
-   tutorials/DarkMatterModels
+   tutorials/QuickStart
+   tutorials/HighLevelInference
+   tutorials/LowLevelOverview
+   tutorials/BinningGeometries
+   tutorials/Exposure
+   tutorials/DataClasses
+   tutorials/InstrumentResponseFunctions
    tutorials/Simulations
-   tutorials/HyperParameterInference
+   tutorials/DarkMatter
+   tutorials/ParameterClasses
+   tutorials/NuisanceParameterMarginalisation
+   tutorials/MultiObservationNuisanceParameterMarginalisation
+   tutorials/HyperparmeterInference
+   tutorials/UsefulUtils
+   tutorials/PlannedDevelopments
+   tutorials/API
 
 
 

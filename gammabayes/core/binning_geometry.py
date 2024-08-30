@@ -54,6 +54,9 @@ Axis values represent bin centres. Bin edges can be extracted with the 'axis nam
     @classmethod
     def from_params(cls, lon_min, lon_max, lon_bin_size, lat_min, lat_max, lat_bin_size, energy_min, energy_max, energy_bins_per_decade, 
                     energy_unit=u.TeV, angle_unit=u.deg):
+        energy_unit = u.Unit(energy_unit)
+        angle_unit  = u.Unit(angle_unit)
+
         
         lon_min = lon_min * angle_unit if not hasattr(lon_min, 'unit') else lon_min
         lon_max = lon_max * angle_unit if not hasattr(lon_max, 'unit') else lon_max
@@ -69,7 +72,7 @@ Axis values represent bin centres. Bin edges can be extracted with the 'axis nam
         lon_bins = np.arange(lon_min.value, lon_max.value + lon_bin_size.value, lon_bin_size.value) * angle_unit
         lat_bins = np.arange(lat_min.value, lat_max.value + lat_bin_size.value, lat_bin_size.value) * angle_unit
         energy_bins = cls.generate_energy_bins(energy_min, energy_max, energy_bins_per_decade, energy_unit)
-        return cls(lon_bins, lat_bins, energy_bins)
+        return cls(energy_bins, lon_bins, lat_bins)
 
     @staticmethod
     def generate_energy_bins(energy_min, energy_max, bins_per_decade, energy_unit):
@@ -103,44 +106,48 @@ Axis values represent bin centres. Bin edges can be extracted with the 'axis nam
         if not isinstance(other, GammaBinning):
             return False
         return (
-            np.array_equal(self.energy_axis, other.energy_axis) and
-            np.array_equal(self.lon_axis, other.lon_axis) and
-            np.array_equal(self.lat_axis, other.lat_axis)
+            np.array_equal(self.energy_axis, other.energy_axis.to(self.energy_axis.unit)) and
+            np.array_equal(self.lon_axis, other.lon_axis.to(self.lon_axis.unit)) and
+            np.array_equal(self.lat_axis, other.lat_axis.to(self.lat_axis.unit))
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
     
 
+    @classmethod
+    def axes_has_same_bounds(self, axis1, axis2):
+        return np.isclose(axis1[0].value, axis2[0].to(axis1.unit).value) and np.isclose(axis1[-1].value, axis2[-1].to(axis1.unit).value)
 
-    def is_subset(self, other):
-        return (
-            np.all(np.isin(self.energy_axis, other.energy_axis)) and
-            np.all(np.isin(self.lon_axis, other.lon_axis)) and
-            np.all(np.isin(self.lat_axis, other.lat_axis))
-        )
+
+
+    def has_same_bounds(self, other):
+        return (self.axes_has_same_bounds(self.energy_axis, other.energy_axis) and
+                self.axes_has_same_bounds(self.lon_axis, other.lon_axis) and
+                self.axes_has_same_bounds(self.lat_axis, other.lat_axis))
+    
+    @classmethod
+    def axis_is_within_bounds(self, axis1, axis2):
+        return    axis1[0].value > axis2[0].to(axis1.unit).value and axis1[-1].value < axis2[-1].to(axis1.unit).value
+
 
     def is_within_bounds(self, other):
-        return (
-            self.energy_axis[0] >= other.energy_axis[0] and
-            self.energy_axis[-1] <= other.energy_axis[-1] and
-            self.lon_axis[0] >= other.lon_axis[0] and
-            self.lon_axis[-1] <= other.lon_axis[-1] and
-            self.lat_axis[0] >= other.lat_axis[0] and
-            self.lat_axis[-1] <= other.lat_axis[-1]
-        )
+        return (self.axis_is_within_bounds(self.energy_axis, other.energy_axis) and
+                self.axis_is_within_bounds(self.lon_axis, other.lon_axis) and
+                self.axis_is_within_bounds(self.lat_axis, other.lat_axis)
+                )
 
     def __lt__(self, other):
-        return self.is_subset(other)
+        return self.is_within_bounds(other)
 
     def __le__(self, other):
-        return self.is_subset(other) or self.is_within_bounds(other)
+        return self.has_same_bounds(other) or self.is_within_bounds(other)
 
     def __gt__(self, other):
-        return other.is_subset(self)
+        return other.is_within_bounds(self)
 
     def __ge__(self, other):
-        return other.is_subset(self) or other.is_within_bounds(self)
+        return other.has_same_bounds(self) or other.is_within_bounds(self)
     
 
     def to_dict(self):

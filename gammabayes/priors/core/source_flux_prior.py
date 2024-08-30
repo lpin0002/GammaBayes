@@ -96,7 +96,7 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
         log_exposure_vals = log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten()).reshape(energy_mesh.shape)
 
         # TODO: #TechDebt
-        return ((log_output_values).T  + (log_exposure_vals).T).T
+        return (log_output_values.T+log_exposure_vals.T).T
 
     
     def log_source_flux(self, energy, lon, lat, log_scaling_factor:float=None, *args, **kwargs):
