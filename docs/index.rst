@@ -15,8 +15,8 @@ Welcome to GammaBayes's documentation!
    tutorials/LowLevelOverview
    tutorials/BinningGeometries
    tutorials/Exposure
-   tutorials/DataClasses
    tutorials/InstrumentResponseFunctions
+   tutorials/DataClasses
    tutorials/Simulations
    tutorials/DarkMatter
    tutorials/ParameterClasses

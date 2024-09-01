@@ -92,3 +92,20 @@ def _handle_nuisance_axes(nuisance_axes: list[np.ndarray],
                 raise Exception("Dependent value axes used for calculations not given.")
                 
     return nuisance_axes
+
+
+def pick_5_values(lst):
+    if len(lst) < 5:
+        raise ValueError("List must have at least 5 elements")
+    
+    # Calculate indices for the edges, center, and intermediate values
+    first_idx = 0
+    last_idx = len(lst) - 1
+    center_idx = len(lst) // 2
+    mid1_idx = (first_idx + center_idx) // 2
+    mid2_idx = (center_idx + last_idx) // 2
+
+    # Extract the values
+    values = [lst[first_idx], lst[mid1_idx], lst[center_idx], lst[mid2_idx], lst[last_idx]]
+    
+    return values

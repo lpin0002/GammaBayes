@@ -18,7 +18,7 @@ class GammaLogExposure:
                  irfs=None, 
                  log_exposure_map: np.ndarray = None,
                  pointing_dir: np.ndarray = None,
-                 observation_time: float | np.ndarray=None, 
+                 observation_time: float | np.ndarray=1*u.s, 
                  observation_time_unit: u.Unit = u.s,
                  use_log_aeff: bool = True
                  ):
@@ -63,6 +63,9 @@ class GammaLogExposure:
             else:
                 self.time_unit = observation_time_unit
 
+
+            if observation_time_unit is None:
+                observation_time_unit = u.s
             self.observation_time_unit = observation_time_unit
 
             self.unit = self.observation_time_unit*self.aeff_units
@@ -184,6 +187,9 @@ class GammaLogExposure:
         from gammabayes.utils.integration import iterate_logspace_integration
 
         fig_kwargs.update(kwargs)
+
+        if 'figsize' not in fig_kwargs:
+            fig_kwargs['figsize'] = (12, 6)
         integrated_energy_exposure = iterate_logspace_integration(logy = self.log_exposure_map, 
                                                         axes=(self.binning_geometry.energy_axis.value,), 
                                                         axisindices=[0])
@@ -192,6 +198,11 @@ class GammaLogExposure:
         integrated_spatial_exposure = iterate_logspace_integration(logy = self.log_exposure_map, 
                                                 axes=(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value,), 
                                                 axisindices=[1, 2])
+        
+
+        integrated_lat_exposure = iterate_logspace_integration(logy = self.log_exposure_map, 
+                                                axes=(self.binning_geometry.lat_axis.value,), 
+                                                axisindices=[2])
 
 
 
@@ -209,7 +220,7 @@ class GammaLogExposure:
         if 'norm' not in pcolormesh_kwargs:
             pcolormesh_kwargs['norm'] = 'log'
 
-        fig, ax = plt.subplots(2, 2, **fig_kwargs)
+        fig, ax = plt.subplots(2, 3, **fig_kwargs)
 
 
         ax[0,0].plot(self.binning_geometry.energy_axis.value, np.exp(self.log_exposure_map[:, lon_slice, lat_slice].T), label=f'Exposure at {slice_coord_str}', **plot_kwargs)
@@ -219,19 +230,19 @@ class GammaLogExposure:
         ax[0,0].legend()
 
 
-        ax[0,1].plot(self.binning_geometry.energy_axis.value, np.exp(integrated_spatial_exposure.T), **plot_kwargs)
-        ax[0,1].set_xscale('log')
-        ax[0,1].set_xlabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
-        ax[0,1].set_ylabel(r"Integrated Exposure ["+(self.unit*self.binning_geometry.lon_axis.unit*self.binning_geometry.lon_axis.unit).to_string('latex')+"]",)
+        ax[1,0].plot(self.binning_geometry.energy_axis.value, np.exp(integrated_spatial_exposure.T), **plot_kwargs)
+        ax[1,0].set_xscale('log')
+        ax[1,0].set_xlabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
+        ax[1,0].set_ylabel(r"Integrated Exposure ["+(self.unit*self.binning_geometry.lon_axis.unit*self.binning_geometry.lon_axis.unit).to_string('latex')+"]",)
 
-        pcm = ax[1,0].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, 
+        pcm = ax[0,1].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, 
                                  np.exp(self.log_exposure_map[energy_slice, :, :].T),
                                  **pcolormesh_kwargs)
-        ax[1,0].legend(title="Slice at 1 TeV")
-        plt.colorbar(mappable=pcm, label=r"Exposure ["+(self.unit).to_string('latex')+"]", ax= ax[1,0])
-        ax[1,0].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
-        ax[1,0].set_ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
-        ax[1,0].set_aspect('equal', adjustable='box')
+        ax[0,1].legend(title="Slice at 1 TeV")
+        plt.colorbar(mappable=pcm, label=r"Exposure ["+(self.unit).to_string('latex')+"]", ax= ax[0,1])
+        ax[0,1].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
+        ax[0,1].set_ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
+        ax[0,1].set_aspect('equal', adjustable='box')
 
 
         int_pcm = ax[1,1].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, np.exp(integrated_energy_exposure.T), **pcolormesh_kwargs)
@@ -241,6 +252,23 @@ class GammaLogExposure:
         ax[1,1].set_aspect('equal', adjustable='box')
 
 
+
+        pcm = ax[0,2].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.energy_axis.value, 
+                                 np.exp(self.log_exposure_map[:, :, lat_slice]),
+                                 **pcolormesh_kwargs)
+        ax[0,2].legend(title=f"Slice at lat={lat_slice_val:.2g} deg")
+        plt.colorbar(mappable=pcm, label=r"Exposure ["+(self.unit).to_string('latex')+"]", ax= ax[0,2])
+        ax[0,2].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
+        ax[0,2].set_ylabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
+        ax[0,2].set_yscale('log')
+
+        int_pcm = ax[1,2].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.energy_axis.value, np.exp(integrated_lat_exposure), **pcolormesh_kwargs)
+        plt.colorbar(mappable=int_pcm, label=r"Integrated Exposure ["+(self.unit*self.binning_geometry.lat_axis.unit).to_string('latex')+"]", ax= ax[1,2])
+        ax[1,2].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
+
+        ax[1,2].set_yscale('log')
+        ax[1,2].set_ylabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
+
         plt.tight_layout()
 
         return fig, ax
@@ -249,9 +277,3 @@ class GammaLogExposure:
     def log_obs_time_map(self):
         return np.log(self.observation_time.to(self.observation_time_unit).value)
             
-
-        
-
-        
-        
-

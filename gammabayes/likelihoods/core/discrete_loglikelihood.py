@@ -10,8 +10,8 @@ class DiscreteLogLikelihood(object):
     
     def __init__(self, 
                  logfunction: callable,
-                 axes: list[np.ndarray] | tuple[np.ndarray], 
-                 dependent_axes: list[np.ndarray], 
+                 axes: list[np.ndarray] | tuple[np.ndarray]     = None, 
+                 dependent_axes: list[np.ndarray]               = None, 
                  name: list[str] | tuple[str]                   = ['None'], 
                  inputunit: str | list[str] | tuple[str]        = ['None'], 
                  iterative_logspace_integrator: callable        = iterate_logspace_integration,
@@ -81,6 +81,9 @@ class DiscreteLogLikelihood(object):
             self.true_binning_geometry = true_binning
         else:
             self.true_binning_geometry = None
+
+        self.axes = self.binning_geometry.axes
+        self.dependent_axes = self.true_binning_geometry.axes
             
 
 

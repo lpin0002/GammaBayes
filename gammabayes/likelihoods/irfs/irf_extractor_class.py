@@ -158,10 +158,10 @@ class IRFExtractor(object):
                  prod_vers=5, 
                  observation_time: float|u.Quantity = 50*u.hr,
                  file_path: str=None,
-                 psf_units: u.Unit = 1/u.deg**2,
-                 edisp_units: u.Unit = 1/u.TeV,
+                 psf_units: u.Unit = (1/u.deg**2).unit,
+                 edisp_units: u.Unit = (1/u.TeV).unit,
                  aeff_units: u.Unit = u.cm**2,
-                 CCR_BKG_units: u.Unit = 1/(u.deg**2*u.TeV*u.s)):
+                 CCR_BKG_units: u.Unit = (1/(u.deg**2*u.TeV*u.s)).unit):
 
 
 
@@ -204,12 +204,12 @@ class IRFExtractor(object):
 
 
         self.edisp_default      = self.extracted_default_irfs['edisp']
-        self.edisp_default.normalize()
+        # self.edisp_default.normalize()
 
         self.psf_default        = self.extracted_default_irfs['psf']
 
         self.psf3d              = self.psf_default.to_psf3d()
-        self.psf3d.normalize()
+        # self.psf3d.normalize()
 
         self.aeff_default       = self.extracted_default_irfs['aeff']
         self.CCR_BKG       = self.extracted_default_irfs['bkg'].to_2d()
@@ -230,14 +230,14 @@ class IRFExtractor(object):
         """
         return self.aeff_default.evaluate(energy_true = energy, offset=offset).to(self.aeff_units)
 
-    def log_aeff(self, energy, longitude, latitude, pointing_dir=[0*u.deg,0*u.deg], parameters={}):
+    def log_aeff(self, energy, lon, lat, pointing_dir=[0*u.deg,0*u.deg], parameters={}):
         """
         Wrapper for the Gammapy interpretation of the log of the CTA effective area function.
 
         Args:
             energy (Quantity): True energy of a gamma-ray event detected by the CTA.
-            longitude (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
-            latitude (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
             pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
 
         Returns:
@@ -245,7 +245,7 @@ class IRFExtractor(object):
         """
         return np.log(self.aeff_default.evaluate(energy_true = energy, 
                                 offset=haversine(
-                                    longitude, latitude, pointing_dir[0], pointing_dir[1])).to(self.aeff_units).value)
+                                    lon, lat, pointing_dir[0], pointing_dir[1])).to(self.aeff_units).value)
         
     def log_edisp(self, recon_energy:Quantity, 
                   true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
@@ -267,9 +267,9 @@ class IRFExtractor(object):
         offset = haversine(true_lon, true_lat, pointing_dir[0], pointing_dir[1])
 
         # edisp output is dimensionless when it should have units of 1/TeV
-        return np.log(self.edisp_default.evaluate(energy_true=true_energy,
+        return np.log((self.edisp_default.evaluate(energy_true=true_energy,
                                                         migra = recon_energy/true_energy, 
-                                                        offset=offset))
+                                                        offset=offset)/true_energy).to(self.edisp_units).value)
 
 
     def log_psf(self, recon_lon:Quantity, recon_lat:Quantity, 
@@ -292,6 +292,8 @@ class IRFExtractor(object):
         rad = haversine(recon_lon.flatten(), recon_lat.flatten(), true_lon.flatten(), true_lat.flatten(),).flatten()
 
         offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_dir[0], pointing_dir[1]).flatten()
+
+        offset = offset
 
         output = np.log(self.psf_default.evaluate(energy_true=true_energy,
                                                         rad = rad, 
