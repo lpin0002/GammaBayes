@@ -1,4 +1,5 @@
 import numpy as np, copy
+from astropy import units as u
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
@@ -61,7 +62,7 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
         del SS_ratios_dict['mS [GeV]']
         del SS_ratios_dict['lahS']
         
-        parameter_interpolation_values = [mass_axis, lahS_axis]
+        parameter_interpolation_values = [mass_axis*u.TeV, lahS_axis]
         parameter_axes_shapes = (lahS_axis.size, mass_axis.size)
 
         for channel in SS_ratios_dict.keys():
@@ -70,7 +71,7 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
 
         super().__init__(annihilation_fractions = SS_ratios_dict, 
                          parameter_interpolation_values = parameter_interpolation_values,
-                         default_parameter_values={'mass':1.0, 'lahS':0.1},
+                         default_parameter_values={'mass':1.0*u.TeV, 'lahS':0.1},
                          *args, **kwargs)
         
 

@@ -37,7 +37,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             
             dependent_axes_names (list[str] | tuple[str], optional): Names of the dependent variable axes.
             
-            iterative_logspace_integrator (callable, optional): Integration method used for normalization.
+            logspace_integrator (callable, optional): Integration method used for normalization.
             
             parameters (dict | ParameterSet, optional): Parameters for the log likelihood function.
         """
@@ -259,7 +259,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                                                           true_lon=centre_spatial[0],
                                                           true_lat=centre_spatial[1])
             
-            log_edisp_norm = self.iterative_logspace_integrator(log_edisp_vals, axes=[self.binning_geometry.energy_axis,])
+            log_edisp_norm = self.logspace_integrator(log_edisp_vals, axes=[self.binning_geometry.energy_axis.value,])
             
             color = cmap(norm(_energy_idx)) 
 
@@ -335,9 +335,9 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                                   ).reshape(lon_mesh.shape)
         
 
-        log_psf_norm = self.iterative_logspace_integrator(log_psf_values, 
-                                                          axes=[self.binning_geometry.lon_axis[zoom_lon_slice], 
-                                                                self.binning_geometry.lat_axis[zoom_lat_slice],
+        log_psf_norm = self.logspace_integrator(log_psf_values, 
+                                                          axes=[self.binning_geometry.lon_axis[zoom_lon_slice].value, 
+                                                                self.binning_geometry.lat_axis[zoom_lat_slice].value,
                                                                 ],
                                                           axisindices=(0,1,))
         
@@ -392,8 +392,8 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                                         true_lon=centre_spatial[0],
                                         true_lat=centre_spatial[1]).reshape(meas_energy_mesh.shape)
         
-        log_edisp_norm = self.iterative_logspace_integrator(log_edisp_vals, 
-                                                            axes=[self.binning_geometry.energy_axis,],
+        log_edisp_norm = self.logspace_integrator(log_edisp_vals, 
+                                                            axes=[self.binning_geometry.energy_axis.value,],
                                                             axisindices=[0])
         
         log_edisp_vals = log_edisp_vals - log_edisp_norm[~np.isinf(log_edisp_norm)]
@@ -479,7 +479,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                                         true_lat = true_centre_spatial[1]
                                         ).reshape(recon_lon_mesh.shape)
             
-            log_psf_norm = self.iterative_logspace_integrator(log_psf_values, 
+            log_psf_norm = self.logspace_integrator(log_psf_values, 
                                                     axes=[sliced_lon_vals.value, 
                                                         sliced_lat_vals.value,
                                                         ],

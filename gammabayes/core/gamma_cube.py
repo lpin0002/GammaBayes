@@ -266,9 +266,6 @@ class GammaObs:
         if not isinstance(other, GammaObs):
             return NotImplemented
         
-        if not np.array_equal(self.pointing_dir, other.pointing_dir):
-            raise ValueError("""When combining multiple sets of data into a single observation, 
-it is assumed the pointing direction of said observation is the same.""")
         if self.binning_geometry!=other.binning_geometry:
             raise ValueError("""When combining multiple sets of data into a single observation, 
 it is assumed that the binning geometries are the same.""")
@@ -279,8 +276,11 @@ it is assumed that the binning geometries are the same.""")
         new_lon = np.concatenate([self.lon, other.lon])
         new_lat = np.concatenate([self.lat, other.lat])
 
-        new_log_exposure = self.log_exposure+other.log_exposure
-
+        try:
+            new_log_exposure = self.log_exposure+other.log_exposure
+        except:
+            new_log_exposure = np.logaddexp(self.log_exposure.log_exposure_map, 
+                                            other.log_exposure.log_exposure_map)
 
         # You might need to decide how to handle other attributes like obs_id, zenith_angle, etc.
         # For this example, I'm just taking them from the first instance.

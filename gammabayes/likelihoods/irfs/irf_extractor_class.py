@@ -266,10 +266,14 @@ class IRFExtractor(object):
 
         offset = haversine(true_lon, true_lat, pointing_dir[0], pointing_dir[1])
 
-        # edisp output is dimensionless when it should have units of 1/TeV
-        return np.log((self.edisp_default.evaluate(energy_true=true_energy,
+        edisp_val = self.edisp_default.evaluate(energy_true=true_energy,
                                                         migra = recon_energy/true_energy, 
-                                                        offset=offset)/true_energy).to(self.edisp_units).value)
+                                                        offset=offset)
+        adjusted_edisp_val = edisp_val/true_energy
+        adjusted_edisp_val = (adjusted_edisp_val).to(self.edisp_units).value
+
+        # edisp output is dimensionless when it should have units of 1/TeV
+        return np.log(adjusted_edisp_val)
 
 
     def log_psf(self, recon_lon:Quantity, recon_lat:Quantity, 

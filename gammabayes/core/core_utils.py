@@ -246,9 +246,14 @@ def bound_axis(axis: np.ndarray,
 
     try:
         bound_radii = bound_radii.to(axis_unit)
-        estimated_val = estimated_val.to(axis_unit)
 
         bound_radii = bound_radii.value
+    except:
+        pass
+
+    try:
+        estimated_val = estimated_val.to(axis_unit)
+
         estimated_val = estimated_val.value
     except:
         pass

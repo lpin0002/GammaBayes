@@ -83,12 +83,13 @@ class DiscreteBruteScan(object):
 
 
 
-    def __init__(self, log_priors: list[DiscreteLogPrior] | tuple[DiscreteLogPrior] = None, 
-                 log_likelihood: callable = None, 
+    def __init__(self, 
+                 log_likelihoodnormalisation: np.ndarray, 
+                 log_priors: list[DiscreteLogPrior] | tuple[DiscreteLogPrior], 
+                 log_likelihood: callable, 
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  nuisance_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  prior_parameter_specifications: dict | list[ParameterSet] | dict[ParameterSet] = {}, 
-                 log_likelihoodnormalisation: np.ndarray | float = 0., 
                  log_nuisance_marg_results: np.ndarray | None = None, 
                  mixture_parameter_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  log_hyperparameter_likelihood: np.ndarray | float = 0., 
@@ -266,6 +267,16 @@ class DiscreteBruteScan(object):
 
 
         meshvalues  = np.meshgrid(*event_vals, *self.nuisance_axes, indexing='ij')
+
+        formatted_nuisance_axes = []
+
+        for axis in self.nuisance_axes:
+            if hasattr(axis, 'unit'):
+                formatted_nuisance_axes.append(axis.value)
+            else:
+                formatted_nuisance_axes.append(axis)
+
+    
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
         log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
@@ -282,7 +293,7 @@ class DiscreteBruteScan(object):
             logintegrandvalues = (np.squeeze(log_prior_matrices).T+np.squeeze(log_likelihoodvalues).T).T
             
             single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
-                axes=self.nuisance_axes)
+                axes=formatted_nuisance_axes)
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 
@@ -355,9 +366,7 @@ class DiscreteBruteScan(object):
                             spatial_parameters =  prior_spatial_params,
                             normalise=True)
                             )
-                    
-                    ic(log_prior_matrices.shape)
-                    
+                                        
                     
                     # Computation is more efficient/faster of the arrays 
                         # are as flattened as possible. Also minimises memory
@@ -464,11 +473,15 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         loglike_norm_shape = squeezed_loglike.shape
 
-        log_prior_matrices  = np.empty(shape = (
+        log_prior_matrices_shape = (
             num_prior_values,
             *loglike_norm_shape,
             )
-            )
+        
+
+        log_prior_matrices  = np.empty(shape = log_prior_matrices_shape)
+        
+
 
 
         prior_marged_shapes[prior_idx] = (Nevents, *parameter_matrix_shape)
@@ -488,7 +501,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
                     normalise=True)
                     )
             
-            nans +=     np.sum(np.isnan(prior_matrix))
+            nans +=  np.sum(np.isnan(prior_matrix))
 
             log_prior_matrices[_inner_idx,...] =    prior_matrix
 
@@ -521,7 +534,6 @@ class before the multiprocessing or make sure that it isn't part of the actual
         """
 
         prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data))
-
 
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 

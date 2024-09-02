@@ -122,8 +122,10 @@ def derive_edisp_bounds(irf_loglike, percentile=90, sigmalevel=5):
     edisp_logval_bounds = []
 
     for erecon in tqdm(energy_recon_axis, desc='Calculating energy dispersion bounds'):
-        log_edisp_vals = irf_loglike.log_edisp(energy_true_axis*0+erecon,energy_true_axis , 0*energy_true_axis+lonval, 0*energy_true_axis+latval)
-        log_edisp_vals = log_edisp_vals - logspace_riemann(logy=log_edisp_vals, x=energy_true_axis)
+        log_edisp_vals = irf_loglike.log_edisp(energy_true_axis.value*0+erecon,energy_true_axis , 
+                                               0*energy_true_axis.value+lonval, 
+                                               0*energy_true_axis.value+latval)
+        log_edisp_vals = log_edisp_vals - logspace_riemann(logy=log_edisp_vals, x=energy_true_axis.value)
         edisp_vals = np.exp(log_edisp_vals)
         bounds = hdp_credible_interval_1d(y=edisp_vals, sigma=sigmalevel, x=energy_true_axis)
         valdiff = np.diff(bounds)[0]

@@ -119,7 +119,6 @@ class FOV_IRF_Norm:
             self.buffered_log_edisp_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
             self.buffered_log_psf_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
             if not self.empty_input:
-                ic(not self.empty_input)
                 self.buffered_log_psf_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val] = self.original_log_psf_norm_matrix
                 self.buffered_log_edisp_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val] = self.original_log_edisp_norm_matrix
             
@@ -213,7 +212,7 @@ class FOV_IRF_Norm:
         
         normed_edisp_values = iterate_logspace_integration(
             logy=np.squeeze(log_edisp_values), 
-            axes=(recon_energy_vals,), 
+            axes=(recon_energy_vals.value,), 
             axisindices=[0,]).reshape(true_lon_mesh_vals.shape)
         
         return normed_edisp_values
@@ -237,7 +236,7 @@ class FOV_IRF_Norm:
         
         normed_psf_values = iterate_logspace_integration(
             logy=np.squeeze(log_psf_values), 
-            axes=(recon_lon_vals, recon_lat_vals,), 
+            axes=(recon_lon_vals.value, recon_lat_vals.value,), 
             axisindices=[0,1])
         
         return normed_psf_values
@@ -308,7 +307,7 @@ class FOV_IRF_Norm:
             new_latitude_axis = np.sort(np.append(new_latitude_axis.value, new_min_latitude.value)*lat_res.unit)
 
         if not np.isclose(new_latitude_axis.value, new_max_latitude.value).any():
-            ic(new_max_latitude.value, new_latitude_axis.value)
+
             new_latitude_axis = np.sort(np.append(new_latitude_axis.value, new_max_latitude.value)*lat_res.unit)
 
         return (new_longitude_axis, new_latitude_axis), (left_buffer_indices, right_buffer_indices, lower_buffer_indices, upper_buffer_indices), (left_buffer_values, right_buffer_values, lower_buffer_values, upper_buffer_values)
@@ -401,7 +400,6 @@ class FOV_IRF_Norm:
         from matplotlib import pyplot as plt
         from matplotlib import patches
         from matplotlib.colors import LogNorm
-        from gammabayes.utils.integration import iterate_logspace_integration
 
         subplots_kwargs.update(kwargs)
 
@@ -455,7 +453,6 @@ class FOV_IRF_Norm:
             default_longitude_start, default_longitude_end, default_latitude_start, default_latitude_end = *self.buffered_true_binning_geometry.lon_axis[[*self.default_buffer_window_values[1]]], *self.buffered_true_binning_geometry.lat_axis[[*self.default_buffer_window_values[2]]]
 
 
-            ic(default_longitude_start, default_longitude_end, default_latitude_start, default_latitude_end)
             default_width  = default_longitude_end - default_longitude_start
             default_height = default_latitude_end  - default_latitude_start
 

@@ -237,7 +237,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
         index_meshes = np.ix_( *[temp_axis_info[1] for temp_axis_info in temp_axes_and_indices])
 
-        flattened_meshvalues = [meshmatrix.flatten()*unit for meshmatrix, unit in zip(meshvalues, unit_list)]
+        flattened_meshvalues = [meshmatrix.flatten() for meshmatrix, unit in zip(meshvalues, unit_list)]
         
         log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
 

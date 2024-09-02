@@ -266,7 +266,7 @@ class DiscreteLogPrior(object):
                 
 
         else:
-            simvals = []
+            simvals = [[], [], []]
         
 
         if hasattr(self, 'log_exposure_map'):

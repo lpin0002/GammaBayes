@@ -46,10 +46,9 @@ class Einasto_Profile(DM_Profile):
         rr = radius / r_s
 
         exponent = -(2 / alpha) * (rr**alpha - 1)
-        if not(return_unit):
-            return np.log(rho_s.to("TeV / cm3").value) + exponent
 
-        return np.log(rho_s.to("TeV / cm3").value) + exponent, u.Unit("TeV / cm3")
+        return np.log(rho_s.to("TeV / cm3").value) + exponent
+
 
 
 
@@ -101,10 +100,15 @@ class GNFW_Profile(DM_Profile):
         Returns:
             float | np.ndarray: Logarithm of the density profile.
         """
+        radius_unit = radius.unit
+        radius = radius.to(radius_unit).value
+        r_s = r_s.to(radius_unit).value
         rr = radius / r_s
-        return np.log(rho_s) -  (
-            gamma*np.log(rr) + ((beta - gamma) / alpha) * np.log(1 + rr **  alpha)
-        )
+
+        exponent = gamma*np.log(rr) + ((beta - gamma) / alpha) * np.log(1 + rr **  alpha)
+
+
+        return np.log(rho_s.to("TeV / cm3").value) -  exponent
     
     def __init__(self, 
                  default_alpha: float | int = 1, 
@@ -151,8 +155,14 @@ class Burkert_Profile(DM_Profile):
         Returns:
             float | np.ndarray: Logarithm of the density profile.
         """
+        radius_unit = radius.unit
+        radius = radius.to(radius_unit).value
+        r_s = r_s.to(radius_unit).value
         rr = radius / r_s
-        return np.log(rho_s) - (np.log(1 + rr) + np.log(1 + rr**2))
+
+        return np.log(rho_s.to("TeV / cm3").value) - (np.log(1 + rr) + np.log(1 + rr**2))
+
+
     
     def __init__(self, 
                  default_rho_s: float = 0.001* u.Unit("TeV / cm3"), 
