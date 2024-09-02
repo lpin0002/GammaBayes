@@ -11,17 +11,17 @@ Welcome to GammaBayes's documentation!
    :caption: Contents:
    
    tutorials/QuickStart
-   tutorials/HighLevelInference
-   tutorials/LowLevelOverview|Theory
-   tutorials/BinningGeometries
-   tutorials/Exposure
-   tutorials/InstrumentResponseFunctions
-   tutorials/DataClasses
-   tutorials/Simulations
-   tutorials/DarkMatter
-   tutorials/ParameterClasses
-   tutorials/HyperparameterInference
-   tutorials/MultiObservationNuisanceParameterMarginalisation
+..    tutorials/HighLevelInference
+..    tutorials/LowLevelOverview
+..    tutorials/BinningGeometries
+..    tutorials/Exposure
+..    tutorials/InstrumentResponseFunctions
+..    tutorials/DataClasses
+..    tutorials/Simulations
+..    tutorials/DarkMatter
+..    tutorials/ParameterClasses
+..    tutorials/HyperparameterInference
+..    tutorials/MultiObservationNuisanceParameterMarginalisation
 ..    tutorials/UsefulUtils
 ..    tutorials/PlannedDevelopments
 ..    tutorials/API
