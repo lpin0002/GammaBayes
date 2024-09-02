@@ -1,6 +1,4 @@
-<p align="center">
-    <img src="misc/banner_logo_v2.png" alt="drawing" class="center"/>
-</p>
+![Alt text](https://raw.githubusercontent.com/lpin0002/GammaBayes/main/misc/banner_logo_v2.png)
 
 
 __Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
@@ -42,6 +40,5 @@ This will also take care of the required dependencies for the project.
 We recommend to look through the tutorials for an overview of the functionality of the code however, the figure below shows the main classes of `GammaBayes` in a UML diagram.
 
 
-<p align="center">
-    <img src="misc/GammaBayes_UML.png" alt="drawing" class="center"/>
-</p>
+![Alt text](https://raw.githubusercontent.com/lpin0002/GammaBayes/main/misc/GammaBayes_UML.png)
+
