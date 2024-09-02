@@ -92,9 +92,17 @@ def logspace_trapz(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray
         np.ndarray | float: Integrated result in logarithmic space.
     """
     h = np.diff(x)
+    indices = list(range(logy.ndim))
+    indices.pop(axis)
 
-    logfkm1    = logy[:-1]
-    logfk      = logy[1:]
+    h = np.expand_dims(h, axis=indices)
+
+
+    # logfkm1    = logy[:-1]
+    # logfk      = logy[1:]
+
+    logfkm1 = np.take(logy, indices=np.arange(logy.shape[axis] - 1), axis=axis)
+    logfk = np.take(logy, indices=np.arange(logy.shape[axis] - 1)+1, axis=axis)
 
     trapz_int = special.logsumexp(np.logaddexp(logfkm1, logfk)+np.log(h) - np.log(2), axis=axis)
 
@@ -190,7 +198,7 @@ def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarr
     # Also tried lintegrate library but couldn't get it to work
     # (from one of the issues doesn't seem to be 64-bit?)
 
-def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray|tuple|list, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
+def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray|tuple|list, logspace_integrator=logspace_trapz, axisindices: list=None) -> np.ndarray|float:
     """
     Iteratively integrates in integrand logspace over multiple axes.
 

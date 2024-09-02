@@ -5,7 +5,7 @@ from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import Parameter, ParameterSet, update_with_defaults, GammaBinning, GammaObs, GammaObsCube
 # from gammabayes import EventData
 import pickle
-
+from tqdm import tqdm
 class DiscreteLogLikelihood(object):
     
     def __init__(self, 
@@ -58,7 +58,7 @@ class DiscreteLogLikelihood(object):
         # TODO: Delegate to binning geometries
         self.axes_dim, self.axes_shape, self.dependent_axes_dim = self._get_axis_dims(self.axes, self.dependent_axes)
 
-        self.iterative_logspace_integrator  = iterative_logspace_integrator 
+        self.logspace_integrator  = iterative_logspace_integrator 
         self.parameters               = parameters
 
         self.parameters = ParameterSet(self.parameters)
@@ -183,7 +183,8 @@ class DiscreteLogLikelihood(object):
             input_units.append(1)
 
         for val_idx, dependent_val in enumerate(dependentvalues):
-            input_units.append(self.axes[val_idx].unit)
+            # input_units.append(self.axes[val_idx].unit)
+            input_units.append(1)
 
         for parameter_val in parameters.values():
             input_units.append(1)
@@ -200,7 +201,7 @@ class DiscreteLogLikelihood(object):
                 parameters={key:flattened_meshes[num_eval_axes+param_idx] for param_idx, key in enumerate(parameters.keys())}
                 ).reshape(inputmesh[0].shape))
 
-        loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
+        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes])
 
 
         # Used for pseudo-riemann summing
@@ -217,7 +218,7 @@ class DiscreteLogLikelihood(object):
                         )
     
 
-    def sample(self,eventdata: GammaObs, parameters: dict | ParameterSet = {}):
+    def sample(self,eventdata: GammaObs, parameters: dict | ParameterSet = {}, print_progress=False):
         """
         Generates samples from the likelihood based on observed event data.
 
@@ -235,7 +236,14 @@ class DiscreteLogLikelihood(object):
 
         measured_event_data = GammaObs(energy=[], lon=[], lat=[], pointing_dir=eventdata.pointing_dir, 
                                         binning_geometry=self.binning_geometry, irf_loglike=self)
-        for datum_coord, num_datum in zip(*eventdata.nonzero_bin_data):
+        
+        data_to_iterate_over = zip(*eventdata.nonzero_bin_data)
+
+        if print_progress:
+            data_to_iterate_over = tqdm(data_to_iterate_over, total=len(eventdata.nonzero_bin_data[0]))
+
+
+        for datum_coord, num_datum in data_to_iterate_over:
             measured_event_data+=self.raw_sample(
                 dependentvalues=datum_coord, 
                 parameters=parameters, 

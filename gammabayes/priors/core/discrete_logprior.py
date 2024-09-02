@@ -178,7 +178,7 @@ class DiscreteLogPrior(object):
                                                 spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())},
                                                 *args, **kwargs
                                                 )    
-        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=self.binning_geometry.axes, axisindices=axisindices)
+        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=[axis.value for axis in self.binning_geometry.axes], axisindices=axisindices)
 
         return log_prior_norms
     
@@ -264,22 +264,38 @@ class DiscreteLogPrior(object):
             
             
                 
-            return GammaObs(energy=simvals[0], 
-                             lon=simvals[1], 
-                             lat=simvals[2], 
-                             binning_geometry=self.binning_geometry,
-                             meta={'source':self.name},
-                             irf_loglike=self.irf_loglike,
-                             )
+
         else:
-            return  GammaObs(
-                energy=[], 
-                lon=[], 
-                lat=[], 
-                binning_geometry=self.binning_geometry,
-                             meta={'source':self.name},
-                             irf_loglike=self.irf_loglike,
-                             )
+            simvals = []
+        
+
+        if hasattr(self, 'log_exposure_map'):
+            log_exposure = self.log_exposure_map
+        else:
+            log_exposure = None
+        
+        if hasattr(self, 'pointing_dir'):
+            pointing_dir = self.pointing_dir
+        else:
+            pointing_dir = None
+
+        if hasattr(self, 'observation_time'):
+            observation_time = self.observation_time
+        else:
+            observation_time = None
+
+
+
+        return GammaObs(energy=simvals[0], 
+                        lon=simvals[1], 
+                        lat=simvals[2], 
+                        binning_geometry=self.binning_geometry,
+                        meta={'source':self.name},
+                        irf_loglike=self.irf_loglike,
+                        pointing_dir=pointing_dir,
+                        observation_time=observation_time,
+                        log_exposure=log_exposure
+                        )
     
     def construct_prior_array(self, 
                               spectral_parameters: dict = {}, 
@@ -368,7 +384,68 @@ class DiscreteLogPrior(object):
 
 
 
-
-
     def rescale(self, log_factor:float|int=0.):
         self.log_scaling_factor = self.log_scaling_factor+log_factor
+
+
+    def peek(self, vmin=None, vmax=None, norm='linear', **kwargs):
+        from matplotlib import pyplot as plt
+        from gammabayes.utils.integration import iterate_logspace_integration
+
+        log_matrix_values = self.construct_prior_array()
+
+
+
+        kwargs.setdefault('figsize', (12,6))
+        fig, ax = plt.subplots(1,3, **kwargs)
+
+        log_integrated_energy_flux = iterate_logspace_integration(logy=log_matrix_values, 
+                                                axes=[self.binning_geometry.lon_axis.value, 
+                                                      self.binning_geometry.lat_axis.value],
+                                                axisindices=[1,2])
+
+        log_integrated_spatial_flux = iterate_logspace_integration(logy=log_matrix_values, 
+                                                axes=[self.binning_geometry.energy_axis.value],
+                                                axisindices=[0])
+        
+
+        log_integrated_mix_flux = iterate_logspace_integration(logy=log_matrix_values, 
+                                                axes=[self.binning_geometry.lat_axis.value],
+                                                axisindices=[2])
+
+
+        ax[0].plot(self.binning_geometry.energy_axis.value, np.exp(log_integrated_energy_flux))
+        ax[0].set_xscale('log')
+        ax[0].set_yscale(norm)
+        
+        ax[0].set_xlabel(f'Energy [{self.binning_geometry.energy_axis.unit.to_string()}]')
+        ax[0].grid(which='major', c='grey', ls='--', alpha=0.4)
+
+
+        pcm = ax[1].pcolormesh(self.binning_geometry.lon_axis.value, 
+                        self.binning_geometry.lat_axis.value, 
+                        np.exp(log_integrated_spatial_flux.T),
+                        norm=norm, vmin=vmin, vmax=vmax)
+        ax[1].set_aspect('equal')
+        ax[1].set_xlabel(f'Longitude [{(self.binning_geometry.lon_axis.unit).to_string()}]')
+        ax[1].set_ylabel(f'Latitude [{(self.binning_geometry.lat_axis.unit).to_string()}]')
+        ax[1].invert_xaxis()
+        plt.colorbar(mappable=pcm, 
+                     ax=ax[1],)
+
+
+
+
+        pcm = ax[2].pcolormesh(self.binning_geometry.energy_axis.value, 
+                        self.binning_geometry.lon_axis.value, 
+                        np.exp(log_integrated_mix_flux.T),
+                        norm=norm, vmin=vmin, vmax=vmax)
+        ax[2].set_xscale('log')
+        ax[2].set_ylabel(f'Longitude [{(self.binning_geometry.lon_axis.unit).to_string()}]')
+        ax[2].set_xlabel(f'Energy [{self.binning_geometry.energy_axis.unit.to_string()}]')
+        plt.colorbar(mappable=pcm, 
+                     ax=ax[2])
+
+
+        plt.tight_layout()
+        return fig, ax

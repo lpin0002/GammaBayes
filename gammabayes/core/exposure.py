@@ -228,6 +228,7 @@ class GammaLogExposure:
         ax[0,0].set_xlabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
         ax[0,0].set_ylabel(r"Exposure ["+(self.unit).to_string('latex')+"]",)
         ax[0,0].legend()
+        ax[0,0].grid(which='major', c='grey', ls='--', alpha=0.4)
 
 
         ax[1,0].plot(self.binning_geometry.energy_axis.value, np.exp(integrated_spatial_exposure.T), **plot_kwargs)
@@ -243,6 +244,7 @@ class GammaLogExposure:
         ax[0,1].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
         ax[0,1].set_ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
         ax[0,1].set_aspect('equal', adjustable='box')
+        ax[0,1].invert_xaxis()
 
 
         int_pcm = ax[1,1].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value, np.exp(integrated_energy_exposure.T), **pcolormesh_kwargs)
@@ -250,6 +252,7 @@ class GammaLogExposure:
         ax[1,1].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
         ax[1,1].set_ylabel(r"Latitude ["+self.binning_geometry.lat_axis.unit.to_string('latex')+']')
         ax[1,1].set_aspect('equal', adjustable='box')
+        ax[1,1].invert_xaxis()
 
 
 
@@ -259,13 +262,14 @@ class GammaLogExposure:
         ax[0,2].legend(title=f"Slice at lat={lat_slice_val:.2g} deg")
         plt.colorbar(mappable=pcm, label=r"Exposure ["+(self.unit).to_string('latex')+"]", ax= ax[0,2])
         ax[0,2].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
+        ax[0,2].invert_xaxis()
         ax[0,2].set_ylabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
         ax[0,2].set_yscale('log')
 
         int_pcm = ax[1,2].pcolormesh(self.binning_geometry.lon_axis.value, self.binning_geometry.energy_axis.value, np.exp(integrated_lat_exposure), **pcolormesh_kwargs)
         plt.colorbar(mappable=int_pcm, label=r"Integrated Exposure ["+(self.unit*self.binning_geometry.lat_axis.unit).to_string('latex')+"]", ax= ax[1,2])
         ax[1,2].set_xlabel(r"Longitude ["+self.binning_geometry.lon_axis.unit.to_string('latex')+']')
-
+        ax[1,2].invert_xaxis()
         ax[1,2].set_yscale('log')
         ax[1,2].set_ylabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+']')
 
