@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'GammaBayes'
 copyright = '2023, Liam Pinchbeck'
 author = 'Liam Pinchbeck'
-release = '0.0.42'
+release = '0.1.7'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
