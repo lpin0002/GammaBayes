@@ -20,12 +20,11 @@ Welcome to GammaBayes's documentation!
    tutorials/Simulations
    tutorials/DarkMatter
    tutorials/ParameterClasses
-   tutorials/NuisanceParameterMarginalisation
+   tutorials/HyperparameterInference
    tutorials/MultiObservationNuisanceParameterMarginalisation
-   tutorials/HyperparmeterInference
-   tutorials/UsefulUtils
-   tutorials/PlannedDevelopments
-   tutorials/API
+..    tutorials/UsefulUtils
+..    tutorials/PlannedDevelopments
+..    tutorials/API
 
 
 
