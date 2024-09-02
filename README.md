@@ -1,6 +1,4 @@
-<p align="center">
-    <img src="misc/banner_logo_v2.png" alt="drawing" class="center"/>
-</p>
+![Alt text](https://raw.githubusercontent.com/lpin0002/GammaBayes/main/misc/banner_logo_v2.png)
 
 
 __Author(s)__: Liam Pinchbeck (Liam.Pinchbeck@monash.edu)
@@ -43,6 +41,5 @@ We recommend to look through the tutorials for an overview of the functionality 
 
 For those unfamiliar with UML the diamonds mean that the object that has the diamond next to it has instances of the other connected class, arrows point at classes dependent on the other class (with the other class not necessarily impact by the one pointed at) and clear arrows point at the class that a parent class. However, all I'm trying to show here are the main classes, methods and attributes involved with `GammaBayes` and what classes they are at least related to in some way. 
 
-<p align="center">
-    <img src="misc/GammaBayes_UML.png" alt="drawing" class="center"/>
-</p>
+
+![Alt text](https://raw.githubusercontent.com/lpin0002/GammaBayes/main/misc/GammaBayes_UML.png)
