@@ -4,15 +4,22 @@ import sys
 import os
 import time
 
+
+# Read the contents of your README file
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+
 setup(name='GammaBayes',
       description='A package for Bayesian dark matter inference',
       url='https://github.com/lpin0002/GammaBayes',
       author='Liam Pinchbeck',
       author_email='Liam.Pinchbeck@monash.edu',
       license="MIT",
-      version='0.1.7',
+      version='0.1.8',
       packages=find_packages(),
-
+        long_description=long_description,  # This is the long description, read from README.md
+    long_description_content_type="text/markdown",  
       # For a lot of the DM spectral classes we require that dict types are ordered
       python_requires='>=3.6',
       install_requires=[
