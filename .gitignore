@@ -34,3 +34,10 @@ dist/*
 *log_edisp_normalisations*
 *log_psf_normalisations*
 **/prod5/*.FITS
+*samples*
+*.pkl
+*norm_matrix.npy*
+docs/tutorials/irf_norm_matrix.npy
+docs/tutorials/test_results.pkl
+docs/tutorials/tutorial_data/measured_data.h5
+*egg-info*

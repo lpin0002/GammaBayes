@@ -4,7 +4,19 @@ import numpy as np
 
 
 def read_config_file(file_path):
-    print(f"file path: {file_path}")
+    """
+    Reads a configuration file in YAML format and returns its contents.
+
+    Args:
+        file_path (str): Path to the configuration file.
+
+    Returns:
+        dict: Parsed contents of the configuration file.
+
+    Raises:
+        SystemExit: If the file is not found or YAML parsing fails.
+    """
+    print(f"Configuration File Path: {file_path}\n")
     try:
         with open(file_path, 'r') as file:
             inputs = yaml.safe_load(file)
@@ -18,11 +30,20 @@ def read_config_file(file_path):
         
         
 def check_necessary_config_inputs(input_dict):
+    """
+    Checks for necessary inputs in the configuration dictionary and prints their values.
+    If any necessary input is missing, it assigns default values or raises an exception.
+
+    Args:
+        input_dict (dict): Configuration dictionary.
+
+    Raises:
+        Exception: If the number of events is not provided.
+    """
     
-    print('\n\n')
 
     try:
-        print(f"Number of events for this script is {input_dict['Nevents']}")
+        print(f"\n\nNumber of events for this script is {input_dict['Nevents']}")
     except:
         raise Exception("Number of events to be simulated/analysed not provided. Add line 'Nevents:  [number value]' to yaml file")
             
@@ -46,6 +67,15 @@ def check_necessary_config_inputs(input_dict):
 
 
 def load_hyperparameter_pickle(file_path):
+    """
+    Loads hyperparameters from a pickle file.
+
+    Args:
+        file_path (str): Path to the pickle file.
+
+    Returns:
+        object: Loaded data from the pickle file.
+    """
     with open(file_path, 'rb') as file:
         loaded_data = pickle.load(file)
     return loaded_data
@@ -94,25 +124,64 @@ def add_event_axes_config(config_dict, energy_axis_true, longitudeaxistrue, lati
 
 
 def save_config_file(config_dict, file_path):
+    """
+    Saves the configuration dictionary to a YAML file.
+
+    Args:
+        config_dict (dict): Configuration dictionary to be saved.
+        file_path (str): Path to the YAML file.
+    """
     with open(file_path, 'w') as file:
         yaml.dump(config_dict, file, default_flow_style=False, sort_keys=False)
 
 
 def create_true_axes_from_config(config_dict):
+    """
+    Creates true event axes based on the configuration dictionary.
+
+    Args:
+        config_dict (dict): Configuration dictionary containing axis parameters.
+
+    Returns:
+        tuple: Created true event axes.
+    """
 
     return create_axes(config_dict['true_energy_min'], config_dict['true_energy_max'], 
                      config_dict['true_energy_bins_per_decade'], config_dict['true_spatial_res'], 
                      config_dict['true_longitude_min'], config_dict['true_longitude_max'],
-                     config_dict['true_latitude_min'], config_dict['true_latitude_max'])
+                     config_dict['true_latitude_min'], config_dict['true_latitude_max'],
+                     custom_print_str="__________ TRUE EVENT AXIS PARAMETERS __________\n")
 
 def create_recon_axes_from_config(config_dict):
+    """
+    Creates reconstructed event axes based on the configuration dictionary.
+
+    Args:
+        config_dict (dict): Configuration dictionary containing axis parameters.
+
+    Returns:
+        tuple: Created reconstructed event axes.
+    """
     return create_axes(config_dict['recon_energy_min'], config_dict['recon_energy_max'], 
                      config_dict['recon_energy_bins_per_decade'], config_dict['recon_spatial_res'], 
                      config_dict['recon_longitude_min'], config_dict['recon_longitude_max'],
-                     config_dict['recon_latitude_min'], config_dict['recon_latitude_max'])
+                     config_dict['recon_latitude_min'], config_dict['recon_latitude_max'],
+                     custom_print_str="__________ MEASURED/RECONSTRUCTED EVENT AXIS PARAMETERS __________\n")
 
 
 def construct_parameter_axes(construction_config):
+    """
+    Constructs parameter axes based on the construction configuration.
+
+    Args:
+        construction_config (dict or list): Configuration dictionary or list for constructing parameter axes.
+
+    Raises:
+        Exception: If invalid configuration or bounds are provided.
+
+    Returns:
+        np.ndarray: Constructed parameter axes.
+    """
 
     # Copying the dict so I don't accidentally overwrite the original
     construction_config_copy = copy.deepcopy(construction_config)
@@ -224,6 +293,18 @@ def construct_parameter_axes(construction_config):
 
 
 def iterative_parameter_axis_construction(scan_specification_dict):
+    """
+    Constructs parameter axes iteratively based on the scan specification dictionary.
+
+    Args:
+        scan_specification_dict (dict): Dictionary specifying the scan configuration.
+
+    Returns:
+        dict: Dictionary with constructed parameter axes.
+    """
+
+
+
     scan_dict = copy.deepcopy(scan_specification_dict)
     for prior_scan_specifications in scan_specification_dict:
         for parameter_type_scan_dict in scan_specification_dict[prior_scan_specifications]:

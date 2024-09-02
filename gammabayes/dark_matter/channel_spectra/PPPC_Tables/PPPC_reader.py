@@ -18,7 +18,7 @@ class PPPCReader:
         "nuenue":"\\[Nu]e",
         "e+e-": "e",
         "numunumu":"\\[Nu]\\[Mu]",
-        "mu+mu-":"mu",
+        "mu+mu-":"\\[Mu]",
         'nutaunutau':"\\[Nu]\\[Tau]",
         "tau+tau-":"\\[Tau]",
         "cc": "c",
@@ -37,6 +37,12 @@ class PPPCReader:
 
 
     def __init__(self, file_name):
+        """
+        Initializes the PPPCReader class to read and process data from the specified file.
+
+        Args:
+            file_name (str): The name of the file to read data from.
+        """
         self.file_name = file_name
         self.data_dict = self.read_data()
 
@@ -50,10 +56,25 @@ class PPPCReader:
         self.output_shape = (self.num_mass, self.num_log10x)
 
     def preprocess_data(self, line):
+        """
+        Preprocesses a line of data by splitting it based on whitespace, preserving quoted fields.
+
+        Args:
+            line (str): A line of data to preprocess.
+
+        Returns:
+            list: A list of preprocessed data fields.
+        """
         # Split the line by one or more whitespace characters, preserving quoted fields
         return re.split(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', line.strip())
 
     def read_data(self):
+        """
+        Reads data from the specified file and stores it in a dictionary.
+
+        Returns:
+            dict: A dictionary containing the data read from the file.
+        """
         with open(self.file_name, 'r') as file:
             # Preprocess and split the first line to get headers
             headers_line = file.readline()
@@ -73,8 +94,11 @@ class PPPCReader:
                         data_dict[header].append(value)
 
 
+
+
         for header in data_dict.keys():
             data_dict[header] = np.asarray(data_dict[header])
+
 
         if 'mDM' in data_dict.keys():
             data_dict['mDM']/=1000  # Turn into TeV
@@ -83,32 +107,94 @@ class PPPCReader:
 
     # Dictionary-like access and other methods
     def __getitem__(self, key):
+        """
+        Gets an item from the data dictionary.
+
+        Args:
+            key (str): The key of the item to retrieve.
+
+        Returns:
+            The value associated with the specified key.
+        """
         return self.data_dict[key]
 
     def __setitem__(self, key, value):
+        """
+        Sets an item in the data dictionary.
+
+        Args:
+            key (str): The key of the item to set.
+            value: The value to associate with the specified key.
+        """
         self.data_dict[key] = value
 
     def __delitem__(self, key):
+        """
+        Deletes an item from the data dictionary.
+
+        Args:
+            key (str): The key of the item to delete.
+        """
         del self.data_dict[key]
 
     def __iter__(self):
+        """
+        Iterates over the keys of the data dictionary.
+
+        Returns:
+            An iterator over the keys of the data dictionary.
+        """
         return iter(self.data_dict)
 
     def __len__(self):
+        """
+        Gets the number of items in the data dictionary.
+
+        Returns:
+            int: The number of items in the data dictionary.
+        """
         return len(self.data_dict)
 
     def keys(self):
+        """
+        Gets the keys of the data dictionary.
+
+        Returns:
+            dict_keys: A view of the keys in the data dictionary.
+        """
         return self.data_dict.keys()
 
     def values(self):
+        """
+        Gets the values of the data dictionary.
+
+        Returns:
+            dict_values: A view of the values in the data dictionary.
+        """
         return self.data_dict.values()
 
     def items(self):
+        """
+        Gets the items of the data dictionary.
+
+        Returns:
+            dict_items: A view of the items in the data dictionary.
+        """
         return self.data_dict.items()
     
 
     # Allows plotting of all the channels
     def peek(self, cmap='viridis', label_size=None, *args, **kwargs):
+        """
+        Plots all channels of the data using a heatmap.
+
+        Args:
+            cmap (str, optional): The colormap to use. Defaults to 'viridis'.
+            label_size (int, optional): The font size for the labels. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing the figure and axes objects.
+        """
         channel_keys = list(self.keys())[2:]
         num_channels = len(channel_keys)
         closest_square = int(np.ceil(np.sqrt(num_channels)))

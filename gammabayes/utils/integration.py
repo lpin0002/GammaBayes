@@ -1,11 +1,28 @@
 import numpy as np
 from scipy import special
-
+from astropy import units as u
 
 
 
 def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
+    """
+    Constructs the logarithmic linear or log differences for the given axis.
+
+    Args:
+        axis (np.ndarray): Axis values.
+
+    Returns:
+        np.ndarray | float: Logarithmic differences for the axis.
+    """
+    try:
+        axis = axis.value
+    except:
+        pass
+
+
     dx = np.diff(axis)
+
+    
     
     # Isclose calculate with ``absolute(a - b) <= (atol + rtol * absolute(b))''
     # With the default values being atol=1e-8 and rtol=1e-5. Need to be careful
@@ -14,12 +31,22 @@ def construct_log_dx(axis: np.ndarray) -> np.ndarray|float:
         # Equal spacing, therefore the last dx can just be the same as the second last
         dx = np.append(dx, dx[-1])
     else:
+
         # Presuming log-uniform spacing
         dx = axis*(10**(np.log10(axis[1])-np.log10(axis[0])))
 
     return np.log(dx)
 
 def construct_log_dx_mesh(axes: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray | float:
+    """
+    Constructs a logarithmic mesh of linear or log spaced axes.
+
+    Args:
+        axes (list[np.ndarray] | tuple[np.ndarray]): List or tuple of axis values.
+
+    Returns:
+        np.ndarray | float: Logarithmic differences mesh for the axes.
+    """
     dxlist = []
     for axis in axes:
         dxlist.append(construct_log_dx(axis))
@@ -30,8 +57,18 @@ def construct_log_dx_mesh(axes: list[np.ndarray] | tuple[np.ndarray]) -> np.ndar
 
 
 def logspace_riemann(logy: np.ndarray, x: np.ndarray, axis: int=-1) -> np.ndarray|float:
-    """Basic 'integration' used over uniform 
-    (uniform or log-uniform) discrete values"""
+    """
+    Performs Riemann sum integration in logarithmic integrand space for linear- or log-spaced axes.
+
+    Args:
+        logy (np.ndarray): Logarithm of function values.
+        x (np.ndarray): Axis values.
+        axis (int, optional): Axis along which to integrate. Defaults to -1.
+
+    Returns:
+        np.ndarray | float: Integrated result in logarithmic space.
+    """
+
     logdx = construct_log_dx(x)
     indices = list(range(logy.ndim))
     indices.pop(axis)
@@ -43,10 +80,29 @@ def logspace_riemann(logy: np.ndarray, x: np.ndarray, axis: int=-1) -> np.ndarra
 
 
 def logspace_trapz(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray|float:
-    h = np.diff(x)
+    """
+    Performs trapezoidal integration in logarithmic space.
 
-    logfkm1    = logy[:-1]
-    logfk      = logy[1:]
+    Args:
+        logy (np.ndarray): Logarithm of function values.
+        x (np.ndarray): Axis values.
+        axis (int, optional): Axis along which to integrate. Defaults to -1.
+
+    Returns:
+        np.ndarray | float: Integrated result in logarithmic space.
+    """
+    h = np.diff(x)
+    indices = list(range(logy.ndim))
+    indices.pop(axis)
+
+    h = np.expand_dims(h, axis=indices)
+
+
+    # logfkm1    = logy[:-1]
+    # logfk      = logy[1:]
+
+    logfkm1 = np.take(logy, indices=np.arange(logy.shape[axis] - 1), axis=axis)
+    logfk = np.take(logy, indices=np.arange(logy.shape[axis] - 1)+1, axis=axis)
 
     trapz_int = special.logsumexp(np.logaddexp(logfkm1, logfk)+np.log(h) - np.log(2), axis=axis)
 
@@ -55,17 +111,15 @@ def logspace_trapz(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray
 
 def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarray|float:
     """
-    Perform vectorized Simpson integration for log integrand values. 
-        
-    Not suitable for potentially numerically unstable x values.
+    Performs vectorized Simpson integration for log integrand values.
 
-    Parameters:
-    - logy: Array of function values.
-    - x: Array of x values (evenly spaced in log10 space).
-    - logjacob: A variable to keep a standard input of all the integrators
+    Args:
+        logy (np.ndarray): Logarithm of function values.
+        x (np.ndarray): Axis values (evenly spaced in log10 space).
+        axis (int, optional): Axis along which to integrate. Defaults to -1.
 
     Returns:
-    - result: Simpson's rule integration result.
+        np.ndarray | float: Integrated result using Simpson's rule in logarithmic space.
     """
     if logy.shape[axis] != len(x):
         raise ValueError("Input arrays y and x must have the same length.")
@@ -144,12 +198,26 @@ def logspace_simpson(logy: np.ndarray, x: np.ndarray, axis: int =-1) -> np.ndarr
     # Also tried lintegrate library but couldn't get it to work
     # (from one of the issues doesn't seem to be 64-bit?)
 
-def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
-    logintegrandvalues = logy
+def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray|tuple|list, logspace_integrator=logspace_riemann, axisindices: list=None) -> np.ndarray|float:
+    """
+    Iteratively integrates in integrand logspace over multiple axes.
+
+    Args:
+        logy (np.ndarray): Logarithm of function values.
+        axes (np.ndarray): Axis values.
+        logspace_integrator (callable, optional): Integration function to use. Defaults to logspace_riemann.
+        axisindices (list, optional): List of axis indices to integrate over. Defaults to None.
+
+    Raises:
+        Exception: If an error occurs during integration.
+
+    Returns:
+        np.ndarray | float: Integrated result.
+    """
             
     if axisindices is None:
         for axis in axes:
-            logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=0)
+            logy = logspace_integrator(logy = logy, x=axis, axis=0)
     else:
         axisindices = np.asarray(axisindices)
 
@@ -158,11 +226,11 @@ def iterate_logspace_integration(logy: np.ndarray, axes: np.ndarray, logspace_in
             # Assuming the indices are in order we subtract the loop idx from the axis index
             # print(loop_idx, axis_idx-loop_idx, axis.shape, logintegrandvalues.shape)
             try:
-                logintegrandvalues = logspace_integrator(logy = logintegrandvalues, x=axis, axis=axis_idx-loop_idx)
+                logy = logspace_integrator(logy = logy, x=axis, axis=axis_idx-loop_idx)
             except Exception as excpt:
-                print(loop_idx, axis.shape, axis_idx, logintegrandvalues.shape)
+                print(loop_idx, axis.shape, axis_idx, logy.shape)
                 raise Exception(f"Error occurred during integration --> {excpt}")
 
 
 
-    return logintegrandvalues
+    return logy

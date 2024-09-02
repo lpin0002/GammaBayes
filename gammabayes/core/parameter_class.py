@@ -1,6 +1,10 @@
 import warnings, numpy as np
 import copy, h5py, pickle
 from scipy.stats import uniform, loguniform
+from scipy import stats
+from scipy.stats import rv_discrete
+from scipy.stats import gamma
+
 
 class Parameter(dict):
     """
@@ -34,10 +38,14 @@ class Parameter(dict):
 
             
         if type(initial_data) == dict:
+
             data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
             data_copy.update(kwargs)
             
             super().__init__(data_copy)
+
+            self.update_distribution()
+            
 
             if not('scaling' in self):
                 self['scaling'] = 'linear'
@@ -99,23 +107,14 @@ class Parameter(dict):
 
             for idx, bound in enumerate(self['bounds']):
                 self['bounds'][idx] = float(bound)
-            if 'prob_model' in initial_data:
-                self.prob_model = initial_data['prob_model']
 
-            else:
-                if self['scaling'] =='linear':
-                        self.prob_model = uniform(
-                            loc=self['bounds'][0],
-                            scale=self['bounds'][1]-self['bounds'][0])
-                if self['scaling'] =='log10':
-                        self.prob_model = loguniform(
-                            a=self['bounds'][0],
-                            b=self['bounds'][1])
 
             # For sampling with 3 or less parameters we highly recommend making them discrete
                 # and performing a scan over them rather than sampling as the performance is 
                 # currently better than the stochastic/reweighting methods. Future updates
                 # will try to improve the performance of the more expandable reweighting method
+
+
             if self['discrete']:
 
                 if not('bins' in self) and (self['scaling'] == 'linear'):  
@@ -144,26 +143,37 @@ class Parameter(dict):
                                                     self['bins'])
                             
                 self['axis'] = np.asarray(self['axis'])
-                            
-                
+
+
+
                 self['transform_scale'] = self['bins']
-                if 'custom_parameter_transform' in self:
-                    self.transform = self['custom_parameter_transform']
-                else:
-                    self.transform = self.discrete_parameter_transform
+
+
+
+
+                if self.distribution is None:
+
+
+                    self.distribution = rv_discrete(values=(self['axis'], np.ones_like(self['axis'])/len(self['axis'])))
+
+                    # Making it so that if a "0" is given to the ppf it outputs the first discrete value
+                    self.distribution.transform = self.distribution.ppf
+                    self.distribution.ppf = self._adjusted_ppf
+                    # pdf and pmf are essentially the same for the purposes of GammaBayes
+                    self.distribution.pdf = self.distribution.pmf
+                    self.distribution.logpdf = self.distribution.logpmf
+
+                    self.rvs_sampling = False
+
+
             else:
 
-                # Future updates will allow one to set a custom function via a dynamic
-                    # import
-                if 'custom_parameter_transform' in self:
-                    self.transform = self['custom_parameter_transform']
-                else:
-                    if self['scaling']=='linear':
-                        self['transform_scale'] = float(np.diff(self['bounds']))
-                        self.transform = self.continuous_parameter_transform_linear_scaling
+                if not(self.distribution is None):
+                    self.rvs_sampling = False
+                    if hasattr(self.distribution, 'ppf'):
+                        self.rvs_sampling = False
                     else:
-                        self['transform_scale'] = float(np.diff(np.log10(self['bounds'])))
-                        self.transform = self.continuous_parameter_transform_log10_scaling
+                        self.rvs_sampling = True
 
             # A parameter to keep track of which prior the parameter belongs to.
             if not('prior_id' in self):
@@ -185,22 +195,112 @@ class Parameter(dict):
                 self[key] = copy.deepcopy(value)
             # If there are any kwargs, update them as well.
             self.update(kwargs)
+            self.update_distribution()
+
 
         else:
             super().__init__()
             if initial_data is not None:  # This ensures compatibility with empty or default init.
                 raise TypeError("Initial data must be of type dict or Parameter")
+            
 
-            self.update(kwargs)
+            
+
+
+
+
+    def update_distribution(self):
+        """
+        Updates the parameter's distribution based on specified attributes.
+        Supports custom distributions with optional keyword arguments.
+        """
+        self.custom_dist = False
+
+
+
+        if ('distribution' in self):
+            if self['distribution'] is None:
+                _setup=True
+                self.distribution = None
+            else:
+                _setup=False
+                self.distribution = self['distribution']
+        else:
+            _setup=True
+            self.distribution = None
+
+
+
+        
+        if ('custom_dist_name' in self) and _setup:
+            self.custom_dist         = True
+
+            dist_name = self['custom_dist_name']
+            dist_kwargs = self['custom_dist_kwargs']
+
+            self.distribution = getattr(stats, dist_name)(**dist_kwargs)
+
+        elif ('custom_distribution' in self) and _setup:
+            
+            self.custom_dist         = True
+
+            self.distribution = self['custom_distribution']
+
+            if type(self.distribution)==str:
+                self['custom_dist_name'] = self.distribution
+
+                del self.distribution
+                del self['custom_distribution']
+
+                self.update_distribution()
+
+            elif 'custom_dist_kwargs' in self:
+                dist_kwargs = self['custom_dist_kwargs']
+                self.distribution = self.distribution(**dist_kwargs)
+                
+
+        # if self['discrete'] and (self['distribution'] is None):
+        #     self.distribution = rv_discrete(values=(self['axis'], np.ones_like(self['axis'])/len(self['axis'])))
+
+        #     # Making it so that if a "0" is given to the ppf it outputs the first discrete value
+        #     self.distribution.transform = self.distribution.ppf
+        #     self.distribution.ppf = self._adjusted_ppf
+        #     # pdf and pmf are essentially the same for the purposes of GammaBayes
+        #     self.distribution.pdf = self.distribution.pmf
+        #     self.distribution.logpdf = self.distribution.logpmf
+
+        #     self.rvs_sampling = False
+        
+        
+
 
 
     @property
     def default(self):
+        """
+        Retrieves the default value of the parameter.
+
+        Returns:
+            float: The default value of the parameter.
+        """
         return self["default_value"]
 
 
 
     def construct_dynamic_bounds(self, centre, scaling, dynamic_multiplier, num_events, absolute_bounds=None):
+        """
+        Constructs dynamic bounds for the parameter based on the number of events.
+
+        Args:
+            centre (float): Central value for the bounds.
+            scaling (str): Scaling type ('linear' or 'log10').
+            dynamic_multiplier (float): Multiplier for the dynamic adjustment.
+            num_events (float): Number of events influencing the bounds.
+            absolute_bounds (list, optional): Absolute bounds to constrain the dynamic bounds. Defaults to None.
+
+        Returns:
+            list: Computed dynamic bounds.
+        """
         if scaling=='linear':
             bounds = [centre-dynamic_multiplier/np.sqrt(num_events), 
                             centre+dynamic_multiplier/np.sqrt(num_events)]
@@ -278,176 +378,166 @@ class Parameter(dict):
         return self.axis.shape
 
 
-    def discrete_parameter_transform(self, u: float):
-        """
-        Transforms a uniform random variable into a discretely scaled parameter value.
-
-        Args:
-            u (float): A uniform random variable in the range [0, 1].
-
-        Returns:
-            float: The corresponding discrete parameter value.
-        """
-
-        scaled_value = u * self.transform_scale
-        index = int(np.floor(scaled_value))
-        # Ensure index is within bounds
-        index = max(0, min(index, self.bins - 1))
-        u = self.axis[index]
-
-        return u
-    
-    def continuous_parameter_transform_linear_scaling(self, u: float):
-        """
-        Transforms a uniform random variable into a continuously scaled parameter value 
-        using linear scaling.
-
-        Args:
-            u (float): A uniform random variable in the range [0, 1].
-
-        Returns:
-            float: The corresponding continuous parameter value under linear scaling.
-        """
-
-        u = u * self.transform_scale + self.bounds[0]
-
-        return u
-
-    
-    def continuous_parameter_transform_log10_scaling(self, u: float):
-        """
-        Transforms a uniform random variable into a continuously scaled parameter value 
-        using logarithmic (base 10) scaling.
-
-        Args:
-            u (float): A uniform random variable in the range [0, 1].
-
-        Returns:
-            float: The corresponding continuous parameter value under logarithmic scaling.
-        """
-
-        u = 10**(u * self.transform_scale + np.log10(self.bounds[0]))
-
-        return u        
-    
-
-    
-
-    def save(self, file_name: str):
-        """
-        Serializes the parameter object to an HDF5 file.
-
-        Args:
-            file_name (str): The name of the file to save the parameter data.
-        """
-        if not(file_name.endswith(".h5")):
-            file_name = file_name + ".h5"
-
-        with h5py.File(file_name, 'w-') as h5f:
-            for key, value in self.items():
-                if key!='transform' and key!='custom_parameter_transform':
-                    # Convert arrays to a format that can be saved in h5py
-                    if isinstance(value, (np.ndarray,list)):
-                        h5f.create_dataset(key, data=value)
-                    elif isinstance(value, (int, float, str, bool)):
-                        h5f.attrs[key] = value
-                    else:
-                        # For all other types, we convert to string to ensure compatibility
-                        h5f.attrs[key] = str(value)
-                elif 'custom_parameter_transform' in self and hasattr(self['custom_parameter_transform'], '__call__'):
-                    func_name = self['custom_parameter_transform'].__name__
-                    h5f.attrs['custom_scaling_function_name'] = func_name
-    
-    
-    def save_to_pickle(self, file_name: str):
-        """
-        Saves the parameter object to an pickle file.
-
-        Args:
-            file_name (str): The name of the file to save the parameter data.
-        """
-
-        if not(file_name.endswith('.pkl')):
-                    file_name = file_name+'.pkl'
-
-        pickle.dump(self, open(file_name,'wb'))
-
-
-
-    @classmethod
-    def load(cls, file_name: str):
-        """
-        Loads and initializes a Parameter object from an HDF5 file.
-
-        Args:
-            file_name (str): The name of the HDF5 file from which to load parameter data.
-
-        Returns:
-            Parameter: An initialized Parameter object with data loaded from the file.
-        """
-        with h5py.File(file_name, 'r') as h5f:
-            data = {}
-            # Load data stored as attributes
-            for key, value in h5f.attrs.items():
-                data[key] = value
-            
-            # Load data stored in datasets
-            for key in h5f.keys():
-                data[key] = np.array(h5f[key])
-
-            print(data)
-            return cls(data)
-        
-    @classmethod
-    def load_from_pickle(cls, file_name: str):
-        """
-        Loads and initializes a Parameter object from an pickle file.
-
-        Args:
-            file_name (str): The name of the HDF5 file from which to load parameter data.
-
-        Returns:
-            Parameter: An initialized Parameter object with data loaded from the file.
-        """
-        if not(file_name.endswith(".pkl")):
-            file_name = file_name + ".pkl"
-
-        
-        return  pickle.load(open(file_name,'rb'))
     
 
     def pdf(self, x):
-        return self.prob_model.pdf(x)
+        """
+        Computes the probability density function (PDF) at a given value (using 
+        self.distribution.pdf, a scipy dist)
+
+        Args:
+            x (float or array-like): Value(s) at which to evaluate the PDF.
+
+        Returns:
+            float or array-like: PDF value(s).
+        """
+        return self.distribution.pdf(x)
     
 
     def logpdf(self, x):
-        return self.prob_model.logpdf(x)
+        """
+        Computes the log of the probability density function (logPDF) at a given value
+        using `self.distribution.logpdf(x)`.
+
+        Args:
+            x (float or array-like): Value(s) at which to evaluate the logPDF.
+
+        Returns:
+            float or array-like: logPDF value(s).
+        """
+        return self.distribution.logpdf(x)
     
     def cdf(self, x):
-        return self.prob_model.cdf(x)
+        """
+        Computes the cumulative distribution function (CDF) at a given value
+        using `self.distribution.cdf(x)`.
+
+        Args:
+            x (float or array-like): Value(s) at which to evaluate the CDF.
+
+        Returns:
+            float or array-like: CDF value(s).
+        """
+        return self.distribution.cdf(x)
     
     def logcdf(self, x):
-        return self.prob_model.logcdf(x)
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        return self.distribution.logcdf(x)
     
     @property
     def median(self, x):
-        return self.prob_model.median()
+        """
+        Computes the median of the distribution using 
+        `self.distribution.median()`.
+
+        Returns:
+            float: Median value.
+        """
+        return self.distribution.median()
+    
     @property
     def mean(self, x):
-        return self.prob_model.mean()
+        """
+        Computes the mean of the distribution using `self.distribution.mean()`.
+
+        Returns:
+            float: Mean value.
+        """
+        return self.distribution.mean()
+    
     @property
     def var(self):
-        return self.prob_model.var()
+        """
+        Computes the variance of the distribution using
+        `self.distribution.var()`.
+
+        Returns:
+            float: Variance value.
+        """
+        return self.distribution.var()
     
     @property
     def std(self, x):
-        return self.prob_model.std()
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        return self.distribution.std()
     
     def interval(self, confidence):
-        return self.prob_model.interval(confidence)
+        """
+        Computes the confidence interval for the distribution using
+        `self.distribution.interval(confidence)`.
+
+        Args:
+            confidence (float): Confidence level.
+
+        Returns:
+            tuple: Lower and upper bounds of the confidence interval.
+        """
+        return self.distribution.interval(confidence)
+
+    def _adjusted_ppf(self, q):
+        """
+        Adjusted percent point function (PPF) to return the smallest discrete value for q=0.
+
+        Args:
+            q (float or array-like): Quantile(s) at which to evaluate the PPF.
+
+        Returns:
+            float or array-like: Adjusted PPF value(s).
+        """
+        q = np.asarray(q)  
+        # Making it so that if a 0 input is given then it returns the smallest discrete value
+        result = np.where(q == 0, self.distribution.xk[0], self.distribution.transform(q))
+        return result
+    
 
     def ppf(self, q):
-        return self.prob_model.ppf(q)
+        """
+        Computes the percent point function (PPF) at a given quantile.
+
+        Args:
+            q (float or array-like): Quantile(s) at which to evaluate the PPF.
+
+        Returns:
+            float or array-like: PPF value(s).
+        """
+        return self.distribution.ppf(q)
+    
+
+    def unitcube_transform(self, u):
+        """
+        Transforms a unit cube sample into the parameter space using the parameter's 
+        inverse cumulative distribution function (ppf) or random variate sampling.
+
+        Args:
+            u (array-like): Sample from a unit cube.
+
+        Returns:
+            array-like: Transformed sample in the parameter space.
+        """
+
+        if self.rvs_sampling:
+
+            return self.distribution.rvs()
+        
+        return self.ppf(u)
+        
+    
+
+
     
     
     

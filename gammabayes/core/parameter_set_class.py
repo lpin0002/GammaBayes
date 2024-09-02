@@ -10,7 +10,8 @@ class ParameterSet(object):
     dictionaries, lists, and other ParameterSet instances.
     """
 
-    def __init__(self, parameter_specifications: dict | list | tuple = None):
+    def __init__(self, parameter_specifications: dict | list | tuple = {}, 
+                 set_name: str = "UnnamedSet", prior_name: str = 'UnknownPrior'):
         """
         Initializes a ParameterSet with the given parameter specifications.
 
@@ -18,46 +19,73 @@ class ParameterSet(object):
             parameter_specifications (dict | list | ParameterSet | tuple, optional): A dictionary, list, tuple, or another
                 ParameterSet instance containing the specifications for initializing the parameter set.
                 This can include parameter names, types, prior names, and their specifications or instances.
+            set_name (str, optional): Name of the parameter set. Defaults to "UnnamedSet".
+            prior_name (str, optional): Name of the prior associated with the parameter set. Defaults to 'UnknownPrior'.
         """
+
+
 
         self.axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
         self.dict_of_parameters_by_name = {}
 
+        try:
+            if 'set_name' in parameter_specifications:
+                self.set_name = parameter_specifications['set_name']
+            else:
+                self.set_name = set_name
+        except TypeError:
+            self.set_name = set_name
+
+        try:
+            if 'prior_name' in parameter_specifications:
+                self.prior_name = parameter_specifications['prior_name']
+            else:
+                self.prior_name = prior_name
+        except TypeError:
+            self.prior_name = prior_name
+
 
 
         if (type(parameter_specifications) == dict):
-            try:
-                initial_type = type(list(parameter_specifications.values())[0])
-            except IndexError as indexerr:
-                logging.warning(f"An error occurred: {indexerr}")
-                initial_type = None
-
-
-            # Actually meant to be dict of parameter specifications by type->name->specifications?
-            if (initial_type is dict):
-
-                try:
-                    secondary_objects = list(list(parameter_specifications.values())[0].values())[0]
-                    secondary_type_is_dict = type(secondary_objects) == dict
-                except IndexError as indexerr:
-                    logging.warning(f"An error occurred: {indexerr}")
-                    secondary_type_is_dict = False 
-
-
-                if secondary_type_is_dict:
-                    self.handle_plain_dict_input(parameter_specifications)
-
-                else:
-                    self.handle_name_dict_input(parameter_specifications)
-            # Actually meant to be dict of parameter specifications by name->specifications?
-            elif (initial_type is Parameter):
-                self.handle_dict_of_param_input(parameter_specifications)
-
             
 
-            else:
-                warnings.warn("Something went wrong when tring to access dictionary values.")
+            # Check if parameter_specifications is an empty dict (evaluates to False in python)
+            if parameter_specifications:
+                try:
+                    initial_type = type(list(parameter_specifications.values())[0])
+                except IndexError as indexerr:
+                    logging.warning(f"An error occurred: {indexerr}")
+                    initial_type = None
+
+
+                # Actually meant to be dict of parameter specifications by type->name->specifications?
+                if (initial_type is dict):
+
+                    try:
+                        secondary_objects = list(list(parameter_specifications.values())[0].values())[0]
+                        secondary_type_is_dict = type(secondary_objects) == dict
+                    except IndexError as indexerr:
+                        logging.warning(f"An error occurred: {indexerr}")
+                        secondary_type_is_dict = False 
+
+
+                    if secondary_type_is_dict:
+                        self.handle_plain_dict_input(parameter_specifications)
+
+                    else:
+                        self.handle_name_dict_input(parameter_specifications)
+                # Actually meant to be dict of parameter specifications by name->specifications?
+                elif (initial_type is Parameter):
+                    self.handle_dict_of_param_input(parameter_specifications)
+
+
+                elif isinstance(parameter_specifications, ParameterSet):
+                    self.append(parameter_specifications) 
+
+
+                else:
+                    warnings.warn("Something went wrong when trying to access dictionary values.")
 
         elif (type(parameter_specifications) == tuple):
             unformatted_parameter_specifications = list(parameter_specifications)
@@ -82,6 +110,9 @@ class ParameterSet(object):
             self.append(parameter_specifications) 
 
 
+
+
+
     # This method presumes that you have given the specifications in the form of 
             # nested dictionaries of the form
             # prior_name > parameter type > parameter name > parameter specifications
@@ -95,14 +126,13 @@ class ParameterSet(object):
         """
 
         
-        for prior_name, single_prior_parameter_specifications in dict_input.items():
-            for type_key, type_value in single_prior_parameter_specifications.items():
-                for param_name, param_specification in type_value.items():
-                    parameter = self.create_parameter(param_specification=param_specification, 
-                                                      param_name=param_name, 
-                                                      type_key=type_key, 
-                                                      prior_name=prior_name)
-                    self.append(parameter)
+        for type_key, type_value in dict_input.items():
+            for param_name, param_specification in type_value.items():
+                parameter = self.create_parameter(param_specification=param_specification, 
+                                                    param_name=param_name, 
+                                                    type_key=type_key, 
+                                                    prior_name=self.prior_name)
+                self.append(parameter)
 
     # This method presumes that you have given the specifications in the form of 
             # nested dictionaries of the form
@@ -116,7 +146,6 @@ class ParameterSet(object):
             dict_input (dict): The input dictionary containing parameter specifications.
         """
         for param_name, single_parameter_specifications in dict_input.items():
-
             parameter = self.create_parameter(param_specification=single_parameter_specifications, 
                                               param_name=param_name)
             self.append(parameter)
@@ -177,11 +206,8 @@ class ParameterSet(object):
 
         Args:
             param_specification (dict): Specifications for the parameter.
-            
             param_name (str, optional): Name of the parameter.
-            
             type_key (str, optional): Type of the parameter (e.g., 'spectral_parameters').
-            
             prior_name (str, optional): Name of the prior associated with the parameter.
 
         Returns:
@@ -232,10 +258,42 @@ class ParameterSet(object):
         elif isinstance(parameter, ParameterSet):
             parameters = parameter
             for param_name, parameter in parameters.dict_of_parameters_by_name.items():
+                parameter = self.create_parameter(parameter, param_name=param_name)
                 self.append(parameter)
+
+    def _reset_unique_input_methods(self):
+        """
+        Resets the unique input methods for the parameters in the set.
+        """
+
+        self.parameter_logpdfs = {}
+
+        already_included_parameters = []
+        list_param_names = list(self.dict_of_parameters_by_name.keys())
+        
+        for param_idx, (parameter_name, parameter) in enumerate(self.dict_of_parameters_by_name.items()):
+
+
+            if not(parameter_name in already_included_parameters):
+                hyper_indices_for_param = [param_idx]
+
+                if 'dependent' in parameter:
+                    for dependent_parameter_name in parameter['dependent']:
+                        hyper_indices_for_param.append(list_param_names.index(dependent_parameter_name))
+                        already_included_parameters.append(dependent_parameter_name)
+
+
+                self.parameter_logpdfs[parameter_name] = [parameter.logpdf, hyper_indices_for_param]
+
 
 
     def __repr__(self):
+        """
+        Returns a string representation of the ParameterSet.
+
+        Returns:
+            str: String representation of the parameter set.
+        """
         return str(self.dict_of_parameters_by_name)
 
 
@@ -320,6 +378,12 @@ class ParameterSet(object):
 
     @property
     def bounds(self):
+        """
+        Retrieves the bounds for all parameters in the set.
+
+        Returns:
+            list: A list of bounds for the parameters.
+        """
         bounds = []
         for param in self.dict_of_parameters_by_name.values():
             bounds.append(param['bounds'])
@@ -340,6 +404,12 @@ class ParameterSet(object):
     
     @property
     def sampling_format(self):
+        """
+        Alias for the stochastic_format property.
+
+        Returns:
+            dict: A dictionary representation of the parameter set suitable for stochastic sampling.
+        """
         return self.stochastic_format
     
     # Method specifically when all parameters are discrete and have a defined 'axis' method
@@ -374,7 +444,16 @@ default value. Place nan in position of default""")
         return default_values
     
 
-    def fetch_defaults(self, param_type):
+    def _fetch_defaults(self, param_type):
+        """
+        Retrieves the default values for parameters of a specific type.
+
+        Args:
+            param_type (str): The type of parameters to retrieve defaults for.
+
+        Returns:
+            dict: A dictionary of parameter names and their default values.
+        """
         default_values = {}
         for parameter in self.dict_of_parameters_by_type[param_type].values():
             default_values[parameter['name']] = parameter['default_value']
@@ -382,13 +461,25 @@ default value. Place nan in position of default""")
      
     @property
     def spectral_defaults(self):
-        return self.fetch_defaults('spectral_parameters')
+        """
+        Retrieves the default values for spectral parameters.
+
+        Returns:
+            dict: A dictionary of spectral parameter names and their default values.
+        """
+        return self._fetch_defaults('spectral_parameters')
     
 
         
     @property
     def spatial_defaults(self):
-        return self.fetch_defaults('spatial_parameters')
+        """
+        Retrieves the default values for spatial parameters.
+
+        Returns:
+            dict: A dictionary of spatial parameter names and their default values.
+        """
+        return self._fetch_defaults('spatial_parameters')
     
 
 
@@ -427,11 +518,19 @@ default value. Place nan in position of default""")
         for param_name, parameter_specs in self.dict_of_parameters_by_name.items():
             param_group = h5f.create_group(param_name)
             for spec_attr, spec_attr_val in parameter_specs.items():
-                if spec_attr != 'transform':
+                if (spec_attr != 'transform'):
                     if isinstance(spec_attr_val, (np.ndarray, list)):
                         param_group.create_dataset(spec_attr, data=spec_attr_val)
-                    else:
+                    elif isinstance(spec_attr_val, (str, tuple, set, int, float)):
                         param_group.attrs[spec_attr] = spec_attr_val
+                    elif spec_attr=='prob_model':
+                        try:
+                            param_group.attrs['prob_model_name'] = spec_attr_val.__name__
+                        except:
+                            param_group.attrs['prob_model_type'] = str(type(spec_attr_val))
+                        
+                    else:
+                        warnings.warn(f"Could not save {spec_attr} for the parameter {param_name}")
 
         return h5f
     
@@ -448,6 +547,16 @@ default value. Place nan in position of default""")
 
     @classmethod
     def load(cls, h5f=None, file_name=None,):
+        """
+        Loads a ParameterSet from an HDF5 file.
+
+        Args:
+            h5f (h5py.File, optional): An HDF5 file object. If None, the file specified by file_name will be opened.
+            file_name (str, optional): The name of the file to load the data from.
+
+        Returns:
+            ParameterSet: A new ParameterSet instance containing the loaded data.
+        """
         new_parameter_set = cls()  # Instantiate a new ParameterSet
 
         if h5f is None:
@@ -505,3 +614,55 @@ default value. Place nan in position of default""")
 
         
         return  pickle.load(open(file_name,'rb'))
+    
+    def reorder(self, order_list):
+        """
+        Reorders the parameters in the set based on the provided order list.
+
+        Args:
+            order_list (list): A list of parameter names in the desired order.
+        """
+        reordered_parameters = {name: self.dict_of_parameters_by_name[name] for name in order_list if name in self.dict_of_parameters_by_name}
+        self.dict_of_parameters_by_name = reordered_parameters
+
+        # Reorder dict_of_parameters_by_type
+        for type_key in self.dict_of_parameters_by_type:
+            type_parameters = self.dict_of_parameters_by_type[type_key]
+            reordered_type_parameters = {name: type_parameters[name] for name in order_list if name in type_parameters}
+            self.dict_of_parameters_by_type[type_key] = reordered_type_parameters
+
+        # Reorder axes_by_type
+        for type_key in self.axes_by_type:
+            type_axes = self.axes_by_type[type_key]
+            reordered_axes = {name: type_axes[name] for name in order_list if name in type_axes}
+            self.axes_by_type[type_key] = reordered_axes
+
+
+    def logpdf(self, input):
+        """
+        Computes the log of the overall sets' probability density function (logPDF) for the given input.
+
+        Args:
+            input (array-like): Input values for which to compute the logPDF.
+
+        Returns:
+            float: The computed logPDF value.
+        """
+        return np.sum([logpdf(input[input_indices]) for logpdf, input_indices in self.parameter_logpdfs])
+    
+
+    def pdf(self, input):
+        """
+        Computes the probability density function (PDF) for the given input.
+
+        Args:
+            input (array-like): Input values for which to compute the PDF.
+
+        Returns:
+            float: The computed PDF value.
+        """
+        return np.exp(self.logpdf(input=input))
+
+
+
+

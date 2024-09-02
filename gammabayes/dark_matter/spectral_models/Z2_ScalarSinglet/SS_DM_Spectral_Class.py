@@ -1,4 +1,5 @@
 import numpy as np, copy
+from astropy import units as u
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
@@ -31,21 +32,21 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
 
     Args:
         interp_file (str, optional): Specifies the interpolation file to use for model parameters. 
-                                     Defaults to 'dimauromattia'.
+                                     Defaults to 'darkSUSY'.
         *args: Additional positional arguments passed to the parent class constructor.
         **kwargs: Additional keyword arguments passed to the parent class constructor, including options for 
                   default parameter values and other configurations.
     """
 
 
-    def __init__(self, interp_file = 'dimauromattia', *args, **kwargs):
+    def __init__(self, interp_file = 'darkSUSY', *args, **kwargs):
         """
         Initializes the Z2_ScalarSinglet class with data specific to the model, preparing it for emission spectrum calculations.
 
         Args:
             interp_file (str, optional): File name (without extension) of the interpolation data within the 
                                          `annihilation_ratio_data` directory. This file contains the model-specific 
-                                         annihilation fractions and parameter axes. Defaults to 'dimauromattia'.
+                                         annihilation fractions and parameter axes. Defaults to 'darkSUSY'.
             *args: Variable length argument list for the parent class's constructor.
             **kwargs: Arbitrary keyword arguments for the parent class's constructor. This includes options to specify
                       default parameter values such as mass and self-interaction strength (`lahS`).
@@ -61,16 +62,16 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
         del SS_ratios_dict['mS [GeV]']
         del SS_ratios_dict['lahS']
         
-        parameter_interpolation_values = [mass_axis, lahS_axis]
-        parameter_axes_shapes = (mass_axis.size, lahS_axis.size)
+        parameter_interpolation_values = [mass_axis*u.TeV, lahS_axis]
+        parameter_axes_shapes = (lahS_axis.size, mass_axis.size)
 
         for channel in SS_ratios_dict.keys():
-            SS_ratios_dict[channel] = SS_ratios_dict[channel].reshape(parameter_axes_shapes)
+            SS_ratios_dict[channel] = SS_ratios_dict[channel].reshape(parameter_axes_shapes).T
 
 
         super().__init__(annihilation_fractions = SS_ratios_dict, 
                          parameter_interpolation_values = parameter_interpolation_values,
-                         default_parameter_values={'mass':1.0, 'lahS':0.1},
+                         default_parameter_values={'mass':1.0*u.TeV, 'lahS':0.1},
                          *args, **kwargs)
         
 

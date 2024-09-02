@@ -1,22 +1,23 @@
 from scipy.special import logsumexp
 import numpy as np
 from gammabayes.samplers import integral_inverse_transform_sampler
-from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh, update_with_defaults
-from gammabayes import EventData, Parameter, ParameterSet
+from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
+from gammabayes import Parameter, ParameterSet, update_with_defaults, GammaBinning, GammaObs, GammaObsCube
+# from gammabayes import EventData
 import pickle
-
+from tqdm import tqdm
 class DiscreteLogLikelihood(object):
     
     def __init__(self, 
                  logfunction: callable,
-                 axes: list[np.ndarray] | tuple[np.ndarray], 
-                 dependent_axes: list[np.ndarray], 
+                 axes: list[np.ndarray] | tuple[np.ndarray]     = None, 
+                 dependent_axes: list[np.ndarray]               = None, 
                  name: list[str] | tuple[str]                   = ['None'], 
                  inputunit: str | list[str] | tuple[str]        = ['None'], 
-                 axes_names: list[str] | tuple[str]             = ['None'], 
-                 dependent_axes_names: list[str] | tuple[str]   = ['None'], 
                  iterative_logspace_integrator: callable        = iterate_logspace_integration,
                  parameters: dict | ParameterSet          = ParameterSet(),
+                 binning_geometry: GammaBinning = None,
+                 true_binning_geometry: GammaBinning = None
                  ) -> None:
         """
         Initializes a DiscreteLogLikelihood object that computes log likelihood values
@@ -48,18 +49,42 @@ class DiscreteLogLikelihood(object):
         self.name = name
         self.inputunit = inputunit
         self.logfunction = logfunction
-        self.axes_names = axes_names
         self.axes = axes
-        print(f'Number of input dimensions {len(self.axes)}')
-        self.dependent_axes_names = dependent_axes_names
         self.dependent_axes = dependent_axes
 
+
+        self._create_geometry(axes=axes, dependent_axes=dependent_axes, binning=binning_geometry, true_binning=true_binning_geometry)
+
+        # TODO: Delegate to binning geometries
         self.axes_dim, self.axes_shape, self.dependent_axes_dim = self._get_axis_dims(self.axes, self.dependent_axes)
 
-        self.iterative_logspace_integrator  = iterative_logspace_integrator 
+        self.logspace_integrator  = iterative_logspace_integrator 
         self.parameters               = parameters
 
         self.parameters = ParameterSet(self.parameters)
+    
+
+    def _create_geometry(self, axes, dependent_axes, binning, true_binning):
+
+
+        if not(axes is None):
+            self.binning_geometry = GammaBinning(energy_axis=axes[0], lon_axis=axes[1], lat_axis=axes[2])
+        elif not(binning is None):
+            self.binning_geometry = binning
+        else:
+            self.binning_geometry = None
+
+
+        if not(dependent_axes is None):
+            self.true_binning_geometry = GammaBinning(energy_axis=dependent_axes[0], lon_axis=dependent_axes[1], lat_axis=dependent_axes[2])
+        elif not(binning is None):
+            self.true_binning_geometry = true_binning
+        else:
+            self.true_binning_geometry = None
+
+        self.axes = self.binning_geometry.axes
+        self.dependent_axes = self.true_binning_geometry.axes
+            
 
 
     def _get_axis_dims(self, axes, dependent_axes):
@@ -126,8 +151,6 @@ class DiscreteLogLikelihood(object):
         string_text = string_text+f'name = {self.name}\n'
         string_text = string_text+f'logfunction type is {self.logfunction}\n'
         string_text = string_text+f'input units of {self.inputunit}\n'
-        string_text = string_text+f'over axes {self.axes_names}\n'
-        string_text = string_text+f'with dependent axes {self.dependent_axes_names}\n'
         
         return string_text
     
@@ -136,8 +159,9 @@ class DiscreteLogLikelihood(object):
     
     def raw_sample(self, 
                    dependentvalues: tuple[float] | list[float] | np.ndarray,  
+                   pointing_dir: np.ndarray = None,
                    parameters: dict | ParameterSet = {}, 
-                   numsamples: int = 1) -> np.ndarray:
+                   numsamples: int = 1) -> GammaObs:
         """
         Samples from the likelihood for given dependent values.
 
@@ -151,20 +175,33 @@ class DiscreteLogLikelihood(object):
         """
         update_with_defaults(parameters, self.parameters)
 
-        num_non_axes = len(self.axes) + len(dependentvalues)
+        num_eval_axes = len(self.axes) + len(dependentvalues)
+
+        input_units = []
+
+        for axis in self.axes:
+            input_units.append(1)
+
+        for val_idx, dependent_val in enumerate(dependentvalues):
+            # input_units.append(self.axes[val_idx].unit)
+            input_units.append(1)
+
+        for parameter_val in parameters.values():
+            input_units.append(1)
+
 
 
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, *parameters.values(), indexing='ij')        
 
-        flattened_meshes = [inputaxis.flatten() for inputaxis in inputmesh]
+        flattened_meshes = [inputaxis.flatten()*unit for inputaxis, unit in zip(inputmesh, input_units)]
         
         loglikevals = np.squeeze(
             self(
-                *flattened_meshes[:num_non_axes], 
-                parameters={key:flattened_meshes[num_non_axes+param_idx] for param_idx, key in enumerate(parameters.keys())}
+                *flattened_meshes[:num_eval_axes], 
+                parameters={key:flattened_meshes[num_eval_axes+param_idx] for param_idx, key in enumerate(parameters.keys())}
                 ).reshape(inputmesh[0].shape))
 
-        loglikevals = loglikevals - self.iterative_logspace_integrator(loglikevals, axes=self.axes)
+        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes])
 
 
         # Used for pseudo-riemann summing
@@ -172,16 +209,16 @@ class DiscreteLogLikelihood(object):
 
         simvals = integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples)
             
-        return EventData(data=np.asarray(simvals).T, 
-                             energy_axis=self.axes[0], 
-                             glongitude_axis=self.axes[1], 
-                             glatitude_axis=self.axes[2], 
-                             _likelihood_id=self.name,
-                             _true_vals = False
-                             )
+        return GammaObs(energy=simvals[0], 
+                        lon=simvals[1], 
+                        lat=simvals[2], 
+                        binning_geometry=self.binning_geometry,
+                        irf_loglike=self,
+                        pointing_dir=pointing_dir
+                        )
     
 
-    def sample(self,eventdata: EventData, parameters: dict | ParameterSet = {}, Nevents_per: int =1):
+    def sample(self,eventdata: GammaObs, parameters: dict | ParameterSet = {}, print_progress=False):
         """
         Generates samples from the likelihood based on observed event data.
 
@@ -197,32 +234,27 @@ class DiscreteLogLikelihood(object):
             An EventData instance containing the sampled data.
         """
 
-        if hasattr(eventdata, 'obs_id'):
-            obs_id = eventdata.obs_id
-        else:
-            obs_id = 'NoID'
+        measured_event_data = GammaObs(energy=[], lon=[], lat=[], pointing_dir=eventdata.pointing_dir, 
+                                        binning_geometry=self.binning_geometry, irf_loglike=self)
+        
+        data_to_iterate_over = zip(*eventdata.nonzero_bin_data)
 
-        measured_event_data = EventData(energy=[], glon=[], glat=[], pointing_dirs=[], 
-                                        _source_ids=[], obs_id=obs_id,
-                                        energy_axis=self.axes[0], glongitude_axis=self.axes[1],
-                                        glatitude_axis=self.axes[2], 
-                                        _true_vals=False)
-        for event_datum in eventdata:
-            measured_event_data.append(
-                self.raw_sample(dependentvalues=event_datum, 
-                                parameters=parameters, 
-                                numsamples=Nevents_per)
-                )
-        try:
-            measured_event_data._source_ids = eventdata._source_ids
-        except:
-            pass
+        if print_progress:
+            data_to_iterate_over = tqdm(data_to_iterate_over, total=len(eventdata.nonzero_bin_data[0]))
+
+
+        for datum_coord, num_datum in data_to_iterate_over:
+            measured_event_data+=self.raw_sample(
+                dependentvalues=datum_coord, 
+                parameters=parameters, 
+                pointing_dir=eventdata.pointing_dir,
+                numsamples=num_datum)
 
         return measured_event_data
     
     
 
-    def save(self, file_name:str ):
+    def save(self, file_name:str , write_mode:str = 'wb'):
         """
         Saves the DiscreteLogLikelihood data to an HDF5 file.
 
@@ -233,8 +265,18 @@ class DiscreteLogLikelihood(object):
         if not(file_name.endswith('.pkl')):
             file_name = file_name+'.pkl'
 
-        pickle.dump(self, open(file_name,'wb'))
+        pickle.dump(self, open(file_name,write_mode))
 
     @classmethod
-    def load(cls, file_name):
-        return  pickle.load(open(file_name,'rb'))
+    def load(cls, file_name:str, read_mode:str = 'rb'):
+        """
+        Loads the DiscreteLogLikelihood data from a pickle file.
+
+        Parameters:
+            file_name (str): The name of the file to load the data from.
+
+        Returns:
+            DiscreteLogLikelihood: An instance of the class with the loaded data.
+        """
+
+        return  pickle.load(open(file_name,read_mode))

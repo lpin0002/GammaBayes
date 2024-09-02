@@ -6,8 +6,8 @@ import time
 from matplotlib import cm
 import sys, os
 from scipy.special import logsumexp
-from gammabayes.utils import hdp_credible_interval_1d, logspace_simpson, logspace_riemann, iterate_logspace_integration
-from gammabayes.core.core_utils import bin_centres_to_edges
+from gammabayes.utils import logspace_simpson, logspace_riemann, iterate_logspace_integration
+from gammabayes import bin_centres_to_edges, hdp_credible_interval_1d
 from matplotlib.colors import LogNorm
 
 
@@ -29,10 +29,38 @@ defaults_kwargs = dict(
 def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=True, sigmas=range(0,6), 
                            cmap=cm.get_cmap('Blues_r'), contours2d = False,
                            levels=np.array([1-np.exp(-25/2), 1-np.exp(-8), 1-np.exp(-4.5),1-np.exp(-2.0),1-np.exp(-0.5)]),
-                           axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm=None,
-                           single_dim_yscales='linear', single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
+                           axis_names=None, suptitle='', suptitlesize=12, plot_density=False, norm='linear',
+                           single_dim_ylabel='', vmin=None, vmax=None, iteratable_logspace_integrator=iterate_logspace_integration,
                            single_dim_logspace_integrator=logspace_riemann, axes_scale=None,
                            **kwargs):
+    """
+    Plots a matrix of log-density plots, including 1D and 2D marginal distributions.
+
+    Args:
+        axes (list[np.ndarray]): List of axis values.
+        log_dist_matrix (np.ndarray): Logarithm of the distribution matrix.
+        truevals (list[float], optional): True values to be marked on the plots. Defaults to None.
+        sigmalines_1d (bool, optional): Whether to plot sigma lines on 1D plots. Defaults to True.
+        sigmas (range, optional): Range of sigma values to plot. Defaults to range(0, 6).
+        cmap (matplotlib.colors.Colormap, optional): Colormap for the plots. Defaults to cm.get_cmap('Blues_r').
+        contours2d (bool, optional): Whether to plot 2D contours. Defaults to False.
+        levels (np.ndarray, optional): Contour levels for 2D plots. Defaults to specific values.
+        axis_names (list[str], optional): Names of the axes. Defaults to None.
+        suptitle (str, optional): Suptitle for the entire plot. Defaults to ''.
+        suptitlesize (int, optional): Font size of the suptitle. Defaults to 12.
+        plot_density (bool, optional): Whether to plot density instead of raw values. Defaults to False.
+        norm (str, optional): Scale for the y-axis. Defaults to 'linear'.
+        single_dim_ylabel (str, optional): Y-label for single dimension plots. Defaults to ''.
+        vmin (float, optional): Minimum value for color scaling. Defaults to None.
+        vmax (float, optional): Maximum value for color scaling. Defaults to None.
+        iteratable_logspace_integrator (callable, optional): Function for log-space integration over multiple axes. Defaults to iterate_logspace_integration.
+        single_dim_logspace_integrator (callable, optional): Function for log-space integration over a single axis. Defaults to logspace_riemann.
+        axes_scale (list[str], optional): Scale for each axis ('linear' or 'log'). Defaults to None.
+        **kwargs: Additional keyword arguments for the plot.
+
+    Returns:
+        tuple: Figure and axes objects for the plot.
+    """
     numaxes = len(axes)
     n = 1000
 
@@ -53,9 +81,11 @@ def logdensity_matrix_plot(axes, log_dist_matrix, truevals=None, sigmalines_1d=T
                 ax[rowidx,rowidx].plot(axes[rowidx], marginal_dist)
                 if not(truevals is None):
                     ax[rowidx, rowidx].axvline(truevals[rowidx], ls='--', lw=1, c='tab:orange')
-                ax[rowidx,rowidx].set_ylim([0,None])
+                    
+                if norm!='log':
+                    ax[rowidx,rowidx].set_ylim([0,None])
                 ax[rowidx, rowidx].set_xlim([axes[colidx].min(), axes[colidx].max()])
-                ax[rowidx,rowidx].set_yscale(single_dim_yscales)
+                ax[rowidx,rowidx].set_yscale(norm)
 
                 if axes_scale is not None:
                     ax[rowidx,rowidx].set_xscale(axes_scale[rowidx])

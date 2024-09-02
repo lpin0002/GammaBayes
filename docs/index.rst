@@ -9,15 +9,23 @@ Welcome to GammaBayes's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-
-    tutorials/"Data Classes: EventData"
-    tutorials/"Data Classes: Parameters"
-    tutorials/ProbabilityClasses
-    tutorials/DarkMatterModels
-    tutorials/Simulations
-    tutorials/HyperParameterInference
-    tutorials/Reweighting
-
+   
+   tutorials/QuickStart
+   tutorials/HighLevelInference
+   tutorials/LowLevelOverview
+   tutorials/BinningGeometries
+   tutorials/Exposure
+   tutorials/InstrumentResponseFunctions
+   tutorials/DataClasses
+   tutorials/Simulations
+   tutorials/DarkMatter
+   tutorials/ParameterClasses
+   tutorials/NuisanceParameterMarginalisation
+   tutorials/MultiObservationNuisanceParameterMarginalisation
+   tutorials/HyperparmeterInference
+   tutorials/UsefulUtils
+   tutorials/PlannedDevelopments
+   tutorials/API
 
 
 
