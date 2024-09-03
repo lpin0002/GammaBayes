@@ -7,8 +7,8 @@ from astropy import units as u
 def test_discrete_logprior():
     energy_true_axis, longitudeaxistrue, latitudeaxistrue = np.logspace(-1,2,16), np.linspace(-5,5,11), np.linspace(-4,4,9)
 
-    def fake_func(energy, longitude, latitude, spectral_parameters, spatial_parameters={}):
-        result = -(energy-spectral_parameters['centre'])**2/(2)
+    def fake_func(energy, longitude, latitude, spectral_parameters={}, spatial_parameters={}):
+        result = -(energy.value-spectral_parameters['centre'])**2/(2)
         return result
 
     warnings.simplefilter("ignore", category=UserWarning)
