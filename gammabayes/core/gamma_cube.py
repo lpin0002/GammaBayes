@@ -1,14 +1,8 @@
 import numpy as np
-from astropy.io import fits
 from .binning_geometry import GammaBinning
-from gammapy.irf import load_irf_dict_from_file
 import pickle
-import pkg_resources
-
 from .exposure import GammaLogExposure
-from icecream import ic
 from astropy import units as u
-from astropy.nddata import NDData
 
 class GammaObs:
     def __init__(self, 
