@@ -2,7 +2,7 @@ astropy==5.3.4
 corner
 dynesty
 matplotlib
-scipy
+scipy==1.11.4
 tqdm
 numpy
 pandas
