@@ -2,6 +2,7 @@ import os, sys, time
 from gammabayes.priors import DiscreteLogPrior
 import warnings
 import numpy as np
+from astropy import units as u
 
 def test_discrete_logprior():
     energy_true_axis, longitudeaxistrue, latitudeaxistrue = np.logspace(-1,2,16), np.linspace(-5,5,11), np.linspace(-4,4,9)
@@ -14,7 +15,7 @@ def test_discrete_logprior():
 
     discrete_logprior_instance = DiscreteLogPrior(logfunction=fake_func, 
                              name='Fake Test Func',
-                             axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], 
+                             axes=[energy_true_axis*u.TeV, longitudeaxistrue*u.deg, latitudeaxistrue*u.deg], 
                              default_spectral_parameters={'centre':1.0}, )
                              
     warnings.simplefilter("default", category=UserWarning)
