@@ -15,7 +15,6 @@ def test_discrete_logprior():
     discrete_logprior_instance = DiscreteLogPrior(logfunction=fake_func, 
                              name='Fake Test Func',
                              axes=[energy_true_axis, longitudeaxistrue, latitudeaxistrue], 
-                             axes_names=['energy', 'lon', 'lat'],
                              default_spectral_parameters={'centre':1.0}, )
                              
     warnings.simplefilter("default", category=UserWarning)
