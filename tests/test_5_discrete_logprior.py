@@ -24,7 +24,7 @@ def test_discrete_logprior():
     print('can sample')
     log_prob_matrix = discrete_logprior_instance.construct_prior_array(spectral_parameters= {'centre':-0.5}, normalise=False)
     print('can construct')
-    discrete_logprior_instance.normalisation(spectral_parameters= {'centre':0.0})
+    discrete_logprior_instance.log_normalisation(spectral_parameters= {'centre':0.0})
     print('can normalise')
 
 
