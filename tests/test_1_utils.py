@@ -1,4 +1,4 @@
-from gammabayes.utils import update_with_defaults, haversine
+from gammabayes import update_with_defaults, haversine
 
 
 def test_update_with_defaults():

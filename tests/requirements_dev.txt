@@ -11,3 +11,5 @@ setuptools
 pyyaml
 gammapy
 h5py
+icecream
+seaborn
