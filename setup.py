@@ -36,6 +36,8 @@ setup(name='GammaBayes',
         "healpy",
         "pytest",
         "h5py",
+        "icecream",
+        "seaborn"
     ],
       classifiers=[
           "License :: OSI Approved :: MIT License",

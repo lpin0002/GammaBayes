@@ -388,11 +388,14 @@ class DiscreteLogPrior(object):
         self.log_scaling_factor = self.log_scaling_factor+log_factor
 
 
-    def peek(self, vmin=None, vmax=None, norm='linear', **kwargs):
+    def peek(self, vmin=None, vmax=None, norm='linear', cmap='viridis', **kwargs):
         from matplotlib import pyplot as plt
         from gammabayes.utils.integration import iterate_logspace_integration
+        from matplotlib.pyplot import get_cmap
 
         log_matrix_values = self.construct_prior_array()
+
+        cmap = get_cmap(cmap)
 
 
 
@@ -414,7 +417,7 @@ class DiscreteLogPrior(object):
                                                 axisindices=[2])
 
 
-        ax[0].plot(self.binning_geometry.energy_axis.value, np.exp(log_integrated_energy_flux))
+        ax[0].plot(self.binning_geometry.energy_axis.value, np.exp(log_integrated_energy_flux), c=cmap(0.5))
         ax[0].set_xscale('log')
         ax[0].set_yscale(norm)
         
@@ -425,7 +428,7 @@ class DiscreteLogPrior(object):
         pcm = ax[1].pcolormesh(self.binning_geometry.lon_axis.value, 
                         self.binning_geometry.lat_axis.value, 
                         np.exp(log_integrated_spatial_flux.T),
-                        norm=norm, vmin=vmin, vmax=vmax)
+                        norm=norm, vmin=vmin, vmax=vmax, cmap=cmap)
         ax[1].set_aspect('equal')
         ax[1].set_xlabel(f'Longitude [{(self.binning_geometry.lon_axis.unit).to_string()}]')
         ax[1].set_ylabel(f'Latitude [{(self.binning_geometry.lat_axis.unit).to_string()}]')
@@ -439,7 +442,7 @@ class DiscreteLogPrior(object):
         pcm = ax[2].pcolormesh(self.binning_geometry.energy_axis.value, 
                         self.binning_geometry.lon_axis.value, 
                         np.exp(log_integrated_mix_flux.T),
-                        norm=norm, vmin=vmin, vmax=vmax)
+                        norm=norm, vmin=vmin, vmax=vmax, cmap=cmap)
         ax[2].set_xscale('log')
         ax[2].set_ylabel(f'Longitude [{(self.binning_geometry.lon_axis.unit).to_string()}]')
         ax[2].set_xlabel(f'Energy [{self.binning_geometry.energy_axis.unit.to_string()}]')
