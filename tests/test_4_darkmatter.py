@@ -30,7 +30,6 @@ def test_dm_spectral_cutoff():
                             axes=(energy_true_axis, 
                                 longitudeaxistrue, 
                                 latitudeaxistrue,), 
-                            axes_names=['energy', 'lon', 'lat'],
                             default_spectral_parameters={'mass':1.0,}, )
     assert np.isneginf(logDMprior(2.0*u.TeV, 0.1*u.deg, 0.0*u.deg,spectral_parameters={'mass':1.0}))
 
