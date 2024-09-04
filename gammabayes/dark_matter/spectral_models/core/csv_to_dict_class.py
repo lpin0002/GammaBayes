@@ -9,7 +9,7 @@ class CSVDictionary:
         df (pd.DataFrame): The DataFrame containing the CSV data.
         dict_object (dict): The dictionary representation of the DataFrame.
     """
-    def __init__(self, filepath, delimiter=' ', numeric_type=np.float128):
+    def __init__(self, filepath, delimiter=' ', numeric_type=np.float64):
         """
         Initializes the CSVDictionary object by reading a CSV file and converting it to a dictionary.
 
