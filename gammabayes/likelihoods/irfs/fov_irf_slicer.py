@@ -339,10 +339,10 @@ class FOV_IRF_Norm:
         else:
             lat_stop = -(default_lat_vals[1] - lat_offset)
 
-        if lon_stop is 0:
+        if lon_stop == 0:
             lon_stop = None
 
-        if lat_stop is 0:
+        if lat_stop == 0:
             lat_stop = None
 
         self.buffer_window = (

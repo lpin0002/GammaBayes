@@ -17,7 +17,7 @@ def test_irf_input_output():
 
     irf_loglike = IRF_LogLikelihood(axes=[energy_recon_axis, longitudeaxis, latitudeaxis], 
                                     dependent_axes = [energy_true_axis, longitudeaxistrue, latitudeaxistrue],
-                                    pointing_direction=np.asarray([10,10]).T, 
+                                    pointing_dir=np.asarray([10,10])*u.deg, 
                                     zenith=40, 
                                     hemisphere='North', 
                                     prod_vers=5)
