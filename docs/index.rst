@@ -19,8 +19,10 @@ Welcome to GammaBayes's documentation!
    tutorials/DataClasses
    tutorials/Simulations
    tutorials/DarkMatter
+   tutorials/Conventional_Astrophysical_Classes
    tutorials/ParameterClasses
-   tutorials/HyperparameterInference
+   tutorials/HyperParameterInference
+   tutorials/HyperparameterInference ver 2
    tutorials/MultiObservationNuisanceParameterMarginalisation
 ..    tutorials/UsefulUtils
 ..    tutorials/PlannedDevelopments

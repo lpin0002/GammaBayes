@@ -270,7 +270,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
 
             ax.set_xscale('log')
 
-        legend=ax.legend(title=f'slice at ({centre_spatial[0].value:.1f}, {centre_spatial[1].value:.1f}) {centre_spatial.unit.to_string('latex')}')
+        legend=ax.legend(title="slice at ("+f"{centre_spatial[0].value:.1f}, {centre_spatial[1].value:.1f}"+") +"+f"{centre_spatial.unit.to_string('latex')}")
         plt.setp(legend.get_title(),fontsize='8')
 
         ax.set_xlabel(r"Energy ["+self.binning_geometry.energy_axis.unit.to_string('latex')+"]")

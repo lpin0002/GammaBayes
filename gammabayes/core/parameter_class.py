@@ -4,7 +4,7 @@ from scipy.stats import uniform, loguniform
 from scipy import stats
 from scipy.stats import rv_discrete
 from scipy.stats import gamma
-
+from icecream import ic
 
 class Parameter(dict):
     """
@@ -18,7 +18,14 @@ class Parameter(dict):
     Attributes are dynamically adjustable and support serialization to and 
     from HDF5 files for easy sharing and storage of configurations.
     """
-    def __init__(self, initial_data: dict =None, **kwargs):
+    def __init__(self, initial_data: dict = {}, 
+                 discrete:bool=True, bins:int = 11,
+                 scaling:str='linear', default_value:float=1.0,
+                num_events:int = 1, axis: np.ndarray = None,
+                parameter_type:str = 'None',
+                bounds:list[float] = [0. ,1.],
+
+                 **kwargs):
         """
         Initializes a Parameter object with specified attributes and properties.
 
@@ -32,53 +39,33 @@ class Parameter(dict):
         based on scaling and discreteness.
         """
 
-        if initial_data is None:
-            initial_data = kwargs
+        data_dict = copy.deepcopy(initial_data)
 
+        for key, val in kwargs.items():
+            data_dict.setdefault(key, val)
 
+        data_dict.setdefault(       'discrete', discrete)
+        data_dict.setdefault(           'bins', bins)
+        data_dict.setdefault(        'scaling', scaling)
+        data_dict.setdefault(  'default_value', default_value)
+        data_dict.setdefault(     'num_events', num_events)
+        data_dict.setdefault(           'axis', axis)
+        data_dict.setdefault( 'parameter_type', parameter_type)
+        data_dict.setdefault(         'bounds', bounds)
+
+        if type(data_dict) == dict:
             
-        if type(initial_data) == dict:
-
-            data_copy = copy.deepcopy(initial_data) if initial_data is not None else {}
-            data_copy.update(kwargs)
-            
-            super().__init__(data_copy)
+            super().__init__(data_dict)
 
             self.update_distribution()
             
 
-            if not('scaling' in self):
-                self['scaling'] = 'linear'
-
-
-            # log10 to specifically let people now that the log will be base 10
-                # rather than the natural scale which is generally notated as 
-                # 'log' for the rest of the repo/package/project/thingy
             if self['scaling'] not in ['linear', 'log10']:
                 warnings.warn("Scaling typically must be 'linear' or 'log10'. ")
 
 
-            if not('discrete' in self):
-                self['discrete'] = True
-
-            if not('default_value' in self):
-                self['default_value'] = 1.0
-
-
-            # A default value does not have to be given but is helpful, and would 
-                # be required if one uses event dynamic bounds
             self['default_value'] = float(self['default_value'])
 
-            # For discrete values we highly recommend you explicitly state the bounds
-                # even if they are 0. and 1.
-            if not('bounds' in self):
-                warnings.warn("No bounds given. Defaulting to 0. and 1.")
-                self['bounds'] = [0., 1.]
-            
-            # A specific way of setting the bounds on the parameter if a value is
-                # fairly well known (or set within simulations) and this way makes
-                # the bounds change with the square root of the number of events
-                # (assuming CLT essentially). 
             
             if isinstance(self['bounds'], str):
                 if self['bounds']=='event_dynamic':
@@ -109,11 +96,6 @@ class Parameter(dict):
                 self['bounds'][idx] = float(bound)
 
 
-            # For sampling with 3 or less parameters we highly recommend making them discrete
-                # and performing a scan over them rather than sampling as the performance is 
-                # currently better than the stochastic/reweighting methods. Future updates
-                # will try to improve the performance of the more expandable reweighting method
-
 
             if self['discrete']:
 
@@ -133,7 +115,7 @@ class Parameter(dict):
                     self['bins'] = int(np.round(np.diff(np.log10(self['bounds']))*10+1))
 
                 # The axis parameter is only required for discrete parameters
-                if not('axis' in self):
+                if self['axis'] is None:
                     if type(self['bins'])==int:
                         if self['scaling']=='linear':
                             self['axis'] = np.linspace(*self['bounds'], self['bins'])
@@ -144,16 +126,10 @@ class Parameter(dict):
                             
                 self['axis'] = np.asarray(self['axis'])
 
-
-
                 self['transform_scale'] = self['bins']
 
 
-
-
                 if self.distribution is None:
-
-
                     self.distribution = rv_discrete(values=(self['axis'], np.ones_like(self['axis'])/len(self['axis'])))
 
                     # Making it so that if a "0" is given to the ppf it outputs the first discrete value
@@ -169,24 +145,24 @@ class Parameter(dict):
             else:
 
                 if not(self.distribution is None):
+
                     self.rvs_sampling = False
+
                     if hasattr(self.distribution, 'ppf'):
                         self.rvs_sampling = False
                     else:
                         self.rvs_sampling = True
+                else:
+                    self.rvs_sampling = True
+                    if self['scaling']=='linear':
+                        self.distribution = uniform(loc=self['bounds'][0], 
+                                                    scale=self['bounds'][1]-self['bounds'][0])
+                    else:
+                        self.distribution = loguniform(a=self['bounds'][0], 
+                                                    b=self['bounds'][1])
+                    
 
-            # A parameter to keep track of which prior the parameter belongs to.
-            if not('prior_id' in self):
-                self['prior_id'] = np.nan
 
-            # A parameter to keep track of which likelihood the parameter belongs to.
-            if not('likelihood_id' in self):
-                self['likelihood_id'] = np.nan
-
-            # A parameter to keep track of what type of prior parameter this parameter is
-                # atm (31/01/24) this is either 'spectral_parameters' or 'spatial_parameters'
-            if not('parameter_type' in self):
-                self['parameter_type'] = 'None'
                 
         elif type(initial_data)==Parameter:
             # Handle duplicating from another Parameter instance
@@ -432,7 +408,7 @@ class Parameter(dict):
         return self.distribution.logcdf(x)
     
     @property
-    def median(self, x):
+    def median(self):
         """
         Computes the median of the distribution using 
         `self.distribution.median()`.
@@ -443,7 +419,7 @@ class Parameter(dict):
         return self.distribution.median()
     
     @property
-    def mean(self, x):
+    def mean(self):
         """
         Computes the mean of the distribution using `self.distribution.mean()`.
 
@@ -464,7 +440,7 @@ class Parameter(dict):
         return self.distribution.var()
     
     @property
-    def std(self, x):
+    def std(self):
         """_summary_
 
         Args:

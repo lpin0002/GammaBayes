@@ -1,7 +1,7 @@
 # If running from main file, the terminal format should be $ python -m gammabayes.utils.default_file_setup 1 1 1
     # If you're running from a script there shouldn't be any issues as setup is just a func
 from gammabayes.utils import iterate_logspace_integration
-from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
+# from gammabayes.likelihoods.irfs.prod5.gammapy_wrappers import log_edisp, log_psf
 from gammabayes import resources_dir
 
 from tqdm import tqdm
@@ -14,10 +14,12 @@ from astropy.units import Quantity
 from numpy import ndarray
 
 
-def irf_norm_setup(energy_true_axis:ndarray[Quantity], energy_recon_axis:ndarray[Quantity], 
+def irf_norm_setup(
+        log_psf:callable, log_edisp:callable,
+        energy_true_axis:ndarray[Quantity], energy_recon_axis:ndarray[Quantity], 
           longitudeaxistrue:ndarray[Quantity], longitudeaxis:ndarray[Quantity], 
           latitudeaxistrue:ndarray[Quantity], latitudeaxis:ndarray[Quantity],
-          save_directory:str = '', log_psf:callable=log_psf, log_edisp:callable=log_edisp,
+          save_directory:str = '', 
           save_results:bool=False):
     """
     Produces default IRF normalization matrices.

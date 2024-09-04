@@ -1,5 +1,4 @@
 
-from gammabayes.priors.CCR_bkg import log_bkg_CCR_dist, bkgfull
 from gammabayes import hdp_credible_interval_1d
 
 from gammabayes.utils.integration import logspace_riemann

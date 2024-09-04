@@ -2,12 +2,14 @@ astropy==5.3.4
 corner
 dynesty
 matplotlib
-scipy
+scipy==1.11.3
 tqdm
 numpy
 pandas
 pytest
 setuptools
 pyyaml
-gammapy
+gammapy==1.1
 h5py
+icecream
+seaborn

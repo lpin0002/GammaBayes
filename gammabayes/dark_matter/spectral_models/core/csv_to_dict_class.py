@@ -9,7 +9,7 @@ class CSVDictionary:
         df (pd.DataFrame): The DataFrame containing the CSV data.
         dict_object (dict): The dictionary representation of the DataFrame.
     """
-    def __init__(self, filepath, delimiter=' ', numeric_type=np.float128):
+    def __init__(self, filepath, delimiter=' ', numeric_type=np.float64):
         """
         Initializes the CSVDictionary object by reading a CSV file and converting it to a dictionary.
 
@@ -36,7 +36,7 @@ class CSVDictionary:
             # Attempt to convert each column to the specified numeric type.
             # If a column contains non-numeric data, it will remain unchanged.
             self.df[column] = pd.to_numeric(self.df[column], errors='ignore', downcast='float')
-            if self.df[column].dtype == np.number or self.df[column].dtype == np.float_:
+            if self.df[column].dtype == np.number or self.df[column].dtype == float:
                 self.df[column] = self.df[column].astype(numeric_type)
         
 

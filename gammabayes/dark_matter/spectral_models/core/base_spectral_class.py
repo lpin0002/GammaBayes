@@ -21,13 +21,13 @@ from icecream import ic
 
 
 single_Wchannel_annihilation_ratios   = {}
-mass_axis       = np.logspace(-1,2,301)*u.TeV
+mass_axis       = np.logspace(-1,2,301)
 
 for channel in PPPCReader.darkSUSY_to_PPPC_converter:
     if channel[0]=="W":
-        single_Wchannel_annihilation_ratios[channel] = mass_axis.value*0+1
+        single_Wchannel_annihilation_ratios[channel] = mass_axis*0+1
     else:
-        single_Wchannel_annihilation_ratios[channel] = mass_axis.value*0
+        single_Wchannel_annihilation_ratios[channel] = mass_axis*0
 
 
 class DM_ContinuousEmission_Spectrum(object):
@@ -72,7 +72,7 @@ class DM_ContinuousEmission_Spectrum(object):
                  annihilation_fractions=single_Wchannel_annihilation_ratios, 
                  parameter_interpolation_values:  list[np.ndarray] = [mass_axis], 
                  ratios: bool = True,
-                 default_parameter_values = {'mass':1.0*u.TeV,},
+                 default_parameter_values = {'mass':1.0,},
                  ):
         """
         Initialize the DMContinuousEmissionSpectrum class.
@@ -81,7 +81,7 @@ class DM_ContinuousEmission_Spectrum(object):
             annihilation_fractions (dict): Dictionary mapping annihilation channels to their fractions.
             parameter_interpolation_values (list[np.ndarray]): List of parameter values for interpolation of annihilation_fractions.
             ratios (bool, optional): Indicates if the fractions are ratios. Defaults to True.
-            default_parameter_values (dict, optional): Default values for parameters. Defaults to {'mass': 1.0*u.TeV}.
+            default_parameter_values (dict, optional): Default values for parameters. Defaults to {'mass': 1.0}.
         """
         self.ratios = ratios
     
@@ -194,7 +194,10 @@ class DM_ContinuousEmission_Spectrum(object):
         except:
             pass
 
-        mass_value = kwargs['mass'].to(self.default_parameter_values['mass'].unit).value
+        try:
+            mass_value = kwargs['mass'].to(self.default_parameter_values['mass'].unit).value
+        except:
+            mass_value = kwargs['mass']
 
 
         formatted_kwargs_list = []
@@ -231,7 +234,7 @@ class DM_ContinuousEmission_Spectrum(object):
         
     def logfunc(self, 
                 energy: list | np.ndarray | float, 
-                kwd_parameters: dict = {'mass':1.0*u.TeV},
+                kwd_parameters: dict = {'mass':1.0},
                 **kwargs) -> np.ndarray | float:
         """
         Calculates the logarithm of the gamma-ray flux.
@@ -296,7 +299,7 @@ class DM_ContinuousEmission_Spectrum(object):
         # and reduces the number of needed computations
     def mesh_efficient_logfunc(self, 
                                energy: list | np.ndarray | float, 
-                               kwd_parameters: dict = {'mass':1.0*u.TeV},
+                               kwd_parameters: dict = {'mass':1.0},
                                **kwargs) -> np.ndarray | float:
         """
         Efficiently computes the log spectrum over a mesh of parameters.

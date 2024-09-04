@@ -11,12 +11,13 @@ from gammabayes.dark_matter import CombineDMComps
 from gammabayes.dark_matter.density_profiles import Einasto_Profile
 
 import numpy as np
+from astropy import units as u
 
 
 def test_dm_spectral_cutoff():
-    energy_true_axis, longitudeaxistrue, latitudeaxistrue = np.logspace(-1,2,31), np.linspace(-5,5,20), np.linspace(-4,4,16)
+    energy_true_axis, longitudeaxistrue, latitudeaxistrue = np.logspace(-1,2,31)*u.TeV, np.linspace(-5,5,20)*u.deg, np.linspace(-4,4,16)*u.deg
 
-    energy_recon_axis, longitudeaxis, latitudeaxis = np.logspace(-1,2,16), np.linspace(-5,5,10), np.linspace(-4,4,8)
+    energy_recon_axis, longitudeaxis, latitudeaxis = np.logspace(-1,2,16)*u.TeV, np.linspace(-5,5,10)*u.deg, np.linspace(-4,4,8)*u.deg
 
 
     irf_loglike = IRF_LogLikelihood(axes=[energy_recon_axis, longitudeaxis, latitudeaxis], 
@@ -29,7 +30,6 @@ def test_dm_spectral_cutoff():
                             axes=(energy_true_axis, 
                                 longitudeaxistrue, 
                                 latitudeaxistrue,), 
-                            axes_names=['energy', 'lon', 'lat'],
                             default_spectral_parameters={'mass':1.0,}, )
-    assert np.isneginf(logDMprior(2.0, 0.00001, 0.0,spectral_parameters={'mass':1.0}))
+    assert np.isneginf(logDMprior(2.0*u.TeV, 0.1*u.deg, 0.0*u.deg,spectral_parameters={'mass':1.0}))
 
