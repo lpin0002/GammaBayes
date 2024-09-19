@@ -110,7 +110,14 @@ class High_Level_Analysis(High_Level_Setup):
 
 
 
-    def run_nuisance_marg(self, observation_containers, fov_irf_norm=None, marg_method=DiscreteAdaptiveScan, *args, **kwargs):
+    def run_nuisance_marg(self, observation_containers, fov_irf_norm=None, 
+                          marginalisation_method=None, 
+                          marginalisation_bounds=None, *args, **kwargs):
+        if marginalisation_method is None:
+            marginalisation_method = self.marginalisation_method
+
+        if marginalisation_bounds is None:
+            marginalisation_bounds = self.marginalisation_bounds
 
         if fov_irf_norm is None:
             fov_irf_norm = self.irf_log_norm
@@ -127,14 +134,14 @@ class High_Level_Analysis(High_Level_Setup):
 
             fov_irf_norm._refresh_buffer_window()
 
-            marginalisation_class = marg_method(
+            marginalisation_class = marginalisation_method(
                 log_priors=observation_data['priors'], 
                 log_likelihood=observation_data['irf_loglike'], 
                 axes=observation_data['recon_binning_geometry'].axes, 
                 log_likelihoodnormalisation=fov_irf_norm,
                 nuisance_axes=observation_data['true_binning_geometry'].axes, 
                 prior_parameter_specifications=[ParameterSet(param_set) for param_set in self.obs_prior_parameter_specifications], 
-                bounds = [['log10', 1.0], ['linear', 1.0], ['linear', 1.0]]
+                bounds = marginalisation_bounds
                 )
 
 

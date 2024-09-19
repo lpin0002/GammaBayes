@@ -136,8 +136,6 @@ class SimulationContainer:
 
             event_counts[prior.name] = int(round(np.exp(log_event_count)))
 
-        ic(event_counts)
-
         return event_counts
 
 
@@ -247,11 +245,9 @@ class SimulationContainer:
 
 
         sample_mixture_tree = mixture_tree.copy()
-        true_event_data = []
 
         if not(tree_node_values is None):
             sample_mixture_tree.overwrite(tree_node_values)
-
 
 
         true_event_data = {}
@@ -262,8 +258,6 @@ class SimulationContainer:
                     log_exposure_map.pointing_dir = pointing_dir
                     log_exposure_map.observation_time = observation_time
                     prior.log_exposure_map = log_exposure_map
-
-
 
                 elif isinstance(prior, ObsFluxDiscreteLogPrior):
                     prior.log_exposure_map.pointing_dir = pointing_dir
@@ -284,11 +278,14 @@ class SimulationContainer:
     
 
 
-    def simulation_observation_set(self):
+    def simulation_observation_set(self, print_progress=False):
 
         simulation_obs_containers  = copy.deepcopy(self.observation_containers)
+        data_to_iterate_over = simulation_obs_containers.items()
+        if print_progress:
+            data_to_iterate_over = tqdm(data_to_iterate_over)
         
-        for observation_name, observation_info in tqdm(simulation_obs_containers.items()):
+        for observation_name, observation_info in data_to_iterate_over:
             observation_info['irf_loglike'].pointing_dir = observation_info['pointing_dir']
 
             true_event_data = self.simulate_true_observation(mixture_tree=self.mixture_tree, **observation_info)

@@ -8,3 +8,6 @@ from .parameter_set_class import ParameterSet
 from .parameter_set_collection_class import ParameterSetCollection
 from .utils import *
 from .core_utils import *
+
+import numpy as np
+np.seterr(divide='ignore')

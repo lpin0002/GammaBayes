@@ -1,29 +1,35 @@
 import numpy as np
-from .binning_geometry import GammaBinning
+from gammabayes.core.binning_geometry import GammaBinning
 import pickle
-from .exposure import GammaLogExposure
+from gammabayes.core.exposure import GammaLogExposure
 from astropy import units as u
+from numpy.typing import ArrayLike
 
 class GammaObs:
     def __init__(self, 
                  binning_geometry: GammaBinning, 
-                 energy=[], lon=[], lat=[], 
-                 pointing_dir:np.ndarray = None, 
+                 name:str = None,
+                 energy: ArrayLike =[], lon: ArrayLike=[], lat: ArrayLike=[], 
+                 event_weights: ArrayLike = None,
+                 pointing_dir:np.ndarray[u.Quantity, u.Quantity] = None, 
                  observation_time: u.Quantity=None,
-                 irf_loglike = None,
+                 irf_loglike: callable = None,
                  log_exposure: GammaLogExposure = None,
                  meta:dict = {}, **kwargs):
         
+
+        self.binning_geometry = binning_geometry
+
+
+
+        if event_weights is not None:
+            energy, lon, lat = self._recreate_samples_with_event_weights(energy, lon, lat, event_weights)
+
         self.energy = energy
         self.lon = lon
         self.lat = lat
 
-        self.log_exposure = GammaLogExposure(binning_geometry=binning_geometry,
-                                             log_exposure_map=log_exposure,
-                                             irfs=irf_loglike,
-                                             pointing_dir=pointing_dir,
-                                             observation_time=observation_time)
-        self.binning_geometry = binning_geometry
+
         if len(energy):
             self.binned_data, _ = self._bin_data()
         else:
@@ -43,9 +49,16 @@ class GammaObs:
         if self.observation_time is None:
             self.observation_time =  self.meta.get('observation_time', None)
 
+        if not(hasattr(self.observation_time, "unit")) and not(self.observation_time is None):
+            self.observation_time = self.observation_time*u.s
+
 
         if not(pointing_dir is None):
             self.pointing_dir = pointing_dir
+
+            if not hasattr(self.pointing_dir, "unit"):
+                self.pointing_dir*=u.deg
+
         
         elif pointing_dir is None:
             self.pointing_dir = self.meta.get('pointing_dir')
@@ -80,6 +93,20 @@ class GammaObs:
 
         else:
             self.hemisphere = None
+
+
+        if name is None:
+            self.name = f"Observation_pt_{self.pointing_dir}_{self.observation_time}"
+        else:
+            self.name = name
+
+
+        self.log_exposure = GammaLogExposure(binning_geometry=self.binning_geometry,
+                                        log_exposure_map=log_exposure,
+                                        irfs=self.irf_loglike,
+                                        pointing_dir=self.pointing_dir,
+                                        observation_time=self.observation_time)
+
 
 
     @property
@@ -229,17 +256,11 @@ class GammaObs:
         return self.nonzero_coordinate_data, even_count_output
 
 
-
     @property
     def nonzero_coordinate_data(self):
         nonzero_indices = self.nonzero_bin_indices
-
-        # numpy transpose gets rid of the units for some reason
-        coordinate_output=  np.asarray([[*entry,] for entry in zip(self.energy_axis[nonzero_indices[0]], 
-                                        self.lon_axis[nonzero_indices[1]], 
-                                        self.lat_axis[nonzero_indices[2]])], dtype='object')
         
-        return coordinate_output
+        return self.energy_axis[nonzero_indices[0]], self.lon_axis[nonzero_indices[1]], self.lat_axis[nonzero_indices[2]]
 
 
 
@@ -266,9 +287,9 @@ it is assumed that the binning geometries are the same.""")
 
 
         # Concatenate the attributes of the two instances
-        new_energy = np.concatenate([self.energy, other.energy])
-        new_lon = np.concatenate([self.lon, other.lon])
-        new_lat = np.concatenate([self.lat, other.lat])
+        new_energy = list(self.energy) +list(other.energy)
+        new_lon = list(self.lon) + list(other.lon)
+        new_lat = list(self.lat) + list(other.lat)
 
         try:
             new_log_exposure = self.log_exposure+other.log_exposure
@@ -359,35 +380,96 @@ it is assumed that the binning geometries are the same.""")
         else:
             raise StopIteration
         
-    def to_dict(self):
-        return {
-            'binning_geometry': self.binning_geometry.to_dict(),
+    def to_dict(self, include_irf=False, include_meta=False):
+
+        if hasattr(self.pointing_dir, "value"):
+            pointing_dir_value = self.pointing_dir.value
+            pointing_dir_unit = self.pointing_dir.unit.to_string()
+        else:
+            pointing_dir_value = self.pointing_dir
+            pointing_dir_unit = None
+
+        if hasattr(self.observation_time, "value"):
+            observation_time_value = self.observation_time.value
+            observation_time_unit = self.observation_time.unit.to_string()
+        else:
+            observation_time_value = self.observation_time
+            observation_time_unit = None
+
+
+        output_dict = {
+            'name': self.name,
             'binned_data': self.binned_data,
-            'meta': self.meta,
-            'pointing_dir': self.pointing_dir,
-            'irf_loglike': self.irf_loglike
+            'pointing_dir': pointing_dir_value,
+            'pointing_dir_unit': pointing_dir_unit,
+            'observation_time': observation_time_value,
+            'observation_time_unit': observation_time_unit,
         }
+        if include_irf:
+            output_dict['irf_loglike'] = self.irf_loglike
+
+        if include_meta:
+            output_dict['meta'] = self.meta
+            output_dict['meta']['binning_geometry'] = self.binning_geometry.to_dict()
 
 
-    def save(self, filename):
-        data_to_save = self.to_dict()
+        return output_dict
+
+
+    def save(self, filename, save_meta=False):
+        data_to_save = self.to_dict(include_meta=save_meta)
         with open(filename, 'wb') as f:
             pickle.dump(data_to_save, f)
 
+
     @classmethod
-    def load(cls, filename):
-        with open(filename, 'rb') as f:
-            data = pickle.load(f)
-            
+    def load_from_dict(cls, info_dict, aux_info={}):
+        binning_geometry_data = info_dict.get('binning_geometry')
+
+        if binning_geometry_data is None:
+            binning_geometry = aux_info.get("binning_geometry")
+        elif isinstance(binning_geometry_data, dict):
+            binning_geometry = GammaBinning.from_dict(binning_geometry_data)
+        else:
+            binning_geometry = binning_geometry_data
+        name = info_dict.get("name")
+        if name is None:
+            name = aux_info.get("name")
+
+
+
+        pointing_dir = info_dict.get('pointing_dir')
+        if (info_dict.get('pointing_dir_unit') is not None):
+            pointing_dir = pointing_dir*u.Unit(info_dict.get('pointing_dir_unit'))
+        elif isinstance(pointing_dir, ArrayLike): 
+            if np.isnan(np.sum(pointing_dir)): # To account for saving variables as nan for h5 files
+                pointing_dir = None
+
+
+        observation_time = info_dict.get('observation_time')
+
+        if np.isnan(observation_time):
+            observation_time = None
+        if (info_dict.get('observation_time_unit') is not None) and not(np.isnan(info_dict.get('observation_time_unit'))):
+            observation_time = observation_time*u.Unit(info_dict.get('observation_time_unit'))
+
+        try:
+            observation_time = u.Quantity(observation_time)
+        except:
+            observation_time = None
+
+
         # Create an empty instance
-        instance = cls(binning_geometry=GammaBinning.from_dict(data['binning_geometry']), 
+        instance = cls(binning_geometry=binning_geometry, 
+                    name = name,
                     energy=[], lon=[], lat=[],  # Empty raw samples
-                    meta=data['meta'],
-                    pointing_dir=data['pointing_dir'],
-                    irf_loglike=data['irf_loglike'])
+                    meta=info_dict.get('meta', {}),
+                    pointing_dir=pointing_dir,
+                    observation_time=observation_time,
+                    irf_loglike=info_dict.get('irf_loglike'))
         
         # Load the binned data
-        instance.binned_data = data['binned_data']
+        instance.binned_data = info_dict['binned_data']
         
         # Recreate the samples from the binned data
         energy_samples, lon_samples, lat_samples = instance._recreate_samples_from_binned_data()
@@ -396,6 +478,17 @@ it is assumed that the binning geometries are the same.""")
         instance.lat = lat_samples
         
         return instance
+    
+
+    @classmethod
+    def load(cls, filename, aux_info: dict):
+        with open(filename, 'rb') as f:
+            data = pickle.load(f)
+
+        return cls.load_from_dict(data)
+            
+
+
 
 
     def _recreate_samples_from_binned_data(self):
@@ -424,6 +517,34 @@ it is assumed that the binning geometries are the same.""")
         return np.array(energy_samples) * self.binning_geometry.energy_axis.unit, \
             np.array(lon_samples) * self.binning_geometry.lon_axis.unit, \
             np.array(lat_samples) * self.binning_geometry.lat_axis.unit
+    
+
+    def _recreate_samples_with_event_weights(self, energy_vals, lon_vals, lat_vals, event_weights):
+        original_energy_values = energy_vals.value
+        original_energy_unit = energy_vals.unit
+
+        original_lon_values = lon_vals.value
+        original_lon_unit = lon_vals.unit
+
+        original_lat_values = lat_vals.value
+        original_lat_unit = lat_vals.unit
+
+        # Prepare lists to hold the recreated samples
+        energy_samples = []
+        lon_samples = []
+        lat_samples = []
+        
+        # Loop over the binned data to recreate the samples
+        for event_weight, energy, longitude, latitude  in zip(event_weights, original_energy_values, original_lon_values, original_lat_values):
+            # Repeat the bin centers according to the bin count
+            energy_samples.extend([energy] * int(event_weight))
+            lon_samples.extend([longitude] * int(event_weight))
+            lat_samples.extend([latitude] * int(event_weight))
+        
+        # Convert to numpy arrays and return
+        return np.array(energy_samples) * original_energy_unit, \
+            np.array(lon_samples) * original_lon_unit, \
+            np.array(lat_samples) * original_lat_unit
 
 
 
@@ -630,23 +751,23 @@ class GammaObsCube:
         raise NotImplemented()
 
     @classmethod
-    def from_dir(cls, dir_name: str):
+    def from_fits_dir(cls, dir_name: str):
         # Placeholder for actual implementation
         raise NotImplemented()
 
 
-    def to_dict(self):
+    def to_dict(self, include_irfs=False, include_obs_meta=False):
         return {
             'name': self.name,
             'binning_geometry': self.binning_geometry.to_dict(),
             'meta': self.meta,
-            'observations': [obs.to_dict() for obs in self.observations]
+            'observations': [obs.to_dict(save_irf=include_irfs, include_meta=include_obs_meta) for obs in self.observations]
         }
 
 
 
-    def save(self, filename):
-        data_to_save = self.to_dict()
+    def save(self, filename, save_irfs=False, save_obs_meta=False):
+        data_to_save = self.to_dict(include_irfs=save_irfs, include_obs_meta=save_obs_meta)
         with open(filename, 'wb') as f:
             pickle.dump(data_to_save, f)
 
@@ -658,15 +779,18 @@ class GammaObsCube:
         
         binning = GammaBinning.from_dict(data['binning_geometry'])
         name = data['name']
-        meta = data['meta']
+        meta = data.get('meta', {})
         
         observations = []
         for obs_dict in data['observations']:
+            obs_meta_dict = obs_dict.get('meta', {})
+            obs_meta_dict.update(meta)
+
             obs = GammaObs(
-                binning=GammaBinning.from_dict(obs_dict['binning_geometry']),
-                meta=obs_dict['meta'],
+                binning=binning,
+                meta=obs_meta_dict,
                 pointing_dir=obs_dict['pointing_dir'],
-                irf_loglike=obs_dict['irf_loglike']
+                irf_loglike=obs_dict.get('irf_loglike')
             )
             obs.binned_data = obs_dict['binned_data']
             

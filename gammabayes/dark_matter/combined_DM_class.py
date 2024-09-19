@@ -76,7 +76,7 @@ class CombineDMComps(TwoCompFluxPrior):
         if true_axes is None:
             true_axes = self.binning_geometry.axes
         
-        print("Starting evaluation")
+
         if self.mesh_efficient_exists:
             integrand = self.log_dist_mesh_efficient(*true_axes, 
                                                      spectral_parameters=spectral_parameters,
@@ -89,7 +89,7 @@ class CombineDMComps(TwoCompFluxPrior):
             integrand = self.log_dist(*true_axis_mesh_flattened, 
                                                      spectral_parameters=spectral_parameters,
                                                      spatial_parameters=spatial_parameters).reshape(true_axis_mesh[0].shape)
-        print("Starting integration")
+
         # Splitting it up for easy debuggin
         log_integrated_energy = logspace_simpson(
                                     logy=integrand, x = true_axes[0].value, axis=0)
@@ -102,10 +102,10 @@ class CombineDMComps(TwoCompFluxPrior):
                             logy=log_integrated_energy_longitude.T*np.cos(true_axes[2].to(u.rad)), 
                                     x = true_axes[2].value, axis=-1).T 
         
-        print("Starting final flux rearrangement")
+
         logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
 
-        print("Finished!")
+
         return np.exp(logsigmav)
 
 

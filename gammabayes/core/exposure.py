@@ -22,6 +22,7 @@ class GammaLogExposure:
                  observation_time_unit: u.Unit = u.s,
                  use_log_aeff: bool = True
                  ):
+        np.seterr(divide='ignore')
         
         # I commonly use None for default arguments and then follow up with this
             # so that one doesn't have to remember default arguments to allow them
@@ -35,14 +36,14 @@ class GammaLogExposure:
             self.binning_geometry = binning_geometry
 
             if observation_time is None:
-                observation_time = 1.*u.hr
+                observation_time = 1.*u.s
 
             self.irfs = irfs
             self.pointing_dir = pointing_dir
 
-            if not(self.pointing_dir is None) and (self.irfs is not None):
+            if not(self.pointing_dir is None) and hasattr(self.irfs, "pointing_dir"):
                 self.irfs.pointing_dir = self.pointing_dir 
-            elif not(self.irfs is None) and (self.pointing_dir is None):
+            elif hasattr(self.irfs, "pointing_dir") and (self.pointing_dir is None):
                 self.pointing_dir = self.irfs.pointing_dir
 
             else:
@@ -50,7 +51,7 @@ class GammaLogExposure:
 
 
 
-            if self.irfs is not None:
+            if hasattr(self.irfs, "log_aeff"):
                 self.log_aeff = self.irfs.log_aeff
                 self.aeff_units = self.irfs.aeff_units
             else:

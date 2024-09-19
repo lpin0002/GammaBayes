@@ -1,0 +1,276 @@
+##################################################################
+##################################################################
+### OZSTAR RESOURCE ALLOCATIONS
+##################################################################
+##################################################################
+
+# # Run the simulation, nuisance parameter marginalisation and posterior generation in one job?
+immediate_run:                    False
+env_name:                         GammaBayesEnv
+stem_identifier:                  cli_config_analysis_1
+num_sim_jobs:                     2
+num_marg_jobs:                    2
+# Nevents_per_job:                  10000
+Nevents:                          3000
+common_norm_matrices:             True
+# log_irf_norm_matrix_path:    'irf_norm_matrix.npy'
+
+mem_for_matrix_gen:               400 #in MB
+
+
+# If using common log irf normalisations one must provide the 
+  # path to the numpy files containing them individually
+# log_psf_norm_matrix_path:       'path'
+# log_edisp_norm_matrix_path:     'path'
+
+# Time and memory here is completely random. 
+# Run small test job to figure out time and memory allocation
+sim_mem:                          24000
+marg_mem:                         320000
+comb_mem:                         64000
+sim_time:  '6:00:00'
+marg_time: '1:30:00'
+comb_time: '24:00:00'
+
+sim_cores:                        6
+marg_cores:                       5
+comb_cores:                       7
+
+mail_progress:                    True
+mail_address:                     progressemail1999@gmail.com
+# dark_matter_spectral_model:       Z2_ScalarSinglet
+
+hyper_parameter_scan_class:       DiscreteAdaptiveScan
+seed:                             0
+save_path:                        ""
+num_priors:                       6
+
+marginalisation_bounds:           [['log10', "0.4 TeV"], ['linear', "0.6 deg"], ['linear', "0.6 deg"]]
+
+
+pointing_directions: [[-1,0], [1,0]]
+observation_times: ["5 hr", "5 hr"]
+
+##################################################################
+##################################################################
+### GAMMABAYES RUN PARAMETERS
+##################################################################
+##################################################################
+
+
+##################################################################
+### Simulation Parameters
+
+
+dark_matter_model_specifications:
+  'dark_matter_density_profile': 'Einasto_Profile'
+  'dark_matter_mass': "1.0 TeV"
+  'DM_Channels': ['ZZ', 'W+W-', 'HH']
+
+
+observational_prior_models:
+  [DM, 
+  # FG_HS_CCR,
+  'CCR_BKG',
+  'FermiGaggeroDiffusePrior',
+  'HESSCatalogueSources_Prior',
+  ]
+
+true_mixture_specifications:
+  true_mixture_fractions: 
+    DM:                             0.1
+    'bkg':                          0.9
+
+
+    'CCR_BKG':                      0.983
+    'FermiGaggeroDiffusePrior':     0.011
+    'HESSCatalogueSources_Prior':   0.006
+
+
+  DM_Annihilation_Ratios:
+
+    'ZZ':                         0.30777537433767554
+    'W+W-':                       0.606028581284285
+    'HH':                         0.06222169472353944
+
+
+
+
+# Parameters for the 'true' value axes for gamma ray events
+true_energy_min:                  0.1
+true_energy_max:                  100.0
+true_energy_bins_per_decade:      50
+true_spatial_res:                 0.2
+true_longitude_min:              -3.1
+true_longitude_max:               3.1
+true_latitude_min:               -3.1
+true_latitude_max:                3.1
+
+# Parameters for the reconstructed value axes for gamma ray events
+recon_energy_min:                 0.1
+recon_energy_max:                 100.0
+recon_energy_bins_per_decade:     20
+recon_spatial_res:                0.2
+recon_longitude_min:             -3.1
+recon_longitude_max:              3.1
+recon_latitude_min:              -3.1
+recon_latitude_max:               3.1
+
+
+IRF_kwarg_Specifications:
+  prod_vers: '5'
+
+
+##################################################################
+### Inference/Analysis Parameters
+
+shared_observational_prior_parameter_specifications:
+  mass:
+    [
+      ['ZZ DM Class', 'W+W- DM Class', 'HH DM Class',
+        # 'tt DM Class',  
+        # 'gg DM Class', 
+        # 'bb DM Class', 
+        # 'tau+tau- DM Class', 
+        # 'cc DM Class'
+        ],
+      
+      {
+        name: 'mass',
+        discrete: True,
+        scaling: 'log10',
+        bounds: 'event_dynamic',
+        absolute_bounds: [1.2e-1, 8e1],
+        parameter_type: 'spectral_parameters',
+        dynamic_multiplier: 6,
+        num_events: 1e2,
+        default_value: 1.,
+        bins: 121}
+    ]
+      
+
+
+
+# Dark Matter Inference Parameters
+observational_prior_parameter_specifications: {}
+
+mixture_layout: 
+  [
+    {'DM': 
+    ['ZZ DM Class', 'W+W- DM Class', 'HH DM Class',
+      # 'tt DM Class',  
+      # 'gg DM Class', 
+      # 'bb DM Class', 
+      # 'tau+tau- DM Class',
+      #  'cc DM Class' 
+       ]},
+      #  'FG_HS_CCR'
+    {'bkg': ['CCR_BKG', 'FermiGaggeroDiffusePrior', 'HESSCatalogueSources_Prior']}
+  ]
+
+
+mixture_parameter_specifications:
+
+  'ZZ DM Class':
+    discrete: False
+    bounds: [0., 1.]
+    dependent: ['W+W- DM Class', 'HH DM Class', 
+    # 'tt DM Class', 
+    # 'gg DM Class', 
+    # 'bb DM Class', 
+    # 'tau+tau- DM Class', 
+    # 'cc DM Class'
+    ]
+    custom_dist_name: 'dirichlet'
+    custom_dist_kwargs: 
+      alpha: [
+        1., 
+        1., 
+        1., 
+        # 1., 
+        # 1., 
+        # 1.,
+        # 1., 
+        # 1.
+        ]
+  'W+W- DM Class':
+    discrete: False
+    bounds: [0., 1.]
+  'HH DM Class':
+    discrete: False
+    bounds: [0., 1.]
+  # 'tt DM Class':
+  #   discrete: False
+  #   bounds: [0., 1.]
+  # 'gg DM Class':
+  #   discrete: False
+  #   bounds: [0., 1.]
+  # 'bb DM Class':
+  #   discrete: False
+  #   bounds: [0., 1.]
+  # 'tau+tau- DM Class':
+  #   discrete: False
+  #   bounds: [0., 1.]
+  # 'cc DM Class':
+  #   discrete: False
+  #   bounds: [0., 1.]
+
+
+  
+  'DM':
+    discrete: False
+    bounds: [0., 1.]
+    dependent: ['bkg']
+    custom_dist_name: 'dirichlet'
+    custom_dist_kwargs: 
+      alpha: [
+        1., 
+        1.]
+
+  'bkg':
+    discrete: False
+    bounds: [0., 1.]
+    dependent: ['DM']
+    custom_dist_name: 'dirichlet'
+    custom_dist_kwargs: 
+      alpha: [
+        1., 
+        1.]
+
+  'CCR_BKG':
+    discrete: False
+    bounds: [0., 1.]
+    dependent: ['FermiGaggeroDiffusePrior', 'HESSCatalogueSources_Prior']
+    custom_dist_name: 'dirichlet'
+    custom_dist_kwargs: 
+      alpha: [
+        10., 
+        1.,
+        1.]
+
+  'FermiGaggeroDiffusePrior':
+    discrete: False
+    bounds: [0., 1.]
+
+  'HESSCatalogueSources_Prior':
+    discrete: False
+    bounds: [0., 1.]
+
+# 'FG_HS_CCR': ['CCR_BKG', 'FermiGaggeroDiffusePrior', 'HESSCatalogueSources_Prior']
+
+
+dynesty_kwargs:
+  initialisation_kwargs:
+    # bound: 'single'
+    # sample: 'slice'
+    nlive: 500
+  run_kwargs:
+    dlogz: 0.5
+
+
+
+# Debugging and plotting arguments
+diagnostics:      False
+blockplot:        True
+
+

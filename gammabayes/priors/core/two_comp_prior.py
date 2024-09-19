@@ -243,9 +243,6 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
             np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
 
-
-
-
         num_spectral_params     = len(spectral_parameters)
 
         num_spatial_params      = len(spatial_parameters)

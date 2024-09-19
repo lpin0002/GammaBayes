@@ -56,7 +56,8 @@ class DiscreteLogPrior(object):
         - This class assumes the prior is defined in a discrete log space along specified axes.
         - The axes should correspond to physical quantities over which the prior is distributed, such as energy and sky coordinates.
         """
-
+        np.seterr(divide='ignore')
+        
         if name is None:
             name = time.strftime("discrete_log_prior_%f")
         self.name = name

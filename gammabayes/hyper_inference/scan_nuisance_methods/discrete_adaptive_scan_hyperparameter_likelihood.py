@@ -15,6 +15,7 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import os, warnings, logging, time, functools, numpy as np, h5py
 from icecream import ic
+from astropy import units as u
 
 class DiscreteAdaptiveScan(DiscreteBruteScan):
     """
@@ -94,7 +95,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
 
     def __init__(self, *args, 
-                 bounds: list[ str, float] = None,
+                 bounds: list[ str, u.Quantity] = None,
                  bounding_percentiles: list[float]      = [95 ,95],
                  bounding_sigmas: list[int]     = [5,5],
                  **kwargs):
@@ -226,8 +227,8 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
         unit_list = []
         # Presuming that the units are the same for the events and the axes
-        for dim_idx, event_val in enumerate(event_vals):
-            unit_list.append(temp_axes[dim_idx].unit)
+        for event_val in event_vals:
+            unit_list.append(event_val.unit)
 
         for temp_axis in temp_axes:
             unit_list.append(1.)

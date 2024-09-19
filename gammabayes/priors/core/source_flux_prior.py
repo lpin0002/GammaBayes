@@ -80,6 +80,8 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
 
         num_spatial_params      = len(spatial_parameters)
 
+        
+
         log_output_values = self.log_mesh_efficient_flux_func(energy, lon, lat, 
                                                               spectral_parameters=spectral_parameters, 
                                                               spatial_parameters=spatial_parameters, *args, **kwargs)

@@ -54,23 +54,23 @@ class Einasto_Profile(DM_Profile):
 
     def __init__(self, 
                  default_alpha = 0.17, 
-                 default_rho_s: float = 0.001 * u.Unit("TeV / cm3"), 
-                 default_r_s: float = 28.44* u.Unit("kpc"), 
+                 default_rho_s: float = 1 * u.Unit("GeV / cm3"), 
+                 default_r_s: float = 20.* u.Unit("kpc"), 
                  *args, **kwargs):
         """
         Initializes the Einasto_Profile class.
 
         Args:
             default_alpha (float, optional): Default Einasto shape parameter. Defaults to 0.17.
-            default_rho_s (float, optional): Default scale density. Defaults to 0.001 * u.Unit("TeV / cm3").
-            default_r_s (float, optional): Default scale radius. Defaults to 28.44 * u.Unit("kpc").
+            default_rho_s (float, optional): Default scale density. Defaults to 1. * u.Unit("TeV / cm3").
+            default_r_s (float, optional): Default scale radius. Defaults to 20.00 * u.Unit("kpc").
         """
         super().__init__(
             log_profile_func=self.log_profile, 
             kwd_profile_default_vals = {'r_s': default_r_s, 
                                         'alpha': default_alpha, 
                                         'rho_s':default_rho_s},
-                                        gammapy_profile_class=Gammapy_EinastoProfile,
+            gammapy_profile_class=Gammapy_EinastoProfile,
             *args, **kwargs
         )
 

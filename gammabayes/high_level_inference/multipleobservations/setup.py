@@ -30,8 +30,10 @@ from gammabayes.priors.astro_sources import construct_fermi_gaggero_flux_matrix,
 
 from scipy.interpolate import RegularGridInterpolator
 from gammabayes.likelihoods.irfs import FOV_IRF_Norm
+from gammabayes.hyper_inference import DiscreteAdaptiveScan, ScanOutput_StochasticTreeMixturePosterior
 
-from icecream import ic
+from .config_utils import from_config_dict, from_config_file
+
 
 class log_obs_interpolator:
     """
@@ -87,21 +89,23 @@ class High_Level_Setup:
                  observation_meta: dict={},
                  observation_cube:GammaObsCube|list[GammaObs]=None,
                  mixture_layout:dict = None,
+                 marginalisation_method = DiscreteAdaptiveScan,
+                 marginalisation_bounds = [['log10', 1.0*u.TeV], ['linear', 1.0*u.deg], ['linear', 1.0*u.deg]],
                  save_path:str='',
                  skip_irf_norm_setup:bool=False,
                  true_mixture_specifications:dict = {},
-                 config_dict:dict = {},
                  irf_log_norm_matrix=None,
                  edisp_log_norm_matrix=None,
                  psf_log_norm_matrix=None,
+                 config_dict:dict = {},
                  **kwargs
                  ):
+        
+        np.seterr(divide='ignore')
         
         self.config_dict = config_dict
         self.config_dict.update(kwargs)
         self.observation_meta = observation_meta
-        self._extract_from_config(config_dict=self.config_dict)
-
         
 
         self.true_binning_geometry = true_binning_geometry
@@ -124,7 +128,6 @@ class High_Level_Setup:
         self.mixture_parameter_specifications = ParameterSet(mixture_parameter_specifications)
 
         self._obs_prior_parameter_specifications = prior_parameter_specifications
-
 
 
         for obs_index, observation in enumerate(self.observation_cube):
@@ -155,17 +158,22 @@ class High_Level_Setup:
             self._setup_irf_norm(irf_loglike=temp_irf_loglike)
 
 
+        self.marginalisation_method = marginalisation_method
+        if isinstance(self.marginalisation_method, str):
+            self.marginalisation_method = dynamic_import("gammabayes.hyper_inference", self.marginalisation_method)
+
+        self.marginalisation_bounds = marginalisation_bounds
+
+        for _axis_idx, axis_bound_info in enumerate(self.marginalisation_bounds):
+            self.marginalisation_bounds[_axis_idx][1] = u.Quantity(axis_bound_info[1])
+
+        
+
+    from_config_file = classmethod(from_config_file)
+    from_config_dict = classmethod(from_config_dict)
 
 
 
-
-
-
-
-    def _extract_from_config(self, config_dict):
-        for key, value in config_dict.items():
-            if not(hasattr(self, key)) or (getattr(self, key) is None):
-                setattr(self, key, value)
 
 
     def setup_observation_cube(self, pointing_dirs, observation_times, 
@@ -417,7 +425,8 @@ class High_Level_Setup:
 
 
         if 'dark_matter_mass' in self.dark_matter_model_specifications:
-            self.dark_matter_mass = self.dark_matter_model_specifications['dark_matter_mass']
+            self.dark_matter_mass = u.Quantity(self.dark_matter_model_specifications['dark_matter_mass'])
+
         else:
             self.dark_matter_mass = np.nan
 
@@ -515,9 +524,6 @@ then the tree node values are the defaults such that if you add them up for thei
 
                 
 
-    def from_config(self, config_file_name):
-        pass
-
     def _setup_irf_norm(self, irf_loglike,  
                         irf_log_norm_matrix=None, edisp_log_norm_matrix=None, psf_log_norm_matrix=None, 
                         base_pointing_dir=None, pointing_dirs=None):
@@ -540,10 +546,7 @@ then the tree node values are the defaults such that if you add them up for thei
             psf_log_norm_matrix = self._psf_log_norm_matrix
 
 
-
         irf_loglike.pointing_dir = base_pointing_dir
-
-        ic(base_pointing_dir)
 
 
         self.fov_irf_norm = FOV_IRF_Norm(true_binning_geometry=self.true_binning_geometry, 
@@ -564,3 +567,7 @@ then the tree node values are the defaults such that if you add them up for thei
             self._setup_irf_norm(self, self.observation_cube.observations[0].irf_loglike)
 
         return self.fov_irf_norm
+    
+
+
+    

@@ -29,28 +29,26 @@ def haversine(lon1, lat1, lon2, lat2):
     Haversine formula.
 
     Args:
-        lon1 (float or Quantity): Longitude of the first point.
-        lat1 (float or Quantity): Latitude of the first point.
-        lon2 (float or Quantity): Longitude of the second point.
-        lat2 (float or Quantity): Latitude of the second point.
+        lon1 (Quantity): Longitude of the first point.
+        lat1 (Quantity): Latitude of the first point.
+        lon2 (Quantity): Longitude of the second point.
+        lat2 (Quantity): Latitude of the second point.
 
     Returns:
         Quantity: Angular separation between the two points in degrees.
     """
     # Convert degrees to radians
-    try:
-        lon1, lat1 = lon1.to(u.rad), lat1.to(u.rad)
-        lon2, lat2 = lon2.to(u.rad), lat2.to(u.rad)
-    except:
-        # If the coordinates do not have astropy units then they must be in radians
-        pass
+    lon1 = lon1.to(u.rad)
+    lat1 = lat1.to(u.rad)
+    lon2 = lon2.to(u.rad)
+    lat2 = lat2.to(u.rad)
+
 
     # Haversine formula
     dlon = lon2 - lon1
     dlat = lat2 - lat1
     a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
     angular_separation_rad = 2 * np.arcsin(np.sqrt(a))
-
 
     return angular_separation_rad.to(u.deg)
 
@@ -222,8 +220,8 @@ def apply_dirichlet_stick_breaking_direct(mixtures_fractions: list | tuple,
 
 def bound_axis(axis: np.ndarray, 
                 bound_type: str, 
-                bound_radii: float, 
-                estimated_val: float):
+                bound_radii: u.Quantity, 
+                estimated_val: u.Quantity):
     """
     Bounds an axis within specified radii around an estimated value.
 
@@ -236,27 +234,17 @@ def bound_axis(axis: np.ndarray,
     Returns:
         tuple: Bounded axis and indices.
     """
-    
-    try:
-        axis_unit = axis.unit
-        axis = axis.value
-    except:
-        axis_unit = 1.
+    axis_unit = axis.unit
+    axis = axis.value
+
+    bound_radii = bound_radii.to(axis_unit)
+
+    bound_radii = bound_radii.value
 
 
-    try:
-        bound_radii = bound_radii.to(axis_unit)
+    estimated_val = estimated_val.to(axis_unit)
 
-        bound_radii = bound_radii.value
-    except:
-        pass
-
-    try:
-        estimated_val = estimated_val.to(axis_unit)
-
-        estimated_val = estimated_val.value
-    except:
-        pass
+    estimated_val = estimated_val.value
 
 
 

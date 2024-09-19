@@ -6,10 +6,18 @@ from astropy.units import Quantity
 import numpy as np
 class IRF_LogLikelihood(DiscreteLogLikelihood):
 
-    def __init__(self,pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], 
+    def __init__(self,
+                 pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], 
                  zenith:int=20, hemisphere:str='South', 
                  observation_time: float|u.Quantity = 50*u.hr,
-                 prod_vers=5, *args, **kwargs):
+                 prod_vers=5, 
+                 instrument='CTAO',
+                 obs_id = None,
+                 psf_units: u.Unit = (1/u.deg**2).unit,
+                 edisp_units: u.Unit = (1/u.TeV).unit,
+                 aeff_units: u.Unit = u.cm**2,
+                 CCR_BKG_units: u.Unit = (1/(u.deg**2*u.TeV*u.s)).unit,
+                 *args, **kwargs):
         """_summary_
 
         Args:
@@ -41,7 +49,17 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             
             parameters (dict | ParameterSet, optional): Parameters for the log likelihood function.
         """
-        self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, prod_vers=prod_vers, observation_time=observation_time)
+        self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, 
+                                              prod_vers=prod_vers, 
+                                              observation_time=observation_time, 
+                                              instrument=instrument,
+                                              pointing_dir=pointing_dir,
+                                              obs_id=obs_id,
+                                              psf_units = psf_units,
+                                              edisp_units = edisp_units,
+                                              aeff_units = aeff_units,
+                                              CCR_BKG_units = CCR_BKG_units,
+                                              )
         super().__init__(
             logfunction=self.irf_loglikelihood.single_loglikelihood, 
             *args, **kwargs
@@ -55,7 +73,9 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         self.CCR_BKG_units = self.irf_loglikelihood.CCR_BKG_units
 
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self,recon_energy, recon_lon, recon_lat, 
+                 true_energy, true_lon, true_lat, 
+                 pointing_dir=None, *args, **kwargs):
         """_summary_
 
         Args:
@@ -74,11 +94,15 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             float: natural log of the full CTA likelihood for the given gamma-ray 
                 event data
         """
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
         
-        return self.logfunction(pointing_dir=self.pointing_dir, *args, **kwargs)
+        return self.logfunction(recon_energy, recon_lon, recon_lat, 
+                 true_energy, true_lon, true_lat,
+                 pointing_dir=pointing_dir, *args, **kwargs)
     
 
-    def log_edisp(self, *args, **kwargs):
+    def log_edisp(self, recon_energy, true_energy, true_lon, true_lat, pointing_dir=None, *args, **kwargs):
         """
         Wrapper for the Gammapy interpretation of the CTA energy dispersion function.
 
@@ -92,9 +116,13 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         Returns:
             float: Natural log of the CTA energy dispersion likelihood for the given gamma-ray event data.
         """
-        return self.irf_loglikelihood.log_edisp(pointing_dir=self.pointing_dir, *args, **kwargs)
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
+
+
+        return self.irf_loglikelihood.log_edisp(recon_energy, true_energy, true_lon, true_lat, pointing_dir=pointing_dir, **kwargs, )
     
-    def log_psf(self, *args, **kwargs):
+    def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_dir=None, **kwargs):
         """
         Wrapper for the Gammapy interpretation of the CTA point spread function.
 
@@ -109,9 +137,12 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         Returns:
             float: Natural log of the CTA point spread function likelihood for the given gamma-ray event data.
         """
-        return self.irf_loglikelihood.log_psf(pointing_dir=self.pointing_dir, *args, **kwargs)
+        if pointing_dir is None:
+            pointing_dir = self.pointing_dir
+        
+        return self.irf_loglikelihood.log_psf(recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_dir, **kwargs)
     
-    def log_aeff(self, *args, pointing_dir =None, **kwargs):
+    def log_aeff(self, energy, lon, lat, *args, pointing_dir = None, **kwargs):
         """
         Wrapper for the Gammapy interpretation of the log of the CTA effective area function.
 
@@ -127,7 +158,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         if pointing_dir is None:
             pointing_dir = self.pointing_dir
 
-        return self.irf_loglikelihood.log_aeff(pointing_dir=self.pointing_dir, *args, **kwargs)
+        return self.irf_loglikelihood.log_aeff(energy, lon, lat, *args, **kwargs, pointing_dir=self.pointing_dir, )
     
 
     def log_bkg_CCR(self, *args, pointing_dir=None, **kwargs):
@@ -179,10 +210,11 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
     def to_dict(self):
         data_dict = {}
         data_dict["pointing_dir"] = self.pointing_dir
-        data_dict["zenith"] = self.zenith
-        data_dict["hemisphere"] = self.hemisphere
-        data_dict["prod_vers"] = self.prod_vers
-        data_dict["observation_time"] = self.observation_time
+        data_dict["zenith"] = self.irf_loglikelihood.zenith
+        data_dict["hemisphere"] = self.irf_loglikelihood.hemisphere
+        data_dict["prod_vers"] = self.irf_loglikelihood.prod_vers
+        data_dict["observation_time"] = self.irf_loglikelihood.observation_time
+        data_dict["instrument"] = self.irf_loglikelihood.instrument
 
         return data_dict
     

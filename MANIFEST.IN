@@ -8,4 +8,4 @@ include gammabayes/dark_matter/220913_145357/massrange.npy
 include gammabayes/dark_matter/dark_matter_spectra/AtProduction_gammas.dat
 include gammabayes/dark_matter/darkSUSY_BFs/darkSUSY_BFs_cleaned*
 include gammabayes/dark_matter/temp/*
-include gammabayes/irf_file_fits/*
+include gammabayes/CTAO_irf_file_fits/*

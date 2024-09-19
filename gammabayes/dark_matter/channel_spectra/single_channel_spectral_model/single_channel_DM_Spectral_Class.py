@@ -48,7 +48,7 @@ class SingleDMChannel(object):
 
 
         self.default_parameter_values = default_parameter_values
-
+        np.seterr(divide='ignore')
 
     
     def __call__(self, *args, **kwargs) -> np.ndarray | float:
@@ -81,7 +81,7 @@ class SingleDMChannel(object):
             
         log_channel_spectrum = np.log(channel_spectrum)
 
-        # Converting it from dN/dlog10x to dN/dlog10E
+        # Converting it from dN/dlog10x to dN/dE
         log_channel_spectrum =log_channel_spectrum - np.log(energy) - np.log(np.log(10))
 
         return log_channel_spectrum
@@ -104,11 +104,14 @@ class SingleDMChannel(object):
 
         energy = np.asarray(energy.to("TeV").value)
 
+
         for key, val in kwd_parameters.items():
             kwd_parameters[key] = np.asarray(val) 
 
+
         flatten_param_vals = np.asarray([energy.flatten(), *[theta_param.flatten() for theta_param in kwd_parameters.values()]])
             
+
         unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
         logspectralvals = self.spectral_gen(
@@ -117,7 +120,9 @@ class SingleDMChannel(object):
 
         mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
 
+
         slices = np.where(mask, logspectralvals[None, :], 0.0)
+
 
         logspectralvals = np.sum(slices, axis=-1).reshape(energy.shape)
         
@@ -142,16 +147,17 @@ class SingleDMChannel(object):
             np.ndarray | float: The calculated log spectrum values.
         """
 
-        energy = energy.to("TeV").value
+
+        energy = energy.to("TeV")
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
 
 
         param_meshes = np.meshgrid(energy, *new_kwd_parameters.values(), indexing='ij')
 
-        logspectralvals = self.spectral_gen(
+        logspectralvals = self.logfunc(
             energy = param_meshes[0].flatten(), 
-            **{param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(new_kwd_parameters.keys())}
+            kwd_parameters={param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(new_kwd_parameters.keys())}
             ).reshape(param_meshes[0].shape)
         
         return logspectralvals
@@ -171,6 +177,7 @@ class SingleDMChannel(object):
         Returns:
             np.ndarray | float: The calculated log spectrum values.
         """
+
 
         energy = np.asarray(energy)
 

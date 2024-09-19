@@ -300,9 +300,12 @@ class CustomDMRatiosModel(object):
                             spectral_parameters = {},
                             spatial_parameters = {},
                             totalnumevents=1e8, 
-                            tobs_seconds=525*60*60, symmetryfactor=1, chunk_size=2):
+                            tobs_seconds=525*60*60, 
+                            symmetryfactor=1, chunk_size=2):
         """
         Converts samples of dark matter parameters to the annihilation/decay cross-section.
+
+        Presumes that parameter values are given in 1d arrays or lists.
 
         Args:
             signal_fraction (float): The fraction of the signal.
@@ -320,53 +323,59 @@ class CustomDMRatiosModel(object):
         # update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         # update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 
+        
 
         if true_axes is None:
             true_axes = self.axes
 
         all_parameters = list(spectral_parameters.values()) + list(spatial_parameters.values())
-        parameter_values = [item.value for item in all_parameters]
 
-        # OrderedDict.fromkeys acts the same as "set" would here, but it preserves the order making it
-            # easier to debug issues in the future
+        num_spectral_params = len(spectral_parameters.keys())
+        parameter_values = np.asarray([item.value if hasattr(item, "value") else item for item in all_parameters])
 
-        # unique_parameter_sample_combinations = [np.array(list(item)) for item in OrderedDict.fromkeys(list(zip(*parameter_values)))]
+        unique_arrays_of_parameter_values = np.unique(parameter_values, axis=1)
 
-        dummy_samples = np.ones(shape=len(overall_signal_fraction))
-
-
-        axis_mesh_shape = (*(len(axis) for axis in true_axes), len(dummy_samples))
-        num_true_axes = len(true_axes)
+        unique_dict_of_spec_parameter_values = {key:unique_arrays_of_parameter_values[key_idx] for key_idx, key in enumerate(spectral_parameters.keys())}
+        unique_dict_of_spat_parameter_values = {key:unique_arrays_of_parameter_values[num_spectral_params+key_idx] for key_idx, key in enumerate(spatial_parameters.keys())}
 
 
+        axis_mesh_shape = (*(len(axis) for axis in true_axes), len(unique_arrays_of_parameter_values[0]))
 
         individual_integrands = {}
 
 
         for channel, channel_prior in self.channel_prior_dict.items():
-            individual_integrands[channel] = channel_prior.log_mesh_efficient_func(*true_axes[:num_true_axes], 
-                                                    spectral_parameters=spectral_parameters,
-                                                    spatial_parameters=spatial_parameters).reshape(axis_mesh_shape)
-            
-        # Splitting it up for easy debuggin
+            channel_prior.log_scaling_factor = 0
+            individual_integrands[channel] = channel_prior.construct_prior_array(
+                                                    spectral_parameters=unique_dict_of_spec_parameter_values,
+                                                    spatial_parameters=unique_dict_of_spat_parameter_values).reshape(axis_mesh_shape)
+        
+        # Splitting it up for easier debuggin
         log_integrated_energies = {channel: logspace_simpson(
                                     logy=integrand, x = true_axes[0].value, axis=0) for channel, integrand in individual_integrands.items()}
-        
-                
+
         log_integrated_energy_longitudes = {channel: logspace_simpson(
                                     logy=integrand, x = true_axes[1].value, axis=0) for channel, integrand in log_integrated_energies.items()}
-        
+
+        mask = np.all(unique_arrays_of_parameter_values[:, None, :] == parameter_values[:, :, None], axis=0)
+
         log_integrals = {}
         for channel, integrand in log_integrated_energy_longitudes.items():
-            log_integrals[channel] = logspace_simpson(
-                                logy=integrand.T*np.cos(true_axes[2].to(u.rad)), 
+            log_channel_unique_integral = logspace_simpson(
+                                logy=integrand.T+np.log(np.sin(np.abs(true_axes[2].to(u.rad))))+np.log(180/np.pi), 
                                         x = true_axes[2].value, axis=-1)
+            
 
-                
+            log_channel_integral_slices = np.where(mask, log_channel_unique_integral.flatten()[None, :], 0.)
+        
+            log_integrals[channel] = np.sum(log_channel_integral_slices, axis=1)
+
+
+
         logintegral = special.logsumexp([np.log(ratios[channel])+log_integral for channel, log_integral in log_integrals.items()], axis=0)
 
-        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*overall_signal_fraction) - logintegral - np.log(tobs_seconds)
 
+        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*overall_signal_fraction) - logintegral - np.log(tobs_seconds)
 
         return np.exp(logsigmav)
 

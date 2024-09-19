@@ -19,7 +19,7 @@ from gammapy.astro.darkmatter.profiles import (
 
 from gammapy.utils.integrate import trapz_loglog
 
-
+from gammabayes.utils.integration import logspace_trapz
 
 
 
@@ -40,10 +40,10 @@ class DM_Profile(object):
 
     def __init__(self, log_profile_func: callable, 
                  LOCAL_DENSITY  = 0.39*u.Unit("GeV/cm3"), 
-                 dist_to_source = 8.33*u.kpc, 
+                 dist_to_source = 8.5*u.kpc, 
                  annihilation = 1,
-                 default_rho_s = 0.001 * u.Unit("TeV / cm3"), 
-                 default_r_s = 28.44* u.Unit("kpc"), 
+                 default_rho_s = 1 * u.Unit("GeV / cm3"), 
+                 default_r_s = 20.* u.Unit("kpc"), 
                  angular_central_coords = np.array([0,0])*u.deg,
                  kwd_profile_default_vals = {},
                  gammapy_profile_class=Gammapy_EinastoProfile,
@@ -137,15 +137,15 @@ class DM_Profile(object):
         val = [
             (
                 2
-                * self.gammapy_profile.integral(
+                * self.integral(
                     _.value * u.kpc,
                     rmax,
                     np.arctan(_.value / self.gammapy_profile.distance.value),
                     ndecade,
                 )
-                + self.gammapy_profile.integral(
+                + self.integral(
                     self.gammapy_profile.distance,
-                    4 * rmax,
+                    5 * rmax,
                     np.arctan(_.value / self.gammapy_profile.distance.value),
                     ndecade,
                 )
@@ -153,7 +153,7 @@ class DM_Profile(object):
             for _ in rmin.ravel()
         ]
         integral_unit = self.diffJ_units if self.annihilation else self.diffD_units
-        jfact = (u.Quantity(val).reshape(rmin.shape)/u.sr).to(integral_unit)
+        jfact = (u.Quantity(val).reshape(rmin.shape)/u.steradian).to(integral_unit)
         
         return np.log(jfact.value)
 
@@ -251,3 +251,80 @@ class DM_Profile(object):
             *args, 
             **kwargs
             ).reshape(parameter_meshes[0].shape)
+    
+
+    def _eval_substitution(self, radius, separation, squared):
+        """Density at given radius together with the substitution part. Taken from Gammapy to change how rmin is handled in integrate_spectrum_separation."""
+        exponent = 2 if squared else 1
+        return (
+            self.gammapy_profile(radius) ** exponent
+            * radius
+            / np.sqrt(radius**2 - (self.gammapy_profile.DISTANCE_GC * np.sin(separation)) ** 2)
+        )
+
+    def integral(self, rmin, rmax, separation, ndecade, squared=True):
+        r"""Integrate dark matter profile numerically. Taken from Gammapy to change how rmin is handled in integrate_spectrum_separation.
+
+        .. math::
+            F(r_{min}, r_{max}) = \int_{r_{min}}^{r_{max}}\rho(r)^\gamma dr \\
+            \gamma = 2 \text{for annihilation} \\
+            \gamma = 1 \text{for decay}
+
+        Parameters
+        ----------
+        rmin, rmax : `~astropy.units.Quantity`
+            Lower and upper bound of integration range.
+        separation : `~numpy.ndarray`
+            Separation angle in radians.
+        ndecade : int, optional
+            Number of grid points per decade used for the integration.
+            Default is 10000.
+        squared : bool, optional
+            Square the profile before integration.
+            Default is True.
+        """
+        integral = self.integrate_spectrum_separation(
+            self._eval_substitution, rmin, rmax, separation, ndecade, squared
+        )
+        inegral_unit = u.Unit("GeV2 cm-5") if squared else u.Unit("GeV cm-2")
+        return integral.to(inegral_unit)
+
+    def integrate_spectrum_separation(
+        self, func, xmin, xmax, separation, ndecade, squared=True
+    ):
+        """Squared dark matter profile integral. Taken from Gammapy for minor changes to how xmin is handled.
+
+        Parameters
+        ----------
+        xmin, xmax : `~astropy.units.Quantity`
+            Lower and upper bound of integration range.
+        separation : `~numpy.ndarray`
+            Separation angle in radians.
+        ndecade : int
+            Number of grid points per decade used for the integration.
+        squared : bool
+            Square the profile before integration.
+            Default is True.
+        """
+        unit = xmin.unit
+        xmin = xmin.value
+        xmax = xmax.to_value(unit)
+        integral_addition = 0
+        if np.isclose(xmin, 0, atol=1e-10):
+            inbetween_xs = np.linspace(xmin, 1e-10, int(round(ndecade)))
+            inbetween_func_eval = func(inbetween_xs*unit, separation, squared)
+            inbetween_func_eval = inbetween_func_eval.value
+            integral_addition = np.exp(logspace_trapz(logy=np.log(inbetween_func_eval), x=inbetween_xs))
+            if np.isnan(integral_addition):
+                integral_addition = 0
+            xmin = 1e-10
+
+
+        logmin = np.log10(xmin)
+        logmax = np.log10(xmax)
+        n = np.int32((logmax - logmin) * ndecade)
+        x = np.logspace(logmin, logmax, n) * unit
+        y = func(x, separation, squared)
+        val = trapz_loglog(y, x)
+        integral_addition*=val.unit
+        return (val+integral_addition).sum()

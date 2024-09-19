@@ -83,6 +83,7 @@ class DM_ContinuousEmission_Spectrum(object):
             ratios (bool, optional): Indicates if the fractions are ratios. Defaults to True.
             default_parameter_values (dict, optional): Default values for parameters. Defaults to {'mass': 1.0}.
         """
+        np.seterr(divide='ignore')
         self.ratios = ratios
     
         # This class presumes that you're getting your annihilation ratios from darkSUSY
@@ -182,6 +183,7 @@ class DM_ContinuousEmission_Spectrum(object):
             np.ndarray | float: Gamma-ray flux for the specified energies and parameters.
         """
         
+
         logspectra = -np.inf
 
 
@@ -312,6 +314,8 @@ class DM_ContinuousEmission_Spectrum(object):
             np.ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
         """
 
+
+
         kwd_parameters.update(kwargs)
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
@@ -349,6 +353,7 @@ class DM_ContinuousEmission_Spectrum(object):
         Returns:
             np.ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
         """
+
         energy = np.asarray(energy.value)
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}

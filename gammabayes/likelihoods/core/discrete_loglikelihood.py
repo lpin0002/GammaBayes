@@ -1,11 +1,15 @@
 from scipy.special import logsumexp
 import numpy as np
-from gammabayes.samplers import integral_inverse_transform_sampler
+from gammabayes.samplers import integral_inverse_transform_sampler, vectorised_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import Parameter, ParameterSet, update_with_defaults, GammaBinning, GammaObs, GammaObsCube
 # from gammabayes import EventData
-import pickle
+import pickle, time
 from tqdm import tqdm
+
+
+
+
 class DiscreteLogLikelihood(object):
     
     def __init__(self, 
@@ -45,7 +49,7 @@ class DiscreteLogLikelihood(object):
         This class facilitates the calculation of log likelihood over discrete spaces, suitable for
         models where likelihood evaluations are essential for parameter inference.
         """
-
+        np.seterr(divide='ignore')
         self.name = name
         self.inputunit = inputunit
         self.logfunction = logfunction
@@ -173,6 +177,8 @@ class DiscreteLogLikelihood(object):
         Returns:
             An ndarray of samples from the likelihood distribution.
         """
+
+
         update_with_defaults(parameters, self.parameters)
 
         num_eval_axes = len(self.axes) + len(dependentvalues)
@@ -190,8 +196,8 @@ class DiscreteLogLikelihood(object):
             input_units.append(1)
 
 
-
         inputmesh = np.meshgrid(*self.axes, *dependentvalues, *parameters.values(), indexing='ij')        
+
 
         flattened_meshes = [inputaxis.flatten()*unit for inputaxis, unit in zip(inputmesh, input_units)]
         
@@ -203,22 +209,84 @@ class DiscreteLogLikelihood(object):
 
         loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes])
 
-
         # Used for pseudo-riemann summing
         logdx = construct_log_dx_mesh(self.axes)
 
         simvals = integral_inverse_transform_sampler(loglikevals+logdx, axes=self.axes, Nsamples=numsamples)
+
             
-        return GammaObs(energy=simvals[0], 
+        return_observation =  GammaObs(energy=simvals[0], 
                         lon=simvals[1], 
                         lat=simvals[2], 
                         binning_geometry=self.binning_geometry,
                         irf_loglike=self,
                         pointing_dir=pointing_dir
                         )
+        
+
+        return return_observation
+
+
     
 
-    def sample(self,eventdata: GammaObs, parameters: dict | ParameterSet = {}, print_progress=False):
+    def _sample_chunk(self, dependentvalues, num_samples, pointing_dir, **kwargs):
+
+        dependent_mesh_indices = np.arange(len(dependentvalues[0]))
+
+        _dependent_axes_index_mesh, recon_energy_mesh, recon_lon_mesh, recon_lat_mesh  = np.meshgrid(dependent_mesh_indices, *self.axes, indexing='ij')
+
+
+        mesh_true_vals = [dependent_value[_dependent_axes_index_mesh].flatten() for dependent_value in dependentvalues]
+
+
+        flattened_meshes = [inputaxis.flatten() for inputaxis in (recon_energy_mesh, recon_lon_mesh, recon_lat_mesh)]
+
+        loglikevals = self(
+                *flattened_meshes, 
+                *mesh_true_vals,
+                pointing_dir=pointing_dir,
+                ).reshape(-1, *self.binning_geometry.axes_dim)
+
+        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes], axisindices=[1, 2, 3])[:, None, None, None]
+
+        # Used for pseudo-riemann summing
+        logdx = construct_log_dx_mesh(self.axes)
+
+        logpmf = loglikevals+logdx
+
+        simvals = vectorised_inverse_transform_sampler(logpmf, axes=self.axes, Nsamples=num_samples)
+
+        return simvals
+    
+
+    def _old_sample(self, true_event_data: GammaObs, parameters: dict | ParameterSet = {}, print_progress=False,):
+
+        measured_event_data = GammaObs(energy=[], lon=[], lat=[], pointing_dir=true_event_data.pointing_dir, 
+                                        binning_geometry=self.binning_geometry, irf_loglike=self)
+        
+        data_to_iterate_over, num_data =true_event_data.nonzero_bin_data
+
+        data_to_iterate_over = zip(*data_to_iterate_over)
+
+        if print_progress:
+            data_to_iterate_over = tqdm(data_to_iterate_over, total=len(true_event_data.nonzero_bin_data[0]))
+
+
+        for datum_coord, num_datum in zip(data_to_iterate_over, num_data):
+            measured_event_data+=self.raw_sample(
+                dependentvalues=datum_coord, 
+                parameters=parameters, 
+                pointing_dir=true_event_data.pointing_dir,
+                numsamples=num_datum)
+            
+        return measured_event_data
+
+
+
+    def sample(self,
+               true_event_data: GammaObs, 
+               parameters: dict | ParameterSet = {}, print_progress=False,
+               chunk_size=10):
         """
         Generates samples from the likelihood based on observed event data.
 
@@ -234,21 +302,34 @@ class DiscreteLogLikelihood(object):
             An EventData instance containing the sampled data.
         """
 
-        measured_event_data = GammaObs(energy=[], lon=[], lat=[], pointing_dir=eventdata.pointing_dir, 
-                                        binning_geometry=self.binning_geometry, irf_loglike=self)
         
-        data_to_iterate_over = zip(*eventdata.nonzero_bin_data)
+        data_to_iterate_over, num_data = true_event_data.nonzero_bin_data
 
+        num_batches = int(np.ceil(len(num_data)/chunk_size))
+
+        event_data = [[], [], []]
+
+
+        indices_to_iterate_over = range(num_batches)
         if print_progress:
-            data_to_iterate_over = tqdm(data_to_iterate_over, total=len(eventdata.nonzero_bin_data[0]))
+            indices_to_iterate_over = tqdm(indices_to_iterate_over, total=num_batches)
 
-
-        for datum_coord, num_datum in data_to_iterate_over:
-            measured_event_data+=self.raw_sample(
-                dependentvalues=datum_coord, 
-                parameters=parameters, 
-                pointing_dir=eventdata.pointing_dir,
-                numsamples=num_datum)
+        for batch_idx in indices_to_iterate_over:
+            measured_event_data_batch=self._sample_chunk(
+                dependentvalues=[datum[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size] for datum in data_to_iterate_over], 
+                num_samples=num_data[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size],
+                pointing_dir=true_event_data.pointing_dir
+                )
+            
+            [event_data[_meas_data_index].extend(data) for _meas_data_index, data in enumerate(measured_event_data_batch)]
+            
+        measured_event_data =  GammaObs(energy=event_data[0], 
+                        lon=event_data[1], 
+                        lat=event_data[2], 
+                        binning_geometry=self.binning_geometry,
+                        irf_loglike=self,
+                        pointing_dir=true_event_data.pointing_dir
+                        )
 
         return measured_event_data
     

@@ -214,7 +214,7 @@ class DiscreteBruteScan(object):
             # way, assuming that they match the expected inputs/outputs of what is
             # used/produce here.
 
-        self.log_nuisance_marg_results        = log_nuisance_marg_results
+        self.log_nuisance_marg_results          = log_nuisance_marg_results
         self.log_hyperparameter_likelihood      = log_hyperparameter_likelihood
         self.log_posterior                      = log_posterior
         self.log_prior_matrix_list              = log_prior_matrix_list
@@ -533,15 +533,13 @@ class before the multiprocessing or make sure that it isn't part of the actual
             - Sets `log_marginalisation_regularisation` to the mean difference between log marginalisation maximums and minimums.
         """
 
-        prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data))
+        prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data[0]))
 
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 
-            event_vals=event_data) for event_data in measured_event_data]
+            event_vals=event_data) for event_data in zip(*measured_event_data)]
                 
         marg_results = np.asarray(marg_results)
-
-
 
         # Making the output iterable around the priors, not the events.
             # Much easier to work with.
