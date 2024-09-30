@@ -13,7 +13,7 @@ setup(name='GammaBayes',
       author='Liam Pinchbeck',
       author_email='Liam.Pinchbeck@monash.edu',
       license="MIT",
-      version='0.1.11.5',
+      version='0.1.12',
 
       packages=find_packages(),
         long_description=long_description,  # This is the long description, read from README.md
@@ -25,12 +25,14 @@ setup(name='GammaBayes',
         "corner==2.2.2",
         "dynesty==2.1.2",
         "tqdm==4.66.1",
-        "gammapy==1.1",
+        "gammapy==1.2",
         "pandas==2.1.2",
         "pytest==7.4.0",
         "h5py==3.10.0",
         "icecream==2.1.3",
-        "seaborn==0.12.2"
+        "seaborn==0.12.2",
+        "requests==2.31.0",
+        "matplotlib==3.9.2",
     ],
       classifiers=[
           "License :: OSI Approved :: MIT License",
@@ -64,6 +66,7 @@ setup(name='GammaBayes',
             'gammabayes.run_simulate = gammabayes.utils.cli:run_sim',
             'gammabayes.run_marg = gammabayes.utils.cli:run_marg',
             'gammabayes.run_combine = gammabayes.utils.cli:run_combine',
+            'gammabayes.plot_from_save = gammabayes.utils.cli:plot_from_save',
             ]
       },
 

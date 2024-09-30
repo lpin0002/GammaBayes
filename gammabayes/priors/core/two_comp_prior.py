@@ -5,7 +5,7 @@ from gammabayes.priors.core.source_flux_prior import SourceFluxDiscreteLogPrior
 from gammabayes.core import GammaLogExposure, GammaBinning
 import time
 
-
+from icecream import ic
 
 class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
     """
@@ -131,6 +131,7 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
 
         spectral_axes = energy, *spectral_parameters.values()
 
+
         spectral_units = []
         for axis in spectral_axes:
             if hasattr(axis, 'unit'):
@@ -152,12 +153,10 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
             
         energy, lon, lat = np.asarray(energy), np.asarray(lon), np.asarray(lat)
 
-        spectral_parameters = {param_key: np.asarray(param_val) for param_key, param_val in spectral_parameters.items()}
-
-
+        mesh_spectral_parameters = {param_key: np.asarray(param_val) for param_key, param_val in spectral_parameters.items()}
         
         flatten_spectral_param_values = np.array([energy.flatten(), 
-                                       *[param_val.flatten() for param_val in spectral_parameters.values()]])
+                                       *[param_val.flatten() for param_val in mesh_spectral_parameters.values()]])
         
         #1 So what we're doing here is to pick out the unique combinations of the energy and spectral parameters
         unique_spectral_param_values = np.unique(flatten_spectral_param_values, axis=1)
@@ -167,7 +166,7 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         logspectralvals = self.spectral_comp(
              unique_spectral_param_values[0]*spectral_units[0], 
              kwd_parameters = {
-                  spectral_param_key : unique_spectral_param_values[1+val_idx]*spectral_units[1+val_idx] for val_idx, spectral_param_key in enumerate(spectral_parameters.keys())
+                  spectral_param_key : unique_spectral_param_values[1+val_idx]*spectral_units[1+val_idx] for val_idx, spectral_param_key in enumerate(mesh_spectral_parameters.keys())
                   },
                   )
         
@@ -246,7 +245,6 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         num_spectral_params     = len(spectral_parameters)
 
         num_spatial_params      = len(spatial_parameters)
-
 
         # Just the total
         num_total_params = num_spectral_params + num_spatial_params + 3

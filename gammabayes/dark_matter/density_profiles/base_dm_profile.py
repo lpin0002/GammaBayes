@@ -20,7 +20,7 @@ from gammapy.astro.darkmatter.profiles import (
 from gammapy.utils.integrate import trapz_loglog
 
 from gammabayes.utils.integration import logspace_trapz
-
+from icecream import ic
 
 
 class DM_Profile(object):
@@ -132,7 +132,6 @@ class DM_Profile(object):
             value=np.tan(separation) * self.gammapy_profile.distance, unit=self.gammapy_profile.distance.unit
         )
 
-
         rmax = self.gammapy_profile.distance
         val = [
             (
@@ -142,15 +141,18 @@ class DM_Profile(object):
                     rmax,
                     np.arctan(_.value / self.gammapy_profile.distance.value),
                     ndecade,
+                    kwd_parameters={Key:keyval for Key, keyval in zip(kwd_parameters.keys(), kwdvals)},
                 )
                 + self.integral(
                     self.gammapy_profile.distance,
                     5 * rmax,
                     np.arctan(_.value / self.gammapy_profile.distance.value),
                     ndecade,
+                    kwd_parameters={Key:keyval for Key, keyval in zip(kwd_parameters.keys(), kwdvals)},
+
                 )
             )
-            for _ in rmin.ravel()
+            for _, *kwdvals in zip(rmin.ravel(), *kwd_parameters.values())
         ]
         integral_unit = self.diffJ_units if self.annihilation else self.diffD_units
         jfact = (u.Quantity(val).reshape(rmin.shape)/u.steradian).to(integral_unit)
@@ -253,16 +255,21 @@ class DM_Profile(object):
             ).reshape(parameter_meshes[0].shape)
     
 
-    def _eval_substitution(self, radius, separation, squared):
+    def _eval_substitution(self, radius, separation, squared, kwd_parameters=None):
         """Density at given radius together with the substitution part. Taken from Gammapy to change how rmin is handled in integrate_spectrum_separation."""
         exponent = 2 if squared else 1
+        if kwd_parameters is None:
+            kwd_parameters = {}
+
+        update_with_defaults(kwd_parameters, self.kwd_profile_default_vals)
+
         return (
-            self.gammapy_profile(radius) ** exponent
+            self.gammapy_profile.evaluate(radius, **kwd_parameters) ** exponent
             * radius
             / np.sqrt(radius**2 - (self.gammapy_profile.DISTANCE_GC * np.sin(separation)) ** 2)
         )
 
-    def integral(self, rmin, rmax, separation, ndecade, squared=True):
+    def integral(self, rmin, rmax, separation, ndecade, squared=True, kwd_parameters=None):
         r"""Integrate dark matter profile numerically. Taken from Gammapy to change how rmin is handled in integrate_spectrum_separation.
 
         .. math::
@@ -283,14 +290,17 @@ class DM_Profile(object):
             Square the profile before integration.
             Default is True.
         """
+        if kwd_parameters is None:
+            kwd_parameters = {}
+
         integral = self.integrate_spectrum_separation(
-            self._eval_substitution, rmin, rmax, separation, ndecade, squared
+            self._eval_substitution, rmin, rmax, separation, ndecade, squared, kwd_parameters=kwd_parameters,
         )
         inegral_unit = u.Unit("GeV2 cm-5") if squared else u.Unit("GeV cm-2")
         return integral.to(inegral_unit)
 
     def integrate_spectrum_separation(
-        self, func, xmin, xmax, separation, ndecade, squared=True
+        self, func, xmin, xmax, separation, ndecade, squared=True, kwd_parameters=None
     ):
         """Squared dark matter profile integral. Taken from Gammapy for minor changes to how xmin is handled.
 
@@ -306,13 +316,16 @@ class DM_Profile(object):
             Square the profile before integration.
             Default is True.
         """
+        if kwd_parameters is None:
+            kwd_parameters = {}
+        
         unit = xmin.unit
         xmin = xmin.value
         xmax = xmax.to_value(unit)
         integral_addition = 0
         if np.isclose(xmin, 0, atol=1e-10):
             inbetween_xs = np.linspace(xmin, 1e-10, int(round(ndecade)))
-            inbetween_func_eval = func(inbetween_xs*unit, separation, squared)
+            inbetween_func_eval = func(inbetween_xs*unit, separation, squared, kwd_parameters=kwd_parameters)
             inbetween_func_eval = inbetween_func_eval.value
             integral_addition = np.exp(logspace_trapz(logy=np.log(inbetween_func_eval), x=inbetween_xs))
             if np.isnan(integral_addition):
@@ -324,7 +337,7 @@ class DM_Profile(object):
         logmax = np.log10(xmax)
         n = np.int32((logmax - logmin) * ndecade)
         x = np.logspace(logmin, logmax, n) * unit
-        y = func(x, separation, squared)
+        y = func(x, separation, squared, kwd_parameters=kwd_parameters)
         val = trapz_loglog(y, x)
         integral_addition*=val.unit
         return (val+integral_addition).sum()

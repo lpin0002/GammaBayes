@@ -112,6 +112,7 @@ class ParameterSetCollection:
                                                                     'prior_identifiers': prior_identifiers_indices, 
                                                                     'prior_param_axes': [],
                                                                     'log_nuisance_marg_slice_indices':[],
+                                                                    'prior_to_axis_dict':{},
                                                                     }
 
             if 'dependent' in shared_param:
@@ -148,8 +149,9 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
                                                                         # 
                         self.prior_idx_to_param_idx_dict[prior_idx].append([param_idx, prior_param_idx])
                         temp_parameter_info['prior_identifiers'].append(prior_idx)
-                        temp_parameter_info['prior_param_axes'].append(param['axis'])
+                        temp_parameter_info['prior_param_axes'].append([param['axis']])
                         temp_parameter_info['log_nuisance_marg_slice_indices'].append(prior_param_idx)
+                        temp_parameter_info['prior_to_axis_dict'][prior_idx] = len(temp_parameter_info['prior_identifiers'])-1
                         is_shared = True
 
                     
@@ -161,6 +163,7 @@ f"""{param['name']} is not discrete. Prior parameters are presumed to be unique 
                                                                     'prior_identifiers': [prior_idx], 
                                                                     'prior_param_axes': [param['axis']],
                                                                     'log_nuisance_marg_slice_indices':[prior_param_idx],
+                                                                    'prior_to_axis_dict': {prior_idx:0}
                                                                     }
                     if 'dependent' in param:
                         self.hyper_param_index_to_info_dict[hyper_param_idx]['dependent'] = param['dependent']

@@ -1,0 +1,2 @@
+from .base_spatial_comp import BaseSpatial_PriorComp
+from .isotropic_map import IsotropicSpatial_PriorComp

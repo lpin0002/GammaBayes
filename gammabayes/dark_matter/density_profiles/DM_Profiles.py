@@ -15,6 +15,7 @@ from gammapy.astro.darkmatter.profiles import (
     BurkertProfile as Gammapy_BurkertProfile,
     MooreProfile as Gammapy_MooreProfile,
     IsothermalProfile as Gammapy_IsothermalProfile,
+    ZhaoProfile as Gammapy_GNFWProfile
 )
 
 
@@ -25,7 +26,7 @@ class Einasto_Profile(DM_Profile):
     def log_profile(radius: float | np.ndarray , 
                     r_s: float, 
                     alpha: float, 
-                    rho_s: float, return_unit=False) -> float | np.ndarray :
+                    rho_s: float) -> float | np.ndarray :
         """
         Computes the logarithm of the Einasto density profile.
 
@@ -39,15 +40,19 @@ class Einasto_Profile(DM_Profile):
         Returns:
             float | np.ndarray: Logarithm of the density profile (and unit if return_unit is True).
         """
-            
-        radius_unit = radius.unit
-        radius = radius.to(radius_unit).value
-        r_s = r_s.to(radius_unit).value
+        radial_unit = u.kpc
+
+        radius = radius.to(radial_unit).value if hasattr(radius, "unit") else radius
+
+        r_s =  r_s.to(radial_unit).value if hasattr(radius, "unit") else radius
+
+        rho_s =  rho_s.to("TeV / cm3").value if hasattr(rho_s, "unit") else radius
+
         rr = radius / r_s
 
         exponent = -(2 / alpha) * (rr**alpha - 1)
 
-        return np.log(rho_s.to("TeV / cm3").value) + exponent
+        return np.log(rho_s) + exponent
 
 
 
@@ -77,7 +82,7 @@ class Einasto_Profile(DM_Profile):
 
 
 class GNFW_Profile(DM_Profile):
-    """Generalized NFW (GNFW) dark matter density profile."""
+    """Generalized NFW (GNFW) or Zhao dark matter density profile."""
 
     @staticmethod
     def log_profile(radius: float | np.ndarray , 
@@ -100,20 +105,25 @@ class GNFW_Profile(DM_Profile):
         Returns:
             float | np.ndarray: Logarithm of the density profile.
         """
-        radius_unit = radius.unit
-        radius = radius.to(radius_unit).value
-        r_s = r_s.to(radius_unit).value
+        
+        radial_unit = u.kpc
+
+        radius = radius.to(radial_unit).value if hasattr(radius, "unit") else radius
+
+        r_s =  r_s.to(radial_unit).value if hasattr(radius, "unit") else radius
+
+        rho_s =  rho_s.to("TeV / cm3").value if hasattr(rho_s, "unit") else radius
+
         rr = radius / r_s
 
-        exponent = gamma*np.log(rr) + ((beta - gamma) / alpha) * np.log(1 + rr **  alpha)
+        result = np.log(rho_s) - gamma*np.log(rr) + ((gamma - beta) * alpha) * np.log(1 + rr **  1/alpha)
 
-
-        return np.log(rho_s.to("TeV / cm3").value) -  exponent
+        return result
     
     def __init__(self, 
                  default_alpha: float | int = 1, 
                  default_beta: float | int = 3, 
-                 default_gamma: float | int =1, 
+                 default_gamma: float | int = 1, 
                  default_rho_s: float = 0.001* u.Unit("TeV / cm3"), 
                  default_r_s: float = 24.42* u.Unit("kpc"),
                 *args, **kwargs):
@@ -134,6 +144,7 @@ class GNFW_Profile(DM_Profile):
                                         'beta': default_beta,
                                         'gamma': default_gamma,
                                         'rho_s':default_rho_s},
+            gammapy_profile_class=Gammapy_GNFWProfile,
             *args, **kwargs
         )
 
@@ -179,6 +190,7 @@ class Burkert_Profile(DM_Profile):
             log_profile_func=self.log_profile, 
             kwd_profile_default_vals = {'r_s': default_r_s, 
                                         'rho_s':default_rho_s},
+            gammapy_profile_class=Gammapy_BurkertProfile,
             *args, **kwargs
         )
  
@@ -218,5 +230,6 @@ class Moore_Profile(DM_Profile):
             log_profile_func=self.log_profile, 
             kwd_profile_default_vals = {'r_s': default_r_s, 
                                         'rho_s':default_rho_s},
+            gammapy_profile_class=Gammapy_MooreProfile,
             *args, **kwargs
         )

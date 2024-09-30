@@ -24,7 +24,8 @@ class Parameter(dict):
                 num_events:int = 1, axis: np.ndarray = None,
                 parameter_type:str = 'None',
                 bounds:list[float] = [0. ,1.],
-
+                name = "NA",
+                _internal_name = "NA_abc",
                  **kwargs):
         """
         Initializes a Parameter object with specified attributes and properties.
@@ -52,6 +53,8 @@ class Parameter(dict):
         data_dict.setdefault(           'axis', axis)
         data_dict.setdefault( 'parameter_type', parameter_type)
         data_dict.setdefault(         'bounds', bounds)
+        data_dict.setdefault(           'name', name)
+        data_dict.setdefault( '_internal_name', _internal_name)
 
         if type(data_dict) == dict:
             
@@ -160,7 +163,9 @@ class Parameter(dict):
                     else:
                         self.distribution = loguniform(a=self['bounds'][0], 
                                                     b=self['bounds'][1])
-                    
+                        
+
+            
 
 
                 
@@ -178,9 +183,9 @@ class Parameter(dict):
             super().__init__()
             if initial_data is not None:  # This ensures compatibility with empty or default init.
                 raise TypeError("Initial data must be of type dict or Parameter")
-            
+        
 
-            
+        
 
 
 

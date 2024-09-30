@@ -8,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 from astropy import units as u
 from scipy import special
-from scipy.integrate import simps
+from scipy.integrate import simpson as simps
 import os, sys
 from astropy.units import Quantity
 from numpy import ndarray

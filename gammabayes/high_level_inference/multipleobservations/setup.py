@@ -34,6 +34,7 @@ from gammabayes.hyper_inference import DiscreteAdaptiveScan, ScanOutput_Stochast
 
 from .config_utils import from_config_dict, from_config_file
 
+from icecream import ic
 
 class log_obs_interpolator:
     """
@@ -188,6 +189,7 @@ class High_Level_Setup:
 
             for pointing_dir, observation_time, log_exposure in zip(pointing_dirs, observation_times, log_exposures):
                 
+                ic(pointing_dir)
 
                 irf_loglike = IRF_LogLikelihood(
                     axes=self.recon_binning_geometry.axes,

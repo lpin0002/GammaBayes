@@ -2,7 +2,6 @@ from gammabayes import haversine, resources_dir
 import numpy as np
 from astropy import units as u
 from astropy.units import Quantity
-from gammapy.irf import load_irf_dict_from_file,load_cta_irfs
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 import os

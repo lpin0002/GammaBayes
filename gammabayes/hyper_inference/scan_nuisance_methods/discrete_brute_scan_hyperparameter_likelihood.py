@@ -15,6 +15,8 @@ from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
 from icecream import ic
+
+
 class DiscreteBruteScan(object):
     """
     A class for performing discrete brute scan hyperparameter likelihood analysis.
@@ -180,6 +182,7 @@ class DiscreteBruteScan(object):
             self.nuisance_axes     = _handle_nuisance_axes(nuisance_axes,
                                                         log_likelihood=self.log_likelihood,
                                                         log_prior=self.log_priors[0])
+            # ParameterSpecification
             self.prior_parameter_specifications = _handle_parameter_specification(
                 parameter_specifications=prior_parameter_specifications,
                 num_required_sets=len(self.log_priors),
@@ -187,6 +190,7 @@ class DiscreteBruteScan(object):
         else:
             self.nuisance_axes     = _handle_nuisance_axes(nuisance_axes,
                                                         log_likelihood=self.log_likelihood)
+            # ParameterSpecification
             self.prior_parameter_specifications = _handle_parameter_specification(
                 parameter_specifications=prior_parameter_specifications,
                 _no_required_num=self.no_priors_on_init)
@@ -204,6 +208,7 @@ class DiscreteBruteScan(object):
         self.logspace_integrator                = logspace_integrator
 
         # Doesn't have to be initialised here, but you can do it if you want
+        # ParameterSpecification
         self.mixture_parameter_specifications   = ParameterSet(mixture_parameter_specifications)
 
         # Used as regularisation to avoid
@@ -346,7 +351,7 @@ class DiscreteBruteScan(object):
                                    desc='Setting up prior matrices',
                                    leave=False):
                 
-
+                # ParameterSpecification
                 prior_parameter_specifications = self.prior_parameter_specifications[_prior_idx].scan_format
 
                 prior_spectral_params   = prior_parameter_specifications['spectral_parameters']
@@ -357,7 +362,7 @@ class DiscreteBruteScan(object):
                                                    *[parameter_specification.size for parameter_specification in prior_spectral_params.values()],
                                                    *[parameter_specification.size for parameter_specification in prior_spatial_params.values()])
 
-                logging.info(f'prior_marged_shapes[{_prior_idx}]: ', prior_marged_shapes[_prior_idx])
+                ic(f'prior_marged_shapes[{_prior_idx}]: ', prior_marged_shapes[_prior_idx])
                 if log_prior.efficient_exist:
 
                     log_prior_matrices = np.squeeze(
@@ -381,6 +386,7 @@ class DiscreteBruteScan(object):
                     # If the prior does not have the mesh inefficient function, that allows
                         # Easy construction of the prior matrices, then each matrix for each 
                         # combination of the hyperparameter values is calculated one-by-one
+                    # ParameterSpecification
                     log_prior_matrices, nans = self._mesh_inefficient_prior_construction( 
                                              log_prior=log_prior, prior_idx=_prior_idx,
                                              prior_spectral_params=prior_spectral_params, 
@@ -445,9 +451,10 @@ class before the multiprocessing or make sure that it isn't part of the actual
             tuple: The generated prior matrices and updated NaN count.
         """
         
+
         num_spec_params         = len(prior_spectral_params)
 
-
+        # ParameterSpecification
         hyper_parameter_coords  = np.asarray(
                         np.meshgrid(*[parameter_specification for parameter_specification in prior_spectral_params.values()],
                                     *[parameter_specification for parameter_specification in prior_spatial_params.values()], indexing='ij'))
@@ -474,8 +481,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
         loglike_norm_shape = squeezed_loglike.shape
 
         log_prior_matrices_shape = (
-            num_prior_values,
             *loglike_norm_shape,
+            num_prior_values,
             )
         
 
@@ -503,7 +510,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             
             nans +=  np.sum(np.isnan(prior_matrix))
 
-            log_prior_matrices[_inner_idx,...] =    prior_matrix
+            log_prior_matrices[..., _inner_idx] =    prior_matrix
 
         return log_prior_matrices, nans
 
@@ -621,6 +628,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Raises:
             ValueError: If `mixture_fraction_exploration_type` is neither 'scan' nor 'sample'.
         """
+        warnings.warn(" 'select_scan_output_exploration_class' will soon be deprecated. Please use 'ScanOutput_StochasticTreeMixturePosterior' or your own method to combine results.")
         if mixture_fraction_exploration_type is None:
             mixture_fraction_exploration_type = self.mixture_fraction_exploration_type
 
@@ -664,6 +672,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         *args, **kwargs: Arguments and keyword arguments to be passed to the initiation method of the exploration class.
         """
+        warnings.warn(" 'init_posterior_exploration' will soon be deprecated. Please use 'ScanOutput_StochasticTreeMixturePosterior' or your own method to combine results.")
         self.hyper_analysis_instance.initiate_exploration(*args, **kwargs)
 
     def run_posterior_exploration(self, *args, **kwargs):
@@ -678,6 +687,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
         Returns:
             The results of the posterior exploration, the format and content of which depend on the exploration method used.
         """
+        warnings.warn(" 'run_posterior_exploration' will soon be deprecated. Please use 'ScanOutput_StochasticTreeMixturePosterior' or your own method to combine results.")
+
         self._posterior_exploration_output = self.hyper_analysis_instance.run_exploration(*args, **kwargs)
 
         if self.applied_priors and (self.mixture_fraction_exploration_type.lower() == 'scan'):

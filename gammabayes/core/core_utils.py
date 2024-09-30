@@ -101,6 +101,7 @@ def power_law(energy: float|Quantity, index: float, phi0: int|Quantity =1) -> fl
     Returns:
         float | Quantity: Computed power law values.
     """
+    warnings.warn("power_law will be deprecated after version 0.1.16. Please use the provided function in the prior.spectral components module.")
     return phi0*energy**(index)
 
 

@@ -8,7 +8,7 @@ from gammabayes.core.core_utils import update_with_defaults
 from itertools import islice
 
 import h5py
-
+from icecream import ic
 
 class ScanOutput_StochasticTreeMixturePosterior(object):
     """
@@ -225,9 +225,11 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
             
             prior_axes = hyper_param_info['prior_param_axes']
             prior_param_value = inputs[hyper_param_idx]
-            for prior_idx in hyper_param_info['prior_identifiers']:
 
-                log_nuisance_param_slice =  np.abs(prior_param_value-prior_axes[prior_idx]).argmin()
+
+            for prior_idx in hyper_param_info['prior_identifiers']:
+                axis_idx = hyper_param_info['prior_to_axis_dict'][prior_idx]
+                log_nuisance_param_slice =  np.abs(prior_param_value-prior_axes[axis_idx]).argmin()
                 # log_nuisance_param_slice = slice_argmin.flatten()[0]
 
 

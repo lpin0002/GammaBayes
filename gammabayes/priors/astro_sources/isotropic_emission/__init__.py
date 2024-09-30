@@ -1,0 +1,1 @@
+from .isotropic_model import IsotropicGRB

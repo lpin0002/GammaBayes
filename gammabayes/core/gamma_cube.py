@@ -442,14 +442,19 @@ it is assumed that the binning geometries are the same.""")
         if (info_dict.get('pointing_dir_unit') is not None):
             pointing_dir = pointing_dir*u.Unit(info_dict.get('pointing_dir_unit'))
         elif isinstance(pointing_dir, ArrayLike): 
-            if np.isnan(np.sum(pointing_dir)): # To account for saving variables as nan for h5 files
+            if hasattr(pointing_dir, "unit"):
+                pointing_dir_value = pointing_dir.value
+            else:
+                pointing_dir_value = pointing_dir
+            if np.isnan(np.sum(pointing_dir_value)): # To account for saving variables as nan for h5 files
                 pointing_dir = None
 
 
         observation_time = info_dict.get('observation_time')
-
-        if np.isnan(observation_time):
-            observation_time = None
+        if not hasattr(observation_time, "unit"):
+            if not(isinstance(observation_time, float)):
+                observation_time = None
+            
         if (info_dict.get('observation_time_unit') is not None) and not(np.isnan(info_dict.get('observation_time_unit'))):
             observation_time = observation_time*u.Unit(info_dict.get('observation_time_unit'))
 

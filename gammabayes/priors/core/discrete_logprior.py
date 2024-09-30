@@ -31,8 +31,8 @@ class DiscreteLogPrior(object):
                  log_mesh_efficient_func: callable = None,
                  axes: tuple[np.ndarray] | None = None, 
                  binning_geometry: GammaBinning = None,
-                 default_spectral_parameters: dict = {},  
-                 default_spatial_parameters: dict = {},  
+                 default_spectral_parameters: dict = None,  
+                 default_spatial_parameters: dict = None,  
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
                  irf_loglike=None,
                  log_scaling_factor: int|float =0.,
@@ -56,6 +56,14 @@ class DiscreteLogPrior(object):
         - This class assumes the prior is defined in a discrete log space along specified axes.
         - The axes should correspond to physical quantities over which the prior is distributed, such as energy and sky coordinates.
         """
+
+        if default_spectral_parameters is None:
+            default_spectral_parameters = {}
+
+        if default_spatial_parameters is None:
+            default_spatial_parameters = {}
+
+
         np.seterr(divide='ignore')
         
         if name is None:
@@ -141,9 +149,9 @@ class DiscreteLogPrior(object):
 
     
     def log_normalisation(self, log_prior_values: np.ndarray = None, 
-                      spectral_parameters: dict = {}, 
-                      spatial_parameters: dict = {},
-                      axisindices: list = [0,1,2],
+                      spectral_parameters: dict = None, 
+                      spatial_parameters: dict = None,
+                      axisindices: list = None,
                       *args, **kwargs) -> np.ndarray | float:
         """
         Calculates the log normalisation constant of the log prior over specified axes.
@@ -157,6 +165,13 @@ class DiscreteLogPrior(object):
         Returns:
             np.ndarray | float: The normalisation constant for the log prior, either as a scalar or an array depending on the integration over multiple axes.
         """
+
+        if spectral_parameters is None:
+            spectral_parameters = {}
+        if spatial_parameters is None:
+            spatial_parameters = {}
+        if axisindices is None:
+            axisindices = [0,1,2]
         
 
         if (log_prior_values is []) | (log_prior_values is None):
@@ -299,9 +314,9 @@ class DiscreteLogPrior(object):
                         )
     
     def construct_prior_array(self, 
-                              spectral_parameters: dict = {}, 
-                              spatial_parameters: dict = {}, 
-                              normalisation_axes: list | tuple = [0,1,2],
+                              spectral_parameters: dict = None, 
+                              spatial_parameters: dict = None, 
+                              normalisation_axes: list | tuple = None,
                               normalise: bool = False,)  -> np.ndarray:
         """
         Constructs an array of log prior values over a mesh of the axes' values.
@@ -320,6 +335,15 @@ class DiscreteLogPrior(object):
         Returns:
         - np.ndarray: An array of log prior values for the specified parameters and axes.
         """
+
+        if spectral_parameters is None:
+            spectral_parameters = {}
+        if spatial_parameters is None:
+            spatial_parameters = {}
+        if normalisation_axes is None:
+            normalisation_axes = [0,1,2]
+
+
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 

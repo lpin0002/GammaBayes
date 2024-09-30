@@ -1,7 +1,5 @@
 import numpy as np
 from scipy import interpolate
-import pandas as pd
-from gammabayes.dark_matter.density_profiles import DM_Profiles
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
@@ -11,13 +9,7 @@ from gammabayes.dark_matter.channel_spectra import (
 )
 from astropy import units as u
 from gammabayes import update_with_defaults
-import time
 
-from decimal import Decimal, getcontext
-
-# Set the precision higher than default
-getcontext().prec = 600  # Setting precision to 600 decimal places
-from icecream import ic
 
 
 single_Wchannel_annihilation_ratios   = {}
@@ -69,10 +61,10 @@ class DM_ContinuousEmission_Spectrum(object):
         return inputval[0]*0 + 1
     
     def __init__(self, 
-                 annihilation_fractions=single_Wchannel_annihilation_ratios, 
-                 parameter_interpolation_values:  list[np.ndarray] = [mass_axis], 
+                 annihilation_fractions= None, 
+                 parameter_interpolation_values:  list[np.ndarray] = None, 
                  ratios: bool = True,
-                 default_parameter_values = {'mass':1.0,},
+                 default_parameter_values = None,
                  ):
         """
         Initialize the DMContinuousEmissionSpectrum class.
@@ -83,6 +75,17 @@ class DM_ContinuousEmission_Spectrum(object):
             ratios (bool, optional): Indicates if the fractions are ratios. Defaults to True.
             default_parameter_values (dict, optional): Default values for parameters. Defaults to {'mass': 1.0}.
         """
+        if annihilation_fractions is None:
+            annihilation_fractions = single_Wchannel_annihilation_ratios
+
+        if parameter_interpolation_values is None:
+            parameter_interpolation_values = [mass_axis]
+
+        if default_parameter_values is None:
+            default_parameter_values = {'mass':1.0,}
+
+
+        
         np.seterr(divide='ignore')
         self.ratios = ratios
     

@@ -256,6 +256,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             # Transpose is because of the convention for where I place the 
                 # axes of the true values (i.e. first three indices of the prior matrices)
                 # and numpy doesn't support this kind of matrix addition nicely
+
             logintegrandvalues = (
                 np.squeeze(log_prior_matrices).T[
                     ...,

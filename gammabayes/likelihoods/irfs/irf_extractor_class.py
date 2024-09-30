@@ -2,7 +2,7 @@ from gammabayes import haversine, resources_dir
 import numpy as np
 from astropy import units as u
 from astropy.units import Quantity
-from gammapy.irf import load_irf_dict_from_file,load_cta_irfs
+from gammapy.irf import load_irf_dict_from_file
 from astropy.coordinates import SkyCoord
 from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 import os
@@ -101,10 +101,7 @@ class IRFExtractor(object):
                                             prod_vers=prod_vers)
         
         # print(f"\nPath to irf fits file: {fits_file_path}\n")
-        if prod_version=='prod5':
-            self.extracted_default_irfs  = load_irf_dict_from_file(fits_file_path)
-        elif prod_version=='prod3b':
-            self.extracted_default_irfs  = load_cta_irfs(fits_file_path)
+        self.extracted_default_irfs  = load_irf_dict_from_file(fits_file_path)
 
 
 
