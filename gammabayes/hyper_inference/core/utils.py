@@ -29,15 +29,14 @@ def _handle_parameter_specification(
 
             for single_prior_parameter_specifications in parameter_specifications.items():
 
-                parameter_set = ParameterSet(single_prior_parameter_specifications)
+                parameter_set = single_prior_parameter_specifications
 
                 formatted_parameter_specifications.append(parameter_set)
 
         elif type(parameter_specifications)==list:
             formatted_parameter_specifications = [
-                ParameterSet(
-                    single_prior_parameter_specification
-                    ) for single_prior_parameter_specification in parameter_specifications
+                single_prior_parameter_specification
+                     for single_prior_parameter_specification in parameter_specifications
                 ]
 
     if num_required_sets is not None:

@@ -39,7 +39,7 @@ class PowerLaw(BaseSpectral_PriorComp):
 class BrokenPowerLaw(BaseSpectral_PriorComp):
 
     # TODO: TechDebt
-    def log_broken_power_law(self, energy: float|u.Quantity, bindex: float=2.5, cutoff_energy_TeV:float=1, phi0: int|u.Quantity =None) -> float|u.Quantity:
+    def log_broken_power_law(self, energy: float|u.Quantity, index: float=2.5, cutoff_energy_TeV:float=1, phi0: int|u.Quantity =None) -> float|u.Quantity:
         """
         Evaluates a broken power law function.
 
@@ -54,17 +54,17 @@ class BrokenPowerLaw(BaseSpectral_PriorComp):
         """
         if phi0 is None:
             phi0 = self.default_parameter_values['phi0']
-        if bindex is None:
-            bindex = self.default_parameter_values['bindex']
+        if index is None:
+            index = self.default_parameter_values['index']
         if cutoff_energy_TeV is None:
             cutoff_energy_TeV = self.default_parameter_values['cutoff_energy_TeV']
 
-        log_value =  np.log(phi0) - bindex*np.log(energy.to("TeV").value) - energy.to("TeV").value/cutoff_energy_TeV
+        log_value =  np.log(phi0) - index*np.log(energy.to("TeV").value) - energy.to("TeV").value/cutoff_energy_TeV
 
         return log_value
 
     def __init__(self, default_parameter_values=None, energy_units=u.Unit("TeV"), *args, **kwargs):
         if default_parameter_values is None:
-            default_parameter_values = {'bindex':2.5,"cutoff_energy_TeV":1, "phi0": 1e-8, }
+            default_parameter_values = {'index':2.5,"cutoff_energy_TeV":1, "phi0": 1e-8, }
 
         super().__init__(logfunc=self.log_broken_power_law, default_parameter_values=default_parameter_values)

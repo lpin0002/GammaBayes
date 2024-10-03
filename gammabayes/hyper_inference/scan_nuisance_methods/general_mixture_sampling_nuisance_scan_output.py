@@ -34,11 +34,12 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
                 log_nuisance_marg_results: list[np.ndarray]|np.ndarray,
                 mixture_tree: MTree,
                 mixture_parameter_specifications:list | dict | ParameterSet,
-                log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
                 prior_parameter_specifications: list | dict | ParameterSet = None,
-                shared_parameters: list | dict | ParameterSet = {},
-                parameter_meta_data: dict = {},
+                observational_prior_names: list=None,
+                shared_parameters: list | dict | ParameterSet = None,
+                parameter_meta_data: dict = None,
                 event_weights:np.ndarray=None,
+                log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
                 _sampler_results={}):
         """
         Initializes the ScanOutput_StochasticTreeMixturePosterior class with necessary parameters and configurations.
@@ -53,6 +54,11 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
             parameter_meta_data (dict, optional): Metadata for the parameters. Defaults to {}.
             _sampler_results (dict, optional): Initial results for the sampler. Defaults to {}.
         """
+        if shared_parameters is None:
+            shared_parameters = {}
+        if parameter_meta_data is None:
+            parameter_meta_data = {}
+
         self.prior_parameter_specifications = _handle_parameter_specification(
             prior_parameter_specifications,
             _no_required_num=True
@@ -60,7 +66,6 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         self.mixture_tree = mixture_tree
         self.shared_parameters = shared_parameters
 
-        self.hyperparameter_axes    = [param_set.axes_by_type for param_set in self.prior_parameter_specifications]
 
 
         self.mixture_parameter_specifications = ParameterSet(mixture_parameter_specifications)
@@ -75,12 +80,16 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
         self.parameter_set_collection = ParameterSetCollection(
-            parameter_sets          = self.prior_parameter_specifications,
-            mixture_parameter_set   = self.mixture_parameter_specifications,
-            shared_parameters       = self.shared_parameters,
-            parameter_meta_data={},
+            parameter_sets            = self.prior_parameter_specifications,
+            mixture_parameter_set     = self.mixture_parameter_specifications,
+            shared_parameters         = self.shared_parameters,
+            parameter_meta_data       = {},
+            observational_prior_names = observational_prior_names,
+
             collection_name = 'ScanOutput_Stochastic_MixtureFracPosterior parameter set collection'
         )
+
+        # self.hyperparameter_axes    = [param_set.axes_by_type for param_set in self.prior_parameter_specifications]
 
         self.num_shared_params = len(self.shared_parameters)
 
@@ -110,51 +119,51 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
         self.results = _sampler_results
 
-        self.ndim = len(self.parameter_set_collection.prior_transform_list)
+        self.ndim = len(self.parameter_set_collection.hyper_param_index_to_info_dict)
 
 
-        self.set_hyper_axis_info()
+        # self.set_hyper_axis_info()
 
 
 
 
 
-    def set_hyper_axis_info(self):
-        """
-        Sets the hyperparameter axis information.
+    # def set_hyper_axis_info(self):
+    #     """
+    #     Sets the hyperparameter axis information.
 
-        This method initializes the number of hyperparameter axes and creates a mapping of hyperparameter indices
-        to their specifications.
-        """
+    #     This method initializes the number of hyperparameter axes and creates a mapping of hyperparameter indices
+    #     to their specifications.
+    #     """
 
-        # Counter for hyperparameter axes, mostly for 'index_to_hyper_parameter_info'
-        hyper_idx = 0
+    #     # Counter for hyperparameter axes, mostly for 'index_to_hyper_parameter_info'
+    #     hyper_idx = 0
 
-        # Creating components of mixture for each prior
-        self.num_hyper_axes         = 0
-        index_to_hyper_parameter_info = {}
+        # # Creating components of mixture for each prior
+        # self.num_hyper_axes         = 0
+        # index_to_hyper_parameter_info = {}
 
-        for prior_idx, prior_hyper_axes in enumerate(self.hyperparameter_axes):
-            idx_for_prior = 0
+        # for prior_idx, prior_hyper_axes in enumerate(self.hyperparameter_axes):
+        #     idx_for_prior = 0
 
-            update_with_defaults(prior_hyper_axes, {'spectral_parameters': {}, 'spatial_parameters':{}})
+        #     update_with_defaults(prior_hyper_axes, {'spectral_parameters': {}, 'spatial_parameters':{}})
 
-            self.num_hyper_axes+=len(prior_hyper_axes['spectral_parameters'])
-            self.num_hyper_axes+=len(prior_hyper_axes['spatial_parameters'])
+        #     self.num_hyper_axes+=len(prior_hyper_axes['spectral_parameters'])
+        #     self.num_hyper_axes+=len(prior_hyper_axes['spatial_parameters'])
 
-            for hyp_name, hyp_axis in prior_hyper_axes['spectral_parameters'].items():
-                # print('hyper_idx: ', prior_idx, 'spectral_parameters', hyp_name, hyper_idx, idx_for_prior)
-                index_to_hyper_parameter_info[hyper_idx] = [prior_idx, 'spectral_parameters', hyp_name, hyp_axis, idx_for_prior]
-                idx_for_prior+1
-                hyper_idx+=1
+        #     for hyp_name, hyp_axis in prior_hyper_axes['spectral_parameters'].items():
+        #         # print('hyper_idx: ', prior_idx, 'spectral_parameters', hyp_name, hyper_idx, idx_for_prior)
+        #         index_to_hyper_parameter_info[hyper_idx] = [prior_idx, 'spectral_parameters', hyp_name, hyp_axis, idx_for_prior]
+        #         idx_for_prior+1
+        #         hyper_idx+=1
 
-            for hyp_name, hyp_axis in prior_hyper_axes['spatial_parameters'].items():
-                # print('hyper_idx: ', prior_idx, 'spatial_parameters', hyp_name, hyper_idx, idx_for_prior)
-                index_to_hyper_parameter_info[hyper_idx] = [prior_idx, 'spatial_parameters', hyp_name, hyp_axis, idx_for_prior]
-                idx_for_prior+1
-                hyper_idx+=1
+        #     for hyp_name, hyp_axis in prior_hyper_axes['spatial_parameters'].items():
+        #         # print('hyper_idx: ', prior_idx, 'spatial_parameters', hyp_name, hyper_idx, idx_for_prior)
+        #         index_to_hyper_parameter_info[hyper_idx] = [prior_idx, 'spatial_parameters', hyp_name, hyp_axis, idx_for_prior]
+        #         idx_for_prior+1
+        #         hyper_idx+=1
 
-        self.index_to_hyper_parameter_info = index_to_hyper_parameter_info
+        # self.index_to_hyper_parameter_info = index_to_hyper_parameter_info
 
 
 
@@ -196,15 +205,10 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         # Extract values of parameters
         mixture_fractions = inputs[:self.num_mixes]
 
-
-
-
         self.mixture_tree.overwrite(mixture_fractions)
 
 
         mixture_weights     = list(self.mixture_tree.leaf_values.values())
-
-
 
 
         # print("mixture_fractions: ", mixture_fractions)
@@ -240,18 +244,13 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         for prior_idx, mixture_weight in enumerate(mixture_weights,):
             ln_component = np.log(mixture_weight)
 
-
             ln_marg_results_for_prior = log_nuisance_marg_results[prior_idx]
 
-            ln_comp_marg_comp = ln_marg_results_for_prior[:, *log_nuisance_param_matrix_slices[prior_idx]]
+            ln_results_slice = log_nuisance_param_matrix_slices[prior_idx]
+
+            ln_comp_marg_comp = ln_marg_results_for_prior[:, *ln_results_slice]
 
             ln_component += ln_comp_marg_comp
-
-
-
-            # print('\n\n\nTypes!: ', type(ln_like), type(np.squeeze(ln_component)))
-            # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
-            # print('\n\n\nValues!: ', ln_like, np.mean(np.squeeze(ln_component)))
 
 
             ln_like = np.logaddexp(ln_like, np.squeeze(ln_component))

@@ -428,7 +428,8 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                                                             axes=[self.binning_geometry.energy_axis.value,],
                                                             axisindices=[0])
         
-        log_edisp_vals = log_edisp_vals - log_edisp_norm[~np.isinf(log_edisp_norm)]
+        log_edisp_norm[np.isinf(log_edisp_norm)] = 0
+        log_edisp_vals = log_edisp_vals - log_edisp_norm
         
         pcm = ax.pcolormesh(self.binning_geometry.energy_axis.value, 
                             self.true_binning_geometry.energy_axis.value,

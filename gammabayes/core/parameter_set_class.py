@@ -1,7 +1,12 @@
-from gammabayes.core import Parameter
+from .parameter_class import Parameter
 import warnings, logging
 import numpy as np
 import h5py, pickle
+import time
+
+
+from icecream import ic
+
 
 class ParameterSet(object):
     """
@@ -10,8 +15,8 @@ class ParameterSet(object):
     dictionaries, lists, and other ParameterSet instances.
     """
 
-    def __init__(self, parameter_specifications: dict | list | tuple = {}, 
-                 set_name: str = "UnnamedSet", prior_name: str = 'UnknownPrior'):
+    def __init__(self, parameter_specifications: dict | list | tuple = None, 
+                 set_name: str = "UnnamedSet", prior_name: str = None):
         """
         Initializes a ParameterSet with the given parameter specifications.
 
@@ -20,14 +25,15 @@ class ParameterSet(object):
                 ParameterSet instance containing the specifications for initializing the parameter set.
                 This can include parameter names, types, prior names, and their specifications or instances.
             set_name (str, optional): Name of the parameter set. Defaults to "UnnamedSet".
-            prior_name (str, optional): Name of the prior associated with the parameter set. Defaults to 'UnknownPrior'.
+            prior_name (str, optional): Name of the prior associated with the parameter set. Defaults to None.
         """
 
-
+        if parameter_specifications is None:
+            parameter_specifications = {}
 
         self.axes_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
-        self.dict_of_parameters_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
-        self.dict_of_parameters_by_name = {}
+        self._dict_of_parameters_by_type = {'spectral_parameters':{}, 'spatial_parameters':{}}
+        self._dict_of_parameters_by_name = {}
 
         try:
             if 'set_name' in parameter_specifications:
@@ -147,7 +153,8 @@ class ParameterSet(object):
         """
         for param_name, single_parameter_specifications in dict_input.items():
             parameter = self.create_parameter(param_specification=single_parameter_specifications, 
-                                              param_name=param_name)
+                                              param_name=param_name,
+                                              prior_name=self.prior_name)
             self.append(parameter)
 
 
@@ -164,6 +171,10 @@ class ParameterSet(object):
         for param_name, parameter_object in dict_input.items():
             if not('name' in parameter_object):
                 parameter_object['name'] = param_name
+
+            if parameter_object['prior_name'] is None:
+                parameter['prior_name'] = self.prior_name
+
             self.append(parameter_object)
 
     # This method presumes that you have given the specifications in the form of 
@@ -176,6 +187,10 @@ class ParameterSet(object):
             list_input (list): The list of Parameter objects.
         """
         for parameter_object in list_input:
+            
+            if parameter_object['prior_name'] is None:
+                parameter['prior_name'] = self.prior_name
+
             self.append(parameter_object)
 
 
@@ -191,6 +206,11 @@ class ParameterSet(object):
         """
         for parameter_specification in list_input:
             parameter_object = Parameter(parameter_specification)
+
+            if parameter_object['prior_name'] is None:
+                parameter['prior_name'] = self.prior_name
+
+
             self.append(parameter_object)
 
 
@@ -213,6 +233,7 @@ class ParameterSet(object):
         Returns:
             Parameter: The created Parameter object.
         """
+
         parameter = Parameter(param_specification)
 
         if type_key is not None:
@@ -222,10 +243,33 @@ class ParameterSet(object):
             parameter['name'] = param_name
 
         if prior_name is not None:
-            parameter['prior_id'] = prior_name
+            parameter['prior_name'] = prior_name
+
+        if parameter.get('prior_name') is None:
+            parameter['prior_name'] = self.prior_name
+
+
+        if '_internal_name' not in param_specification:
+            _internal_name_temp = str(parameter['name']) +"_"+ time.strftime("%M%S")
+
+            _internal_name_temp += "_"+str(parameter['prior_name'])
+
+            parameter['_internal_name'] =  _internal_name_temp + "_" + str(self._param_counter)
 
         return parameter
     
+
+    @property
+    def _param_counter(self):
+        if not hasattr(self, '_parameter_count_idx'):
+            self._parameter_count_idx = 0
+
+            return self._parameter_count_idx
+        
+        self._parameter_count_idx+=1
+
+        return self._parameter_count_idx
+
 
 
     def append(self, parameter: Parameter):
@@ -235,9 +279,16 @@ class ParameterSet(object):
         Args:
             parameter (Parameter or ParameterSet): The parameter or parameter set to append.
         """
+
+        if not hasattr(self, "_name_to_internal_name_dict"):
+            self._name_to_internal_name_dict = {}
+        
+
         if isinstance(parameter, Parameter):
 
             param_name = parameter['name']
+
+            parameter['prior_name'] = self.prior_name
 
             if 'parameter_type' in parameter:
                 type_key = parameter['parameter_type']
@@ -249,16 +300,24 @@ class ParameterSet(object):
                     else:
                         self.axes_by_type[type_key][param_name] = np.nan
 
-            if type_key in self.dict_of_parameters_by_type.keys():
-                self.dict_of_parameters_by_type[type_key][param_name] = parameter
+            if type_key in self._dict_of_parameters_by_type.keys():
+                self._dict_of_parameters_by_type[type_key][parameter._internal_name] = parameter
 
 
-            self.dict_of_parameters_by_name[param_name] = parameter
+            self._dict_of_parameters_by_name[parameter._internal_name] = parameter
+            self._name_to_internal_name_dict[parameter.name] = parameter._internal_name
+            self._name_to_internal_name_dict[parameter._internal_name] = parameter._internal_name
+
 
         elif isinstance(parameter, ParameterSet):
             parameters = parameter
-            for param_name, parameter in parameters.dict_of_parameters_by_name.items():
-                parameter = self.create_parameter(parameter, param_name=param_name)
+            for _internal_param_name, parameter in parameters._dict_of_parameters_by_name.items():
+
+                parameter = self.create_parameter(parameter, 
+                                                  param_name=parameter.get("name", None),
+                                                  type_key=parameter.get("parameter_type", None),
+                                                  prior_name=self.prior_name,
+                                                  )
                 self.append(parameter)
 
     def _reset_unique_input_methods(self):
@@ -269,21 +328,21 @@ class ParameterSet(object):
         self.parameter_logpdfs = {}
 
         already_included_parameters = []
-        list_param_names = list(self.dict_of_parameters_by_name.keys())
+        list_internal_param_names = list(self._dict_of_parameters_by_name.keys())
         
-        for param_idx, (parameter_name, parameter) in enumerate(self.dict_of_parameters_by_name.items()):
+        for param_idx, (internal_parameter_name, parameter) in enumerate(self._dict_of_parameters_by_name.items()):
 
 
-            if not(parameter_name in already_included_parameters):
+            if not(internal_parameter_name in already_included_parameters):
                 hyper_indices_for_param = [param_idx]
 
                 if 'dependent' in parameter:
                     for dependent_parameter_name in parameter['dependent']:
-                        hyper_indices_for_param.append(list_param_names.index(dependent_parameter_name))
+                        hyper_indices_for_param.append(list_internal_param_names.index(dependent_parameter_name))
                         already_included_parameters.append(dependent_parameter_name)
 
 
-                self.parameter_logpdfs[parameter_name] = [parameter.logpdf, hyper_indices_for_param]
+                self.parameter_logpdfs[internal_parameter_name] = [parameter.logpdf, hyper_indices_for_param]
 
 
 
@@ -294,7 +353,7 @@ class ParameterSet(object):
         Returns:
             str: String representation of the parameter set.
         """
-        return str(self.dict_of_parameters_by_name)
+        return str(self._dict_of_parameters_by_name)
 
 
     def __len__(self):
@@ -304,7 +363,7 @@ class ParameterSet(object):
         Returns:
             int: The number of parameters.
         """
-        return len(self.dict_of_parameters_by_name)
+        return len(self._dict_of_parameters_by_name)
 
 
     # Allows the behaviour of set1 + set2 = new combined set
@@ -325,10 +384,10 @@ class ParameterSet(object):
             raise TypeError("Can only add another ParameterSet")
 
         combined = ParameterSet()
-        for param_name, parameter in self.dict_of_parameters_by_name.items():
+        for param_name, parameter in self._dict_of_parameters_by_name.items():
             combined.append(parameter)
 
-        for param_name, parameter in other.dict_of_parameters_by_name.items():
+        for param_name, parameter in other._dict_of_parameters_by_name.items():
             combined.append(parameter)  # This will overwrite if param_name already exists
 
         return combined
@@ -342,7 +401,7 @@ class ParameterSet(object):
         Returns:
             ItemsView: A view of the parameter set's items.
         """
-        return self.dict_of_parameters_by_name.items()
+        return self._dict_of_parameters_by_name.items()
     
     def values(self):
         """
@@ -351,7 +410,7 @@ class ParameterSet(object):
         Returns:
             ValuesView: A view of the Parameter objects in the set.
         """
-        return self.dict_of_parameters_by_name.values()
+        return self._dict_of_parameters_by_name.values()
     
     def keys(self):
         """
@@ -360,7 +419,7 @@ class ParameterSet(object):
         Returns:
             KeysView: A view of the parameter names.
         """
-        return self.dict_of_parameters_by_name.keys()
+        return self._dict_of_parameters_by_name.keys()
         
 
     # Outputs the dictionary of the form used for analysis classes that explore 
@@ -385,7 +444,7 @@ class ParameterSet(object):
             list: A list of bounds for the parameters.
         """
         bounds = []
-        for param in self.dict_of_parameters_by_name.values():
+        for param in self._dict_of_parameters_by_name.values():
             bounds.append(param['bounds'])
 
         return bounds
@@ -400,7 +459,7 @@ class ParameterSet(object):
         Returns:
             dict: A dictionary representation of the parameter set suitable for stochastic sampling.
         """
-        return self.dict_of_parameters_by_name
+        return self._dict_of_parameters_by_name
     
     @property
     def sampling_format(self):
@@ -421,7 +480,7 @@ class ParameterSet(object):
         Returns:
             list: A list of axes for the parameters.
         """
-        return [param['axis'] for param in self.dict_of_parameters_by_name.values()]
+        return [param['axis'] for param in self._dict_of_parameters_by_name.values()]
     
     # Ex
     @property
@@ -433,7 +492,7 @@ class ParameterSet(object):
             list: A list of default values for the parameters.
         """
         default_values = []
-        for parameter in self.dict_of_parameters_by_name.values():
+        for parameter in self._dict_of_parameters_by_name.values():
 
             try:
                 default_values.append(parameter['default_value'])
@@ -455,7 +514,7 @@ default value. Place nan in position of default""")
             dict: A dictionary of parameter names and their default values.
         """
         default_values = {}
-        for parameter in self.dict_of_parameters_by_type[param_type].values():
+        for parameter in self._dict_of_parameters_by_type[param_type].values():
             default_values[parameter['name']] = parameter['default_value']
         return default_values   
      
@@ -496,7 +555,7 @@ default value. Place nan in position of default""")
         Returns:
             iterator: An iterator over the names of parameters in the set.
         """
-        return iter(self.dict_of_parameters_by_name)
+        return iter(self._dict_of_parameters_by_name)
 
 
 
@@ -512,10 +571,10 @@ default value. Place nan in position of default""")
             
         # Save the order of parameters as an attribute. h5py does not natively support
             # saving groups in a particular order. They're closer to sets than anything.
-        param_order = list(self.dict_of_parameters_by_name.keys())
+        param_order = list(self._dict_of_parameters_by_name.keys())
         h5f.attrs['parameter_order'] = param_order
         
-        for param_name, parameter_specs in self.dict_of_parameters_by_name.items():
+        for param_name, parameter_specs in self._dict_of_parameters_by_name.items():
             param_group = h5f.create_group(param_name)
             for spec_attr, spec_attr_val in parameter_specs.items():
                 if (spec_attr != 'transform'):
@@ -580,7 +639,7 @@ default value. Place nan in position of default""")
                 # Create and append the parameter object accordingly
                 # This assumes a constructor or method to recreate a parameter from specs
                 parameter = Parameter(parameter_specs)
-                new_parameter_set.dict_of_parameters_by_name[param_name] = parameter
+                new_parameter_set._dict_of_parameters_by_name[parameter._internal_name] = parameter
 
         return new_parameter_set
     
@@ -617,19 +676,19 @@ default value. Place nan in position of default""")
     
     def reorder(self, order_list):
         """
-        Reorders the parameters in the set based on the provided order list.
+        Reorders the parameters in the set based on the provided order list. Can only be used if parameter names within set are unique.
 
         Args:
             order_list (list): A list of parameter names in the desired order.
         """
-        reordered_parameters = {name: self.dict_of_parameters_by_name[name] for name in order_list if name in self.dict_of_parameters_by_name}
-        self.dict_of_parameters_by_name = reordered_parameters
+        reordered_parameters = {self._name_to_internal_name_dict[name]: self._dict_of_parameters_by_name[self._name_to_internal_name_dict[name]] for name in order_list}
+        self._dict_of_parameters_by_name = reordered_parameters
 
         # Reorder dict_of_parameters_by_type
-        for type_key in self.dict_of_parameters_by_type:
-            type_parameters = self.dict_of_parameters_by_type[type_key]
+        for type_key in self._dict_of_parameters_by_type:
+            type_parameters = self._dict_of_parameters_by_type[type_key]
             reordered_type_parameters = {name: type_parameters[name] for name in order_list if name in type_parameters}
-            self.dict_of_parameters_by_type[type_key] = reordered_type_parameters
+            self._dict_of_parameters_by_type[type_key] = reordered_type_parameters
 
         # Reorder axes_by_type
         for type_key in self.axes_by_type:
@@ -662,6 +721,11 @@ default value. Place nan in position of default""")
             float: The computed PDF value.
         """
         return np.exp(self.logpdf(input=input))
+    
+
+
+    def get(self, keyname, value=None):
+        return self._dict_of_parameters_by_name.get(keyname, value=value)
 
 
 

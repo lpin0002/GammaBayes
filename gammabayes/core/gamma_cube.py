@@ -1,7 +1,7 @@
 import numpy as np
-from gammabayes.core.binning_geometry import GammaBinning
+from .binning_geometry import GammaBinning
 import pickle
-from gammabayes.core.exposure import GammaLogExposure
+from .exposure import GammaLogExposure
 from astropy import units as u
 from numpy.typing import ArrayLike
 

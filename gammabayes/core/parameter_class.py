@@ -5,6 +5,7 @@ from scipy import stats
 from scipy.stats import rv_discrete
 from scipy.stats import gamma
 from icecream import ic
+import time
 
 class Parameter(dict):
     """
@@ -18,13 +19,13 @@ class Parameter(dict):
     Attributes are dynamically adjustable and support serialization to and 
     from HDF5 files for easy sharing and storage of configurations.
     """
-    def __init__(self, initial_data: dict = {}, 
+    def __init__(self, initial_data: dict = None, 
                  discrete:bool=True, bins:int = 11,
                  scaling:str='linear', default_value:float=1.0,
                 num_events:int = 1, axis: np.ndarray = None,
                 parameter_type:str = 'None',
-                bounds:list[float] = [0. ,1.],
-                name = "NA",
+                bounds:list[float] = None,
+                name = None,
                 _internal_name = "NA_abc",
                  **kwargs):
         """
@@ -40,7 +41,16 @@ class Parameter(dict):
         based on scaling and discreteness.
         """
 
-        data_dict = copy.deepcopy(initial_data)
+        if initial_data is not None:
+            data_dict = copy.deepcopy(initial_data)
+        else:
+            data_dict = {}
+
+        if bounds is None:
+            bounds = [0. ,1.]
+
+        if name is None:
+            name = "NA"
 
         for key, val in kwargs.items():
             data_dict.setdefault(key, val)
@@ -54,7 +64,11 @@ class Parameter(dict):
         data_dict.setdefault( 'parameter_type', parameter_type)
         data_dict.setdefault(         'bounds', bounds)
         data_dict.setdefault(           'name', name)
-        data_dict.setdefault( '_internal_name', _internal_name)
+
+        if _internal_name !="NA_abc": 
+            data_dict.setdefault( '_internal_name', _internal_name)
+        else:
+            data_dict.setdefault( '_internal_name', data_dict['name']+"_"+time.strftime("%S%M%H"))
 
         if type(data_dict) == dict:
             
