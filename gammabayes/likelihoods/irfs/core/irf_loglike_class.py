@@ -1,9 +1,12 @@
 from gammabayes.likelihoods.core import DiscreteLogLikelihood
-from gammabayes.likelihoods.irfs.irf_extractor_class import IRFExtractor
+from gammabayes.likelihoods.irfs.core.irf_extractor_class import IRFExtractor
 from gammabayes.likelihoods.irfs.irf_normalisation_setup import irf_norm_setup
 from astropy import units as u
 from astropy.units import Quantity
 import numpy as np
+from gammabayes.utils import MethodDict
+
+
 class IRF_LogLikelihood(DiscreteLogLikelihood):
 
     def __init__(self,
@@ -17,6 +20,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                  edisp_units: u.Unit = (1/u.TeV).unit,
                  aeff_units: u.Unit = u.cm**2,
                  CCR_BKG_units: u.Unit = (1/(u.deg**2*u.TeV*u.s)).unit,
+                 custom_irfs: dict=None,
                  *args, **kwargs):
         """_summary_
 
@@ -48,20 +52,28 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             logspace_integrator (callable, optional): Integration method used for normalization.
             
             parameters (dict | ParameterSet, optional): Parameters for the log likelihood function.
+
+            custom_irfs (dict): A dictionary with keys of log_edisp, log_psf and log_aeff to be used as 
+                relevant functions for IRF_LogLikelihood.
         """
-        self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, 
-                                              prod_vers=prod_vers, 
-                                              observation_time=observation_time, 
-                                              instrument=instrument,
-                                              pointing_dir=pointing_dir,
-                                              obs_id=obs_id,
-                                              psf_units = psf_units,
-                                              edisp_units = edisp_units,
-                                              aeff_units = aeff_units,
-                                              CCR_BKG_units = CCR_BKG_units,
-                                              )
+
+        if custom_irfs is not None:
+            self.irf_loglikelihood = MethodDict(custom_irfs)
+
+        else:
+            self.irf_loglikelihood = IRFExtractor(zenith_angle=zenith, hemisphere=hemisphere, 
+                                                prod_vers=prod_vers, 
+                                                observation_time=observation_time, 
+                                                instrument=instrument,
+                                                pointing_dir=pointing_dir,
+                                                obs_id=obs_id,
+                                                psf_units = psf_units,
+                                                edisp_units = edisp_units,
+                                                aeff_units = aeff_units,
+                                                CCR_BKG_units = CCR_BKG_units,
+                                                )
         super().__init__(
-            logfunction=self.irf_loglikelihood.single_loglikelihood, 
+            logfunction=self.single_loglikelihood, 
             *args, **kwargs
         )
         self.pointing_dir = pointing_dir
@@ -651,3 +663,37 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         
         return ax
 
+
+    def single_loglikelihood(self, 
+                             recon_energy:Quantity, recon_lon:Quantity, recon_lat:Quantity, 
+                             true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
+                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+        """
+        Outputs the log likelihood value(s) for the given gamma-ray event datum (log of the product of 
+        energy dispersion and point spread function.)
+
+        Args:
+            recon_energy (Quantity): Measured energy value by the CTA.
+            recon_lon (Quantity): Measured FOV longitude of a gamma-ray event detected by the CTA.
+            recon_lat (Quantity): Measured FOV latitude of a gamma-ray event detected by the CTA.
+            true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
+            true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
+            true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
+            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
+
+        Returns:
+            float: Natural log of the full CTA likelihood for the given gamma-ray event data.
+        """
+
+
+        output = self.log_edisp(recon_energy, 
+                                true_energy, true_lon, true_lat, 
+                                pointing_dir)
+        
+
+
+        output +=  self.log_psf(recon_lon, recon_lat, 
+                                true_energy, true_lon, true_lat, 
+                                pointing_dir)
+        
+        return output.reshape(true_lon.shape)

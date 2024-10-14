@@ -41,13 +41,16 @@ class BrokenPowerLaw(BaseSpectral_PriorComp):
     # TODO: TechDebt
     def log_broken_power_law(self, energy: float|u.Quantity, index: float=2.5, cutoff_energy_TeV:float=1, phi0: int|u.Quantity =None) -> float|u.Quantity:
         """
-        Evaluates a broken power law function.
+        Evaluates a broken power law function. 
+
+        $\phi_0 \left(\frac{E}{1\, TeV}\right)^{-index} \; e^{-E/cutoff\_energy\_TeV}$
 
         Args:
             energy (float | Quantity): Energy values.
             index (float): Power law index. Defaults to -2.5
             cutoff_energy_TeV (float): Cut off energy in TeV. Defaults to 1 (1 TeV)
             phi0 (int | Quantity, optional): Normalization constant. Defaults to 1.
+            
 
         Returns:
             float | Quantity: Computed power law values.

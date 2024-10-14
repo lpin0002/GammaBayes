@@ -188,7 +188,7 @@ class MTree:
             product *= node.value
         return product
 
-    def create_tree(self, layout:list|dict, values:list=None, parent:MTreeNode=None, index=0):
+    def create_tree(self, layout:list|dict, values:list=None, parent:MTreeNode=None, index=0, no_values=True):
         """Create a tree from a layout and optional values.
 
         Args:
@@ -200,11 +200,8 @@ class MTree:
         Returns:
             int: The next index to be used.
         """
-
-        no_values=False
         if values is None:
             no_values = True
-
             num_in_layer = len(layout)
 
             values = [1/num_in_layer]*num_in_layer
@@ -221,7 +218,8 @@ class MTree:
         for item in layout:
             if isinstance(item, dict):
                 # Recursive case: item is a sublist representing children of the current node
-                new_node = self.add(values[index], parent, id=list(item.keys())[0])
+                stem_node_name = list(item.keys())[0]
+                new_node = self.add(values[index], parent, id=stem_node_name)
 
                 index += 1
 
@@ -229,12 +227,8 @@ class MTree:
                     num_in_layer = len(list(item.values())[0])
                     values[index:index] = [1/num_in_layer]*num_in_layer
 
-                index = self.create_tree(layout=list(item.values())[0], values=values, parent=new_node, index=index)
 
-            elif isinstance(item, DiscreteLogPrior):
-                # Base case: item is an ID
-                new_node = self.add(values[index], parent, prior=item, id=item.name)
-                index += 1
+                index = self.create_tree(layout=list(item.values())[0], values=values, parent=new_node, index=index, no_values=no_values)
 
             else:
                 # Base case: item is an ID

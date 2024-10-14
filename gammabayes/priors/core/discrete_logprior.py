@@ -413,12 +413,12 @@ class DiscreteLogPrior(object):
         self.log_scaling_factor = self.log_scaling_factor+log_factor
 
 
-    def peek(self, vmin=None, vmax=None, norm='linear', cmap='viridis', **kwargs):
+    def peek(self, vmin=None, vmax=None, norm='linear', cmap='viridis', normalise=True, **kwargs):
         from matplotlib import pyplot as plt
         from gammabayes.utils.integration import iterate_logspace_integration
         from matplotlib.pyplot import get_cmap
 
-        log_matrix_values = self.construct_prior_array()
+        log_matrix_values = self.construct_prior_array(normalise=normalise)
 
         cmap = get_cmap(cmap)
 
@@ -427,19 +427,21 @@ class DiscreteLogPrior(object):
         kwargs.setdefault('figsize', (12,6))
         fig, ax = plt.subplots(1,3, **kwargs)
 
-        log_integrated_energy_flux = iterate_logspace_integration(logy=log_matrix_values, 
+
+
+        log_integrated_energy_flux = np.squeeze(iterate_logspace_integration(logy=log_matrix_values, 
                                                 axes=[self.binning_geometry.lon_axis.value, 
                                                       self.binning_geometry.lat_axis.value],
-                                                axisindices=[1,2])
+                                                axisindices=[1,2]))
 
-        log_integrated_spatial_flux = iterate_logspace_integration(logy=log_matrix_values, 
+        log_integrated_spatial_flux = np.squeeze(iterate_logspace_integration(logy=log_matrix_values, 
                                                 axes=[self.binning_geometry.energy_axis.value],
-                                                axisindices=[0])
+                                                axisindices=[0]))
         
 
-        log_integrated_mix_flux = iterate_logspace_integration(logy=log_matrix_values, 
+        log_integrated_mix_flux = np.squeeze(iterate_logspace_integration(logy=log_matrix_values, 
                                                 axes=[self.binning_geometry.lat_axis.value],
-                                                axisindices=[2])
+                                                axisindices=[2]))
 
 
         ax[0].plot(self.binning_geometry.energy_axis.value, np.exp(log_integrated_energy_flux), c=cmap(0.5))
@@ -448,6 +450,8 @@ class DiscreteLogPrior(object):
         
         ax[0].set_xlabel(f'Energy [{self.binning_geometry.energy_axis.unit.to_string()}]')
         ax[0].grid(which='major', c='grey', ls='--', alpha=0.4)
+
+        ax[0].set_ylim([vmin, vmax])
 
 
         pcm = ax[1].pcolormesh(self.binning_geometry.lon_axis.value, 

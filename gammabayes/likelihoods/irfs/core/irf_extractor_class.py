@@ -8,8 +8,8 @@ from gammapy.maps import Map, MapAxis, MapAxes, WcsGeom
 import os
 import zipfile
 
-from .CTAO_irf_file_utils import find_ctao_irf_file_path
-from .HESS_data_extraction import extract_and_generate_hess_data
+from ..CTAO_IRFs.CTAO_irf_file_utils import find_ctao_irf_file_path
+from ..HESS_IRFs import extract_and_generate_hess_data
 from gammapy.data import DataStore
 import importlib.resources as pkg_resources
 import time
@@ -233,40 +233,6 @@ class IRFExtractor(object):
                 
         return output
 
-
-    def single_loglikelihood(self, 
-                             recon_energy:Quantity, recon_lon:Quantity, recon_lat:Quantity, 
-                             true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
-        """
-        Wrapper for the Gammapy interpretation of the CTA IRFs to output the log likelihood values 
-        for the given gamma-ray event datum.
-
-        Args:
-            recon_energy (Quantity): Measured energy value by the CTA.
-            recon_lon (Quantity): Measured FOV longitude of a gamma-ray event detected by the CTA.
-            recon_lat (Quantity): Measured FOV latitude of a gamma-ray event detected by the CTA.
-            true_energy (Quantity): True energy of a gamma-ray event detected by the CTA.
-            true_lon (Quantity): True FOV longitude of a gamma-ray event detected by the CTA.
-            true_lat (Quantity): True FOV latitude of a gamma-ray event detected by the CTA.
-            pointing_dir (list[Quantity], optional): Pointing direction. Defaults to [0*u.deg, 0*u.deg].
-
-        Returns:
-            float: Natural log of the full CTA likelihood for the given gamma-ray event data.
-        """
-
-
-        output = self.log_edisp(recon_energy, 
-                                true_energy, true_lon, true_lat, 
-                                pointing_dir)
-        
-
-
-        output +=  self.log_psf(recon_lon, recon_lat, 
-                                true_energy, true_lon, true_lat, 
-                                pointing_dir)
-        
-        return output.reshape(true_lon.shape)
 
     # Made for the reverse convention of parameter order required by dynesty
     def dynesty_single_loglikelihood(self, 

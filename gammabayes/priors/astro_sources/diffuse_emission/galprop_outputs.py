@@ -22,6 +22,7 @@ def extract_galprop_prior_template(true_binning_geometry:GammaBinning,
     file_endings_dict = {5:"j8h245c88vhzr5yu", 6:"uxwddrp6wtlkt4pd"}
 
     try:
+        text_res = resolution
         resolution = res_dict[resolution]
         file_ending = file_endings_dict[resolution]
     except KeyError:
@@ -48,9 +49,9 @@ Medium (the default) should take up about 130MB of disk space while High takes u
 
 
         if component=='all':
-            return (extract_galprop_prior_template(true_binning_geometry=true_binning_geometry, irf_loglike=irf_loglike, component='pion'),
-                    extract_galprop_prior_template(true_binning_geometry=true_binning_geometry, irf_loglike=irf_loglike, component='bremss'),
-                    extract_galprop_prior_template(true_binning_geometry=true_binning_geometry, irf_loglike=irf_loglike, component='ics'),)
+            return (extract_galprop_prior_template(true_binning_geometry=true_binning_geometry, irf_loglike=irf_loglike, component='pion', resolution=text_res),
+                    extract_galprop_prior_template(true_binning_geometry=true_binning_geometry, irf_loglike=irf_loglike, component='bremss', resolution=text_res),
+                    extract_galprop_prior_template(true_binning_geometry=true_binning_geometry, irf_loglike=irf_loglike, component='ics', resolution=text_res))
         else:
 
             component_dict = {'pion':'pion_decay_skymap', 'bremss':'bremss_skymap', 'ics':'ics_skymap_comp'}
@@ -79,6 +80,7 @@ Medium (the default) should take up about 130MB of disk space while High takes u
     energy_axis = 10**np.linspace(__header["CRVAL3"], 
                                     __header["CRVAL3"]+__header["CDELT3"]*__header["NAXIS3"], 
                                     __header["NAXIS3"])
+    
 
     # Checking to see if the axes are about the Galactic Centre. 
     #   If the bounds of the longitude axis multiply to something negative then they must be different signs

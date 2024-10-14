@@ -127,8 +127,6 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         Returns:
             np.ndarray: The calculated log prior values as a numpy array.
         """
-
-
         spectral_axes = energy, *spectral_parameters.values()
 
 
@@ -263,6 +261,8 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
 
         # Expanding along Lon, Lat, and spatial param dims
 
+
+
         expand_spectral_axes = list([1,2])+list(range(3+num_spectral_params, num_total_params))
         logpdfvalues = np.expand_dims(logspectralvals, 
                                         axis=expand_spectral_axes)
@@ -273,7 +273,7 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
 
         log_spatial_vals = np.expand_dims(logspatialvals, 
                                         axis=expand_spatial_axes)
-        
+
         logpdfvalues = logpdfvalues + log_spatial_vals
 
 
