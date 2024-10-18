@@ -35,6 +35,8 @@ A stable python package version of the code exists on `PyPi` that can be install
 
 `pip install gammabayes`.
 
+(18/10/24: Must have python version between 3.6 and 3.12. Will be enforced in next update)
+
 This will also take care of the required dependencies for the project. 
 
 We recommend to look through the tutorials for an overview of the functionality of the code however, the figure below shows the main classes of `GammaBayes` in a UML diagram.
