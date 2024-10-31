@@ -14,7 +14,6 @@ import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
 import os, warnings, logging, time, functools, numpy as np, h5py
-from icecream import ic
 from astropy import units as u
 
 class DiscreteAdaptiveScan(DiscreteBruteScan):
@@ -189,7 +188,8 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
     def observation_nuisance_marg(self, 
                                   event_vals: np.ndarray | GammaObs, 
-                                  log_prior_matrix_list: list[np.ndarray]):
+                                  log_prior_matrix_list: list[np.ndarray],
+                                  loglike_kwargs=None):
         """
         Calculates the marginal log likelihoods for observations by integrating over nuisance parameters with 
         additional bound handling specific to this class.
@@ -212,6 +212,9 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             - The method then integrates these values with the log prior matrices, accounting for the rearrangement 
               of axes due to bounds.
         """
+
+        if loglike_kwargs is None:
+            loglike_kwargs = {}
 
 
 
@@ -240,7 +243,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
 
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix, unit in zip(meshvalues, unit_list)]
         
-        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
+        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues, **loglike_kwargs).reshape(meshvalues[0].shape))
 
         log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation[*index_meshes]
 

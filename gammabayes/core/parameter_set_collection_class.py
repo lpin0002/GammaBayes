@@ -127,6 +127,9 @@ class ParameterSetCollection:
 
         # Next few indices of the unit cube are predesignated for any shared parameters, again
             # just for a consistent convention
+        if not hasattr(self, "shared_parameters_by_prior"):
+            self.shared_parameters_by_prior = {}
+
         for [prior_identifiers, shared_param] in self.shared_parameters.values():
             hyper_param_idx = self.setup_intermediaries_for_shared_parameter(prior_identifiers, shared_param, hyper_param_idx)
 
@@ -146,9 +149,6 @@ class ParameterSetCollection:
 
 
     def setup_intermediaries_for_shared_parameter(self, prior_identifiers, shared_param, hyper_param_idx):
-        if not hasattr(self, "shared_parameters_by_prior"):
-            self.shared_parameters_by_prior = {}
-
             
         if '_internal_name' not in shared_param:
             shared_param['_internal_name'] = shared_param["name"]+"_shared_"+str(prior_identifiers)

@@ -237,14 +237,15 @@ class DiscreteLogLikelihood(object):
 
 
         mesh_true_vals = [dependent_value[_dependent_axes_index_mesh].flatten() for dependent_value in dependentvalues]
-
+        mesh_pointings = np.array(pointing_dir)[_dependent_axes_index_mesh, :]*pointing_dir[0].unit
 
         flattened_meshes = [inputaxis.flatten() for inputaxis in (recon_energy_mesh, recon_lon_mesh, recon_lat_mesh)]
+        flattened_mesh_pointings = [point_coord.flatten() for point_coord in [mesh_pointings[..., 0],mesh_pointings[..., 1]]]
 
         loglikevals = self(
                 *flattened_meshes, 
                 *mesh_true_vals,
-                pointing_dir=pointing_dir,
+                pointing_dir=flattened_mesh_pointings,
                 ).reshape(-1, *self.binning_geometry.axes_dim)
 
         loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes], axisindices=[1, 2, 3])[:, None, None, None]
@@ -255,6 +256,7 @@ class DiscreteLogLikelihood(object):
         logpmf = loglikevals+logdx
 
         simvals = vectorised_inverse_transform_sampler(logpmf, axes=self.axes, Nsamples=num_samples)
+
 
         return simvals
     
@@ -308,7 +310,10 @@ class DiscreteLogLikelihood(object):
         num_batches = int(np.ceil(len(num_data)/chunk_size))
 
         event_data = [[], [], []]
+        pointing_dirs = true_event_data.pointing_dirs
 
+        if np.array(pointing_dirs).ndim<2:
+            pointing_dirs = [pointing_dirs]*len(data_to_iterate_over[0])
 
         indices_to_iterate_over = range(num_batches)
         if print_progress:
@@ -318,7 +323,7 @@ class DiscreteLogLikelihood(object):
             measured_event_data_batch=self._sample_chunk(
                 dependentvalues=[datum[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size] for datum in data_to_iterate_over], 
                 num_samples=num_data[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size],
-                pointing_dir=true_event_data.pointing_dir
+                pointing_dir=pointing_dirs[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size]
                 )
             
             [event_data[_meas_data_index].extend(data) for _meas_data_index, data in enumerate(measured_event_data_batch)]
@@ -328,7 +333,7 @@ class DiscreteLogLikelihood(object):
                         lat=event_data[2], 
                         binning_geometry=self.binning_geometry,
                         irf_loglike=self,
-                        pointing_dir=true_event_data.pointing_dir
+                        pointing_dir=true_event_data.pointing_dirs
                         )
 
         return measured_event_data

@@ -40,8 +40,8 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
                  spatial_class, 
                  spectral_mesh_efficient_logfunc=None, 
                  spatial_mesh_efficient_logfunc=None, 
-                 spectral_class_kwds: dict = {},
-                 spatial_class_kwds: dict = {},
+                 spectral_class_kwds: dict = None,
+                 spatial_class_kwds: dict = None,
                  *args, **kwargs
                  ):
         """
@@ -70,6 +70,13 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
             
             name (str, optional): A name for the two-component prior model. Defaults to 'UnknownTwoComp'.
         """
+
+        if spectral_class_kwds is None:
+            spectral_class_kwds = {}
+        if spatial_class_kwds is None:
+            spatial_class_kwds = {}
+
+
 
         self.spectral_comp    = spectral_class(**spectral_class_kwds)
         self.spatial_comp     = spatial_class(**spatial_class_kwds)

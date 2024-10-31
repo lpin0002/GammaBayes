@@ -18,8 +18,8 @@ class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
                  logfunction: callable=None, 
                  log_mesh_efficient_func: callable = None,
                  binning_geometry: GammaBinning = None,
-                 default_spectral_parameters: dict = {},  
-                 default_spatial_parameters: dict = {},  
+                 default_spectral_parameters: dict = None,  
+                 default_spatial_parameters: dict = None,  
                  irf_loglike=None,
                  observation_time=None,
                  observation_time_unit=None,
@@ -27,6 +27,11 @@ class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
                  *args, 
                  **kwargs,
                  ):
+        if default_spectral_parameters is None:
+            default_spectral_parameters = {}
+        if default_spatial_parameters is None:
+            default_spatial_parameters = {}
+
         self.pointing_dir = pointing_dir
         self.observation_time = observation_time
         self.observation_time_unit = observation_time_unit

@@ -10,11 +10,10 @@ from gammabayes.utils import (
 from gammabayes.utils.config_utils import save_config_file
 from gammabayes.hyper_inference.core.utils import _handle_parameter_specification, _handle_nuisance_axes
 from gammabayes.hyper_inference.scan_nuisance_methods import ScanOutput_StochasticTreeMixturePosterior
-from gammabayes import GammaObs, Parameter, ParameterSet, update_with_defaults, bound_axis
+from gammabayes import GammaObs, Parameter, ParameterSet, update_with_defaults, bound_axis, GammaBinning
 from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
-from icecream import ic
 
 
 class DiscreteBruteScan(object):
@@ -176,6 +175,7 @@ class DiscreteBruteScan(object):
 
         # Axes for the __reconstructed__ values
         self.axes               = axes
+        self.recon_binning_geometry = GammaBinning(*axes)
 
         # Axes for the "true" values
         if not self.no_priors_on_init:
@@ -195,11 +195,19 @@ class DiscreteBruteScan(object):
                 parameter_specifications=prior_parameter_specifications,
                 _no_required_num=self.no_priors_on_init)
 
+        self.nuisance_binning_geomtry = GammaBinning(*self.nuisance_axes)
 
-
+        if log_likelihoodnormalisation is None:
+            log_likelihoodnormalisation = 0.
 
         # Currently required as the normalisation of the IRFs isn't natively consistent
         self.log_likelihoodnormalisation            = np.asarray(log_likelihoodnormalisation)
+
+        if self.log_likelihoodnormalisation.shape != self.nuisance_binning_geomtry.axes_dim:
+            if self.log_likelihoodnormalisation.shape==():
+                self.log_likelihoodnormalisation = self.log_likelihoodnormalisation*np.ones(shape=self.nuisance_binning_geomtry.axes_dim)
+            else:
+                raise ValueError("log_likelihoodnormalisation's shape/size cannot be matched to the dimensions of the nuisance axes provided.")
 
         # Log-space integrator for multiple dimensions (kind of inefficient at the moment)
         self.iterative_logspace_integrator      = iterative_logspace_integrator
@@ -248,7 +256,8 @@ class DiscreteBruteScan(object):
             # shape is what matters)
     def observation_nuisance_marg(self, 
                                   event_vals: list | np.ndarray, 
-                                  log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray]) -> np.ndarray:
+                                  log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray],
+                                  loglike_kwargs=None) -> np.ndarray:
         """
         Calculates the marginal log likelihoods for observations by integrating over nuisance parameters. 
         This method creates a meshgrid of event values and nuisance axes, computes the log likelihood values, 
@@ -269,7 +278,8 @@ class DiscreteBruteScan(object):
             - It adjusts the log likelihood values by subtracting the normalization factor.
             - The integration over nuisance parameters is performed using the specified iterative logspace integrator.
         """
-
+        if loglike_kwargs is None:
+            loglike_kwargs = {}
 
         meshvalues  = np.meshgrid(*event_vals, *self.nuisance_axes, indexing='ij')
 
@@ -284,7 +294,7 @@ class DiscreteBruteScan(object):
     
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues).reshape(meshvalues[0].shape))
+        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues, **loglike_kwargs).reshape(meshvalues[0].shape))
 
         log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation
         
@@ -362,7 +372,6 @@ class DiscreteBruteScan(object):
                                                    *[parameter_specification.size for parameter_specification in prior_spectral_params.values()],
                                                    *[parameter_specification.size for parameter_specification in prior_spatial_params.values()])
 
-                ic(f'prior_marged_shapes[{_prior_idx}]: ', prior_marged_shapes[_prior_idx])
                 if log_prior.efficient_exist:
 
                     log_prior_matrices = np.squeeze(
@@ -375,7 +384,7 @@ class DiscreteBruteScan(object):
                     
                     # Computation is more efficient/faster of the arrays 
                         # are as flattened as possible. Also minimises memory
-                    log_prior_matrices = log_prior_matrices.reshape(*self.log_likelihoodnormalisation.shape, -1)
+                    log_prior_matrices = log_prior_matrices.reshape(*self.nuisance_binning_geomtry.axes_dim, -1)
                     
                     # Each index of the matrices that is nan shows up as 1, otherwise 0
                         # To figure out how many nans there are, you can just add the 1's
@@ -478,7 +487,8 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
 
 
-        loglike_norm_shape = squeezed_loglike.shape
+        loglike_norm_shape = self.nuisance_binning_geomtry.axes_dim
+
 
         log_prior_matrices_shape = (
             *loglike_norm_shape,
@@ -542,9 +552,16 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data[0]))
 
+        try:
+            obs_meta = measured_event_data.obs_meta
+        except:
+            obs_meta = [None]*len(measured_event_data[0])
+
+
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 
-            event_vals=event_data) for event_data in zip(*measured_event_data)]
+            event_vals=event_data, loglike_kwargs=obs_meta_kwargs) for *event_data, obs_meta_kwargs in zip(*measured_event_data, obs_meta)]
+        
                 
         marg_results = np.asarray(marg_results)
 

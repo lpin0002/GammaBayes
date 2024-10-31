@@ -21,14 +21,13 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
                  binning_geometry: GammaBinning = None,
                  irf_loglike=None,
                  log_exposure_map=None, 
-                 pointing_dir:np.ndarray[u.Quantity]=np.array([0.,0.])*u.deg,
-                 observation_time=None,
-                 observation_time_unit=None,
+                 pointing_dirs:np.ndarray[u.Quantity]=None, 
+                 live_times=None,
                  log_scaling_factor=0.,
                  *args,
                  **kwargs
                  ):
-                
+        
         
         self.log_flux_function = log_flux_function
         self.log_mesh_efficient_flux_func = log_mesh_efficient_flux_func
@@ -53,9 +52,8 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
         self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
                                                  irfs=self.irf_loglike,
                                                  log_exposure_map=log_exposure_map, 
-                                                 pointing_dir=pointing_dir, 
-                                                 observation_time=observation_time,
-                                                 observation_time_unit=observation_time_unit)
+                                                 pointing_dirs=pointing_dirs, 
+                                                 live_times=live_times,)
 
         
 

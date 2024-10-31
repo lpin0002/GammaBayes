@@ -1,1 +1,1 @@
-from .isotropic_model import IsotropicGRB
+from .isotropic_model import IsotropicPowerLaw, IsotropicBrokenPowerLaw

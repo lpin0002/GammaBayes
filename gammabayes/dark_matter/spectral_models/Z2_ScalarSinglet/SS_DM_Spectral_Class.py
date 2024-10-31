@@ -57,19 +57,19 @@ class Z2_ScalarSinglet(DM_ContinuousEmission_Spectrum):
         # Extracting the annihilation ratios for the Scalar Singlet model
         mass_axis, lahS_axis = np.unique(annihilation_ratio_data_dict['mS [GeV]'])/1e3, np.unique(annihilation_ratio_data_dict['lahS'])
 
-        SS_ratios_dict = copy.deepcopy(annihilation_ratio_data_dict)
+        self._SS_ratios_dict = copy.deepcopy(annihilation_ratio_data_dict)
 
-        del SS_ratios_dict['mS [GeV]']
-        del SS_ratios_dict['lahS']
+        del self._SS_ratios_dict['mS [GeV]']
+        del self._SS_ratios_dict['lahS']
         
         parameter_interpolation_values = [mass_axis, lahS_axis]
         parameter_axes_shapes = (lahS_axis.size, mass_axis.size)
 
-        for channel in SS_ratios_dict.keys():
-            SS_ratios_dict[channel] = SS_ratios_dict[channel].reshape(parameter_axes_shapes).T
+        for channel in self._SS_ratios_dict.keys():
+            self._SS_ratios_dict[channel] = self._SS_ratios_dict[channel].reshape(parameter_axes_shapes).T
 
 
-        super().__init__(annihilation_fractions = SS_ratios_dict, 
+        super().__init__(annihilation_fractions = self._SS_ratios_dict, 
                          parameter_interpolation_values = parameter_interpolation_values,
                          default_parameter_values={'mass':1.0, 'lahS':0.1},
                          *args, **kwargs)

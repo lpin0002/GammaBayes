@@ -4,6 +4,7 @@ import pickle
 from .exposure import GammaLogExposure
 from astropy import units as u
 from numpy.typing import ArrayLike
+import time
 
 class GammaObs:
     def __init__(self, 
@@ -11,8 +12,8 @@ class GammaObs:
                  name:str = None,
                  energy: ArrayLike =[], lon: ArrayLike=[], lat: ArrayLike=[], 
                  event_weights: ArrayLike = None,
-                 pointing_dir:np.ndarray[u.Quantity, u.Quantity] = None, 
-                 observation_time: u.Quantity=None,
+                 pointing_dirs:np.ndarray[u.Quantity, u.Quantity] = None, 
+                 live_times: u.Quantity=None,
                  irf_loglike: callable = None,
                  log_exposure: GammaLogExposure = None,
                  meta:dict = {}, **kwargs):
@@ -43,29 +44,29 @@ class GammaObs:
 
         self.meta.update(kwargs)
 
-        self.observation_time = observation_time
+        self.live_times = live_times
 
 
-        if self.observation_time is None:
-            self.observation_time =  self.meta.get('observation_time', None)
+        if self.live_times is None:
+            self.live_times =  self.meta.get('live_times', None)
 
-        if not(hasattr(self.observation_time, "unit")) and not(self.observation_time is None):
-            self.observation_time = self.observation_time*u.s
+        if not(hasattr(self.live_times, "unit")) and not(self.live_times is None):
+            self.live_times = None
 
 
-        if not(pointing_dir is None):
-            self.pointing_dir = pointing_dir
+        if not(pointing_dirs is None):
+            self.pointing_dirs = pointing_dirs
 
-            if not hasattr(self.pointing_dir, "unit"):
-                self.pointing_dir*=u.deg
+            if not hasattr(self.pointing_dirs, "unit"):
+                self.pointing_dirs*=u.deg
 
         
-        elif pointing_dir is None:
-            self.pointing_dir = self.meta.get('pointing_dir')
+        elif pointing_dirs is None:
+            self.pointing_dirs = self.meta.get('pointing_dirs')
 
-        if self.pointing_dir is None:
+        if self.pointing_dirs is None:
             # If pointing direction not given, the centre of the spatial axes is presumed and
-            self.pointing_dir = np.array([
+            self.pointing_dirs = np.array([
                 np.mean(self.binning_geometry.lon_axis.value), 
                 np.mean(self.binning_geometry.lat_axis.to(self.binning_geometry.lon_axis.unit).value)
                 ])*self.binning_geometry.lon_axis.unit
@@ -84,9 +85,6 @@ class GammaObs:
         else:
             self.irf_loglike = {}
 
-        if hasattr(self.irf_loglike, 'pointing_dir'):
-            self.irf_loglike.pointing_dir = pointing_dir
-
 
         if 'hemisphere' in self.meta:
             self.hemisphere = self.meta['hemisphere']
@@ -96,7 +94,7 @@ class GammaObs:
 
 
         if name is None:
-            self.name = f"Observation_pt_{self.pointing_dir}_{self.observation_time}"
+            self.name = time.strftime(f"Observation_pt_%H%M%S")
         else:
             self.name = name
 
@@ -104,8 +102,8 @@ class GammaObs:
         self.log_exposure = GammaLogExposure(binning_geometry=self.binning_geometry,
                                         log_exposure_map=log_exposure,
                                         irfs=self.irf_loglike,
-                                        pointing_dir=self.pointing_dir,
-                                        observation_time=self.observation_time)
+                                        pointing_dirs=self.pointing_dirs,
+                                        live_times=self.live_times)
 
 
 
@@ -300,7 +298,7 @@ it is assumed that the binning geometries are the same.""")
         # You might need to decide how to handle other attributes like obs_id, zenith_angle, etc.
         # For this example, I'm just taking them from the first instance.
         return GammaObs(energy=new_energy, lon=new_lon, lat=new_lat, 
-                        pointing_dir=self.pointing_dir, 
+                        pointing_dirs=self.pointing_dirs, 
                         irf_loglike=self.irf_loglike,
                         binning_geometry=self.binning_geometry,
                         log_exposure=new_log_exposure
@@ -382,28 +380,28 @@ it is assumed that the binning geometries are the same.""")
         
     def to_dict(self, include_irf=False, include_meta=False):
 
-        if hasattr(self.pointing_dir, "value"):
-            pointing_dir_value = self.pointing_dir.value
-            pointing_dir_unit = self.pointing_dir.unit.to_string()
+        if hasattr(self.pointing_dirs, "value"):
+            pointing_dirs_value = self.pointing_dirs.value
+            pointing_dirs_unit = self.pointing_dirs.unit.to_string()
         else:
-            pointing_dir_value = self.pointing_dir
-            pointing_dir_unit = None
+            pointing_dirs_value = self.pointing_dirs
+            pointing_dirs_unit = None
 
-        if hasattr(self.observation_time, "value"):
-            observation_time_value = self.observation_time.value
-            observation_time_unit = self.observation_time.unit.to_string()
+        if hasattr(self.live_times, "value"):
+            live_times_value = self.live_times.value
+            live_times_unit = self.live_times.unit.to_string()
         else:
-            observation_time_value = self.observation_time
-            observation_time_unit = None
+            live_times_value = self.live_times
+            live_times_unit = None
 
 
         output_dict = {
             'name': self.name,
             'binned_data': self.binned_data,
-            'pointing_dir': pointing_dir_value,
-            'pointing_dir_unit': pointing_dir_unit,
-            'observation_time': observation_time_value,
-            'observation_time_unit': observation_time_unit,
+            'pointing_dirs': pointing_dirs_value,
+            'pointing_dirs_unit': pointing_dirs_unit,
+            'live_times': live_times_value,
+            'live_times_unit': live_times_unit,
         }
         if include_irf:
             output_dict['irf_loglike'] = self.irf_loglike
@@ -438,30 +436,30 @@ it is assumed that the binning geometries are the same.""")
 
 
 
-        pointing_dir = info_dict.get('pointing_dir')
-        if (info_dict.get('pointing_dir_unit') is not None):
-            pointing_dir = pointing_dir*u.Unit(info_dict.get('pointing_dir_unit'))
-        elif isinstance(pointing_dir, ArrayLike): 
-            if hasattr(pointing_dir, "unit"):
-                pointing_dir_value = pointing_dir.value
+        pointing_dirs = info_dict.get('pointing_dirs')
+        if (info_dict.get('pointing_dirs_unit') is not None):
+            pointing_dirs = pointing_dirs*u.Unit(info_dict.get('pointing_dirs_unit'))
+        elif isinstance(pointing_dirs, ArrayLike): 
+            if hasattr(pointing_dirs, "unit"):
+                pointing_dirs_value = pointing_dirs.value
             else:
-                pointing_dir_value = pointing_dir
-            if np.isnan(np.sum(pointing_dir_value)): # To account for saving variables as nan for h5 files
-                pointing_dir = None
+                pointing_dirs_value = pointing_dirs
+            if np.isnan(np.sum(pointing_dirs_value)): # To account for saving variables as nan for h5 files
+                pointing_dirs = None
 
 
-        observation_time = info_dict.get('observation_time')
-        if not hasattr(observation_time, "unit"):
-            if not(isinstance(observation_time, float)):
-                observation_time = None
+        live_times = info_dict.get('live_times')
+        if not hasattr(live_times, "unit"):
+            if not(isinstance(live_times, float)):
+                live_times = None
             
-        if (info_dict.get('observation_time_unit') is not None) and not(np.isnan(info_dict.get('observation_time_unit'))):
-            observation_time = observation_time*u.Unit(info_dict.get('observation_time_unit'))
+        if (info_dict.get('live_times_unit') is not None) and not(np.isnan(info_dict.get('live_times_unit'))):
+            live_times = live_times*u.Unit(info_dict.get('live_times_unit'))
 
         try:
-            observation_time = u.Quantity(observation_time)
+            live_times = u.Quantity(live_times)
         except:
-            observation_time = None
+            live_times = None
 
 
         # Create an empty instance
@@ -469,8 +467,8 @@ it is assumed that the binning geometries are the same.""")
                     name = name,
                     energy=[], lon=[], lat=[],  # Empty raw samples
                     meta=info_dict.get('meta', {}),
-                    pointing_dir=pointing_dir,
-                    observation_time=observation_time,
+                    pointing_dirs=pointing_dirs,
+                    live_times=live_times,
                     irf_loglike=info_dict.get('irf_loglike'))
         
         # Load the binned data
@@ -550,6 +548,15 @@ it is assumed that the binning geometries are the same.""")
         return np.array(energy_samples) * original_energy_unit, \
             np.array(lon_samples) * original_lon_unit, \
             np.array(lat_samples) * original_lat_unit
+    
+    @property
+    def obs_meta(self):
+        __meta_list = []
+
+        for pointing_dir, live_time in zip(self.pointing_dirs, self.live_times):
+            __meta_list.append({'pointing_dir':pointing_dir, 'live_time':live_time})
+
+        return __meta_list
 
 
 
@@ -558,7 +565,7 @@ class GammaObsCube:
                  observations: list[GammaObs],  
                  binning_geometry: GammaBinning=None, 
                  pointing_dirs=None,
-                 observation_times=None,
+                 live_times=None,
                  name:str='NoName', 
                  meta:dict = {},
                  **kwargs):
@@ -574,12 +581,12 @@ class GammaObsCube:
         if not pointing_dirs is None:
             self.pointing_dirs = pointing_dirs
         else:
-            self.pointing_dirs = [obs.pointing_dir for obs in observations]
+            self.pointing_dirs = [obs.pointing_dirs for obs in observations]
 
-        if not observation_times is None:
-            self.observation_times = observation_times
+        if not live_times is None:
+            self.live_times = live_times
         else:
-            self.observation_times = [obs.observation_time for obs in observations]
+            self.live_times = [obs.live_times for obs in observations]
 
 
         self.meta.update(kwargs)
@@ -605,7 +612,7 @@ class GammaObsCube:
     def _calc_combined_log_exposure(self):
         combined_log_exposure = sum(self.log_exposures)
 
-        combined_log_exposure.pointing_dir = self.binning_geometry.spatial_centre
+        combined_log_exposure.pointing_dirs = self.binning_geometry.spatial_centre
 
         self._combined_log_exposure = combined_log_exposure
     

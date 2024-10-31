@@ -102,7 +102,7 @@ class FermiGaggeroDiffusePrior(TwoCompFluxPrior):
             spatial_class = FermiIEM_Morphology, 
             axes=self.binning_geometry.axes,
             binning_geometry=self.binning_geometry,
-            spectral_class_kwds = {'index':2.41, 'phi0':1.36*1e-8*u.Unit("TeV-1 cm-2 s-1 sr-1")},
+            spectral_class_kwds = {'default_parameter_values': {'index':2.41, 'phi0':1.36*1e-8}}, #*u.Unit("TeV-1 cm-2 s-1 sr-1")},
             *args, **kwargs
         )
         

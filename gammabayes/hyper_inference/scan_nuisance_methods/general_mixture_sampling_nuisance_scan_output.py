@@ -8,7 +8,6 @@ from gammabayes.core.core_utils import update_with_defaults
 from itertools import islice
 
 import h5py
-from icecream import ic
 
 class ScanOutput_StochasticTreeMixturePosterior(object):
     """

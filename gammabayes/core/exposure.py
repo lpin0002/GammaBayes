@@ -7,7 +7,9 @@ from .binning_geometry import GammaBinning
 from astropy import units as u
 from scipy.interpolate import RegularGridInterpolator
 import copy
-from icecream import ic
+from warnings import warn
+
+
 
 def trivial_log_aeff(energy, lon, lat, pointing_dir=None):
     return energy.value*0.
@@ -17,16 +19,20 @@ class GammaLogExposure:
                  binning_geometry:GammaBinning, 
                  irfs=None, 
                  log_exposure_map: np.ndarray = None,
-                 pointing_dir: np.ndarray = None,
-                 observation_time: float | np.ndarray=1*u.s, 
-                 observation_time_unit: u.Unit = u.s,
-                 use_log_aeff: bool = True
+                 pointing_dirs: list[np.ndarray[u.Quantity]] | np.ndarray[u.Quantity] = None,
+
+                 # One second is taken as most differential fluxes are per second, so this works as a unit where the absolute values are the quantities don't change
+                 live_times: u.Quantity | np.ndarray[u.Quantity]=1*u.s, 
+                 use_log_aeff: bool = True,
+
+                 # By default the units of the effective area are taken to be u.m**2 and intermediary calculations use seconds when needed
+                 unit_bases = None, 
                  ):
+        if unit_bases is None:
+            unit_bases = [u.m, u.s] 
+
         np.seterr(divide='ignore')
         
-        # I commonly use None for default arguments and then follow up with this
-            # so that one doesn't have to remember default arguments to allow them
-            # to be used in other functions/classes
         self.use_log_aeff = use_log_aeff
 
         if isinstance(log_exposure_map, GammaLogExposure):
@@ -35,20 +41,7 @@ class GammaLogExposure:
         else:
             self.binning_geometry = binning_geometry
 
-            if observation_time is None:
-                observation_time = 1.*u.s
-
             self.irfs = irfs
-            self.pointing_dir = pointing_dir
-
-            if not(self.pointing_dir is None) and hasattr(self.irfs, "pointing_dir"):
-                self.irfs.pointing_dir = self.pointing_dir 
-            elif hasattr(self.irfs, "pointing_dir") and (self.pointing_dir is None):
-                self.pointing_dir = self.irfs.pointing_dir
-
-            else:
-                self.pointing_dir = self.binning_geometry.spatial_centre
-
 
 
             if hasattr(self.irfs, "log_aeff"):
@@ -58,22 +51,24 @@ class GammaLogExposure:
                 self.log_aeff = trivial_log_aeff
                 self.aeff_units = u.Unit("")
 
-            
-            if hasattr(observation_time, 'unit'):
-                self.time_unit = observation_time.unit
-            else:
-                self.time_unit = observation_time_unit
 
 
-            if observation_time_unit is None:
-                observation_time_unit = u.s
-            self.observation_time_unit = observation_time_unit
+            self.__parse_livetime(live_times=live_times)
+            self.__parse_pointing_dirs(pointing_dirs=pointing_dirs)
 
-            self.unit = self.observation_time_unit*self.aeff_units
+                
+            self.unit = self.live_time_units*self.aeff_units
 
 
-
-            self.observation_time = observation_time
+            # Gets rid of annoying things like u.hr/u.s not being simplified
+            try:
+                decomposed_unit = self.unit.decompose(unit_bases)
+                self.unit = ((1*decomposed_unit).decompose(unit_bases)).unit
+                self.log_unit_converter = np.log(((1*decomposed_unit).decompose(unit_bases)).value)
+            except:
+                self.unit = self.unit
+                self.log_unit_converter = 0.
+                
 
 
             self._reset_cache()
@@ -84,9 +79,59 @@ class GammaLogExposure:
             else:
                 self.refresh()
 
+                
+
+    def __parse_livetime(self, live_times):
+
+        if live_times is None:
+            live_times = 1.*u.Unit("")
+
+        if isinstance(live_times, u.Quantity):
+            if live_times.isscalar:
+                live_times = [live_times]
+            else:
+                live_times = live_times
+        elif isinstance(live_times, (int, float)):
+            live_times = [live_times]
+        elif isinstance(live_times, (np.ndarray, list, tuple)):
+            live_times = live_times
+        else:
+            warn("Cannot interpret livetime input. Must be list of scalars or scalar. Not sure how you gave something else.")
+        
+        self.live_times = live_times
+
+
+        try:
+            self.live_time_units = self.live_times[0].unit
+        except:
+            self.live_time_units = u.Unit("")
+
+        try:
+            self.live_times_values = [live_time.to(self.live_time_units).value for live_time in self.live_times]
+        except:
+            self.live_times_values = [live_time for live_time in self.live_times]
+
+
+        self.live_times = np.array(self.live_times_values)*self.live_time_units
+
+
+
+    def __parse_pointing_dirs(self, pointing_dirs):
+
+        if np.asarray(pointing_dirs).ndim <2:
+            pointing_dirs = [pointing_dirs]
+
+        self.pointing_dirs = pointing_dirs
+
+        if hasattr(self.irfs, "pointing_dir") and (self.pointing_dirs is None):
+            self.pointing_dirs = [self.irfs.pointing_dir]
+
+        elif self.pointing_dirs is None:
+            self.pointing_dirs = [self.binning_geometry.spatial_centre]
+
 
     def __call__(self, *args, **kwargs):
-        return np.log(self.exp_interpolator(*args, **kwargs).value)
+        return np.log(self.exp_interpolator(*args, **kwargs).value)+self.log_unit_converter
 
 
     # Support for indexing like a list or array
@@ -110,8 +155,8 @@ class GammaLogExposure:
             return GammaLogExposure(binning_geometry=self.binning_geometry, 
                                     log_exposure_map=new_exposure_map,
                                     irfs=self.irfs,
-                                    pointing_dir=np.mean([self.pointing_dir, other.pointing_dir], axis=0)*u.deg,
-                                    observation_time=self.observation_time+other.observation_time,
+                                    pointing_dirs= self.pointing_dirs.extend(other.pointing_dirs),
+                                    lives_times=self.live_times.extend(other.live_times),
                                     )
         else:
 
@@ -119,18 +164,21 @@ class GammaLogExposure:
         
 
 
-    def _same_as_cached(self, pointing_dir:np.ndarray[u.Quantity]=None, observation_time:u.Quantity=None):
+    def _same_as_cached(self, pointing_dirs: np.ndarray[u.Quantity]| u.Quantity=None, live_times:u.Quantity=None):
 
-        if pointing_dir is None:
-            pointing_dir = self.pointing_dir
-        if observation_time is None:
-            observation_time = self.observation_time
-        observation_time = observation_time.to(self.observation_time_unit)
 
-        same_as_cached = True
+        if pointing_dirs is None:
+            same_as_cached = True
+            return same_as_cached
+        
+        if np.asarray(pointing_dirs).ndim <2:
 
-        same_as_cached = same_as_cached and np.array_equiv(pointing_dir, self._cached_pointing_dir)
-        same_as_cached = same_as_cached and np.equal(observation_time, self._cached_observation_time)
+            same_as_cached = np.any((np.array(self.pointing_dirs) == pointing_dirs.value).all(axis=1))
+
+            return same_as_cached
+
+        same_as_cached = np.array_equiv(np.sort(pointing_dirs, axis=0), np.sort(self.pointing_dirs, axis=0))
+
 
         return same_as_cached
     
@@ -138,11 +186,11 @@ class GammaLogExposure:
     def _reset_cache(self):
 
 
-        if self.pointing_dir is None:
+        if self.pointing_dirs is None:
             raise ValueError()
 
-        self._cached_pointing_dir = self.pointing_dir
-        self._cached_observation_time = self.observation_time
+        self._cached_pointing_dirs = self.pointing_dirs
+        self._cached_live_times = self.live_times
 
 
 
@@ -156,12 +204,14 @@ class GammaLogExposure:
     def refresh(self):
 
         if self.use_log_aeff:
-            log_exposure_vals = self.log_aeff(*self.binning_geometry.axes_mesh, pointing_dir=self.pointing_dir)
-        else:
-            log_exposure_vals = self.binning_geometry.axes_mesh[0].value*0
-        
-        log_exposure_vals+=np.log(self.observation_time.to(self.observation_time_unit).value)
+            log_exposure_vals = -np.inf
 
+            for pointing_dir, live_time in zip(self.pointing_dirs, self.live_times):
+                log_exposure_vals = np.logaddexp(log_exposure_vals, self.log_aeff(*self.binning_geometry.axes_mesh, pointing_dir=pointing_dir)+np.log(live_time.value)+self.log_unit_converter)
+
+        else:
+            log_exposure_vals = self.binning_geometry.axes_mesh[0].value*0+np.log(live_time.value)+self.log_unit_converter
+        
 
         self.log_exposure_map = log_exposure_vals
 
@@ -172,15 +222,53 @@ class GammaLogExposure:
         
         return self.log_exposure_map
     
-    def exp_interpolator(self, energy, lon, lat, *args, pointing_dir=None, observation_time=None, **kwargs):
 
-        if self._same_as_cached(pointing_dir, observation_time):
-            return self._exp_interpolator((energy, lon , lat), *args, **kwargs)*self.unit
+    def add_single_exposure(self, pointing_dir:np.ndarray[u.Quantity], live_time:u.Quantity):
+
+
+        self.pointing_dirs = self.pointing_dirs.append(pointing_dir)
+        self.live_times = self.live_times.append(live_time)
+
+        if hasattr(live_time, "unit"):
+            live_time = live_time.to(self.live_time_units)
         else:
-            return np.exp(self.log_aeff(energy, lon, lat, pointing_dir=pointing_dir)+np.log(observation_time.to(self.observation_time_unit).value))*self.unit
+            live_time = live_time*self.live_time_units
+
+
+        if self.use_log_aeff:
+
+            self.log_exposure_map = np.logaddexp(self.log_exposure_map, self.log_aeff(*self.binning_geometry.axes_mesh, pointing_dir=pointing_dir)+np.log(live_time.value)+self.log_unit_converter)
+
+        else:
+            self.log_exposure_map = np.logaddexp(self.log_exposure_map, self.binning_geometry.axes_mesh[0].value*0+np.log(live_time.value)+self.log_unit_converter)
+
+
+        # Have to interpolate exposure not log_exposure due to possible -inf values
+        self._exp_interpolator = RegularGridInterpolator(self.binning_geometry.axes, np.exp(self.log_exposure_map))
+
+        self._reset_cache()
+        
+        return self.log_exposure_map
+            
+    
+    def exp_interpolator(self, energy, lon, lat, *args, pointing_dirs=None, live_time=None, **kwargs):
+
+        if not self._same_as_cached():
+            self.add_single_exposure(pointing_dir=pointing_dirs, live_time=live_time)
+
+        return self._exp_interpolator((energy, lon , lat), *args, **kwargs)*self.unit
         
 
-    def peek(self, fig_kwargs={}, pcolormesh_kwargs={}, plot_kwargs={}, **kwargs):
+    def peek(self, fig_kwargs=None, pcolormesh_kwargs=None, plot_kwargs=None, **kwargs):
+
+        if fig_kwargs is None:
+            fig_kwargs = {}
+
+        if pcolormesh_kwargs is None:
+            pcolormesh_kwargs = {}
+
+        if plot_kwargs is None:
+            plot_kwargs = {}
 
         from matplotlib import pyplot as plt
         from matplotlib import patches
@@ -205,11 +293,16 @@ class GammaLogExposure:
                                                 axes=(self.binning_geometry.lat_axis.value,), 
                                                 axisindices=[2])
 
+        weighted_mean_pointing_dir = np.sum(np.asarray(self.pointing_dirs).T*self.live_times, axis=1)/np.sum(self.live_times)
 
+        try:
+            weighted_mean_pointing_dir = [weighted_mean_pointing_dir[0].value, weighted_mean_pointing_dir[1].value]
+        except:
+            weighted_mean_pointing_dir = weighted_mean_pointing_dir
 
         energy_slice = np.abs(self.binning_geometry.energy_axis.value-1).argmin()
-        lon_slice = np.abs(self.binning_geometry.lon_axis.value-self.pointing_dir[0].value).argmin()
-        lat_slice = np.abs(self.binning_geometry.lat_axis.value-self.pointing_dir[1].value).argmin()
+        lon_slice = np.abs(self.binning_geometry.lon_axis.value-weighted_mean_pointing_dir[0]).argmin()
+        lat_slice = np.abs(self.binning_geometry.lat_axis.value-weighted_mean_pointing_dir[1]).argmin()
 
         energy_slice_val = self.binning_geometry.energy_axis.value[energy_slice]
         lon_slice_val = self.binning_geometry.lon_axis.value[lon_slice]

@@ -1,6 +1,6 @@
 from gammabayes.likelihoods.core import DiscreteLogLikelihood
 from gammabayes.likelihoods.irfs.core.irf_extractor_class import IRFExtractor
-from gammabayes.likelihoods.irfs.irf_normalisation_setup import irf_norm_setup
+from gammabayes.likelihoods.irfs.core.irf_normalisation_setup import irf_norm_setup
 from astropy import units as u
 from astropy.units import Quantity
 import numpy as np
@@ -18,7 +18,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                  obs_id = None,
                  psf_units: u.Unit = (1/u.deg**2).unit,
                  edisp_units: u.Unit = (1/u.TeV).unit,
-                 aeff_units: u.Unit = u.cm**2,
+                 aeff_units: u.Unit = u.m**2,
                  CCR_BKG_units: u.Unit = (1/(u.deg**2*u.TeV*u.s)).unit,
                  custom_irfs: dict=None,
                  *args, **kwargs):
@@ -77,12 +77,19 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             *args, **kwargs
         )
         self.pointing_dir = pointing_dir
+        self.observation_time = observation_time
 
 
-        self.psf_units = self.irf_loglikelihood.psf_units
-        self.edisp_units = self.irf_loglikelihood.edisp_units
-        self.aeff_units = self.irf_loglikelihood.aeff_units
-        self.CCR_BKG_units = self.irf_loglikelihood.CCR_BKG_units
+        try:
+            self.psf_units = self.irf_loglikelihood.psf_units
+            self.edisp_units = self.irf_loglikelihood.edisp_units
+            self.aeff_units = self.irf_loglikelihood.aeff_units
+            self.CCR_BKG_units = self.irf_loglikelihood.CCR_BKG_units
+        except:
+            self.psf_units = psf_units
+            self.edisp_units = edisp_units
+            self.aeff_units = aeff_units
+            self.CCR_BKG_units = CCR_BKG_units
 
 
     def __call__(self,recon_energy, recon_lon, recon_lat, 
@@ -170,7 +177,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         if pointing_dir is None:
             pointing_dir = self.pointing_dir
 
-        return self.irf_loglikelihood.log_aeff(energy, lon, lat, *args, **kwargs, pointing_dir=self.pointing_dir, )
+        return self.irf_loglikelihood.log_aeff(energy, lon, lat, *args, **kwargs, pointing_dir=pointing_dir, )
     
 
     def log_bkg_CCR(self, *args, pointing_dir=None, **kwargs):
@@ -222,16 +229,23 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
     def to_dict(self):
         data_dict = {}
         data_dict["pointing_dir"] = self.pointing_dir
-        data_dict["zenith"] = self.irf_loglikelihood.zenith
-        data_dict["hemisphere"] = self.irf_loglikelihood.hemisphere
-        data_dict["prod_vers"] = self.irf_loglikelihood.prod_vers
-        data_dict["observation_time"] = self.irf_loglikelihood.observation_time
-        data_dict["instrument"] = self.irf_loglikelihood.instrument
+        data_dict["observation_time"] = self.observation_time
+
+        try:
+            data_dict["zenith"] = self.irf_loglikelihood.zenith
+            data_dict["hemisphere"] = self.irf_loglikelihood.hemisphere
+            data_dict["prod_vers"] = self.irf_loglikelihood.prod_vers
+            data_dict["instrument"] = self.irf_loglikelihood.instrument
+        except:
+            pass
 
         return data_dict
     
 
-    def peek(self, fig_kwargs={}, pcolormesh_kwargs={}, plot_kwargs={}, probability_scale='log', colormap='Blues', **kwargs):
+    def peek(self, fig_kwargs={}, pcolormesh_kwargs={}, plot_kwargs={}, probability_scale='log', 
+             plot_psf_pdf_kwargs = {}, plot_psf_pdf_lines_kwargs = {}, 
+             plot_edisp_pdf_kwargs = {}, plot_edisp_density_kwargs = {}, 
+             colormap='Blues', **kwargs):
 
         from matplotlib import pyplot as plt
 
@@ -248,11 +262,11 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
 
         fig, ax = plt.subplots(2, 3, **fig_kwargs)
 
-        self._plot_edisp_pdf(ax=ax[0,0], plot_kwargs=plot_kwargs)
-        self._plot_edisp_density(ax=ax[0,1], pcolormesh_kwargs=pcolormesh_kwargs)
+        self._plot_edisp_pdf(ax=ax[0,0], plot_kwargs=plot_kwargs, **plot_edisp_pdf_kwargs)
+        self._plot_edisp_density(ax=ax[0,1], pcolormesh_kwargs=pcolormesh_kwargs, **plot_edisp_density_kwargs)
 
-        self._plot_psf_pdf(ax=ax[1,0], pcolormesh_kwargs=pcolormesh_kwargs)
-        self._plot_psf_lines(ax=ax[1,1], plot_kwargs=plot_kwargs)
+        self._plot_psf_pdf(ax=ax[1,0], pcolormesh_kwargs=pcolormesh_kwargs, **plot_psf_pdf_kwargs)
+        self._plot_psf_lines(ax=ax[1,1], plot_kwargs=plot_kwargs, **plot_psf_pdf_lines_kwargs)
 
         self._plot_aeff(ax=ax[0,2], pcolormesh_kwargs=pcolormesh_kwargs)
 
@@ -333,7 +347,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         return ax
     
 
-    def _plot_psf_pdf(self, ax, pcolormesh_kwargs={}):
+    def _plot_psf_pdf(self, ax, pcolormesh_kwargs={}, symmetric_bound = 1.0):
 
         from matplotlib import cm
         from matplotlib.colors import Normalize
@@ -344,7 +358,6 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             fig, ax = plt.subplots(1,1)
 
         pcolormesh_kwargs_copy = copy.deepcopy(pcolormesh_kwargs)
-        pcolormesh_kwargs_copy.setdefault('vmin', 1e-5)
 
         if 'norm' not in pcolormesh_kwargs_copy:
             pcolormesh_kwargs_copy['norm'] = 'log'
@@ -361,10 +374,11 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
 
 
         centre_spatial = self.true_binning_geometry.spatial_centre
+        centre_energy = np.take(self.true_binning_geometry.energy_axis, len(self.true_binning_geometry.energy_axis)//2)
 
 
-        zoom_lon_slice = np.where(0.5-np.abs(self.binning_geometry.lon_axis.value-centre_spatial[0].value)>=0)
-        zoom_lat_slice = np.where(0.5-np.abs(self.binning_geometry.lat_axis.value-centre_spatial[1].value)>=0)
+        zoom_lon_slice = np.where(symmetric_bound-np.abs(self.binning_geometry.lon_axis.value-centre_spatial[0].value)>=0)
+        zoom_lat_slice = np.where(symmetric_bound-np.abs(self.binning_geometry.lat_axis.value-centre_spatial[1].value)>=0)
 
 
         lon_mesh, lat_mesh = np.meshgrid(self.binning_geometry.lon_axis[zoom_lon_slice], 
@@ -373,7 +387,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
 
         log_psf_values = self.log_psf(recon_lon=lon_mesh.flatten(),
                                   recon_lat=lat_mesh.flatten(), 
-                                  true_energy=1*u.TeV,
+                                  true_energy=centre_energy,
                                   true_lon=centre_spatial[0],
                                   true_lat=centre_spatial[1],
                                   ).reshape(lon_mesh.shape)
@@ -399,7 +413,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         
         plt.colorbar(mappable=pcm, label=r'Probability Density [1/'+(lon_unit*lat_unit).to_string('latex')+']', ax=ax)
 
-        legend=ax.legend(title=f'''slice at E=1 TeV and 
+        legend=ax.legend(title=f'''slice at E={centre_energy:.1f} and 
 (l,b) = ({centre_spatial[0].value:.1f}, {centre_spatial[1].value:.1f})''')
         plt.setp(legend.get_title(),fontsize='8')
 
