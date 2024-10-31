@@ -19,7 +19,7 @@ setup(name='GammaBayes',
         long_description=long_description,  # This is the long description, read from README.md
     long_description_content_type="text/markdown",  
       # For a lot of the DM spectral classes we require that dict types are ordered
-      python_requires='>=3.6',
+      python_requires='>=3.6, <=3.12.7',
       install_requires=[
         "astropy==5.3.4",
         "corner==2.2.2",
