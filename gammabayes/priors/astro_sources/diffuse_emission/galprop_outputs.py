@@ -16,7 +16,12 @@ def extract_galprop_prior_template(true_binning_geometry:GammaBinning,
                                    irf_loglike:IRF_LogLikelihood, 
                                    component:Literal['pion','bremss','ics','all', 'custom']='all', 
                                    custom_galprop_fits_file_path=None,
-                                   resolution:Literal['Medium', 'High']='Medium'):
+                                   resolution:Literal['Medium', 'High']='Medium',
+                                   log_exposure_map = None,
+                                   pointing_dirs=None,
+                                   live_times=None,
+                                   **kwargs
+                                   ):
 
     res_dict = {'Medium':5, 'High':6}
     file_endings_dict = {5:"j8h245c88vhzr5yu", 6:"uxwddrp6wtlkt4pd"}
@@ -37,7 +42,6 @@ def extract_galprop_prior_template(true_binning_geometry:GammaBinning,
     galprop_dir_path = Path(_get_package_data_directory()/Path(f"results_54_0e03000{resolution}"))
 
 
-
     if component in ['pion','bremss','ics','all']:
         if not galprop_dir_path.is_dir():
             warnings.warn("""\nHey there, this looks to be the first time you are trying to use the GALPROP templates at least at the given resolution. 
@@ -56,13 +60,20 @@ Medium (the default) should take up about 130MB of disk space while High takes u
 
             component_dict = {'pion':'pion_decay_skymap', 'bremss':'bremss_skymap', 'ics':'ics_skymap_comp'}
             file_component = component_dict[component]
-            hdu = fits.open(_get_package_data_directory()/Path(f"results_54_0e03000{resolution}/{file_component}_54_0e03000{resolution}.gz"), memmap=True)
+
+            output_file_path = _get_package_data_directory()/galprop_dir_path/Path(f"{file_component}_54_0e03000{resolution}.gz")
+            
+
+            try:
+                hdu = fits.open(output_file_path)
+            except FileNotFoundError:
+                download_and_unpack_tar(url=f"https://galprop.stanford.edu/wrxiv/0e03/results_54_0e03000{resolution}_{file_ending}.tar.gz", verify=False)
+
+                hdu = fits.open(output_file_path)
 
 
     elif component=='custom':
         hdu = fits.open(custom_galprop_fits_file_path)
-
-
 
 
 
@@ -82,6 +93,7 @@ Medium (the default) should take up about 130MB of disk space while High takes u
                                     __header["NAXIS3"])
     
 
+
     # Checking to see if the axes are about the Galactic Centre. 
     #   If the bounds of the longitude axis multiply to something negative then they must be different signs
     #   (lower bound negative and upper bound positive)
@@ -98,11 +110,15 @@ Medium (the default) should take up about 130MB of disk space while High takes u
 
 
 
+
     # Finding longitude and latitude values that fall within the bounds of the given binning geometry
     care_about_lon_mask = np.logical_and(np.where(new_longitude_axis<=true_binning_geometry.lon_axis[-1].value+2*true_binning_geometry.lon_res.value, True, False), 
                                          np.where(new_longitude_axis>=true_binning_geometry.lon_axis[0].value-2*true_binning_geometry.lon_res.value, True, False))
     care_about_lat_mask = np.logical_and(np.where(lat_axis_2<=true_binning_geometry.lat_axis[-1].value+2*true_binning_geometry.lat_res.value, True, False), 
                                          np.where(lat_axis_2>=true_binning_geometry.lat_axis[0].value-2*true_binning_geometry.lat_res.value, True, False))
+
+
+
 
 
     galprop_binning_geometry = GammaBinning(
@@ -113,9 +129,14 @@ Medium (the default) should take up about 130MB of disk space while High takes u
 
 
 
+
     __data = __data[longitude_mask, :, :, :][care_about_lon_mask, :, :, :][:, care_about_lat_mask, :, :]
 
+
+
     reformatted_data_matrix = np.transpose(np.sum(__data, axis=-1), axes=(2,0,1))
+
+
 
     del __header
     del __data
@@ -127,11 +148,18 @@ Medium (the default) should take up about 130MB of disk space while High takes u
         )
 
 
+
     template_prior = SourceFluxDiscreteLogPrior(
         name=component+'_template_prior',
         binning_geometry=true_binning_geometry,
         irf_loglike=irf_loglike,
-        log_flux_function=template_model
+        log_flux_function=template_model,
+        log_exposure_map=log_exposure_map,
+        pointing_dirs=pointing_dirs,
+        live_times=live_times,
+        **kwargs
     )
+
+
 
     return template_prior

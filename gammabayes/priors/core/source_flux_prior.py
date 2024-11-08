@@ -54,6 +54,17 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
                                                  log_exposure_map=log_exposure_map, 
                                                  pointing_dirs=pointing_dirs, 
                                                  live_times=live_times,)
+        if pointing_dirs is not None:
+
+            self.pointing_dirs = pointing_dirs
+        else:
+            self.pointing_dirs = self.log_exposure_map.pointing_dirs
+
+        if live_times is not None:
+
+            self.live_times = live_times
+        else:
+            self.live_times = self.log_exposure_map.live_times
 
         
 

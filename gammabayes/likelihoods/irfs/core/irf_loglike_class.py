@@ -242,12 +242,27 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         return data_dict
     
 
-    def peek(self, fig_kwargs={}, pcolormesh_kwargs={}, plot_kwargs={}, probability_scale='log', 
-             plot_psf_pdf_kwargs = {}, plot_psf_pdf_lines_kwargs = {}, 
-             plot_edisp_pdf_kwargs = {}, plot_edisp_density_kwargs = {}, 
+    def peek(self, fig_kwargs=None, pcolormesh_kwargs=None, plot_kwargs=None, probability_scale='log', 
+             plot_psf_pdf_kwargs = None, plot_psf_pdf_lines_kwargs = None, 
+             plot_edisp_pdf_kwargs = None, plot_edisp_density_kwargs = None, 
              colormap='Blues', **kwargs):
 
         from matplotlib import pyplot as plt
+
+        if fig_kwargs is None:
+            fig_kwargs = {}
+        if pcolormesh_kwargs is None:
+            pcolormesh_kwargs = {}
+        if plot_kwargs is None:
+            plot_kwargs = {}
+        if plot_psf_pdf_kwargs is None:
+            plot_psf_pdf_kwargs = {}
+        if plot_psf_pdf_lines_kwargs is None:
+            plot_psf_pdf_lines_kwargs = {}
+        if plot_edisp_pdf_kwargs is None:
+            plot_edisp_pdf_kwargs = {}
+        if plot_edisp_density_kwargs is None:
+            plot_edisp_density_kwargs = {}
 
         fig_kwargs.update(kwargs)
 
@@ -280,14 +295,19 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
 
 
 
-    def _plot_edisp_pdf(self, ax=None, plot_kwargs={}):
+    def _plot_edisp_pdf(self, ax=None, plot_kwargs={}, **kwargs):
         from gammabayes.core.utils import pick_5_values
         from matplotlib import cm
         from matplotlib.colors import Normalize
         from matplotlib import pyplot as plt
         import copy
 
+
+
         plot_kwargs_copy = copy.deepcopy(plot_kwargs)
+
+        plot_kwargs_copy.update(kwargs)
+
         if 'norm' not in plot_kwargs_copy:
             plot_kwargs_copy['norm'] = 'log'
 
@@ -309,13 +329,15 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         norm = Normalize(vmin=-3, vmax=4)
 
 
-
+        running_max = -np.inf
         for _energy_idx, energy_value in enumerate(five_true_energy_values):
 
             log_edisp_vals = self.log_edisp(recon_energy=self.binning_geometry.energy_axis, 
                                                           true_energy=energy_value,
                                                           true_lon=centre_spatial[0],
                                                           true_lat=centre_spatial[1])
+            
+            running_max = np.max([running_max, log_edisp_vals.max()])
             
             log_edisp_norm = self.logspace_integrator(log_edisp_vals, axes=[self.binning_geometry.energy_axis.value,])
             
@@ -340,6 +362,10 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                 fontsize=10, ha='center', va='center', fontweight='bold')
 
         ymin, ymax = ax.get_ylim()
+        if plot_kwargs_copy['norm'] == 'log':
+            ymax = 10*running_max
+        else:
+            ymax = 1.2*running_max
 
         if ymin < 1e-5:
             ax.set_ylim(bottom=1e-5, top=ymax)
@@ -681,7 +707,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
     def single_loglikelihood(self, 
                              recon_energy:Quantity, recon_lon:Quantity, recon_lat:Quantity, 
                              true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}, **kwargs):
         """
         Outputs the log likelihood value(s) for the given gamma-ray event datum (log of the product of 
         energy dispersion and point spread function.)

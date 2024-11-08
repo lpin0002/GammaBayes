@@ -91,6 +91,7 @@ class DiscreteBruteScan(object):
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  nuisance_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  prior_parameter_specifications: dict | list[ParameterSet] | dict[ParameterSet] = {}, 
+                 log_likelihood_parameters: ParameterSet=None,
                  log_nuisance_marg_results: np.ndarray | None = None, 
                  mixture_parameter_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  log_hyperparameter_likelihood: np.ndarray | float = 0., 
@@ -203,7 +204,7 @@ class DiscreteBruteScan(object):
         # Currently required as the normalisation of the IRFs isn't natively consistent
         self.log_likelihoodnormalisation            = np.asarray(log_likelihoodnormalisation)
 
-        if self.log_likelihoodnormalisation.shape != self.nuisance_binning_geomtry.axes_dim:
+        if self.log_likelihoodnormalisation.shape[:3] != self.nuisance_binning_geomtry.axes_dim:
             if self.log_likelihoodnormalisation.shape==():
                 self.log_likelihoodnormalisation = self.log_likelihoodnormalisation*np.ones(shape=self.nuisance_binning_geomtry.axes_dim)
             else:
@@ -218,6 +219,10 @@ class DiscreteBruteScan(object):
         # Doesn't have to be initialised here, but you can do it if you want
         # ParameterSpecification
         self.mixture_parameter_specifications   = ParameterSet(mixture_parameter_specifications)
+
+        self.log_likelihood_parameters          = ParameterSet(log_likelihood_parameters)
+
+        self.log_likelihood_parameter_axes_by_name = {key:value.axis for key, value in self.log_likelihood_parameters._dict_of_parameters_by_name.items()}
 
         # Used as regularisation to avoid
         self.log_marginalisation_regularisation = log_marginalisation_regularisation
@@ -280,6 +285,9 @@ class DiscreteBruteScan(object):
         """
         if loglike_kwargs is None:
             loglike_kwargs = {}
+
+        
+        
 
         meshvalues  = np.meshgrid(*event_vals, *self.nuisance_axes, indexing='ij')
 
@@ -550,7 +558,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             - Sets `log_marginalisation_regularisation` to the mean difference between log marginalisation maximums and minimums.
         """
 
-        prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data[0]))
+        prior_marged_shapes, _ = self.prior_gen(Nevents=len(measured_event_data))
 
         try:
             obs_meta = measured_event_data.obs_meta
@@ -560,7 +568,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 
-            event_vals=event_data, loglike_kwargs=obs_meta_kwargs) for *event_data, obs_meta_kwargs in zip(*measured_event_data, obs_meta)]
+            event_vals=event_data, loglike_kwargs=obs_meta_kwargs) for event_data, obs_meta_kwargs in zip(measured_event_data, obs_meta)]
         
                 
         marg_results = np.asarray(marg_results)

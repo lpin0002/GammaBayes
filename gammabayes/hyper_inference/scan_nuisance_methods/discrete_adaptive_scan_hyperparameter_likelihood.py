@@ -15,6 +15,7 @@ from tqdm import tqdm
 from multiprocessing import Pool
 import os, warnings, logging, time, functools, numpy as np, h5py
 from astropy import units as u
+from icecream import ic
 
 class DiscreteAdaptiveScan(DiscreteBruteScan):
     """
@@ -216,8 +217,6 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
         if loglike_kwargs is None:
             loglike_kwargs = {}
 
-
-
         temp_axes_and_indices = [
             bound_axis(
                 axis, 
@@ -225,7 +224,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
                 bound_radii=bound_info[1], 
                 estimated_val=event_val
                 ) for bound_info, axis, event_val in zip(self.bounds, self.log_likelihood.dependent_axes, event_vals)]
-        
+
         temp_axes = [temp_axis_info[0] for temp_axis_info in temp_axes_and_indices]
 
         unit_list = []
@@ -267,7 +266,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
                     index_meshes[1].T,
                     index_meshes[0].T
                 ] + np.squeeze(log_likelihoodvalues).T).T
-                        
+            
             single_parameter_log_margvals = iterate_logspace_integration(logintegrandvalues,   
                 axes=temp_axes, axisindices=[0,1,2])
 

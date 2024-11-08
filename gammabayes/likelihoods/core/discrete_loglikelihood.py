@@ -236,7 +236,14 @@ class DiscreteLogLikelihood(object):
         _dependent_axes_index_mesh, recon_energy_mesh, recon_lon_mesh, recon_lat_mesh  = np.meshgrid(dependent_mesh_indices, *self.axes, indexing='ij')
 
 
-        mesh_true_vals = [dependent_value[_dependent_axes_index_mesh].flatten() for dependent_value in dependentvalues]
+        mesh_true_vals = [np.array(dependent_value.value)[_dependent_axes_index_mesh].flatten()*dependent_value.unit for dependent_value in dependentvalues]
+
+        try:
+            pointing_dir = np.array(pointing_dir.value)*pointing_dir.unit
+        except:
+            pointing_dir = np.array(pointing_dir)*pointing_dir[0].unit
+
+
         mesh_pointings = np.array(pointing_dir)[_dependent_axes_index_mesh, :]*pointing_dir[0].unit
 
         flattened_meshes = [inputaxis.flatten() for inputaxis in (recon_energy_mesh, recon_lon_mesh, recon_lat_mesh)]
@@ -305,7 +312,7 @@ class DiscreteLogLikelihood(object):
         """
 
         
-        data_to_iterate_over, num_data = true_event_data.nonzero_bin_data
+        data_to_iterate_over, num_data = true_event_data.binned_unique_coordinate_data
 
         num_batches = int(np.ceil(len(num_data)/chunk_size))
 
@@ -320,6 +327,7 @@ class DiscreteLogLikelihood(object):
             indices_to_iterate_over = tqdm(indices_to_iterate_over, total=num_batches)
 
         for batch_idx in indices_to_iterate_over:
+
             measured_event_data_batch=self._sample_chunk(
                 dependentvalues=[datum[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size] for datum in data_to_iterate_over], 
                 num_samples=num_data[chunk_size*batch_idx:chunk_size*batch_idx+chunk_size],
@@ -328,12 +336,15 @@ class DiscreteLogLikelihood(object):
             
             [event_data[_meas_data_index].extend(data) for _meas_data_index, data in enumerate(measured_event_data_batch)]
             
+        print("Finished sampling")
+
         measured_event_data =  GammaObs(energy=event_data[0], 
                         lon=event_data[1], 
                         lat=event_data[2], 
                         binning_geometry=self.binning_geometry,
                         irf_loglike=self,
-                        pointing_dir=true_event_data.pointing_dirs
+                        pointing_dir=true_event_data.pointing_dirs,
+                        log_exposure=true_event_data.log_exposure
                         )
 
         return measured_event_data

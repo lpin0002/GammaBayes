@@ -251,10 +251,17 @@ class GammaLogExposure:
         return self.log_exposure_map
             
     
-    def exp_interpolator(self, energy, lon, lat, *args, pointing_dirs=None, live_time=None, **kwargs):
+    def exp_interpolator(self, energy, lon, lat, *args, pointing_dirs=None, live_times=None, **kwargs):
 
-        if not self._same_as_cached():
-            self.add_single_exposure(pointing_dir=pointing_dirs, live_time=live_time)
+        if not self._same_as_cached(pointing_dirs=pointing_dirs):
+            if np.array(pointing_dirs).size>2:
+                self.pointing_dirs = pointing_dirs
+                self.live_times = live_times
+
+                self.refresh()
+
+            else:
+                self.add_single_exposure(pointing_dir=pointing_dirs, live_times=live_times)
 
         return self._exp_interpolator((energy, lon , lat), *args, **kwargs)*self.unit
         

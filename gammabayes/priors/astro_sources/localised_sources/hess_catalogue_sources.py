@@ -49,12 +49,13 @@ def construct_hess_flux_matrix(binning_geometry:GammaBinning=None,
     hess_catalog = SourceCatalogHGPS(resources_dir+"/hgps_catalog_v1.fits.gz")
 
     hess_models = hess_catalog.to_models()
-    
+
+    centre_spatial = binning_geometry.spatial_centre
 
     energy_axis_true_nodes = MapAxis.from_nodes(binning_geometry.energy_axis, interp='log', name="energy_true")
 
     HESSgeom = WcsGeom.create(
-        skydir=SkyCoord(0, 0, unit="deg", frame='galactic'),
+        skydir=SkyCoord(centre_spatial[0], centre_spatial[1], unit="deg", frame='galactic'),
         binsz=(np.diff(binning_geometry.lon_axis)[0], np.diff(binning_geometry.lat_axis)[0],),
         width=(np.ptp(binning_geometry.lon_axis)+np.diff(binning_geometry.lon_axis)[0], 
                np.ptp(binning_geometry.lat_axis)+np.diff(binning_geometry.lat_axis)[0]),
@@ -73,18 +74,23 @@ def construct_hess_flux_matrix(binning_geometry:GammaBinning=None,
     for idx, model in enumerate(hess_models):
         
         # We will store the longitude 'l' and latitude 'b' values of the source
-        temp_l_value = model.spatial_model.position.l
-        temp_b_value = model.spatial_model.position.b
-        
+        temp_l_value = model.spatial_model.position.l.degree*u.deg
+        temp_b_value = model.spatial_model.position.b.degree*u.deg
         
         # The unit convention for the longitude works as 357, 358, 359, 0, 1, 2
             # we will make it so that it's -3, -2, -1, 0, 1, 2
         if temp_l_value>180*u.deg:
             temp_l_value=temp_l_value-360*u.deg
+
             
+
+        lon_include_condition = np.logical_and(temp_l_value<np.max(binning_geometry.lon_axis), temp_l_value>np.min(binning_geometry.lon_axis))
+        lat_include_condition = np.logical_and(temp_b_value<np.max(binning_geometry.lat_axis), temp_b_value>np.min(binning_geometry.lat_axis))
             
+
+
         # If the location of the source satisfies the criteria above then we start to store it's flux values
-        if np.abs(temp_l_value)<np.max(binning_geometry.lon_axis) and np.abs(temp_b_value)<np.max(binning_geometry.lat_axis):
+        if  lon_include_condition and lat_include_condition:
             
             # We extract the flux by assigning it to the HESSmap object
             HESSmap.quantity = model.evaluate_geom(HESSmap.geom)
@@ -153,12 +159,7 @@ class construct_hess_source_map_interpolation(object):
         map at arbitrary points within the defined axes.
         """
 
-        if binning_geometry is None:
-            self.binning_geometry = GammaBinning(energy_axis=energy_axis, lon_axis=longitudeaxis, lat_axis=latitudeaxis)
-        else:
-            self.binning_geometry = binning_geometry
-
-        
+        self.binning_geometry = binning_geometry
 
 
         log_astro_sourcemap = np.log(

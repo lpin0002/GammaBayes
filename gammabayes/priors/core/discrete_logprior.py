@@ -291,15 +291,14 @@ class DiscreteLogPrior(object):
             log_exposure = None
         
         if hasattr(self, 'pointing_dir'):
-            pointing_dir = self.pointing_dir
+            pointing_dirs = self.pointing_dirs
         else:
-            pointing_dir = None
+            pointing_dirs = None
 
         if hasattr(self, 'observation_time'):
-            observation_time = self.observation_time
+            live_times = self.live_times
         else:
-            observation_time = None
-
+            live_times = None
 
 
         return GammaObs(energy=simvals[0], 
@@ -308,8 +307,8 @@ class DiscreteLogPrior(object):
                         binning_geometry=self.binning_geometry,
                         meta={'source':self.name},
                         irf_loglike=self.irf_loglike,
-                        pointing_dir=pointing_dir,
-                        observation_time=observation_time,
+                        pointing_dirs=pointing_dirs,
+                        live_times=live_times,
                         log_exposure=log_exposure
                         )
     
@@ -343,7 +342,7 @@ class DiscreteLogPrior(object):
         if normalisation_axes is None:
             normalisation_axes = [0,1,2]
 
-
+        
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
         update_with_defaults(spatial_parameters, self.default_spatial_parameters)
 

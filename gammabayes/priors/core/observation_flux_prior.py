@@ -21,9 +21,8 @@ class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
                  default_spectral_parameters: dict = None,  
                  default_spatial_parameters: dict = None,  
                  irf_loglike=None,
-                 observation_time=None,
-                 observation_time_unit=None,
-                 pointing_dir=np.array([0., 0.])*u.deg,
+                 live_times=None,
+                 pointing_dirs=np.array([0., 0.])*u.deg,
                  *args, 
                  **kwargs,
                  ):
@@ -32,9 +31,8 @@ class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
         if default_spatial_parameters is None:
             default_spatial_parameters = {}
 
-        self.pointing_dir = pointing_dir
-        self.observation_time = observation_time
-        self.observation_time_unit = observation_time_unit
+        self.pointing_dirs = pointing_dirs
+        self.live_times = live_times
 
         self._obs_logfunction = logfunction
         self._obs_log_mesh_efficient_func = log_mesh_efficient_func
@@ -60,45 +58,44 @@ class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
         # self.log_exposure_map basically is just for possibly complicated observation time maps
         self.log_exposure_map = GammaLogExposure(binning_geometry=self.binning_geometry, 
                                                  irfs=self.irf_loglike,
-                                                 observation_time=observation_time,
-                                                 observation_time_unit=observation_time_unit,
-                                                 pointing_dir=pointing_dir)
+                                                 live_times=live_times,
+                                                 pointing_dirs=pointing_dirs)
 
         
 
     def obs_logfunction(self, energy, lon, lat, 
-                    log_exposure_map:GammaLogExposure=None, pointing_dir = None, observation_time = None, *args, **kwargs):
-        if pointing_dir is None:
-            pointing_dir = self.pointing_dir
-        if observation_time is None:
-            observation_time = self.observation_time
+                    log_exposure_map:GammaLogExposure=None, pointing_dirs = None, live_times = None, *args, **kwargs):
+        if pointing_dirs is None:
+            pointing_dirs = self.pointing_dirs
+        if live_times is None:
+            live_times = self.live_times
         
         
         
         if log_exposure_map is None:
             log_exposure_map = self.log_exposure_map
-            log_exposure_map.observation_time = observation_time
+            log_exposure_map.live_times = live_times
             
 
 
-        return self._obs_logfunction(energy, lon, lat, pointing_dir=pointing_dir, *args, **kwargs) \
-            + log_exposure_map(energy, lon, lat, pointing_dir=pointing_dir, observation_time=observation_time)
+        return self._obs_logfunction(energy, lon, lat, pointing_dir=pointing_dirs, *args, **kwargs) \
+            + log_exposure_map(energy, lon, lat, pointing_dirs=pointing_dirs, live_times=live_times)
 
     def obs_log_mesh_efficient_func(self, energy, lon, lat, 
-                                 log_exposure_map:GammaLogExposure = None, pointing_dir = None, observation_time=None, *args, **kwargs):
+                                 log_exposure_map:GammaLogExposure = None, pointing_dirs = None, observation_time=None, *args, **kwargs):
 
         if log_exposure_map is None:
             log_exposure_map = self.log_exposure_map
 
-        if pointing_dir is None:
-            pointing_dir = self.pointing_dir
+        if pointing_dirs is None:
+            pointing_dirs = self.pointing_dirs
 
 
         energy_mesh, lon_mesh, lat_mesh = np.meshgrid(energy, lon, lat, indexing='ij')
 
         # Not a fan of hitting maximum recursion depth? Me neither funnily enough
-        return self._obs_log_mesh_efficient_func(energy, lon, lat, pointing_dir=pointing_dir, *args, **kwargs) \
-            + log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten(), pointing_dir=pointing_dir, observation_time=observation_time).reshape(energy_mesh.shape)
+        return self._obs_log_mesh_efficient_func(energy, lon, lat, pointing_dir=pointing_dirs, *args, **kwargs) \
+            + log_exposure_map(energy_mesh.flatten(), lon_mesh.flatten(), lat_mesh.flatten(), pointing_dir=pointing_dirs, observation_time=observation_time).reshape(energy_mesh.shape)
 
     
             
