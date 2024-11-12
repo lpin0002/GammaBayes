@@ -707,7 +707,8 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
     def single_loglikelihood(self, 
                              recon_energy:Quantity, recon_lon:Quantity, recon_lat:Quantity, 
                              true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}, **kwargs):
+                             pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], 
+                             parameters:dict=None, edisp_parameters:dict=None, psf_parameters:dict=None, **kwargs):
         """
         Outputs the log likelihood value(s) for the given gamma-ray event datum (log of the product of 
         energy dispersion and point spread function.)
@@ -724,16 +725,24 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         Returns:
             float: Natural log of the full CTA likelihood for the given gamma-ray event data.
         """
+        if parameters is None:
+            parameters = {}
+
+        if edisp_parameters is None:
+            edisp_parameters = {}
+
+        if psf_parameters is None:
+            psf_parameters = {}
 
 
         output = self.log_edisp(recon_energy, 
                                 true_energy, true_lon, true_lat, 
-                                pointing_dir)
+                                pointing_dir, **edisp_parameters)
         
 
 
         output +=  self.log_psf(recon_lon, recon_lat, 
                                 true_energy, true_lon, true_lat, 
-                                pointing_dir)
+                                pointing_dir, **psf_parameters)
         
         return output.reshape(true_lon.shape)

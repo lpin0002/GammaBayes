@@ -235,16 +235,23 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
         for temp_axis in temp_axes:
             unit_list.append(1.)
 
+        num_edisp_params = len(self.edisp_parameter_axes_by_name)
+        num_psf_params = len(self.psf_parameter_axes_by_name)
 
-        meshvalues  = np.meshgrid(*event_vals, *temp_axes, indexing='ij')
+        meshvalues  = np.meshgrid(*event_vals, *temp_axes, *self.edisp_parameter_axes_by_name.values(), *self.psf_parameter_axes_by_name.values(), indexing='ij')
 
         index_meshes = np.ix_( *[temp_axis_info[1] for temp_axis_info in temp_axes_and_indices])
 
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix, unit in zip(meshvalues, unit_list)]
-        
-        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues, **loglike_kwargs).reshape(meshvalues[0].shape))
 
-        log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation[*index_meshes]
+        edisp_parameter_axes_by_kwarg = {key:flattened_mesh_axis for key, flattened_mesh_axis in zip(self.edisp_parameter_axes_by_name.keys(), flattened_meshvalues[6:6+num_edisp_params])}
+        psf_parameter_axes_by_kwarg = {key:flattened_mesh_axis for key, flattened_mesh_axis in zip(self.psf_parameter_axes_by_name.keys(), flattened_meshvalues[6+num_edisp_params:6+num_edisp_params+num_psf_params])}
+        
+        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues[:6], 
+                                                              edisp_parameters = edisp_parameter_axes_by_kwarg, 
+                                                              psf_parameters = psf_parameter_axes_by_kwarg, **loglike_kwargs).reshape(meshvalues[0].shape))
+
+        log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation[*index_meshes, ...]
 
         try:
             for idx, axis in enumerate(temp_axes):
@@ -262,6 +269,8 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             logintegrandvalues = (
                 np.squeeze(log_prior_matrices).T[
                     ...,
+                    *[np.newaxis]*num_psf_params,
+                    *[np.newaxis]*num_edisp_params,
                     index_meshes[2].T,
                     index_meshes[1].T,
                     index_meshes[0].T
@@ -269,6 +278,15 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             
             single_parameter_log_margvals = iterate_logspace_integration(logintegrandvalues,   
                 axes=temp_axes, axisindices=[0,1,2])
+            
+            if num_edisp_params>0:
+                single_parameter_log_margvals = iterate_logspace_integration((single_parameter_log_margvals.T+self.edisp_parameter_prior_logvalue_mesh.T).T,   
+                axes=list(self.edisp_parameter_axes_by_name.values()), axisindices=list(range(num_edisp_params)))
+
+
+            if num_psf_params>0:
+                single_parameter_log_margvals = iterate_logspace_integration( (single_parameter_log_margvals.T+self.psf_parameter_prior_logvalue_mesh.T).T,   
+                axes=list(self.psf_parameter_axes_by_name.values()), axisindices=list(range(num_psf_params)))
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 

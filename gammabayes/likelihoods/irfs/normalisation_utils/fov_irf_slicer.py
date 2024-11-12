@@ -1,5 +1,5 @@
 import numpy as np
-from gammabayes import GammaBinning
+from gammabayes import GammaBinning, ParameterSet
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from gammabayes.utils.integration import iterate_logspace_integration
 from tqdm import tqdm
@@ -18,7 +18,10 @@ class FOV_IRF_Norm:
                  irf_loglike:IRF_LogLikelihood=None, 
                  log_edisp_norm_matrix:np.ndarray=None,
                  log_psf_norm_matrix:np.ndarray=None,
-                 irf_norm_matrix:np.ndarray=None):
+                 irf_norm_matrix:np.ndarray=None,
+                 edisp_parameters:ParameterSet=None,
+                 psf_parameters:ParameterSet=None,
+                 ):
         """Assumes linear spatial binning. Energy binning doesn't matter for this class as it isn't impacted."""
         self.observation_time=observation_time
         self.true_binning_geometry = true_binning_geometry
@@ -28,6 +31,11 @@ class FOV_IRF_Norm:
         self.irf_loglike = irf_loglike
         self.pointing_dir = new_pointing
 
+        self.edisp_parameters          = ParameterSet(edisp_parameters)
+        self.psf_parameters          = ParameterSet(psf_parameters)
+
+
+        self._setup_irf_parameter_sets()
 
         if not(any(np.array_equal(self.pointing_dir, arr) for arr in list(self.pointing_dirs))):
             self.pointing_dirs.append(self.pointing_dir)
@@ -80,6 +88,18 @@ class FOV_IRF_Norm:
         self.refresh()
 
 
+    def _setup_irf_parameter_sets(self):
+
+        self.edisp_parameter_axes_by_name = {parameter.name:parameter.axis for parameter in self.edisp_parameters._dict_of_parameters_by_name.values()}
+        self.psf_parameter_axes_by_name = {parameter.name:parameter.axis for parameter in self.psf_parameters._dict_of_parameters_by_name.values()}
+
+        self.num_edisp_parameters = len(self.edisp_parameter_axes_by_name)
+        self.num_psf_parameters = len(self.psf_parameter_axes_by_name)
+
+        self.edisp_axes_dims = [len(axis) for axis in self.edisp_parameter_axes_by_name.values()]
+        self.psf_axes_dims = [len(axis) for axis in self.psf_parameter_axes_by_name.values()]
+
+
 
 
     def refresh(self, pointing_dir=None):
@@ -88,6 +108,7 @@ class FOV_IRF_Norm:
         if pointing_dir is not None:
             self.pointing_dir = pointing_dir
 
+        self._setup_irf_parameter_sets()
 
         self.left_longitude_buffer, self.right_longitude_buffer, self.lower_latitude_buffer, self.upper_latitude_buffer = self._define_buffers()
 
@@ -116,11 +137,11 @@ class FOV_IRF_Norm:
 
 
         if not(self.use_irf_norm_matrix):
-            self.buffered_log_edisp_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
-            self.buffered_log_psf_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
+            self.buffered_log_edisp_norm = np.full(fill_value=np.nan, shape=(*self.buffered_true_binning_geometry.axes_dim, *self.edisp_axes_dims))
+            self.buffered_log_psf_norm = np.full(fill_value=np.nan, shape=(*self.buffered_true_binning_geometry.axes_dim, *self.psf_axes_dims))
             if not self.empty_input:
-                self.buffered_log_psf_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val] = self.original_log_psf_norm_matrix
-                self.buffered_log_edisp_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val] = self.original_log_edisp_norm_matrix
+                self.buffered_log_psf_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val, ...] = self.original_log_psf_norm_matrix
+                self.buffered_log_edisp_norm[:, left_true_buffer_indices:right_buffer_slice_val, lower_true_buffer_indices:upper_buffer_slice_val, ...] = self.original_log_edisp_norm_matrix
             
         else:
             self.buffered_log_irf_norm = np.full(fill_value=np.nan, shape=self.buffered_true_binning_geometry.axes_dim)
@@ -144,7 +165,7 @@ class FOV_IRF_Norm:
         self.irf_loglike.pointing = self.original_norm_matrix_pointing_dir
 
 
-        for energy_slice_idx, nan_index_energy_slice in tqdm(enumerate(isnan_boolean_matrix), desc="Filling in buffer", total=len(isnan_boolean_matrix)):
+        for energy_slice_idx, nan_index_energy_slice in tqdm(enumerate(isnan_boolean_matrix[:, :, :, *[0]*self.num_edisp_parameters]), desc="Filling in buffer", total=len(isnan_boolean_matrix)):
 
             true_energy_val = self.buffered_true_binning_geometry.energy_axis[energy_slice_idx]
 
@@ -153,9 +174,11 @@ class FOV_IRF_Norm:
 
                 sliced_spatial_meshes = [spatial_mesh[nan_index_energy_slice].reshape(nan_index_energy_slice.shape) for spatial_mesh in unfiltered_spatial_meshes]
 
-                normed_edisp_values = self._edisp_normalisation(self.recon_binning_geometry, true_energy_val, *sliced_spatial_meshes)
+                normed_edisp_values = self._edisp_normalisation(self.recon_binning_geometry, true_energy_val, *sliced_spatial_meshes, edisp_parameter_axes=self.edisp_parameter_axes_by_name)
 
-                self.buffered_log_edisp_norm[energy_slice_idx, nan_index_energy_slice] = normed_edisp_values.flatten()
+                reshaped_normed_edisp_values = normed_edisp_values.squeeze().reshape((-1, *self.edisp_axes_dims))
+                
+                self.buffered_log_edisp_norm[energy_slice_idx, nan_index_energy_slice, ...] = reshaped_normed_edisp_values
 
             for lon_slice_idx, nan_index_energy_lon_slice in enumerate(nan_index_energy_slice):
 
@@ -166,9 +189,9 @@ class FOV_IRF_Norm:
 
                     true_lat_vals = self.buffered_true_binning_geometry.lat_axis[nan_index_energy_lon_slice]
                     
-                    normed_psf_values = self._psf_normalisation(self.recon_binning_geometry,  true_energy_val, true_lon_val, true_lat_vals,)
+                    normed_psf_values = self._psf_normalisation(self.recon_binning_geometry,  true_energy_val, true_lon_val, true_lat_vals, psf_parameter_axes=self.psf_parameter_axes_by_name)
 
-                    self.buffered_log_psf_norm[energy_slice_idx, lon_slice_idx, nan_index_energy_lon_slice]   = normed_psf_values
+                    self.buffered_log_psf_norm[energy_slice_idx, lon_slice_idx, nan_index_energy_lon_slice, ...]   = normed_psf_values
 
 
                 else:
@@ -188,13 +211,23 @@ class FOV_IRF_Norm:
 
 
 
-    def _edisp_normalisation(self, recon_binning_geometry, true_energy_val, true_lon_mesh_vals, true_lat_mesh_vals):
+    def _edisp_normalisation(self, recon_binning_geometry, true_energy_val, true_lon_mesh_vals, true_lat_mesh_vals, edisp_parameter_axes=None):
+        if edisp_parameter_axes is None:
+            edisp_parameter_axes = {}
+
+
         
         recon_energy_vals = recon_binning_geometry.energy_axis
 
-        recon_energy_mesh, true_energy_axis_mesh, true_lon_axis_mesh = np.meshgrid(recon_energy_vals, true_energy_val, true_lon_mesh_vals.flatten(), indexing='ij')
+        recon_energy_mesh, true_energy_axis_mesh, true_lon_axis_mesh, *edisp_parameter_axes_meshes = np.meshgrid(recon_energy_vals, 
+                                                                                   true_energy_val, true_lon_mesh_vals.flatten(), 
+                                                                                   *edisp_parameter_axes.values(), indexing='ij')
 
-        true_lat_axis_mesh = np.broadcast_to(true_lat_mesh_vals.flatten()[np.newaxis, np.newaxis, :], recon_energy_mesh.shape)
+
+        edisp_parameter_axes_meshes_flattened = {kwd:parameter_axis_mesh.flatten() for kwd, parameter_axis_mesh in zip(edisp_parameter_axes.keys(), edisp_parameter_axes_meshes)}
+
+        true_lat_axis_mesh = np.broadcast_to(true_lat_mesh_vals.flatten()[np.newaxis, np.newaxis, :, *[np.newaxis]*len(edisp_parameter_axes_meshes)], recon_energy_mesh.shape)
+
 
         if not(hasattr(true_lat_axis_mesh, 'unit')):
             if hasattr(true_lat_mesh_vals, 'unit'):
@@ -208,22 +241,31 @@ class FOV_IRF_Norm:
                 true_energy=true_energy_axis_mesh.flatten(),  
                 true_lon=true_lon_axis_mesh.flatten(),  
                 true_lat=true_lat_axis_mesh.flatten(),
+                **edisp_parameter_axes_meshes_flattened
                 ).reshape(recon_energy_mesh.shape)
         
         normed_edisp_values = iterate_logspace_integration(
             logy=np.squeeze(log_edisp_values), 
             axes=(recon_energy_vals.value,), 
-            axisindices=[0,]).reshape(true_lon_mesh_vals.shape)
+            axisindices=[0,]).reshape((*true_lon_mesh_vals.shape, *self.edisp_axes_dims))
         
         return normed_edisp_values
     
 
 
-    def _psf_normalisation(self, recon_binning_geometry, true_energy_val, true_lon_val, true_lat_vals,):
+    def _psf_normalisation(self, recon_binning_geometry, true_energy_val, true_lon_val, true_lat_vals, psf_parameter_axes=None):
+        if psf_parameter_axes is None:
+            psf_parameter_axes = {}
+
+
+
         recon_lon_vals = recon_binning_geometry.lon_axis
         recon_lat_vals = recon_binning_geometry.lat_axis
 
-        recon_lon_mesh,recon_lat_mesh, true_energy_mesh, true_lon_mesh, true_lat_mesh = np.meshgrid(recon_lon_vals, recon_lat_vals, true_energy_val, true_lon_val, true_lat_vals, indexing='ij')
+        recon_lon_mesh,recon_lat_mesh, true_energy_mesh, true_lon_mesh, true_lat_mesh, *psf_parameter_axes_meshes = np.meshgrid(
+            recon_lon_vals, recon_lat_vals, true_energy_val, true_lon_val, true_lat_vals, *psf_parameter_axes.values(), indexing='ij')
+
+        psf_parameter_axes_meshes_flattened_dict = {kwd:parameter_axis_mesh.flatten() for kwd, parameter_axis_mesh in zip(psf_parameter_axes.keys(), psf_parameter_axes_meshes)}
 
 
         log_psf_values = self.irf_loglike.log_psf(
@@ -232,12 +274,14 @@ class FOV_IRF_Norm:
                 true_energy=true_energy_mesh.flatten(),  
                 true_lon=true_lon_mesh.flatten(),  
                 true_lat=true_lat_mesh.flatten(),
+                **psf_parameter_axes_meshes_flattened_dict,
                 ).reshape(recon_lon_mesh.shape)
         
         normed_psf_values = iterate_logspace_integration(
             logy=np.squeeze(log_psf_values), 
             axes=(recon_lon_vals.value, recon_lat_vals.value,), 
-            axisindices=[0,1])
+            axisindices=[0,1]).reshape((*true_lat_vals.shape, *self.psf_axes_dims))
+        
         
         return normed_psf_values
 
@@ -473,22 +517,23 @@ class FOV_IRF_Norm:
     def __getitem__(self, indices):
 
         if not self.use_irf_norm_matrix:
-            return self.buffered_log_edisp_norm[self.buffer_window][indices] + self.buffered_log_psf_norm[self.buffer_window][indices]
+            return (self.buffered_log_edisp_norm[*self.buffer_window, ..., *[np.newaxis]*self.num_psf_parameters] \
+                + self.buffered_log_psf_norm[*self.buffer_window, *[np.newaxis]*self.num_edisp_parameters, ...])[indices]
         else:
             return self.buffered_log_irf_norm[self.buffer_window][indices]
         
 
     def __add__(self, other):
         if not self.use_irf_norm_matrix:
-            return (self.buffered_log_edisp_norm[self.buffer_window] +
-                    self.buffered_log_psf_norm[self.buffer_window]) + other
+            return (self.buffered_log_edisp_norm[*self.buffer_window, ..., *[np.newaxis]*self.num_psf_parameters] +
+                    self.buffered_log_psf_norm[*self.buffer_window, *[np.newaxis]*self.num_edisp_parameters, ...]) + other
         else:
             return self.buffered_log_irf_norm[self.buffer_window] + other
 
     def __sub__(self, other):
         if not self.use_irf_norm_matrix:
-            return (self.buffered_log_edisp_norm[self.buffer_window] +
-                    self.buffered_log_psf_norm[self.buffer_window]) - other
+            return (self.buffered_log_edisp_norm[*self.buffer_window, ..., *[np.newaxis]*self.num_psf_parameters] +
+                    self.buffered_log_psf_norm[*self.buffer_window, *[np.newaxis]*self.num_edisp_parameters, ...]) - other
         else:
             return self.buffered_log_irf_norm[self.buffer_window] - other
 
@@ -498,8 +543,8 @@ class FOV_IRF_Norm:
 
     def __rsub__(self, other):
         if not self.use_irf_norm_matrix:
-            return other - (self.buffered_log_edisp_norm[self.buffer_window] +
-                            self.buffered_log_psf_norm[self.buffer_window])
+            return other - (self.buffered_log_edisp_norm[*self.buffer_window, ..., *[np.newaxis]*self.num_psf_parameters] +
+                            self.buffered_log_psf_norm[*self.buffer_window, *[np.newaxis]*self.num_edisp_parameters, ...])
         else:
             return other - self.buffered_log_irf_norm[self.buffer_window]
         
@@ -507,8 +552,8 @@ class FOV_IRF_Norm:
 
     def __array__(self, dtype=None):
         if not self.use_irf_norm_matrix:
-            result = self.buffered_log_edisp_norm[self.buffer_window] + \
-                     self.buffered_log_psf_norm[self.buffer_window]
+            result = self.buffered_log_edisp_norm[*self.buffer_window, ..., *[np.newaxis]*self.num_psf_parameters] + \
+                     self.buffered_log_psf_norm[*self.buffer_window, *[np.newaxis]*self.num_edisp_parameters, ...]
         else:
             result = self.buffered_log_irf_norm[self.buffer_window]
         

@@ -91,7 +91,8 @@ class DiscreteBruteScan(object):
                  axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
                  nuisance_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  prior_parameter_specifications: dict | list[ParameterSet] | dict[ParameterSet] = {}, 
-                 log_likelihood_parameters: ParameterSet=None,
+                 edisp_parameters: ParameterSet=None,
+                 psf_parameters: ParameterSet=None,
                  log_nuisance_marg_results: np.ndarray | None = None, 
                  mixture_parameter_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
                  log_hyperparameter_likelihood: np.ndarray | float = 0., 
@@ -159,6 +160,11 @@ class DiscreteBruteScan(object):
                 parameter for log marginalisation, should not change normalisation
                 of final result but will minimise effects of numerical instability. Defaults to None.
         """
+        if edisp_parameters is None:
+            edisp_parameters = {}
+
+        if psf_parameters is None:
+            psf_parameters = {}
 
         
         self.log_priors             = log_priors
@@ -204,11 +210,6 @@ class DiscreteBruteScan(object):
         # Currently required as the normalisation of the IRFs isn't natively consistent
         self.log_likelihoodnormalisation            = np.asarray(log_likelihoodnormalisation)
 
-        if self.log_likelihoodnormalisation.shape[:3] != self.nuisance_binning_geomtry.axes_dim:
-            if self.log_likelihoodnormalisation.shape==():
-                self.log_likelihoodnormalisation = self.log_likelihoodnormalisation*np.ones(shape=self.nuisance_binning_geomtry.axes_dim)
-            else:
-                raise ValueError("log_likelihoodnormalisation's shape/size cannot be matched to the dimensions of the nuisance axes provided.")
 
         # Log-space integrator for multiple dimensions (kind of inefficient at the moment)
         self.iterative_logspace_integrator      = iterative_logspace_integrator
@@ -220,9 +221,34 @@ class DiscreteBruteScan(object):
         # ParameterSpecification
         self.mixture_parameter_specifications   = ParameterSet(mixture_parameter_specifications)
 
-        self.log_likelihood_parameters          = ParameterSet(log_likelihood_parameters)
+        self.edisp_parameters          = ParameterSet(edisp_parameters)
+        self.psf_parameters          = ParameterSet(psf_parameters)
 
-        self.log_likelihood_parameter_axes_by_name = {key:value.axis for key, value in self.log_likelihood_parameters._dict_of_parameters_by_name.items()}
+        self.edisp_parameter_axes_by_name = {parameter.name:parameter.axis for parameter in self.edisp_parameters._dict_of_parameters_by_name.values()}
+        self.psf_parameter_axes_by_name = {parameter.name:parameter.axis for parameter in self.psf_parameters._dict_of_parameters_by_name.values()}
+
+        if len(edisp_parameters)>0:
+            self.edisp_parameter_prior_logvalue_axes_by_name = {parameter.name:parameter.logpdf(parameter.axis) for parameter in self.edisp_parameters._dict_of_parameters_by_name.values()}
+            self.edisp_parameter_prior_logvalue_mesh = np.sum(np.meshgrid(*self.edisp_parameter_prior_logvalue_axes_by_name.values(), indexing='ij'), axis=0)
+
+        if len(psf_parameters)>0:
+            self.psf_parameter_prior_logvalue_axes_by_name = {parameter.name:parameter.logpdf(parameter.axis) for parameter in self.psf_parameters._dict_of_parameters_by_name.values()}
+            self.psf_parameter_prior_logvalue_mesh = np.sum(np.meshgrid(*self.psf_parameter_prior_logvalue_axes_by_name.values(), indexing='ij'), axis=0)
+
+        self.edisp_axes_dims = [len(axis) for axis in self.edisp_parameter_axes_by_name.values()]
+        self.psf_axes_dims = [len(axis) for axis in self.psf_parameter_axes_by_name.values()]
+
+
+
+
+
+
+        if self.log_likelihoodnormalisation.shape[:3] != self.nuisance_binning_geomtry.axes_dim:
+            if self.log_likelihoodnormalisation.shape==():
+                self.log_likelihoodnormalisation = self.log_likelihoodnormalisation*np.ones(shape=(*self.nuisance_binning_geomtry.axes_dim, *self.edisp_axes_dims, *self.psf_axes_dims))
+            else:
+                raise ValueError("log_likelihoodnormalisation's shape/size cannot be matched to the dimensions of the nuisance axes provided.")
+        
 
         # Used as regularisation to avoid
         self.log_marginalisation_regularisation = log_marginalisation_regularisation
@@ -286,8 +312,6 @@ class DiscreteBruteScan(object):
         if loglike_kwargs is None:
             loglike_kwargs = {}
 
-        
-        
 
         meshvalues  = np.meshgrid(*event_vals, *self.nuisance_axes, indexing='ij')
 
