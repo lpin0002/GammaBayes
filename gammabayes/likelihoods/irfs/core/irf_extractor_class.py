@@ -133,8 +133,8 @@ class IRFExtractor(object):
         
         self.extracted_default_irfs = {method: getattr(obs, method) for method in obs.available_irfs}
 
-        
-        
+
+
 
 
 
@@ -171,7 +171,7 @@ class IRFExtractor(object):
         
     def log_edisp(self, recon_energy:Quantity, 
                   true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
-                  pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}):
+                  pointing_dir:list[Quantity]=[0*u.deg,0*u.deg], parameters:dict={}, migration_cut=100):
         """
         Wrapper for the Gammapy interpretation of the CTA energy dispersion function.
 
@@ -189,9 +189,13 @@ class IRFExtractor(object):
 
         offset = haversine(true_lon, true_lat, pointing_dir[0], pointing_dir[1])
 
-        edisp_val = self.edisp_default.evaluate(energy_true=true_energy,
-                                                        migra = recon_energy/true_energy, 
-                                                        offset=offset)
+        migration = recon_energy/true_energy
+
+
+
+        edisp_val = np.where(np.logical_and(migration<migration_cut, migration>1/migration_cut), self.edisp_default.evaluate(energy_true=true_energy,
+                                                        migra = migration, 
+                                                        offset=offset), 0)
 
         adjusted_edisp_val = edisp_val/(true_energy.unit)
 
@@ -227,9 +231,8 @@ class IRFExtractor(object):
 
         offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_dir[0], pointing_dir[1]).flatten()
 
-        output = np.log(self.psf_default.evaluate(energy_true=true_energy,
-                                                        rad = rad, 
-                                                        offset=offset).to(self.psf_units).value)
+        output = np.log(self.psf_default.evaluate(energy_true=true_energy, rad = rad, 
+                                                  offset=offset).to(self.psf_units).value)
                 
         return output
 

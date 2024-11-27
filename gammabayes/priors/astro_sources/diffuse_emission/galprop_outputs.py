@@ -97,17 +97,13 @@ Medium (the default) should take up about 130MB of disk space while High takes u
     # Checking to see if the axes are about the Galactic Centre. 
     #   If the bounds of the longitude axis multiply to something negative then they must be different signs
     #   (lower bound negative and upper bound positive)
+    longitude_indices = np.arange(len(lon_axis_1))
+
+    longitude_mask = np.append(longitude_indices[lon_axis_1>180], longitude_indices[lon_axis_1<=180])
+
+    new_longitude_axis = lon_axis_1[lon_axis_1>180]-360
+    new_longitude_axis = np.append(new_longitude_axis, lon_axis_1[lon_axis_1<=180])
     
-    if true_binning_geometry.lon_axis[0].value*true_binning_geometry.lon_axis[-1].value<0:
-        longitude_indices = np.arange(len(lon_axis_1))
-        longitude_mask = np.append(longitude_indices[lon_axis_1>180], longitude_indices[lon_axis_1<=180])
-
-        new_longitude_axis = lon_axis_1[lon_axis_1>180]-360
-        new_longitude_axis = np.append(new_longitude_axis, lon_axis_1[lon_axis_1<=180])
-    else:
-        new_longitude_axis = lon_axis_1
-        longitude_mask = longitude_indices
-
 
 
 

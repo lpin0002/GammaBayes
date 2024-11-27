@@ -15,6 +15,7 @@ from gammabayes.priors import DiscreteLogPrior
 from multiprocessing.pool import ThreadPool as Pool
 import os, warnings, logging, time, h5py, pickle
 
+from icecream import ic
 
 class DiscreteBruteScan(object):
     """
@@ -588,7 +589,6 @@ class before the multiprocessing or make sure that it isn't part of the actual
             obs_meta = measured_event_data.obs_meta
         except:
             obs_meta = [None]*len(measured_event_data[0])
-
 
         marg_results = [self.observation_nuisance_marg(
             log_prior_matrix_list=self.log_prior_matrix_list, 

@@ -12,7 +12,7 @@ class EnergySpatialTemplateInterpolator:
                  spectral_parameter_axes:dict = None, spatial_parameter_axes:dict = None, 
                  axis_index_to_parameter_map:dict = None,
                  interpolation_method:str = 'linear',
-                 bounds_error:bool = True, fill_value:float = np.nan):
+                 bounds_error:bool = False, fill_value:float = 0):
         
         if spectral_parameter_axes is None:
             spectral_parameter_axes = {}

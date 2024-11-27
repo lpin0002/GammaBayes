@@ -21,6 +21,7 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
                  aeff_units: u.Unit = u.m**2,
                  CCR_BKG_units: u.Unit = (1/(u.deg**2*u.TeV*u.s)).unit,
                  custom_irfs: dict=None,
+                 migration_cut: float= 5,
                  *args, **kwargs):
         """_summary_
 
@@ -78,6 +79,11 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         )
         self.pointing_dir = pointing_dir
         self.observation_time = observation_time
+        self.migration_cut = migration_cut
+
+        self.use_migration_cut = False
+        if self.migration_cut is not None:
+            self.use_migration_cut = True
 
 
         try:
@@ -138,8 +144,11 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
         if pointing_dir is None:
             pointing_dir = self.pointing_dir
 
+        if 'migration_cut' not in kwargs and self.use_migration_cut:
+            kwargs["migration_cut"] = self.migration_cut
 
-        return self.irf_loglikelihood.log_edisp(recon_energy, true_energy, true_lon, true_lat, pointing_dir=pointing_dir, **kwargs, )
+
+        return self.irf_loglikelihood.log_edisp(recon_energy, true_energy, true_lon, true_lat, pointing_dir=pointing_dir, **kwargs,)
     
     def log_psf(self, recon_lon, recon_lat, true_energy, true_lon, true_lat, pointing_dir=None, **kwargs):
         """
@@ -733,6 +742,9 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
 
         if psf_parameters is None:
             psf_parameters = {}
+
+        if 'migration_cut' not in edisp_parameters and self.use_migration_cut:
+            kwargs["migration_cut"] = self.migration_cut
 
 
         output = self.log_edisp(recon_energy, 

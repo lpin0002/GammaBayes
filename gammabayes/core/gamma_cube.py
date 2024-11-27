@@ -71,18 +71,20 @@ class GammaObs:
             self.name = name
 
 
-        if len(self.energy)>0:
+        if len(self.energy)>0 and not(self.irf_loglike=={}):
             self.log_exposure = GammaLogExposure(binning_geometry=self.binning_geometry,
                                             log_exposure_map=log_exposure,
                                             irfs=self.irf_loglike,
                                             pointing_dirs=self.unique_pointing_dir_data,
                                             live_times=self.unique_pointing_live_times)
-        else:
+        elif not(self.irf_loglike=={}):
             self.log_exposure = GammaLogExposure(binning_geometry=self.binning_geometry,
                                             log_exposure_map=log_exposure,
                                             irfs=self.irf_loglike,
                                             pointing_dirs=[],
                                             live_times=[])
+        else:
+            self.log_exposure = None
             
             
         if len(self.energy):
@@ -441,7 +443,12 @@ it is assumed that the binning geometries are the same.""")
         new_live_times      = list(self.live_times) + list(other.live_times)
 
         try:
-            new_log_exposure = self.log_exposure+other.log_exposure
+            if self.log_exposure is None:
+                new_log_exposure = other.log_exposure
+            elif other.log_exposure is None:
+                new_log_exposure = self.log_exposure
+            else:
+                new_log_exposure = self.log_exposure+other.log_exposure
         except:
             new_log_exposure = np.logaddexp(self.log_exposure.log_exposure_map, 
                                             other.log_exposure.log_exposure_map)

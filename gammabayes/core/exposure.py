@@ -75,7 +75,8 @@ class GammaLogExposure:
 
             if not(log_exposure_map is None):
                 self.log_exposure_map = log_exposure_map
-                self._exp_interpolator = RegularGridInterpolator(self.binning_geometry.axes, np.exp(self.log_exposure_map))
+                self._exp_interpolator = RegularGridInterpolator(self.binning_geometry.axes, np.exp(self.log_exposure_map), 
+                                                                 bounds_error=False, fill_value=0)
             else:
                 self.refresh()
 
@@ -216,7 +217,7 @@ class GammaLogExposure:
         self.log_exposure_map = log_exposure_vals
 
         # Have to interpolate exposure not log_exposure due to possible -inf values
-        self._exp_interpolator = RegularGridInterpolator(self.binning_geometry.axes, np.exp(self.log_exposure_map))
+        self._exp_interpolator = RegularGridInterpolator(self.binning_geometry.axes, np.exp(self.log_exposure_map), bounds_error=False, fill_value=0)
 
         self._reset_cache()
         

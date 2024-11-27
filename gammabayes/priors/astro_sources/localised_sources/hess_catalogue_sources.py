@@ -169,7 +169,8 @@ class construct_hess_source_map_interpolation(object):
         # Have to interpolate actual probabilities as otherwise these maps include -inf
         self.hess_grid_interpolator = interpolate.RegularGridInterpolator(
             (*self.binning_geometry.axes,), 
-            np.exp(log_astro_sourcemap))
+            np.exp(log_astro_sourcemap),
+            bounds_error=False, fill_value=0)
 
     # Then we make a wrapper to put the result of the function in log space
     def log_func(self, energy, longitude, latitude, 
