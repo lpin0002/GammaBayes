@@ -1,5 +1,5 @@
 from .general_mixture_sampling_nuisance_scan_output import ScanOutput_StochasticTreeMixturePosterior
-
+from .intrinsic_scatter_mixture_sampling_nuisance_scan_output import ScanOutput_IntrinsicScatterMixturePosterior
 
 
 from .discrete_brute_scan_hyperparameter_likelihood import DiscreteBruteScan

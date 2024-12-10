@@ -185,7 +185,9 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
         return unitcube
     
-    def ln_likelihood(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
+
+    
+    def single_event_loglike(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
         """
         Calculates the log likelihood of the given inputs.
 
@@ -254,10 +256,11 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
             ln_like = np.logaddexp(ln_like, np.squeeze(ln_component))
 
+        return ln_like
+    
+    def ln_likelihood(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
 
-        result = np.dot(ln_like, self.event_weights)
-
-        return result
+        return np.dot(self.single_event_loglike(inputs=inputs, log_nuisance_marg_results=log_nuisance_marg_results), self.event_weights)
 
 
 
