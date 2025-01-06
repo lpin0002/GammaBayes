@@ -1,10 +1,29 @@
-from scipy import integrate, special, interpolate, stats
-import numpy as np
+
+
+try:
+    from jax import numpy as np
+    from jax import jit
+    from jax.numpy import interp
+    from gammabayes.utils.interpolation import JAX_RegularGrid_Linear_Interpolator as RegularGridInterpolator
+    from jax.scipy.integrate import trapezoid as simps
+
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+    from scipy.interpolate import RegularGridInterpolator
+    from numpy import interp
+    from scipy.integrate import simps
+from numpy import ndarray
+import numpy
+from scipy.integrate import cumtrapz
+
+
+
+
 import random, time, pickle
 from tqdm import tqdm
 from scipy.stats import norm as norm1d
 import yaml, warnings, sys, os
-from scipy.interpolate import RegularGridInterpolator
 from astropy import units as u
 from astropy.units import Quantity
 from os import path
@@ -23,10 +42,11 @@ def update_with_defaults(target_dict, default_dict):
         target_dict.setdefault(key, value)
 
 
+@jit
 def haversine(lon1, lat1, lon2, lat2):
     """
     Calculates the distance between two points on a sphere specified by longitude and latitude using the 
-    Haversine formula.
+    Haversine formula and returns the separation in degrees.
 
     Args:
         lon1 (Quantity): Longitude of the first point.
@@ -38,10 +58,12 @@ def haversine(lon1, lat1, lon2, lat2):
         Quantity: Angular separation between the two points in degrees.
     """
     # Convert degrees to radians
-    lon1 = lon1.to(u.rad)
-    lat1 = lat1.to(u.rad)
-    lon2 = lon2.to(u.rad)
-    lat2 = lat2.to(u.rad)
+
+    lon1 = lon1*np.pi/180
+    lat1 = lat1*np.pi/180
+
+    lon2 = lon2*numpy.pi/180
+    lat2 = lat2*numpy.pi/180
 
 
     # Haversine formula
@@ -50,37 +72,37 @@ def haversine(lon1, lat1, lon2, lat2):
     a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
     angular_separation_rad = 2 * np.arcsin(np.sqrt(a))
 
-    return angular_separation_rad.to(u.deg)
+    return angular_separation_rad*180/numpy.pi
 
 
-def hdp_credible_interval_1d(y: np.ndarray, sigma: np.ndarray|list, x: np.ndarray) -> list[float, float]|list[float]:
+def hdp_credible_interval_1d(y: ndarray, sigma: ndarray|list, x: ndarray) -> list[float, float]|list[float]:
     """
     Computes the highest density posterior credible interval for a 1D distribution.
 
     Args:
-        y (np.ndarray): Probability density function values.
-        sigma (np.ndarray | list): Standard deviation for credible interval calculation.
-        x (np.ndarray): Points at which the pdf is evaluated.
+        y (ndarray): Probability density function values.
+        sigma (ndarray | list): Standard deviation for credible interval calculation.
+        x (ndarray): Points at which the pdf is evaluated.
 
     Returns:
         list[float, float] | list[float]: Credible interval or a single point for sigma=0.
     """
-    y = y/integrate.simps(y=y, x=x)
+    y = y/simps(y=y, x=x)
     levels = np.linspace(0, y.max(),1000)
 
-    areas = integrate.simps(y= (y>=levels[:, None])*y, x=x, axis=1)
+    areas = simps(y= (y>=levels[:, None])*y, x=x, axis=1)
 
-    interpolator = interpolate.interp1d(y=levels, x=areas)
+    # interpolator = interp1d(y=levels, x=areas)
     if sigma!=0:
         prob_val = norm1d.cdf(sigma)-norm1d.cdf(-sigma)
 
-        level = interpolator(prob_val)
+        level = interp(prob_val, xp=areas, fp=levels)
 
         prob_array_indices = np.where(y>=level)
 
-        return x[prob_array_indices[0][0]],x[prob_array_indices[0][-1]]
+        return np.array([x[prob_array_indices[0][0]],x[prob_array_indices[0][-1]]])
     else:
-        cdf = integrate.cumtrapz(y=y, x=x)
+        cdf = cumtrapz(y=y, x=x)
 
         probval = norm1d.cdf(sigma)
 
@@ -181,7 +203,7 @@ def extract_axes(axes_config):
         depth (int): The depth of the stick-breaking process.
 
     Returns:
-        np.ndarray | float: Resulting mixture component.
+        ndarray | float: Resulting mixture component.
     """
     axes = {}
 
@@ -194,7 +216,7 @@ def extract_axes(axes_config):
 
 
 def apply_dirichlet_stick_breaking_direct(mixtures_fractions: list | tuple, 
-                                            depth: int) -> np.ndarray | float:
+                                            depth: int) -> ndarray | float:
     """_summary_
 
     Args:
@@ -202,7 +224,7 @@ def apply_dirichlet_stick_breaking_direct(mixtures_fractions: list | tuple,
         depth (int): _description_
 
     Returns:
-        np.ndarray | float: _description_
+        ndarray | float: _description_
     """
 
     dirichletmesh = 1
@@ -219,7 +241,7 @@ def apply_dirichlet_stick_breaking_direct(mixtures_fractions: list | tuple,
 
 
 
-def bound_axis(axis: np.ndarray, 
+def bound_axis(axis: ndarray, 
                 bound_type: str, 
                 bound_radii: u.Quantity, 
                 estimated_val: u.Quantity):
@@ -227,7 +249,7 @@ def bound_axis(axis: np.ndarray,
     Bounds an axis within specified radii around an estimated value.
 
     Args:
-        axis (np.ndarray): Axis values.
+        axis (ndarray): Axis values.
         bound_type (str): Type of bounding ('linear' or 'log10').
         bound_radii (float): Bounding radii.
         estimated_val (float): Estimated value around which to bound.
@@ -235,17 +257,17 @@ def bound_axis(axis: np.ndarray,
     Returns:
         tuple: Bounded axis and indices.
     """
-    axis_unit = axis.unit
-    axis = axis.value
+    # axis_unit = axis.unit
+    # axis = axis.value
 
-    bound_radii = bound_radii.to(axis_unit)
+    # bound_radii = bound_radii.to(axis_unit)
 
-    bound_radii = bound_radii.value
+    # bound_radii = bound_radii.value
 
 
-    estimated_val = estimated_val.to(axis_unit)
+    # estimated_val = estimated_val.to(axis_unit)
 
-    estimated_val = estimated_val.value
+    # estimated_val = estimated_val.value
 
 
 
@@ -257,22 +279,22 @@ def bound_axis(axis: np.ndarray,
         axis_indices = np.where(
         (np.log10(axis)>np.log10(estimated_val)-bound_radii) & (np.log10(axis)<np.log10(estimated_val)+bound_radii) )[0]
         
-    temp_axis = axis[axis_indices]*axis_unit
+    temp_axis = axis[axis_indices]
 
     return temp_axis, axis_indices
 
 
 
 
-def bin_centres_to_edges(axis: np.ndarray) -> np.ndarray:
+def bin_centres_to_edges(axis: ndarray) -> ndarray:
     """
     Converts bin centers to bin edges for a given axis.
 
     Args:
-        axis (np.ndarray): Bin centers.
+        axis (ndarray): Bin centers.
 
     Returns:
-        np.ndarray: Bin edges.
+        ndarray: Bin edges.
     """
     return np.append(axis-np.diff(axis)[0]/2, axis[-1]+np.diff(axis)[0]/2)
 

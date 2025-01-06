@@ -5,7 +5,14 @@ from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 from gammabayes.priors.core import DiscreteLogPrior, SourceFluxDiscreteLogPrior
 
 
-import numpy as np, logging
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+import numpy
+
+import logging
 from scipy import interpolate
 from scipy.special import logsumexp
 from astropy.coordinates import SkyCoord
@@ -24,19 +31,19 @@ hess_obs_rate_units = 1/u.TeV/u.deg**2
 
 
 def construct_hess_flux_matrix(binning_geometry:GammaBinning=None,
-        energy_axis: np.ndarray=None, longitudeaxis: np.ndarray=None, latitudeaxis: np.ndarray=None,):
+        energy_axis: ndarray=None, longitudeaxis: ndarray=None, latitudeaxis: ndarray=None,):
     """
     Constructs a map of HESS source fluxes based on the HGPS catalog.
 
     Args:
-        energy_axis (np.ndarray): Energy axis for the map (TeV).
-        longitudeaxis (np.ndarray): Longitude axis for the map (degrees).
-        latitudeaxis (np.ndarray): Latitude axis for the map (degrees).
+        energy_axis (ndarray): Energy axis for the map (TeV).
+        longitudeaxis (ndarray): Longitude axis for the map (degrees).
+        latitudeaxis (ndarray): Latitude axis for the map (degrees).
         log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
         aeff_unit (optional): Units for effective area function.
 
     Returns:
-        np.ndarray: A 3D array representing the event rate from HESS catalog sources over the specified energy,
+        ndarray: A 3D array representing the event rate from HESS catalog sources over the specified energy,
                     longitude, and latitude axes.
     """
 
@@ -52,7 +59,7 @@ def construct_hess_flux_matrix(binning_geometry:GammaBinning=None,
 
     centre_spatial = binning_geometry.spatial_centre
 
-    energy_axis_true_nodes = MapAxis.from_nodes(binning_geometry.energy_axis, interp='log', name="energy_true")
+    energy_axis_true_nodes = MapAxis.from_nodes(binning_geometry.energy_axis, interp='log', name="energy_true", unit="TeV")
 
     HESSgeom = WcsGeom.create(
         skydir=SkyCoord(centre_spatial[0], centre_spatial[1], unit="deg", frame='galactic'),
@@ -74,18 +81,18 @@ def construct_hess_flux_matrix(binning_geometry:GammaBinning=None,
     for idx, model in enumerate(hess_models):
         
         # We will store the longitude 'l' and latitude 'b' values of the source
-        temp_l_value = model.spatial_model.position.l.degree*u.deg
-        temp_b_value = model.spatial_model.position.b.degree*u.deg
+        temp_l_value = model.spatial_model.position.l.degree
+        temp_b_value = model.spatial_model.position.b.degree
         
         # The unit convention for the longitude works as 357, 358, 359, 0, 1, 2
             # we will make it so that it's -3, -2, -1, 0, 1, 2
-        if temp_l_value>180*u.deg:
-            temp_l_value=temp_l_value-360*u.deg
+        if temp_l_value>180:
+            temp_l_value=temp_l_value-360
 
             
 
-        lon_include_condition = np.logical_and(temp_l_value<np.max(binning_geometry.lon_axis), temp_l_value>np.min(binning_geometry.lon_axis))
-        lat_include_condition = np.logical_and(temp_b_value<np.max(binning_geometry.lat_axis), temp_b_value>np.min(binning_geometry.lat_axis))
+        lon_include_condition = np.logical_and(temp_l_value<max(binning_geometry.lon_axis), temp_l_value>min(binning_geometry.lon_axis))
+        lat_include_condition = np.logical_and(temp_b_value<max(binning_geometry.lat_axis), temp_b_value>min(binning_geometry.lat_axis))
             
 
 
@@ -131,7 +138,7 @@ def construct_hess_flux_matrix(binning_geometry:GammaBinning=None,
     # hesslonvals[hesslonvals>180*u.deg] = hesslonvals[hesslonvals>180*u.deg]-360*u.deg
     
 
-    return (full_hess_flux*HESSmap.quantity.unit).to(hess_flux_units)
+    return (full_hess_flux*HESSmap.quantity.unit).to(hess_flux_units).value
                 
 
 
@@ -140,9 +147,9 @@ class construct_hess_source_map_interpolation(object):
     Provides interpolated values from the HESS source map for given energy, longitude, and latitude points.
 
     Args:
-        energy_axis (np.ndarray): Energy axis for the interpolation (TeV).
-        longitudeaxis (np.ndarray): Longitude axis for the interpolation (degrees).
-        latitudeaxis (np.ndarray): Latitude axis for the interpolation (degrees).
+        energy_axis (ndarray): Energy axis for the interpolation (TeV).
+        longitudeaxis (ndarray): Longitude axis for the interpolation (degrees).
+        latitudeaxis (ndarray): Latitude axis for the interpolation (degrees).
         log_aeff (callable): Function to calculate the log of the effective area.
         normalise (bool, optional): Whether to normalise the source map. Defaults to True.
         iterate_logspace_integrator (callable, optional): Integrator function for normalisation in log space. Defaults to iterate_logspace_integration.
@@ -163,7 +170,7 @@ class construct_hess_source_map_interpolation(object):
 
 
         log_astro_sourcemap = np.log(
-            construct_hess_flux_matrix(binning_geometry=self.binning_geometry,).to(hess_flux_units).value)
+            construct_hess_flux_matrix(binning_geometry=self.binning_geometry,))
 
 
         # Have to interpolate actual probabilities as otherwise these maps include -inf
@@ -196,9 +203,9 @@ class HESSCatalogueSources_Prior(SourceFluxDiscreteLogPrior):
     Defines a prior based on HESS catalogue sources over specified energy, longitude, and latitude axes.
 
     Args:
-        energy_axis (np.ndarray): Energy axis for the prior (TeV).
-        longitudeaxis (np.ndarray): Longitude axis for the prior (degrees).
-        latitudeaxis (np.ndarray): Latitude axis for the prior (degrees).
+        energy_axis (ndarray): Energy axis for the prior (TeV).
+        longitudeaxis (ndarray): Longitude axis for the prior (degrees).
+        latitudeaxis (ndarray): Latitude axis for the prior (degrees).
         irf (IRF_LogLikelihood): Instrument Response Function log likelihood instance.
         normalise (bool, optional): Whether to normalise the prior. Defaults to True.
         iterate_logspace_integrator (callable, optional): Function for integration over log space for normalisation. Defaults to iterate_logspace_integration.
@@ -208,17 +215,17 @@ class HESSCatalogueSources_Prior(SourceFluxDiscreteLogPrior):
 
     
     def __init__(self, 
-                 axes: list[np.ndarray[u.Quantity]]| tuple[np.ndarray[u.Quantity]]=None,
+                 axes: list[ndarray[u.Quantity]]| tuple[ndarray[u.Quantity]]=None,
                  binning_geometry: GammaBinning = None,
                  *args, **kwargs):
         """Defines a prior based on HESS catalogue sources over specified energy, longitude, and latitude axes.
 
         Args:
-            energy_axis (np.ndarray): Energy axis for the prior (TeV).
+            energy_axis (ndarray): Energy axis for the prior (TeV).
             
-            longitudeaxis (np.ndarray): Longitude axis for the prior (degrees).
+            longitudeaxis (ndarray): Longitude axis for the prior (degrees).
             
-            latitudeaxis (np.ndarray): Latitude axis for the prior (degrees).
+            latitudeaxis (ndarray): Latitude axis for the prior (degrees).
             
             irf (IRF_LogLikelihood): Instrument Response Function log likelihood instance.
             

@@ -1,10 +1,21 @@
-import warnings, numpy as np
-import copy, h5py, pickle
-from scipy.stats import uniform, loguniform
+import copy, h5py, pickle, warnings
+
+
+
+try:
+    from jax import numpy as np
+    from jax.numpy import interp as interp1d
+    from gammabayes.utils.interpolation import JAX_RegularGrid_Linear_Interpolator as RegularGridInterpolator
+
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+    from scipy.interpolate import RegularGridInterpolator, interp1d
+
 from scipy import stats
-from scipy.stats import rv_discrete
-from scipy.stats import gamma
-from icecream import ic
+from scipy.stats import uniform, loguniform, rv_discrete, gamma
+from numpy import ndarray
+
 import time
 
 class Parameter(dict):
@@ -22,7 +33,7 @@ class Parameter(dict):
     def __init__(self, initial_data: dict = None, 
                  discrete:bool=True, bins:int = 11,
                  scaling:str='linear', default_value:float=1.0,
-                num_events:int = 1, axis: np.ndarray = None,
+                num_events:int = 1, axis: ndarray = None,
                 parameter_type:str = 'None',
                 bounds:list[float] = None,
                 name = None,

@@ -13,9 +13,13 @@ from gammabayes import GammaObs, update_with_defaults, bound_axis
 import numpy as np
 from tqdm import tqdm
 from multiprocessing import Pool
-import os, warnings, logging, time, functools, numpy as np, h5py
+import os, warnings, logging, time, functools, h5py
 from astropy import units as u
 from icecream import ic
+
+from jax import numpy as np
+import jax
+from numpy import ndarray
 
 class DiscreteAdaptiveScan(DiscreteBruteScan):
     """
@@ -28,28 +32,28 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
         log_likelihood (callable, optional): A callable object to compute 
             the log likelihood. Defaults to None.
         
-        axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): Axes 
+        axes (list[ndarray] | tuple[ndarray] | None, optional): Axes 
             that the measured event data can take. Defaults to None.
         
-        nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+        nuisance_axes (list[ndarray] | tuple[ndarray] | None, optional): 
             Axes that the nuisance parameters can take. Defaults to None.
         
         parameter_specifications (dict, optional): Specifications for 
             parameters involved in the likelihood estimation. Defaults to an empty dictionary.
         
-        log_likelihoodnormalisation (np.ndarray | float, optional): 
+        log_likelihoodnormalisation (ndarray | float, optional): 
             Normalization for the log likelihood. Defaults to 0.
         
-        log_margresults (np.ndarray | None, optional): Results of 
+        log_margresults (ndarray | None, optional): Results of 
             marginalization, expressed in log form. Defaults to None.
         
-        mixture_param_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+        mixture_param_specifications (list[ndarray] | tuple[ndarray] | None, optional): 
             Specifications for the mixture fraction parameters. Defaults to None.
         
-        log_hyperparameter_likelihood (np.ndarray | float, optional): 
+        log_hyperparameter_likelihood (ndarray | float, optional): 
             Log likelihood of hyperparameters (penultimate result). Defaults to 0.
         
-        log_posterior (np.ndarray | float, optional): Log of the 
+        log_posterior (ndarray | float, optional): Log of the 
             hyperparameter posterior probability (final result of class). 
             Defaults to 0.
         
@@ -61,7 +65,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             performing single dimension integration in log space. 
             Defaults to logspace_riemann.
         
-        log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray], optional): 
+        log_prior_matrix_list (list[ndarray] | tuple[ndarray], optional): 
             List or tuple of matrices representing the log of the prior matrices
             for the given hyperparameters over the nuisance parameter axes. 
             Defaults to None.
@@ -109,28 +113,28 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             log_likelihood (callable, optional): A callable object to compute 
                 the log likelihood. Defaults to None.
             
-            axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): Axes 
+            axes (list[ndarray] | tuple[ndarray] | None, optional): Axes 
                 that the measured event data can take. Defaults to None.
             
-            nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            nuisance_axes (list[ndarray] | tuple[ndarray] | None, optional): 
                 Axes that the nuisance parameters can take. Defaults to None.
             
             parameter_specifications (dict, optional): Specifications for 
                 parameters involved in the likelihood estimation. Defaults to an empty dictionary.
             
-            log_likelihoodnormalisation (np.ndarray | float, optional): 
+            log_likelihoodnormalisation (ndarray | float, optional): 
                 Normalization for the log likelihood. Defaults to 0.
             
-            log_margresults (np.ndarray | None, optional): Results of 
+            log_margresults (ndarray | None, optional): Results of 
                 marginalization, expressed in log form. Defaults to None.
             
-            mixture_param_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            mixture_param_specifications (list[ndarray] | tuple[ndarray] | None, optional): 
                 Specifications for the mixture fraction parameters. Defaults to None.
             
-            log_hyperparameter_likelihood (np.ndarray | float, optional): 
+            log_hyperparameter_likelihood (ndarray | float, optional): 
                 Log likelihood of hyperparameters (penultimate result). Defaults to 0.
             
-            log_posterior (np.ndarray | float, optional): Log of the 
+            log_posterior (ndarray | float, optional): Log of the 
                 hyperparameter posterior probability (final result of class). 
                 Defaults to 0.
             
@@ -142,7 +146,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
                 performing single dimension integration in log space. 
                 Defaults to logspace_riemann.
             
-            log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray], optional): 
+            log_prior_matrix_list (list[ndarray] | tuple[ndarray], optional): 
                 List or tuple of matrices representing the log of the prior matrices
                 for the given hyperparameters over the nuisance parameter axes. 
                 Defaults to None.
@@ -185,23 +189,39 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
             self.bounds = [['log10', logeval_bound], ['linear', lonlact_bound], ['linear', lonlact_bound]]
 
         logging.info(f"Bounds: {self.bounds}")
-    
 
-    def observation_nuisance_marg(self, 
-                                  event_vals: np.ndarray | GammaObs, 
-                                  log_prior_matrix_list: list[np.ndarray],
-                                  loglike_kwargs=None):
+        self.class_specific_marg_parameters = {'bounds':self.bounds, 
+                                          'edisp_parameter_axes_by_name':self.edisp_parameter_axes_by_name,
+                                          'psf_parameter_axes_by_name':self.psf_parameter_axes_by_name,
+                                          'edisp_parameter_prior_logvalue_mesh':self.edisp_parameter_prior_logvalue_mesh,
+                                          'psf_parameter_prior_logvalue_mesh':self.psf_parameter_prior_logvalue_mesh,
+                                          }
+    
+    @staticmethod
+    def observation_nuisance_marg(loglike,
+                                  event_vals: ndarray | GammaObs, 
+                                  log_prior_matrix_list: list[ndarray],
+                                  bounds,
+                                  edisp_parameter_axes_by_name,
+                                  psf_parameter_axes_by_name,
+                                  edisp_parameter_prior_logvalue_mesh,
+                                  psf_parameter_prior_logvalue_mesh,
+                                  loglike_kwargs=None,
+                                  loglike_norm=0,
+                                  logspace_integrator=iterate_logspace_integration,
+                                  **kwargs
+                                  ):
         """
         Calculates the marginal log likelihoods for observations by integrating over nuisance parameters with 
         additional bound handling specific to this class.
 
         Args:
-            event_vals (np.ndarray | GammaObs): The event values for which the marginal log likelihoods are to be 
+            event_vals (ndarray | GammaObs): The event values for which the marginal log likelihoods are to be 
                                                 computed. Can be either a numpy ndarray or an GammaObs object.
-            log_prior_matrix_list (list[np.ndarray]): A list of numpy ndarrays representing log prior matrices.
+            log_prior_matrix_list (list[ndarray]): A list of numpy ndarrays representing log prior matrices.
 
         Returns:
-            np.ndarray: An array of marginal log likelihood values corresponding to each set of event values 
+            ndarray: An array of marginal log likelihood values corresponding to each set of event values 
                         and each log prior matrix.
 
         Notes:
@@ -214,6 +234,7 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
               of axes due to bounds.
         """
 
+
         if loglike_kwargs is None:
             loglike_kwargs = {}
 
@@ -223,41 +244,44 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
                 bound_type=bound_info[0], 
                 bound_radii=bound_info[1], 
                 estimated_val=event_val
-                ) for bound_info, axis, event_val in zip(self.bounds, self.log_likelihood.dependent_axes, event_vals)]
+                ) for bound_info, axis, event_val in zip(bounds, loglike.dependent_axes, event_vals)]
+        # 
+        event_vals = np.array([np.array([event_val]) for event_val in event_vals])
 
-        temp_axes = [temp_axis_info[0] for temp_axis_info in temp_axes_and_indices]
 
-        unit_list = []
-        # Presuming that the units are the same for the events and the axes
-        for event_val in event_vals:
-            unit_list.append(event_val.unit)
+        temp_axes = [np.array([temp_axis_info[0]]) if np.array([temp_axis_info[0]]).ndim<2 else temp_axis_info[0] for temp_axis_info in temp_axes_and_indices]
 
-        for temp_axis in temp_axes:
-            unit_list.append(1.)
+        # unit_list = []
+        # # Presuming that the units are the same for the events and the axes
+        # for event_val in event_vals:
+        #     unit_list.append(1)
 
-        num_edisp_params = len(self.edisp_parameter_axes_by_name)
-        num_psf_params = len(self.psf_parameter_axes_by_name)
+        # for temp_axis in temp_axes:
+        #     unit_list.append(1.)
 
-        meshvalues  = np.meshgrid(*event_vals, *temp_axes, *self.edisp_parameter_axes_by_name.values(), *self.psf_parameter_axes_by_name.values(), indexing='ij')
+        num_edisp_params = len(edisp_parameter_axes_by_name)
+        num_psf_params = len(psf_parameter_axes_by_name)
+
+        meshvalues  = np.meshgrid(*event_vals, *temp_axes, *edisp_parameter_axes_by_name.values(), *psf_parameter_axes_by_name.values(), indexing='ij')
 
         index_meshes = np.ix_( *[temp_axis_info[1] for temp_axis_info in temp_axes_and_indices])
 
-        flattened_meshvalues = [meshmatrix.flatten() for meshmatrix, unit in zip(meshvalues, unit_list)]
+        flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
 
-        edisp_parameter_axes_by_kwarg = {key:flattened_mesh_axis for key, flattened_mesh_axis in zip(self.edisp_parameter_axes_by_name.keys(), flattened_meshvalues[6:6+num_edisp_params])}
-        psf_parameter_axes_by_kwarg = {key:flattened_mesh_axis for key, flattened_mesh_axis in zip(self.psf_parameter_axes_by_name.keys(), flattened_meshvalues[6+num_edisp_params:6+num_edisp_params+num_psf_params])}
+        edisp_parameter_axes_by_kwarg = {key:flattened_mesh_axis for key, flattened_mesh_axis in zip(edisp_parameter_axes_by_name.keys(), flattened_meshvalues[6:6+num_edisp_params])}
+        psf_parameter_axes_by_kwarg = {key:flattened_mesh_axis for key, flattened_mesh_axis in zip(psf_parameter_axes_by_name.keys(), flattened_meshvalues[6+num_edisp_params:6+num_edisp_params+num_psf_params])}
         
-        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues[:6], 
+        log_likelihoodvalues = np.squeeze(loglike(*flattened_meshvalues[:6], 
                                                               edisp_parameters = edisp_parameter_axes_by_kwarg, 
                                                               psf_parameters = psf_parameter_axes_by_kwarg, **loglike_kwargs).reshape(meshvalues[0].shape))
 
-        log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation[*index_meshes, ...]
+        log_likelihoodvalues = log_likelihoodvalues - loglike_norm[*index_meshes, ...]
 
-        try:
-            for idx, axis in enumerate(temp_axes):
-                temp_axes[idx] = axis.value
-        except:
-            pass
+        # try:
+        #     for idx, axis in enumerate(temp_axes):
+        #         temp_axes[idx] = axis
+        # except:
+        #     pass
 
         all_log_marg_results = []
 
@@ -276,22 +300,22 @@ class DiscreteAdaptiveScan(DiscreteBruteScan):
                     index_meshes[0].T
                 ] + np.squeeze(log_likelihoodvalues).T).T
             
-            single_parameter_log_margvals = iterate_logspace_integration(logintegrandvalues,   
+            single_parameter_log_margvals = logspace_integrator(logintegrandvalues,   
                 axes=temp_axes, axisindices=[0,1,2])
             
             if num_edisp_params>0:
-                single_parameter_log_margvals = iterate_logspace_integration((single_parameter_log_margvals.T+self.edisp_parameter_prior_logvalue_mesh.T).T,   
-                axes=list(self.edisp_parameter_axes_by_name.values()), axisindices=list(range(num_edisp_params)))
+                single_parameter_log_margvals = logspace_integrator((single_parameter_log_margvals.T+edisp_parameter_prior_logvalue_mesh.T).T,   
+                axes=list(edisp_parameter_axes_by_name.values()), axisindices=list(range(num_edisp_params)))
 
 
             if num_psf_params>0:
-                single_parameter_log_margvals = iterate_logspace_integration( (single_parameter_log_margvals.T+self.psf_parameter_prior_logvalue_mesh.T).T,   
-                axes=list(self.psf_parameter_axes_by_name.values()), axisindices=list(range(num_psf_params)))
+                single_parameter_log_margvals = logspace_integrator( (single_parameter_log_margvals.T+psf_parameter_prior_logvalue_mesh.T).T,   
+                axes=list(psf_parameter_axes_by_name.values()), axisindices=list(range(num_psf_params)))
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 
         
-        return np.array(all_log_marg_results, dtype=object)
+        return all_log_marg_results
 
 
     def pack_data(self, reduce_mem_consumption: bool = True, h5f=None, file_name='temporary_file.h5'):

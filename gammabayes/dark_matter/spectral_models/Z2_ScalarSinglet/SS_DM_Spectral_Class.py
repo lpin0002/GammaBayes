@@ -1,5 +1,11 @@
-import numpy as np, copy
-from astropy import units as u
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+import copy
+
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 

@@ -2,8 +2,17 @@ from gammabayes.dark_matter.channel_spectra import (
     single_channel_spectral_data_path,
     PPPCReader, 
 )
-from scipy import interpolate
-import numpy as np
+
+try:
+    from jax import numpy as np
+    from jax.nn import logsumexp
+    from gammabayes.utils.interpolation import JAX_RegularGrid_Linear_Interpolator as RegularGridInterpolator
+except Exception as err:
+    print(err)
+    import numpy as np
+    from scipy.interpolate import RegularGridInterpolator
+from numpy import ndarray
+
 
 class multi_comp_dm_spectrum(object):
     """
@@ -61,7 +70,7 @@ class multi_comp_dm_spectrum(object):
                     sqrt_tempspectragrid = np.sqrt(atprod_gammas[PPPC_channel].reshape(atprod_gammas.output_shape)/1000) # 1000 is to convert to 1/TeV 
                     
                     # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
-                    sqrtchannelfuncdictionary[micrOMEGAs_channel] = interpolate.RegularGridInterpolator(
+                    sqrtchannelfuncdictionary[micrOMEGAs_channel] = RegularGridInterpolator(
                         (np.log10(atprod_mass_values), atprod_log10x_values), 
                         sqrt_tempspectragrid,
                         method='cubic', bounds_error=False, fill_value=0)
@@ -81,7 +90,7 @@ class multi_comp_dm_spectrum(object):
                     sqrt_tempspectragrid = np.sqrt(tempspectragrid)
 
                     # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
-                    sqrtchannelfuncdictionary[micrOMEGAs_channel] = interpolate.RegularGridInterpolator(
+                    sqrtchannelfuncdictionary[micrOMEGAs_channel] = RegularGridInterpolator(
                         (np.log10(atprod_mass_values), atprod_log10x_values), 
                         sqrt_tempspectragrid,
                         method='cubic', bounds_error=False, fill_value=0)            
@@ -94,7 +103,7 @@ class multi_comp_dm_spectrum(object):
         self.partial_sqrt_sigmav_interpolator_dictionary = {
             initial_state_key: {
             final_MM_state_key: 
-            interpolate.RegularGridInterpolator(
+            RegularGridInterpolator(
                 (*parameter_interpolation_values,),
                 np.sqrt(annihilation_ratios_nested_dict[initial_state_key][final_MM_state_key]),
                 method='linear', bounds_error=False, fill_value=0) \
@@ -104,7 +113,7 @@ class multi_comp_dm_spectrum(object):
         self.annihilation_ratios_nested_dict = annihilation_ratios_nested_dict
 
 
-    def __call__(self, *args, **kwargs) -> np.ndarray | float:
+    def __call__(self, *args, **kwargs) -> ndarray | float:
         """
         Allows the instance to be called as a function, delegating to the `logfunc` method.
 
@@ -183,17 +192,17 @@ class multi_comp_dm_spectrum(object):
         return log_spectrum
     
     def mesh_efficient_logfunc(self, 
-                               energy: list | np.ndarray | float, 
-                               kwd_parameters: dict = {'mDM1':5.0, 'mDM2': 7.0}) -> np.ndarray | float:
+                               energy: list | ndarray | float, 
+                               kwd_parameters: dict = {'mDM1':5.0, 'mDM2': 7.0}) -> ndarray | float:
         """
         Efficiently computes the log spectrum over a mesh of parameters.
 
         Args:
-            energy (list | np.ndarray | float): Energy values.
+            energy (list | ndarray | float): Energy values.
             kwd_parameters (dict, optional): Dictionary of keyword parameters, defaults to {'mDM1': 5.0, 'mDM2': 7.0}.
 
         Returns:
-            np.ndarray | float: Log spectrum values.
+            ndarray | float: Log spectrum values.
         """
 
         kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}

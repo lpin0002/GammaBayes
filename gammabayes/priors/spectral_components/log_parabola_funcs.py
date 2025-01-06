@@ -1,6 +1,11 @@
 from .base_spectral_comp import BaseSpectral_PriorComp
 from astropy import units as u
-import numpy as np
+
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
 
 from icecream import ic
 
@@ -22,7 +27,7 @@ def log_log_parabola_func(self, energy: float|u.Quantity, index: float=2.5, phi0
 
 
 
-    energy_ratio = energy.to("TeV").value/E0TeV
+    energy_ratio = energy/E0TeV
     exponent = -(index + beta*np.log10(energy_ratio))
     log_value = np.log(phi0)+exponent*np.log(energy_ratio)
 
@@ -35,13 +40,11 @@ class LogParabola(BaseSpectral_PriorComp):
 
     log_parabola_func = log_log_parabola_func
 
-    def __init__(self, default_parameter_values=None, energy_units=u.Unit("TeV"), *args, **kwargs):
+    def __init__(self, default_parameter_values=None,*args, **kwargs):
         
         if default_parameter_values is None:
             default_parameter_values = {}
             
         default_parameter_values.update({'index':2.5, "phi0": 4.47e-7, 'beta':0.37, 'index':2.39})
-
-        self.energy_units = energy_units
 
         super().__init__(logfunc=self.log_parabola_func, default_parameter_values=default_parameter_values)

@@ -1,8 +1,17 @@
-import numpy as np
+
+
+try:
+    from jax import numpy as np
+
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+from numpy import ndarray
+
 from .binning_geometry import GammaBinning
 import pickle
 from .exposure import GammaLogExposure
-from astropy import units as u
+
 from numpy.typing import ArrayLike
 import time
 from collections import defaultdict
@@ -14,12 +23,12 @@ class GammaObs:
                  name:str = None,
                  energy: ArrayLike =None, lon: ArrayLike=None, lat: ArrayLike=None, 
                  event_weights: ArrayLike = None,
-                 pointing_dirs_by_event:np.ndarray[u.Quantity, u.Quantity] = None, 
-                 pointing_dirs:np.ndarray[u.Quantity, u.Quantity] = None, 
-                 live_times: u.Quantity=None,
+                 pointing_dirs_by_event: ndarray = None, 
+                 pointing_dirs: ndarray = None, 
+                 live_times: ndarray =None,
                  irf_loglike: callable = None,
                  log_exposure: GammaLogExposure = None,
-                 event_ids: np.ndarray = None,
+                 event_ids: ndarray = None,
                  meta:dict = None, **kwargs):
         
         if meta is None:
@@ -70,7 +79,6 @@ class GammaObs:
         else:
             self.name = name
 
-
         if len(self.energy)>0 and not(self.irf_loglike=={}):
             self.log_exposure = GammaLogExposure(binning_geometry=self.binning_geometry,
                                             log_exposure_map=log_exposure,
@@ -80,9 +88,7 @@ class GammaObs:
         elif not(self.irf_loglike=={}):
             self.log_exposure = GammaLogExposure(binning_geometry=self.binning_geometry,
                                             log_exposure_map=log_exposure,
-                                            irfs=self.irf_loglike,
-                                            pointing_dirs=[],
-                                            live_times=[])
+                                            irfs=self.irf_loglike,)
         else:
             self.log_exposure = None
             
@@ -97,14 +103,12 @@ class GammaObs:
         if energies is None:
             return [], [], []
         
-        try:
-            energies = np.array([energ.value for energ in energies])*energies[0].unit
-            longitudes = np.array([long.value for long in longitudes])*longitudes[0].unit
-            latitudes = np.array([lat.value for lat in latitudes])*latitudes[0].unit
+        energies = np.array(energies)
+        longitudes = np.array(longitudes)
+        latitudes = np.array(latitudes)
 
-            return energies, longitudes, latitudes
-        except:
-            return energies, longitudes, latitudes
+        return energies, longitudes, latitudes
+
         
     
     def __parse_pointing_and_livetime_inputs(self, pointing_dirs, live_times, pointing_dirs_by_event):
@@ -115,17 +119,13 @@ class GammaObs:
         if self.live_times is None:
             self.live_times =  self.meta.get('live_times', None)
 
-        if not(hasattr(self.live_times, "unit")) and not(self.live_times is None):
-            if hasattr(self.live_times[0], "unit"):
-                self.live_times = np.array([live_time.value for live_time in self.live_times])*self.live_times[0].unit
-            else:
-                self.live_times = np.array(self.live_times)*u.s
+        if self.live_times is None:
+            self.live_times = [1]*len(self.energy)
+
+        self.live_times = np.array(self.live_times)
 
         if not(pointing_dirs is None):
             self.pointing_dirs = pointing_dirs
-
-            if not hasattr(self.pointing_dirs, "unit"):
-                self.pointing_dirs*=u.deg
 
         
         elif pointing_dirs is None:
@@ -134,12 +134,15 @@ class GammaObs:
         if self.pointing_dirs is None:
             # If pointing direction not given, the centre of the spatial axes is presumed and
             self.pointing_dirs = np.array([
-                np.mean(self.binning_geometry.lon_axis.value), 
-                np.mean(self.binning_geometry.lat_axis.to(self.binning_geometry.lon_axis.unit).value)
-                ])*self.binning_geometry.lon_axis.unit
+                np.mean(self.binning_geometry.lon_axis), 
+                np.mean(self.binning_geometry.lat_axis)
+                ])
+            
         
+        self.pointing_dirs = np.array(self.pointing_dirs)
+
         if pointing_dirs_by_event is None and self.pointing_dirs.size<3:
-            self.pointing_dirs_by_event = np.squeeze(self.pointing_dirs.value)*self.pointing_dirs.unit
+            self.pointing_dirs_by_event = np.squeeze(self.pointing_dirs)
         elif pointing_dirs_by_event is None:
             self.pointing_dirs_by_event = self.binning_geometry.spatial_centre
         else:
@@ -151,7 +154,9 @@ class GammaObs:
 
 
         if self.live_times is None:
-            self.live_times = [1*u.s]*len(self.energy)
+            self.live_times = np.ones_like(self.energy)
+
+        
 
 
 
@@ -237,7 +242,7 @@ class GammaObs:
             # Create four new subplots in the same grid location with some separation
             gs = gridspec[subplot_spec.rowspan, subplot_spec.colspan].subgridspec(2, 2, wspace=wspace, hspace=0.3)
             axs = [fig.add_subplot(gs[i, j]) for i in range(2) for j in range(2)]
-        elif isinstance(axs, (list, np.ndarray)):
+        elif isinstance(axs, (list, ndarray)):
             # Ensure axs are in list/array form
             pass
         else:
@@ -245,8 +250,8 @@ class GammaObs:
         axs = axs.flatten()
 
 
-        binned_energy, binned_longitudes, binned_latitudes = self.binned_unique_coordinate_data[0]
-        event_weights = self.binned_unique_coordinate_data[1]
+        # binned_energy, binned_longitudes, binned_latitudes = self.binned_unique_coordinate_data[0]
+        # event_weights = self.binned_unique_coordinate_data[1]
 
         if count_scaling == 'linear':
             logq=False
@@ -255,9 +260,9 @@ class GammaObs:
         
 
         axs[0].hist(self.energy, bins=self.binning_geometry.energy_edges, color=hist1dcolor, log=logq)
-        axs[0].set_xlabel(r'Energy ['+ self.binning_geometry.energy_axis.unit.to_string('latex_inline')+']')
+        axs[0].set_xlabel(r'Energy [TeV]')
         axs[0].set_ylabel('Counts')
-        axs[0].set_xlim(np.array([self.binning_geometry.energy_edges[0].value, self.binning_geometry.energy_edges[-1].value]))
+        axs[0].set_xlim(np.array([self.binning_geometry.energy_edges[0], self.binning_geometry.energy_edges[-1]]))
         axs[0].set_yscale(count_scaling)
         axs[0].set_xscale('log')
 
@@ -271,20 +276,20 @@ class GammaObs:
             axs[0].grid(**full_grid_kwargs)
         
         spatial_hist2d_output = axs[1].hist2d(
-            self.lon.value, self.lat.value, 
-            bins=[self.binning_geometry.lon_axis.value, self.binning_geometry.lat_axis.value],
+            self.lon, self.lat, 
+            bins=[self.binning_geometry.lon_axis, self.binning_geometry.lat_axis],
             norm=count_scaling, cmap=cmap)
         plt.colorbar(spatial_hist2d_output[3], ax=axs[1], label='Counts')
 
 
-        axs[1].set_xlabel(r'Longitude ['+self.binning_geometry.lon_axis.unit.to_string('latex_inline')+']')
-        axs[1].set_ylabel(r'Latitude ['+self.binning_geometry.lat_axis.unit.to_string('latex_inline')+']')
+        axs[1].set_xlabel(r'Longitude [deg]')
+        axs[1].set_ylabel(r'Latitude [deg]]')
         axs[1].set_aspect('equal')
         axs[1].invert_xaxis()
 
         # Plot longitude histogram
         axs[2].hist(self.live_times, bins=len(self.binning_geometry.lon_axis), color=hist1dcolor, log=logq)
-        axs[2].set_xlabel(r'Live time for pointings [' + self.live_times[0].unit.to_string('latex_inline') + ']')
+        axs[2].set_xlabel(r'Live time for pointings [s]')
         axs[2].set_ylabel('Counts')
         axs[2].set_yscale(count_scaling)
 
@@ -295,8 +300,8 @@ class GammaObs:
                       bins=[len(self.binning_geometry.lon_axis), len(self.binning_geometry.lat_axis)], 
                       norm=count_scaling, cmap=cmap)
         
-        axs[3].set_xlabel(r'Pointing Longitude [' + self.binning_geometry.lon_axis.unit.to_string('latex_inline') + ']')
-        axs[3].set_ylabel(r'Pointing Latitude [' + self.binning_geometry.lat_axis.unit.to_string('latex_inline') + ']')
+        axs[3].set_xlabel(r'Pointing Longitude [deg]')
+        axs[3].set_ylabel(r'Pointing Latitude [deg]')
         axs[3].set_aspect('equal')
         axs[3].invert_xaxis()
         plt.colorbar(pointing_hist2d_output[3], ax=axs[3], label='Counts')
@@ -327,24 +332,12 @@ class GammaObs:
     def _binned_unique_data(self):
         
         # Bin data1, data2, and data3 based on edges
-        binned_data1 = np.digitize(self.energy.value, self.binning_geometry.energy_edges.to(self.energy.unit).value) - 1
-        binned_data2 = np.digitize(self.lon.value, self.binning_geometry.lon_edges.to(self.lon.unit).value) - 1
+        binned_data1 = np.digitize(self.energy, self.binning_geometry.energy_edges) - 1
+        binned_data2 = np.digitize(self.lon, self.binning_geometry.lon_edges) - 1
 
-        binned_data3 = np.digitize(self.lat.value, self.binning_geometry.lat_edges.to(self.lat.unit).value) - 1
+        binned_data3 = np.digitize(self.lat, self.binning_geometry.lat_edges) - 1
 
-        
-
-        try:
-            live_times = np.array(self.live_times.value)
-        except AttributeError:
-            live_times = np.array([live_time.value for live_time in self.live_times])
-        except AttributeError:
-            live_times = np.array(self.live_times)
-
-
-        live_times = live_times*(self.live_times[0].unit)
-
-
+        live_times = np.array(self.live_times)
 
         # Combine binned data with unbinned data4 to form unique identifiers
         combined_data = list(zip(binned_data1, binned_data2, binned_data3, *np.array(self.pointing_dirs).T))
@@ -352,18 +345,17 @@ class GammaObs:
         # Step 4: Find unique combinations, counts, and indices
         unique_combinations = defaultdict(list)
         for idx, entry in enumerate(combined_data):
+            formatted_entry = (float(self.binning_geometry.energy_axis[entry[0]]),float(self.binning_geometry.lon_axis[entry[1]]), float(self.binning_geometry.lat_axis[entry[2]]), float(entry[-2]), float(entry[-1]))
 
-            formatted_entry = (self.binning_geometry.energy_axis[entry[0]],self.binning_geometry.lon_axis[entry[1]], self.binning_geometry.lat_axis[entry[2]], entry[-2], entry[-1])
             unique_combinations[formatted_entry].append(idx)
 
+        unique_energy_vals = np.array([datum[0] for datum in unique_combinations.keys()])
+        unique_lon_vals = np.array([datum[1] for datum in unique_combinations.keys()])
+        unique_lat_vals = np.array([datum[2] for datum in unique_combinations.keys()])
 
-        unique_energy_vals = np.array([datum[0].value for datum in unique_combinations.keys()])*self.energy_axis.unit
-        unique_lon_vals = np.array([datum[1].value for datum in unique_combinations.keys()])*self.lon_axis.unit
-        unique_lat_vals = np.array([datum[2].value for datum in unique_combinations.keys()])*self.lat_axis.unit
+        unique_pointing_dirs = np.array([np.array([datum[3], datum[4]]) for datum in unique_combinations.keys()])
 
-        unique_pointing_dirs = np.array([np.array([datum[3], datum[4]]) for datum in unique_combinations.keys()])*self.pointing_dirs[0][0].unit
-
-        corresponding_live_times = np.array([np.sum(live_times[unique_entry_indices].value) for unique_entry_indices in unique_combinations.values()])*self.live_times[0].unit
+        corresponding_live_times = np.array([np.sum(live_times[np.array(unique_entry_indices)]) for unique_entry_indices in unique_combinations.values()])
 
         event_weights = [len(unique_entry_indices) for unique_entry_indices in unique_combinations.values()]
 
@@ -461,7 +453,7 @@ it is assumed that the binning geometries are the same.""")
                         irf_loglike=self.irf_loglike,
                         binning_geometry=self.binning_geometry,
                         log_exposure=new_log_exposure
-)
+                        )
             
     def __radd__(self, other):
         if other == 0:
@@ -539,28 +531,16 @@ it is assumed that the binning geometries are the same.""")
         
     def to_dict(self, include_irf=False, include_meta=False):
 
-        if hasattr(self.pointing_dirs, "value"):
-            pointing_dirs_value = self.pointing_dirs.value
-            pointing_dirs_unit = self.pointing_dirs.unit.to_string()
-        else:
-            pointing_dirs_value = self.pointing_dirs
-            pointing_dirs_unit = None
+        pointing_dirs_value = self.pointing_dirs
 
-        if hasattr(self.live_times, "value"):
-            live_times_value = self.live_times.value
-            live_times_unit = self.live_times.unit.to_string()
-        else:
-            live_times_value = self.live_times
-            live_times_unit = None
+        live_times_value = self.live_times
 
 
         output_dict = {
             'name': self.name,
             'binned_data': self.binned_data,
             'pointing_dirs': pointing_dirs_value,
-            'pointing_dirs_unit': pointing_dirs_unit,
             'live_times': live_times_value,
-            'live_times_unit': live_times_unit,
         }
         if include_irf:
             output_dict['irf_loglike'] = self.irf_loglike
@@ -596,29 +576,14 @@ it is assumed that the binning geometries are the same.""")
 
 
         pointing_dirs = info_dict.get('pointing_dirs')
-        if (info_dict.get('pointing_dirs_unit') is not None):
-            pointing_dirs = pointing_dirs*u.Unit(info_dict.get('pointing_dirs_unit'))
-        elif isinstance(pointing_dirs, ArrayLike): 
-            if hasattr(pointing_dirs, "unit"):
-                pointing_dirs_value = pointing_dirs.value
-            else:
-                pointing_dirs_value = pointing_dirs
+
+        if isinstance(pointing_dirs, ArrayLike): 
+            pointing_dirs_value = pointing_dirs
             if np.isnan(np.sum(pointing_dirs_value)): # To account for saving variables as nan for h5 files
                 pointing_dirs = None
 
 
         live_times = info_dict.get('live_times')
-        if not hasattr(live_times, "unit"):
-            if not(isinstance(live_times, float)):
-                live_times = None
-            
-        if (info_dict.get('live_times_unit') is not None) and not(np.isnan(info_dict.get('live_times_unit'))):
-            live_times = live_times*u.Unit(info_dict.get('live_times_unit'))
-
-        try:
-            live_times = u.Quantity(live_times)
-        except:
-            live_times = None
 
 
         # Create an empty instance
@@ -651,13 +616,11 @@ it is assumed that the binning geometries are the same.""")
             
 
 
-
-
     def _recreate_samples_from_binned_data(self):
         # Extract bin centers
-        energy_centers = self.binning_geometry.energy_axis.value
-        lon_centers = self.binning_geometry.lon_axis.value
-        lat_centers = self.binning_geometry.lat_axis.value
+        energy_centers = self.binning_geometry.energy_axis
+        lon_centers = self.binning_geometry.lon_axis
+        lat_centers = self.binning_geometry.lat_axis
         
         # Prepare lists to hold the recreated samples
         energy_samples = []
@@ -676,20 +639,12 @@ it is assumed that the binning geometries are the same.""")
                         lat_samples.extend([lat_centers[k]] * int(count))
         
         # Convert to numpy arrays and return
-        return np.array(energy_samples) * self.binning_geometry.energy_axis.unit, \
-            np.array(lon_samples) * self.binning_geometry.lon_axis.unit, \
-            np.array(lat_samples) * self.binning_geometry.lat_axis.unit
+        return np.array(energy_samples), \
+            np.array(lon_samples), \
+            np.array(lat_samples)
     
 
     def _recreate_samples_with_event_weights(self, energy_vals, lon_vals, lat_vals, event_weights):
-        original_energy_values = energy_vals.value
-        original_energy_unit = energy_vals.unit
-
-        original_lon_values = lon_vals.value
-        original_lon_unit = lon_vals.unit
-
-        original_lat_values = lat_vals.value
-        original_lat_unit = lat_vals.unit
 
         # Prepare lists to hold the recreated samples
         energy_samples = []
@@ -697,16 +652,14 @@ it is assumed that the binning geometries are the same.""")
         lat_samples = []
         
         # Loop over the binned data to recreate the samples
-        for event_weight, energy, longitude, latitude  in zip(event_weights, original_energy_values, original_lon_values, original_lat_values):
+        for event_weight, energy, longitude, latitude  in zip(event_weights, energy_vals, lon_vals, lat_vals):
             # Repeat the bin centers according to the bin count
             energy_samples.extend([energy] * int(event_weight))
             lon_samples.extend([longitude] * int(event_weight))
             lat_samples.extend([latitude] * int(event_weight))
         
         # Convert to numpy arrays and return
-        return np.array(energy_samples) * original_energy_unit, \
-            np.array(lon_samples) * original_lon_unit, \
-            np.array(lat_samples) * original_lat_unit
+        return np.array(energy_samples), np.array(lon_samples) , np.array(lat_samples)
 
 
 
@@ -861,9 +814,9 @@ class GammaObsCube:
             log=True
         
         axs[0].hist(self.binning_geometry.energy_axis, bins=self.binning_geometry.energy_edges, weights=self.collapsed_energy[0], log=log, color=hist1dcolor)
-        axs[0].set_xlabel(r'Energy ['+ self.binning_geometry.energy_axis.unit.to_string('latex_inline')+']')
+        axs[0].set_xlabel(r'Energy [TeV]')
         axs[0].set_ylabel('Counts')
-        axs[0].set_xlim(np.array([self.binning_geometry.energy_edges[0].value, self.binning_geometry.energy_edges[-1].value]))
+        axs[0].set_xlim(np.array([self.binning_geometry.energy_edges[0], self.binning_geometry.energy_edges[-1]]))
         axs[0].set_xscale('log')
         axs[0].set_yscale(count_scaling)
 
@@ -871,10 +824,10 @@ class GammaObsCube:
             axs[0].grid(**grid_kwargs)
 
         im = axs[1].imshow(self.collapsed_spatial[0].T, origin='lower', aspect='auto', extent=[
-            self.binning_geometry.lon_edges[0].value, 
-            self.binning_geometry.lon_edges[-1].value,
-            self.binning_geometry.lat_edges[0].value,
-            self.binning_geometry.lat_edges[-1].value,
+            self.binning_geometry.lon_edges[0], 
+            self.binning_geometry.lon_edges[-1],
+            self.binning_geometry.lat_edges[0],
+            self.binning_geometry.lat_edges[-1],
             ], 
             cmap=cmap,
             norm=count_scaling)
@@ -882,8 +835,8 @@ class GammaObsCube:
 
 
         plt.colorbar(im, ax=axs[1], label='Counts')
-        axs[1].set_xlabel(r'Longitude ['+self.binning_geometry.lon_axis.unit.to_string('latex_inline')+']')
-        axs[1].set_ylabel(r'Latitude ['+self.binning_geometry.lat_axis.unit.to_string('latex_inline')+']')
+        axs[1].set_xlabel(r'Longitude [deg]')
+        axs[1].set_ylabel(r'Latitude [deg]')
         axs[1].invert_xaxis()
         
         fig.tight_layout()

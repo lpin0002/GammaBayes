@@ -4,7 +4,12 @@ from gammabayes import GammaBinning, GammaObs
 from gammabayes.priors import DiscreteLogPrior
 from gammabayes.hyper_inference import MTree
 from .inverse_transform_sampling import integral_inverse_transform_sampler
-import numpy as np
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+
+
 from tqdm import tqdm
 from astropy import units as u
 from matplotlib import pyplot as plt

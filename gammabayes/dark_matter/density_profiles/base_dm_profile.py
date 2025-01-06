@@ -1,8 +1,15 @@
-import numpy as np
-import astropy.units as u
+try:
+    from jax import numpy as np
+    from jax.nn import logsumexp
+except Exception as err:
+    print(err)
+    import numpy as np
+    from scipy.special import logsumexp
+from numpy import ndarray
+import numpy
+
 from gammabayes.utils import logspace_riemann, logspace_simpson
 from gammabayes import haversine, update_with_defaults
-from scipy import special
 import time
 
 
@@ -21,7 +28,7 @@ from gammapy.utils.integrate import trapz_loglog
 
 from gammabayes.utils.integration import logspace_trapz
 from icecream import ic
-
+from astropy import units as u
 
 class DM_Profile(object):
     """Class for dark matter density profiles and related calculations."""
@@ -35,20 +42,20 @@ class DM_Profile(object):
             density (Quantity): The density to match.
             distance (Quantity): The distance at which to match the density.
         """
-        scale = density / (np.exp(self.log_profile(distance, **kwargs))*u.Unit("TeV/cm3"))
-        self.default_rho_s *= scale.to("")
+        scale = density / (np.exp(self.log_profile(distance, **kwargs)))
+        self.default_rho_s *= scale
 
     def __init__(self, log_profile_func: callable, 
-                 LOCAL_DENSITY  = 0.39*u.Unit("GeV/cm3"), 
+                 LOCAL_DENSITY  = 0.39*1e-3, #TeV/cm3, 
                  dist_to_source = 8.5*u.kpc, 
                  annihilation = 1,
-                 default_rho_s = 1 * u.Unit("GeV / cm3"), 
-                 default_r_s = 20.* u.Unit("kpc"), 
-                 angular_central_coords = np.array([0,0])*u.deg,
+                 default_rho_s = 1e-3*u.Unit("TeV/cm3"), 
+                 default_r_s = 20.*u.kpc,
+                 angular_central_coords = np.array([0,0]),
                  kwd_profile_default_vals = {},
                  gammapy_profile_class=Gammapy_EinastoProfile,
-                 diffJ_units = u.Unit("TeV2 cm-5 deg-2"),
-                 diffD_units = u.Unit("TeV cm-2 deg-2")
+                #  diffJ_units = u.Unit("TeV2 cm-5 deg-2"),
+                #  diffD_units = u.Unit("TeV cm-2 deg-2")
                  ):
         """
         Initializes the DM_Profile class with specified parameters.
@@ -63,8 +70,6 @@ class DM_Profile(object):
             angular_central_coords (Quantity, optional): Central coordinates. Defaults to np.array([0, 0]) * u.deg.
             kwd_profile_default_vals (dict, optional): Default keyword parameters for the profile function.
             gammapy_profile_class (class, optional): Gammapy profile class. Defaults to EinastoProfile.
-            diffJ_units (Quantity, optional): Units for differential J factor. Defaults to u.Unit("TeV2 cm-5 deg-2").
-            diffD_units (Quantity, optional): Units for differential D factor. Defaults to u.Unit("TeV cm-2 deg-2").
         """
         self.log_profile_func           = log_profile_func
         self.LOCAL_DENSITY              = LOCAL_DENSITY
@@ -76,8 +81,8 @@ class DM_Profile(object):
         self.angular_central_coords     = angular_central_coords
         self.scale_density_profile(self.LOCAL_DENSITY, self.DISTANCE, **kwd_profile_default_vals)
 
-        self.diffJ_units = diffJ_units
-        self.diffD_units = diffD_units
+        # self.diffJ_units = diffJ_units
+        # self.diffD_units = diffD_units
 
         ########################################
         ########################################
@@ -90,12 +95,12 @@ class DM_Profile(object):
         self.gammapy_profile.distance = self.DISTANCE
         self.gammapy_profile.scale_to_local_density()
 
-    def __call__(self, *args, **kwargs) -> float | np.ndarray :
+    def __call__(self, *args, **kwargs) -> float | ndarray :
         """
         Enables using the DM_Profile instance as a callable, computing the log differential J factor.
 
         Returns:
-            float | np.ndarray: The computed log differential J factor.
+            float | ndarray: The computed log differential J factor.
         """
         return self.compute_logdifferential_jfactor(*args, **kwargs)
     
@@ -104,7 +109,7 @@ class DM_Profile(object):
         Computes the logarithm of the density profile.
 
         Returns:
-            float | np.ndarray: The logarithm of the density.
+            float | ndarray: The logarithm of the density.
         """
         update_with_defaults(kwargs, self.kwd_profile_default_vals)
 
@@ -124,10 +129,11 @@ class DM_Profile(object):
             kwd_parameters (dict, optional): Additional parameters for the profile function.
 
         Returns:
-            float | np.ndarray: The computed log differential J factor.
+            float | ndarray: The computed log differential J factor.
         """
-        separation = haversine(longitude, latitude, *self.angular_central_coords).to(u.rad)
+        separation = haversine(longitude, latitude, *self.angular_central_coords)*np.pi/180
 
+        
         rmin = u.Quantity(
             value=np.tan(separation) * self.gammapy_profile.distance, unit=self.gammapy_profile.distance.unit
         )
@@ -154,28 +160,29 @@ class DM_Profile(object):
             )
             for _, *kwdvals in zip(rmin.ravel(), *kwd_parameters.values())
         ]
-        integral_unit = self.diffJ_units if self.annihilation else self.diffD_units
+
+        integral_unit = "TeV^2/(cm^5*deg^2)"
         jfact = (u.Quantity(val).reshape(rmin.shape)/u.steradian).to(integral_unit)
         
         return np.log(jfact.value)
 
     
-    def _radius(self, t: float | np.ndarray, 
-                angular_offset: float | np.ndarray, 
-                distance: float | np.ndarray) -> float | np.ndarray :
+    def _radius(self, t: float | ndarray, 
+                angular_offset: float | ndarray, 
+                distance: float | ndarray) -> float | ndarray :
         """
         Computes the radius for given parameters.
 
         Args:
-            t (float | np.ndarray): Parameter t.
-            angular_offset (Quantity): Angular offset.
+            t (float | ndarray): Parameter t.
+            angular_offset (float): Angular offset in deg.
             distance (Quantity): Distance.
 
         Returns:
-            float | np.ndarray: The computed radius.
+            float | ndarray: The computed radius.
         """
         
-        angular_offset = angular_offset.to(u.rad)
+        angular_offset = angular_offset * numpy.pi/180
 
         t_mesh, offset_mesh = np.meshgrid(t, angular_offset, indexing='ij')
 
@@ -187,23 +194,23 @@ class DM_Profile(object):
         return returnval
 
 
-    def logdiffJ(self, longitude: float | np.ndarray, 
-                 latitude: float | np.ndarray, 
+    def logdiffJ(self, longitude: float | ndarray, 
+                 latitude: float | ndarray, 
               int_resolution: int = 1001, 
               integration_method: callable = logspace_riemann, 
-              kwd_parameters = {}) -> float | np.ndarray :
+              kwd_parameters = {}) -> float | ndarray :
         """
         Computes the logarithm of the differential J factor.
 
         Args:
-            longitude (float | np.ndarray): Longitude values.
-            latitude (float | np.ndarray): Latitude values.
+            longitude (float | ndarray): Longitude values.
+            latitude (float | ndarray): Latitude values.
             int_resolution (int, optional): Integration resolution. Defaults to 1001.
             integration_method (callable, optional): Integration method. Defaults to logspace_riemann.
             kwd_parameters (dict, optional): Additional parameters for the profile function.
 
         Returns:
-            float | np.ndarray: The computed log differential J factor.
+            float | ndarray: The computed log differential J factor.
         """
         
         angular_offset = haversine(longitude, 
@@ -226,7 +233,7 @@ class DM_Profile(object):
         return logintegral+np.log(self.DISTANCE.to("cm"))+np.log(np.cos(angular_offset.to("rad"))) 
     
 
-    def mesh_efficient_logfunc(self, longitude, latitude, kwd_parameters={}, *args, **kwargs) -> float | np.ndarray :
+    def mesh_efficient_logfunc(self, longitude, latitude, kwd_parameters={}, *args, **kwargs) -> float | ndarray :
         """
         Computes the log differential J factor efficiently using a mesh grid.
 
@@ -236,19 +243,17 @@ class DM_Profile(object):
             kwd_parameters (dict, optional): Additional parameters for the profile function.
 
         Returns:
-            float | np.ndarray: The computed log differential J factor.
+            float | ndarray: The computed log differential J factor.
         """
 
-        longitude_units = longitude.unit
-        latitude_units = latitude.unit
 
         parameter_meshes = np.meshgrid(longitude, latitude, *kwd_parameters.values(), indexing='ij')
         parameter_values_flattened_meshes = np.asarray([mesh.flatten() for mesh in parameter_meshes])
 
 
         return self(
-            longitude=parameter_values_flattened_meshes[0]*longitude_units, 
-            latitude=parameter_values_flattened_meshes[1]*latitude_units, 
+            longitude=parameter_values_flattened_meshes[0], 
+            latitude=parameter_values_flattened_meshes[1], 
             kwd_parameters = {param_key: parameter_values_flattened_meshes[2+idx] for idx, param_key in enumerate(kwd_parameters)},
             *args, 
             **kwargs
@@ -296,8 +301,10 @@ class DM_Profile(object):
         integral = self.integrate_spectrum_separation(
             self._eval_substitution, rmin, rmax, separation, ndecade, squared, kwd_parameters=kwd_parameters,
         )
-        inegral_unit = u.Unit("GeV2 cm-5") if squared else u.Unit("GeV cm-2")
-        return integral.to(inegral_unit)
+        integral_unit = u.Unit("GeV2 cm-5") if squared else u.Unit("GeV cm-2")
+        integral_output_with_unit =  (integral/self.gammapy_profile.distance.unit).to(integral_unit)
+
+        return integral_output_with_unit
 
     def integrate_spectrum_separation(
         self, func, xmin, xmax, separation, ndecade, squared=True, kwd_parameters=None

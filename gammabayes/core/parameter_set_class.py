@@ -1,11 +1,21 @@
 from .parameter_class import Parameter
 import warnings, logging
-import numpy as np
+
+
+
+try:
+    from jax import numpy as np
+
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+from numpy import ndarray
+
+
+
 import h5py, pickle
 import time
 
-
-from icecream import ic
 
 
 class ParameterSet(object):
@@ -578,7 +588,7 @@ default value. Place nan in position of default""")
             param_group = h5f.create_group(param_name)
             for spec_attr, spec_attr_val in parameter_specs.items():
                 if (spec_attr != 'transform'):
-                    if isinstance(spec_attr_val, (np.ndarray, list)):
+                    if isinstance(spec_attr_val, (ndarray, list)):
                         param_group.create_dataset(spec_attr, data=spec_attr_val)
                     elif isinstance(spec_attr_val, (str, tuple, set, int, float)):
                         param_group.attrs[spec_attr] = spec_attr_val

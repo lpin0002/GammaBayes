@@ -1,6 +1,43 @@
-import numpy as np, h5py
+try:
+    from jax import numpy as np
+    import jax
+    import time
 
-def bound_axis(axis: np.ndarray, 
+
+
+
+    class RandomGen:
+        def __init__(self, seed=None):
+            """
+            Mimics numpy.random.random using JAX.
+
+            Parameters:
+            - seed: An integer to initialize the PRNG key. If None, a random seed is used.
+            """
+            self.key = jax.random.PRNGKey(seed if seed is not None else jax.random.randint(jax.random.PRNGKey(time.perf_counter_ns()), (), 0, 2**31 - 1))
+
+        def random(self, size=None):
+            """
+            Generates uniformly distributed random numbers between 0 and 1.
+
+            Parameters:
+            - size: Tuple defining the output array's shape. If None, a single scalar is returned.
+
+            Returns:
+            - A JAX array of random numbers.
+            """
+            if size is None:
+                size = ()
+            self.key, subkey = jax.random.split(self.key)
+            return jax.random.uniform(subkey, shape=size)
+
+except:
+    import numpy as np
+
+import h5py
+from numpy import ndarray
+
+def bound_axis(axis: ndarray, 
                bound_type: str, 
                bound_radii: float, 
                estimated_val: float):
@@ -8,7 +45,7 @@ def bound_axis(axis: np.ndarray,
     Bounds an axis within a specified range based on the given bound type.
 
     Args:
-        axis (np.ndarray): The axis array to be bounded.
+        axis (ndarray): The axis array to be bounded.
         bound_type (str): Type of bounding ('linear' or 'log10').
         bound_radii (float): Radius for bounding.
         estimated_val (float): Estimated value around which to bound the axis.
@@ -30,31 +67,31 @@ def bound_axis(axis: np.ndarray,
     return temp_axis, axis_indices
 
 
-def default_proposal_prior_array(axes:list|tuple|np.ndarray):
+def default_proposal_prior_array(axes:list|tuple|ndarray):
     """
     Generates a default proposal prior array.
 
     Args:
-        axes (list | tuple | np.ndarray): Axes to generate the array for.
+        axes (list | tuple | ndarray): Axes to generate the array for.
 
     Returns:
-        np.ndarray: The generated prior array.
+        ndarray: The generated prior array.
     """
     return np.meshgrid(np.log(1+0*axes[0]), axes[1], axes[2], indexing='ij')[0]
 
 
 def discrete_prior_transform(u:float, 
                              inv_cdf_func:callable=None, 
-                             log_prior_array:np.ndarray=None, 
-                             axes:list|tuple|np.ndarray=None):
+                             log_prior_array:ndarray=None, 
+                             axes:list|tuple|ndarray=None):
     """
     Transforms a uniform random variable to the discrete prior space.
 
     Args:
         u (float): Uniform random variable.
         inv_cdf_func (callable, optional): Inverse CDF function. Defaults to None.
-        log_prior_array (np.ndarray, optional): Log prior array. Defaults to None.
-        axes (list | tuple | np.ndarray, optional): Axes for the prior. Defaults to None.
+        log_prior_array (ndarray, optional): Log prior array. Defaults to None.
+        axes (list | tuple | ndarray, optional): Axes for the prior. Defaults to None.
 
     Returns:
         list: Transformed output.
@@ -204,3 +241,6 @@ class ResultsWrapper:
             sampler_results['eff'] = float(h5f['eff'])
 
         return cls(sampler_results)
+    
+
+

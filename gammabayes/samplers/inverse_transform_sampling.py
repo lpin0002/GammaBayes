@@ -1,6 +1,33 @@
 from scipy.special import logsumexp
-import numpy as np
+from functools import partial
+import time
+try:
+    import jax
+    import jax.numpy as np
+
+    from jax import random
+    from jax.lax import cumlogsumexp
+    from .sampler_utils import RandomGen
+
+
+    random_gen_class = RandomGen()
+
+
+    logaddexp_accumulate = cumlogsumexp
+
+    random_gen = random_gen_class.random
+
+
+
+
+except:
+    import numpy as np
+    from numpy.random import random as random_gen
+    from numpy import logaddexp
+    logaddexp_accumulate = logaddexp.accumulate
+
 import random
+from numpy import ndarray
 
 
 def inverse_transform_sampler(logpmf, Nsamples=1):
@@ -8,18 +35,18 @@ def inverse_transform_sampler(logpmf, Nsamples=1):
         probability density values
 
     Args:
-        logpmf (np.ndarray): discrete log probability density values
+        logpmf (ndarray): discrete log probability density values
         Nsamples (int, optional): Number of wanted samples. Defaults to 1.
 
     Returns:
-        np.ndarray: Sampled indices of the input axis
+        ndarray: Sampled indices of the input axis
     """
     logpmf = logpmf - logsumexp(logpmf)
-    logcdf = np.logaddexp.accumulate(logpmf)
+    logcdf = logaddexp_accumulate(logpmf)
     cdf = np.exp(logcdf-logcdf[-1])  
 
-    randvals = [random.random() for xkcd in range(Nsamples)]
-    indices = [np.searchsorted(cdf, u) for u in randvals]
+    randvals = [random_gen() for xkcd in range(Nsamples)]
+    indices = np.asarray([np.searchsorted(cdf, u) for u in randvals])
     return indices
 
 # Need to figure out a more rigorous solution. Stable for up to ...
@@ -31,12 +58,12 @@ def integral_inverse_transform_sampler(logpmf, axes=None, Nsamples: int = 1):
 
     logpmf_flattened = logpmf_flattened - logsumexp(logpmf_flattened)
 
-    flat_logcdf = np.logaddexp.accumulate(logpmf_flattened)
+    flat_logcdf = logaddexp_accumulate(logpmf_flattened)
 
     flat_cdf = np.exp(flat_logcdf-flat_logcdf[-1])  
 
-    randvals = [random.random() for xkcd in range(Nsamples)]
-    indices = [np.searchsorted(flat_cdf, u) for u in randvals]
+    randvals = [random_gen() for xkcd in range(Nsamples)]
+    indices = np.asarray([np.searchsorted(flat_cdf, u) for u in randvals])
 
     reshaped_simulated_indices = np.unravel_index(indices, np.squeeze(logpmf).shape)
 
@@ -51,10 +78,10 @@ def vectorised_inverse_transform_sampler(logpmfs, axes=None, Nsamples: list[int]
 
     logpmfs_flattened = logpmfs.reshape(logpmfs.shape[0], -1)
     logpmfs_flattened = logpmfs_flattened - logsumexp(logpmfs_flattened, axis=1)[:, None]
-    flat_logcdfs = np.logaddexp.accumulate(logpmfs_flattened, axis=1)
+    flat_logcdfs = logaddexp_accumulate(logpmfs_flattened, axis=1)
     flat_cdfs = np.exp(flat_logcdfs-flat_logcdfs[:, -1][:, None])
     # Vectorized random value generation, not sure whether it's any better than list comprehension
-    randvals_list = np.random.random((len(Nsamples), max(Nsamples)))
+    randvals_list = random_gen((len(Nsamples), max(Nsamples)))
 
     indices_list = [np.searchsorted(flat_cdf, randvals[:num]) for flat_cdf, randvals, num in zip(flat_cdfs, randvals_list, Nsamples)]
 

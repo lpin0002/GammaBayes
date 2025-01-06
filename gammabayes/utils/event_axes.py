@@ -2,33 +2,43 @@
 from gammabayes import hdp_credible_interval_1d
 
 from gammabayes.utils.integration import logspace_riemann
-
+from numpy import ndarray
 
 from tqdm import tqdm
 from matplotlib import pyplot as plt
-import numpy as np
-from scipy.special import logsumexp
-from scipy.interpolate import interp1d
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+
 from astropy import units as u
 
+try:
+    from jax.nn import logsumexp
+    from jax.numpy import interp
+except Exception as err:
+    print(__file__, err)
+    from scipy.interpolate import interp1d
+    from scipy.special import logsumexp
 
 
 
-def makelogjacob(energyaxis: np.ndarray) -> np.ndarray:
+def makelogjacob(energyaxis: ndarray) -> ndarray:
     """Generates log jacobian for using log-spaced energy for proper integrals
 
     Args:
-        log10eaxis (np.ndarray, optional): Axis of discrete values of energy values. 
+        log10eaxis (ndarray, optional): Axis of discrete values of energy values. 
 
     Returns:
-        np.ndarray: Log jacobian for using log-spaced energy for proper integrals
+        ndarray: Log jacobian for using log-spaced energy for proper integrals
     """
     outputlogjacob = np.log(energyaxis)
     return outputlogjacob
 
 
 
-def create_linear_axis(lower_bound: float, upper_bound: float,resolution: int = 10) -> np.ndarray:
+def create_linear_axis(lower_bound: float, upper_bound: float,resolution: int = 10) -> ndarray:
     """
     Creates a linear axis with specified bounds and resolution.
 
@@ -38,14 +48,14 @@ def create_linear_axis(lower_bound: float, upper_bound: float,resolution: int = 
         resolution (int, optional): The resolution of the axis. Defaults to 10.
 
     Returns:
-        np.ndarray: Linear axis array.
+        ndarray: Linear axis array.
     """
     return np.linspace(lower_bound, 
                         upper_bound, 
                         int(round((upper_bound-lower_bound)/resolution)+1))
     
 
-def create_loguniform_axis(lower_bound: float, upper_bound: float, number_of_bins_per_unit: int = 100) -> np.ndarray:
+def create_loguniform_axis(lower_bound: float, upper_bound: float, number_of_bins_per_unit: int = 100) -> ndarray:
     """
     Creates a log-uniform axis with specified bounds and bins per unit.
 
@@ -55,7 +65,7 @@ def create_loguniform_axis(lower_bound: float, upper_bound: float, number_of_bin
         number_of_bins_per_unit (int, optional): Number of bins per unit. Defaults to 100.
 
     Returns:
-        np.ndarray: Log-uniform axis array.
+        ndarray: Log-uniform axis array.
     """
     return np.logspace(np.log10(lower_bound), 
                         np.log10(upper_bound), 
@@ -65,7 +75,7 @@ def create_axes(energy_min: float, energy_max: float,
                     energy_bins_per_decade: int, spatial_res: float, 
                     longitude_min: float, longitude_max: float,
                     latitude_min: float, latitude_max: float,
-                    custom_print_str="") -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+                    custom_print_str="") -> tuple[ndarray, ndarray, ndarray]:
     """
     Creates energy, longitude, and latitude axes for event analysis.
 
@@ -81,7 +91,7 @@ def create_axes(energy_min: float, energy_max: float,
         custom_print_str (str, optional): Custom print string for displaying axis parameters. Defaults to "".
 
     Returns:
-        tuple[np.ndarray, np.ndarray, np.ndarray]: Energy axis, longitude axis, and latitude axis.
+        tuple[ndarray, ndarray, ndarray]: Energy axis, longitude axis, and latitude axis.
     """
 
     
@@ -91,9 +101,9 @@ Spatial Resolution: {spatial_res},
 Longitude Min: {longitude_min}, Longitude Max: {longitude_max},
 Latitude Min: {latitude_min}, Latitude Max: {latitude_max}\n""")
     
-    energy_axis = create_loguniform_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)*u.TeV
-    longitude_axis = create_linear_axis(longitude_min, longitude_max, resolution=spatial_res)*u.deg
-    latitude_axis = create_linear_axis(latitude_min, latitude_max, resolution=spatial_res)*u.deg
+    energy_axis = create_loguniform_axis(energy_min, energy_max, number_of_bins_per_unit=energy_bins_per_decade)
+    longitude_axis = create_linear_axis(longitude_min, longitude_max, resolution=spatial_res)
+    latitude_axis = create_linear_axis(latitude_min, latitude_max, resolution=spatial_res)
 
     return energy_axis, longitude_axis, latitude_axis
 
@@ -121,10 +131,10 @@ def derive_edisp_bounds(irf_loglike, percentile=90, sigmalevel=5):
     edisp_logval_bounds = []
 
     for erecon in tqdm(energy_recon_axis, desc='Calculating energy dispersion bounds'):
-        log_edisp_vals = irf_loglike.log_edisp(energy_true_axis.value*0+erecon,energy_true_axis , 
-                                               0*energy_true_axis.value+lonval, 
-                                               0*energy_true_axis.value+latval)
-        log_edisp_vals = log_edisp_vals - logspace_riemann(logy=log_edisp_vals, x=energy_true_axis.value)
+        log_edisp_vals = irf_loglike.log_edisp(energy_true_axis*0+erecon,energy_true_axis , 
+                                               0*energy_true_axis+lonval, 
+                                               0*energy_true_axis+latval)
+        log_edisp_vals = log_edisp_vals - logspace_riemann(logy=log_edisp_vals, x=energy_true_axis)
         edisp_vals = np.exp(log_edisp_vals)
         bounds = hdp_credible_interval_1d(y=edisp_vals, sigma=sigmalevel, x=energy_true_axis)
         valdiff = np.diff(bounds)[0]

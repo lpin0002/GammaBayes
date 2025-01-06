@@ -1,6 +1,19 @@
 from gammabayes import haversine, resources_dir
-import numpy as np
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+import numpy
+
 from astropy import units as u
+from astropy.units import UnitConversionError
 from astropy.units import Quantity
 from gammapy.irf import load_irf_dict_from_file
 from astropy.coordinates import SkyCoord
@@ -27,7 +40,7 @@ class IRFExtractor(object):
                  CCR_BKG_units: u.Unit = (1/(u.deg**2*u.TeV*u.s)).unit,
                  instrument: str ='CTAO',
                  obs_id: int = None,
-                 pointing_dir: np.ndarray[u.Quantity] = np.array([0, 0])*u.deg):
+                 pointing_dir: ndarray[u.Quantity] = np.array([0, 0])*u.deg):
 
         self._format_instrument(instrument)
 
@@ -165,9 +178,26 @@ class IRFExtractor(object):
         Returns:
             float: The natural log of the effective area of the CTA in cm^2.
         """
-        return np.log(self.aeff_default.evaluate(energy_true = energy, 
+    # TODO: Tech Debt
+        try:
+            energy = numpy.array(energy.value)
+        except:
+            pass
+
+        try:
+            lon, lat = numpy.array(lon.value), numpy.array(lat.value)
+        except:
+            lon, lat = numpy.array(lon), numpy.array(lat)
+
+        try:
+            pointing_lon, pointing_lat = numpy.array(pointing_dir[0].value), numpy.array(pointing_dir[1].value)
+        except:
+            pointing_lon, pointing_lat = numpy.array(pointing_dir[0]), numpy.array(pointing_dir[1])
+
+
+        return np.log(np.array(self.aeff_default.evaluate(energy_true = energy*u.TeV, 
                                 offset=haversine(
-                                    lon, lat, pointing_dir[0], pointing_dir[1])).to(self.aeff_units).value)
+                                    lon*u.deg, lat*u.deg, pointing_lon*u.deg, pointing_lat*u.deg)*u.deg).to(self.aeff_units).value))
         
     def log_edisp(self, recon_energy:Quantity, 
                   true_energy:Quantity, true_lon:Quantity, true_lat:Quantity, 
@@ -192,14 +222,21 @@ class IRFExtractor(object):
         migration = recon_energy/true_energy
 
 
+        try:
+            edisp_val = np.where(np.logical_and(migration<migration_cut, migration>1/migration_cut), self.edisp_default.evaluate(energy_true=true_energy,
+                                                            migra = migration, 
+                                                            offset=offset), 0)
 
-        edisp_val = np.where(np.logical_and(migration<migration_cut, migration>1/migration_cut), self.edisp_default.evaluate(energy_true=true_energy,
-                                                        migra = migration, 
-                                                        offset=offset), 0)
+            adjusted_edisp_val = edisp_val/(true_energy.unit)
 
-        adjusted_edisp_val = edisp_val/(true_energy.unit)
+            adjusted_edisp_val = (adjusted_edisp_val).to(self.edisp_units).value
+        except UnitConversionError:
+            edisp_val = np.where(np.logical_and(migration<migration_cut, migration>1/migration_cut), self.edisp_default.evaluate(energy_true=true_energy*u.TeV,
+                                                migra = migration, 
+                                                offset=offset*u.deg), 0)
 
-        adjusted_edisp_val = (adjusted_edisp_val).to(self.edisp_units).value
+            adjusted_edisp_val = edisp_val
+
 
 
         # edisp output is dimensionless when it should have units of 1/TeV
@@ -231,9 +268,13 @@ class IRFExtractor(object):
 
         offset  = haversine(true_lon.flatten(), true_lat.flatten(), pointing_dir[0], pointing_dir[1]).flatten()
 
-        output = np.log(self.psf_default.evaluate(energy_true=true_energy, rad = rad, 
-                                                  offset=offset).to(self.psf_units).value)
-                
+        try:
+            output = np.log(self.psf_default.evaluate(energy_true=true_energy, rad = rad, 
+                                                    offset=offset).to(self.psf_units).value)
+        except:
+            output = np.log(self.psf_default.evaluate(energy_true=true_energy*u.TeV, rad = rad*u.deg, 
+                                                    offset=offset*u.deg))
+
         return output
 
 
@@ -291,6 +332,14 @@ class IRFExtractor(object):
 
         offset  = haversine(lon, lat, pointing_dir[0], pointing_dir[1])
 
+        try:
+            offset = offset.to(u.deg)
+        except:
+            offset = offset*u.deg
+        try:
+            energy = energy.to(u.TeV)
+        except:
+            energy = energy*u.TeV
 
 
         return np.log(self.CCR_BKG.evaluate(energy=energy, offset=offset).to(self.CCR_BKG_units).value)

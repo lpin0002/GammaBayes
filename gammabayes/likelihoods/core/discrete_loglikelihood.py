@@ -1,5 +1,19 @@
-from scipy.special import logsumexp
-import numpy as np
+
+from jax import config
+config.update("jax_enable_x64", True)
+
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray    
+
 from gammabayes.samplers import integral_inverse_transform_sampler, vectorised_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import Parameter, ParameterSet, update_with_defaults, GammaBinning, GammaObs, GammaObsCube
@@ -14,8 +28,8 @@ class DiscreteLogLikelihood(object):
     
     def __init__(self, 
                  logfunction: callable,
-                 axes: list[np.ndarray] | tuple[np.ndarray]     = None, 
-                 dependent_axes: list[np.ndarray]               = None, 
+                 axes: list[ndarray] | tuple[ndarray]     = None, 
+                 dependent_axes: list[ndarray]               = None, 
                  name: list[str] | tuple[str]                   = ['None'], 
                  inputunit: str | list[str] | tuple[str]        = ['None'], 
                  iterative_logspace_integrator: callable        = iterate_logspace_integration,
@@ -30,9 +44,9 @@ class DiscreteLogLikelihood(object):
         Parameters:
             logfunction (callable): Function that computes log likelihood values.
             
-            axes (list[np.ndarray] | tuple[np.ndarray]): Arrays defining the independent variable axes.
+            axes (list[ndarray] | tuple[ndarray]): Arrays defining the independent variable axes.
             
-            dependent_axes (list[np.ndarray]): Arrays defining the dependent variable axes.
+            dependent_axes (list[ndarray]): Arrays defining the dependent variable axes.
             
             name (list[str] | tuple[str], optional): Identifier name(s) for the likelihood instance.
             
@@ -49,7 +63,7 @@ class DiscreteLogLikelihood(object):
         This class facilitates the calculation of log likelihood over discrete spaces, suitable for
         models where likelihood evaluations are essential for parameter inference.
         """
-        np.seterr(divide='ignore')
+
         self.name = name
         self.inputunit = inputunit
         self.logfunction = logfunction
@@ -130,7 +144,7 @@ class DiscreteLogLikelihood(object):
     
 
         
-    def __call__(self, *args, **kwargs) -> np.ndarray | float:
+    def __call__(self, *args, **kwargs) -> ndarray | float:
         """
         Enables using the DiscreteLogLikelihood instance as a callable, passing
         arguments directly to the logfunction.
@@ -162,8 +176,8 @@ class DiscreteLogLikelihood(object):
     
     
     def raw_sample(self, 
-                   dependentvalues: tuple[float] | list[float] | np.ndarray,  
-                   pointing_dir: np.ndarray = None,
+                   dependentvalues: tuple[float] | list[float] | ndarray,  
+                   pointing_dir: ndarray = None,
                    parameters: dict | ParameterSet = {}, 
                    numsamples: int = 1) -> GammaObs:
         """
@@ -189,7 +203,6 @@ class DiscreteLogLikelihood(object):
             input_units.append(1)
 
         for val_idx, dependent_val in enumerate(dependentvalues):
-            # input_units.append(self.axes[val_idx].unit)
             input_units.append(1)
 
         for parameter_val in parameters.values():
@@ -207,7 +220,7 @@ class DiscreteLogLikelihood(object):
                 parameters={key:flattened_meshes[num_eval_axes+param_idx] for param_idx, key in enumerate(parameters.keys())}
                 ).reshape(inputmesh[0].shape))
 
-        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes])
+        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=self.axes)
 
         # Used for pseudo-riemann summing
         logdx = construct_log_dx_mesh(self.axes)
@@ -235,16 +248,12 @@ class DiscreteLogLikelihood(object):
 
         _dependent_axes_index_mesh, recon_energy_mesh, recon_lon_mesh, recon_lat_mesh  = np.meshgrid(dependent_mesh_indices, *self.axes, indexing='ij')
 
+        mesh_true_vals = [np.array(dependent_value)[_dependent_axes_index_mesh].flatten() for dependent_value in dependentvalues]
 
-        mesh_true_vals = [np.array(dependent_value.value)[_dependent_axes_index_mesh].flatten()*dependent_value.unit for dependent_value in dependentvalues]
-
-        try:
-            pointing_dir = np.array(pointing_dir.value)*pointing_dir.unit
-        except:
-            pointing_dir = np.array(pointing_dir)*pointing_dir[0].unit
+        pointing_dir = np.array(pointing_dir)
 
 
-        mesh_pointings = np.array(pointing_dir)[_dependent_axes_index_mesh, :]*pointing_dir[0].unit
+        mesh_pointings = np.array(pointing_dir)[_dependent_axes_index_mesh, :]
 
         flattened_meshes = [inputaxis.flatten() for inputaxis in (recon_energy_mesh, recon_lon_mesh, recon_lat_mesh)]
         flattened_mesh_pointings = [point_coord.flatten() for point_coord in [mesh_pointings[..., 0],mesh_pointings[..., 1]]]
@@ -255,7 +264,7 @@ class DiscreteLogLikelihood(object):
                 pointing_dir=flattened_mesh_pointings,
                 ).reshape(-1, *self.binning_geometry.axes_dim)
 
-        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=[axis.value for axis in self.axes], axisindices=[1, 2, 3])[:, None, None, None]
+        loglikevals = loglikevals - self.logspace_integrator(loglikevals, axes=self.axes, axisindices=[1, 2, 3])[:, None, None, None]
 
         # Used for pseudo-riemann summing
         logdx = construct_log_dx_mesh(self.axes)

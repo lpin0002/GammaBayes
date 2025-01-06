@@ -1,5 +1,13 @@
 from gammabayes import ParameterSet
-import logging, warnings, numpy as np
+import logging, warnings
+
+
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
 
 def _handle_parameter_specification(
         parameter_specifications: dict | ParameterSet,

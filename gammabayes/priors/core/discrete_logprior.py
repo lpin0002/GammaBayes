@@ -1,11 +1,26 @@
-from scipy.special import logsumexp
-import numpy as np, time, warnings, logging, pickle
+
+from jax import config
+config.update("jax_enable_x64", True)
+
+
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
+import time, warnings, logging, pickle
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExposure
 # from gammabayes import EventData
 from icecream import ic
-from astropy import units as u
 import matplotlib.pyplot as plt
 
 class DiscreteLogPrior(object):
@@ -17,7 +32,7 @@ class DiscreteLogPrior(object):
         inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
         logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
         log_mesh_efficient_func (callable, optional): A function for efficient computation of log prior values on a mesh grid.
-        axes (tuple[np.ndarray], optional): A tuple containing np.ndarray objects for each axis over which the prior is defined.
+        axes (tuple[ndarray], optional): A tuple containing ndarray objects for each axis over which the prior is defined.
         axes_names (list[str] | tuple[str], optional): Names of the axes. Defaults to ['None'].
         default_spectral_parameters (dict, optional): Default spectral parameters for the prior. Defaults to an empty dict.
         default_spatial_parameters (dict, optional): Default spatial parameters for the prior. Defaults to an empty dict.
@@ -29,7 +44,7 @@ class DiscreteLogPrior(object):
                  inputunits: str=None, 
                  logfunction: callable=None, 
                  log_mesh_efficient_func: callable = None,
-                 axes: tuple[np.ndarray] | None = None, 
+                 axes: tuple[ndarray] | None = None, 
                  binning_geometry: GammaBinning = None,
                  default_spectral_parameters: dict = None,  
                  default_spatial_parameters: dict = None,  
@@ -45,7 +60,7 @@ class DiscreteLogPrior(object):
             inputunits (str, optional): Unit of the input values for the axes. Defaults to None.
             logfunction (callable, optional): A function that calculates log prior values given axes values and hyperparameters.
             log_mesh_efficient_func (callable, optional): A function for efficient computation of log prior values on a mesh grid.
-            axes (tuple[np.ndarray], optional): A tuple containing np.ndarray objects for each axis over which the prior is defined.
+            axes (tuple[ndarray], optional): A tuple containing ndarray objects for each axis over which the prior is defined.
             axes_names (list[str] | tuple[str], optional): Names of the axes. Defaults to ['None'].
             default_spectral_parameters (dict, optional): Default spectral parameters for the prior. Defaults to an empty dict.
             default_spatial_parameters (dict, optional): Default spatial parameters for the prior. Defaults to an empty dict.
@@ -63,8 +78,6 @@ class DiscreteLogPrior(object):
         if default_spatial_parameters is None:
             default_spatial_parameters = {}
 
-
-        np.seterr(divide='ignore')
         
         if name is None:
             name = time.strftime("discrete_log_prior_%f")
@@ -133,7 +146,7 @@ class DiscreteLogPrior(object):
         return description
     
     
-    def __call__(self, *args, **kwargs)  -> np.ndarray | float:
+    def __call__(self, *args, **kwargs)  -> ndarray | float:
         """
         Allows the instance to be called like a function, passing arguments directly to the logfunction.
 
@@ -142,28 +155,28 @@ class DiscreteLogPrior(object):
             **kwargs: Keyword arguments for the logfunction.
 
         Returns:
-            np.ndarray | float: The result from the logfunction, which is the log prior value(s) for the given input(s).
+            ndarray | float: The result from the logfunction, which is the log prior value(s) for the given input(s).
         """
         output = self.logfunction(*args, **kwargs)
         return output
 
     
-    def log_normalisation(self, log_prior_values: np.ndarray = None, 
+    def log_normalisation(self, log_prior_values: ndarray = None, 
                       spectral_parameters: dict = None, 
                       spatial_parameters: dict = None,
                       axisindices: list = None,
-                      *args, **kwargs) -> np.ndarray | float:
+                      *args, **kwargs) -> ndarray | float:
         """
         Calculates the log normalisation constant of the log prior over specified axes.
 
         Args:
-            log_prior_values (np.ndarray, optional): Pre-computed log prior values. If None, they will be computed using default or provided hyperparameters.
+            log_prior_values (ndarray, optional): Pre-computed log prior values. If None, they will be computed using default or provided hyperparameters.
             spectral_parameters (dict, optional): Spectral parameters to be used if log_prior_values is not provided. Defaults to instance's default spectral parameters.
             spatial_parameters (dict, optional): Spatial parameters to be used if log_prior_values is not provided. Defaults to instance's default spatial parameters.
             axisindices (list, optional): Indices of the axes over which to integrate. Defaults to [0, 1, 2].
 
         Returns:
-            np.ndarray | float: The normalisation constant for the log prior, either as a scalar or an array depending on the integration over multiple axes.
+            ndarray | float: The normalisation constant for the log prior, either as a scalar or an array depending on the integration over multiple axes.
         """
 
         if spectral_parameters is None:
@@ -194,7 +207,7 @@ class DiscreteLogPrior(object):
                                                 spatial_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+len(spectral_parameters)+idx] for idx, hyper_key in enumerate(spatial_parameters.keys())},
                                                 *args, **kwargs
                                                 )    
-        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=[axis.value for axis in self.binning_geometry.axes], axisindices=axisindices)
+        log_prior_norms = self.logspace_integrator(logy=np.squeeze(log_prior_values), axes=[axis for axis in self.binning_geometry.axes], axisindices=axisindices)
 
         return log_prior_norms
     
@@ -202,25 +215,25 @@ class DiscreteLogPrior(object):
     
     def sample(self, 
                numsamples: int=None, 
-               log_prior_values: np.ndarray = None, 
+               log_prior_values: ndarray = None, 
                spectral_parameters: dict = None, 
                spatial_parameters: dict = None,
                *args, **kwargs,
-               )  -> np.ndarray:
+               )  -> ndarray:
         """
         Generates samples from the prior distribution using inverse transform sampling.
 
         Parameters:
         - numsamples (int): Number of samples to generate.
         
-        - log_prior_values (np.ndarray, optional): Log prior values to sample from. If None, they are computed using the provided or default parameters.
+        - log_prior_values (ndarray, optional): Log prior values to sample from. If None, they are computed using the provided or default parameters.
         
         - spectral_parameters (dict, optional): Spectral parameters for computing log prior values. Defaults to instance's parameters.
         
         - spatial_parameters (dict, optional): Spatial parameters for computing log prior values. Defaults to instance's parameters.
 
         Returns:
-        - np.ndarray: Samples from the prior, with shape determined by the number of axes and samples requested.
+        - ndarray: Samples from the prior, with shape determined by the number of axes and samples requested.
         """
         if spectral_parameters is None:
             spectral_parameters = self.default_spectral_parameters
@@ -242,8 +255,9 @@ class DiscreteLogPrior(object):
 
             else:
                 inputmesh = np.meshgrid(*self.binning_geometry.axes, 
-                                *spectral_parameters.values(),
-                                *spatial_parameters.values(), indexing='ij') 
+                                        *[np.array([param]).flatten() for param in spectral_parameters.values()],
+                                        *[np.array([param]).flatten() for param in spatial_parameters.values()],
+                                        indexing='ij') 
         
                 log_prior_values = self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
                                                 spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
@@ -316,7 +330,7 @@ class DiscreteLogPrior(object):
                               spectral_parameters: dict = None, 
                               spatial_parameters: dict = None, 
                               normalisation_axes: list | tuple = None,
-                              normalise: bool = False,)  -> np.ndarray:
+                              normalise: bool = False,)  -> ndarray:
         """
         Constructs an array of log prior values over a mesh of the axes' values.
 
@@ -332,7 +346,7 @@ class DiscreteLogPrior(object):
         - normalise (bool, optional): Whether to normalise the output array. Defaults to False.
 
         Returns:
-        - np.ndarray: An array of log prior values for the specified parameters and axes.
+        - ndarray: An array of log prior values for the specified parameters and axes.
         """
 
         if spectral_parameters is None:
@@ -355,8 +369,9 @@ class DiscreteLogPrior(object):
 
         else:
             inputmesh = np.meshgrid(*self.binning_geometry.axes, 
-                                    *spectral_parameters.values(),
-                                    *spatial_parameters.values(), indexing='ij') 
+                                    *[np.array([param]).flatten() for param in spectral_parameters.values()],
+                                    *[np.array([param]).flatten() for param in spatial_parameters.values()],
+                                      indexing='ij') 
             
             outputarray = self.log_scaling_factor+self.logfunction(*inputmesh[:self.binning_geometry.num_axes], 
                                             spectral_parameters = {hyper_key: inputmesh[self.binning_geometry.num_axes+idx] for idx, hyper_key in enumerate(spectral_parameters.keys())}, 
@@ -429,37 +444,37 @@ class DiscreteLogPrior(object):
 
 
         log_integrated_energy_flux = np.squeeze(iterate_logspace_integration(logy=log_matrix_values, 
-                                                axes=[self.binning_geometry.lon_axis.value, 
-                                                      self.binning_geometry.lat_axis.value],
+                                                axes=[self.binning_geometry.lon_axis, 
+                                                      self.binning_geometry.lat_axis],
                                                 axisindices=[1,2]))
 
         log_integrated_spatial_flux = np.squeeze(iterate_logspace_integration(logy=log_matrix_values, 
-                                                axes=[self.binning_geometry.energy_axis.value],
+                                                axes=[self.binning_geometry.energy_axis],
                                                 axisindices=[0]))
         
 
         log_integrated_mix_flux = np.squeeze(iterate_logspace_integration(logy=log_matrix_values, 
-                                                axes=[self.binning_geometry.lat_axis.value],
+                                                axes=[self.binning_geometry.lat_axis],
                                                 axisindices=[2]))
 
 
-        ax[0].plot(self.binning_geometry.energy_axis.value, np.exp(log_integrated_energy_flux), c=cmap(0.5))
+        ax[0].plot(self.binning_geometry.energy_axis, np.exp(log_integrated_energy_flux), c=cmap(0.5))
         ax[0].set_xscale('log')
         ax[0].set_yscale(norm)
         
-        ax[0].set_xlabel(f'Energy [{self.binning_geometry.energy_axis.unit.to_string()}]')
+        ax[0].set_xlabel(f'Energy [TeV]')
         ax[0].grid(which='major', c='grey', ls='--', alpha=0.4)
 
         ax[0].set_ylim([vmin, vmax])
 
 
-        pcm = ax[1].pcolormesh(self.binning_geometry.lon_axis.value, 
-                        self.binning_geometry.lat_axis.value, 
+        pcm = ax[1].pcolormesh(self.binning_geometry.lon_axis, 
+                        self.binning_geometry.lat_axis, 
                         np.exp(log_integrated_spatial_flux.T),
                         norm=norm, vmin=vmin, vmax=vmax, cmap=cmap)
         ax[1].set_aspect('equal')
-        ax[1].set_xlabel(f'Longitude [{(self.binning_geometry.lon_axis.unit).to_string()}]')
-        ax[1].set_ylabel(f'Latitude [{(self.binning_geometry.lat_axis.unit).to_string()}]')
+        ax[1].set_xlabel(f'Longitude [deg]')
+        ax[1].set_ylabel(f'Latitude [deg]')
         ax[1].invert_xaxis()
         plt.colorbar(mappable=pcm, 
                      ax=ax[1],)
@@ -467,13 +482,13 @@ class DiscreteLogPrior(object):
 
 
 
-        pcm = ax[2].pcolormesh(self.binning_geometry.energy_axis.value, 
-                        self.binning_geometry.lon_axis.value, 
+        pcm = ax[2].pcolormesh(self.binning_geometry.energy_axis, 
+                        self.binning_geometry.lon_axis, 
                         np.exp(log_integrated_mix_flux.T),
                         norm=norm, vmin=vmin, vmax=vmax, cmap=cmap)
         ax[2].set_xscale('log')
-        ax[2].set_ylabel(f'Longitude [{(self.binning_geometry.lon_axis.unit).to_string()}]')
-        ax[2].set_xlabel(f'Energy [{self.binning_geometry.energy_axis.unit.to_string()}]')
+        ax[2].set_ylabel(f'Longitude [deg]')
+        ax[2].set_xlabel(f'Energy [TeV]')
         plt.colorbar(mappable=pcm, 
                      ax=ax[2])
 

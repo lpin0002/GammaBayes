@@ -1,5 +1,13 @@
 import warnings
-import numpy as np
+
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+
+
 from gammabayes.priors.core import DiscreteLogPrior
 
 class MTreeNode:

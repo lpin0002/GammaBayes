@@ -1,9 +1,19 @@
 from .parameter_set_class import ParameterSet
 from .parameter_class import Parameter
 from .core_utils import update_with_defaults
-import numpy as np
 
-from icecream import ic
+
+
+
+try:
+    from jax import numpy as np
+
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+from numpy import ndarray
+
+
 
 class ParameterSetCollection:
     """

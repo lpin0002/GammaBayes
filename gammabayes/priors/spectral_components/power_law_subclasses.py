@@ -1,6 +1,15 @@
 from .base_spectral_comp import BaseSpectral_PriorComp
 from astropy import units as u
-import numpy as np
+
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+
+
+
+
 
 from icecream import ic
 
@@ -22,7 +31,8 @@ def log_power_law(self, energy: float|u.Quantity, index: float=2.5, phi0: int|u.
     if index is None:
         index = self.default_parameter_values['index']
 
-    log_value = np.log(phi0) - index * np.log(energy.to(self.energy_units).value)
+
+    log_value = np.log(phi0) - index * np.log(energy)
 
     return log_value
 
@@ -30,12 +40,10 @@ class PowerLaw(BaseSpectral_PriorComp):
 
     log_power_law = log_power_law
 
-    def __init__(self, default_parameter_values=None, energy_units=u.Unit("TeV"), *args, **kwargs):
+    def __init__(self, default_parameter_values=None, *args, **kwargs):
         
         if default_parameter_values is None:
             default_parameter_values = {'index':2.5, "phi0": 1e-8}
-
-        self.energy_units = energy_units
 
         super().__init__(logfunc=self.log_power_law, default_parameter_values=default_parameter_values)
 
@@ -66,7 +74,7 @@ def log_broken_power_law(self, energy: float|u.Quantity, index: float=2.5, cutof
     if cutoff_energy_TeV is None:
         cutoff_energy_TeV = self.default_parameter_values['cutoff_energy_TeV']
 
-    log_value =  np.log(phi0) - index*np.log(energy.to("TeV").value) - energy.to("TeV").value/cutoff_energy_TeV
+    log_value =  np.log(phi0) - index*np.log(energy) - energy/cutoff_energy_TeV
 
     return log_value
 
@@ -75,7 +83,7 @@ class BrokenPowerLaw(BaseSpectral_PriorComp):
 
     log_broken_power_law = log_broken_power_law
 
-    def __init__(self, default_parameter_values=None, energy_units=u.Unit("TeV"), *args, **kwargs):
+    def __init__(self, default_parameter_values=None, *args, **kwargs):
         if default_parameter_values is None:
             default_parameter_values = {'index':2.5,"cutoff_energy_TeV":1, "phi0": 1e-8, }
 
@@ -114,7 +122,7 @@ def log_broad_broken_power_law(self, energy: float|u.Quantity, cutoff_energy_TeV
     if cutoff_energy_TeV is None:
         cutoff_energy_TeV = self.default_parameter_values['cutoff_energy_TeV']
 
-    log_value =  np.log(phi0) - index*np.log(energy.value/cutoff_energy_TeV) + S*(index1-index2)*np.log(1+(energy.value/cutoff_energy_TeV)**(1/S))
+    log_value =  np.log(phi0) - index1*np.log(energy/cutoff_energy_TeV) + S*(index1-index2)*np.log(1+(energy/cutoff_energy_TeV)**(1/S))
 
     return log_value
 
@@ -124,7 +132,7 @@ class BroadBrokenPowerLaw(BaseSpectral_PriorComp):
 
     log_broad_broken_power_law = log_broad_broken_power_law
 
-    def __init__(self, default_parameter_values=None, energy_units=u.Unit("TeV"), *args, **kwargs):
+    def __init__(self, default_parameter_values=None, *args, **kwargs):
         if default_parameter_values is None:
             default_parameter_values = {'index1':2.5,'index2':2.5,"S":0.3, "cutoff_energy_TeV":10, "phi0": 1e-8, }
 

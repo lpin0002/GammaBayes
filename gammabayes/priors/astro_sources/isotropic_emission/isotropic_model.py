@@ -1,4 +1,9 @@
-import numpy as np
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
 from astropy import units as u
 
 from gammabayes.priors.core import TwoCompFluxPrior
@@ -13,7 +18,7 @@ from gammabayes.priors.spatial_components import IsotropicSpatial_PriorComp
 class IsotropicBrokenPowerLaw(TwoCompFluxPrior):
 
     def __init__(self, 
-                 axes: list[np.ndarray[u.Quantity]]| tuple[np.ndarray[u.Quantity]]=None,
+                 axes: list[ndarray[u.Quantity]]| tuple[ndarray[u.Quantity]]=None,
                  binning_geometry: GammaBinning = None,
                  *args, **kwargs):
         
@@ -52,7 +57,7 @@ class IsotropicBrokenPowerLaw(TwoCompFluxPrior):
 class IsotropicPowerLaw(TwoCompFluxPrior):
 
     def __init__(self, 
-                 axes: list[np.ndarray[u.Quantity]]| tuple[np.ndarray[u.Quantity]]=None,
+                 axes: list[ndarray[u.Quantity]]| tuple[ndarray[u.Quantity]]=None,
                  binning_geometry: GammaBinning = None,
                  *args, **kwargs):
         

@@ -1,5 +1,14 @@
-import numpy as np
-import functools
+from jax import numpy as np
+import jax
+from numpy import ndarray
+
+from jax import config
+config.update("jax_enable_x64", True)
+
+
+
+
+from functools import partial
 from tqdm import tqdm
 from gammabayes.utils import (
     iterate_logspace_integration, 
@@ -28,28 +37,28 @@ class DiscreteBruteScan(object):
         log_likelihood (callable, optional): A callable object to compute 
             the log likelihood. Defaults to None.
         
-        axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): Axes 
+        axes (list[ndarray] | tuple[ndarray] | None, optional): Axes 
             that the measured event data can take. Defaults to None.
         
-        nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+        nuisance_axes (list[ndarray] | tuple[ndarray] | None, optional): 
             Axes that the nuisance parameters can take. Defaults to None.
         
         prior_parameter_specifications (dict | list[ParameterSet] | dict[ParameterSet], optional): 
             Specifications for parameters involved in the likelihood estimation. Defaults to an empty dictionary.
         
-        log_likelihoodnormalisation (np.ndarray | float, optional): 
+        log_likelihoodnormalisation (ndarray | float, optional): 
             Normalization for the log likelihood. Defaults to 0.
         
-        log_nuisance_marg_results (np.ndarray | None, optional): Results of 
+        log_nuisance_marg_results (ndarray | None, optional): Results of 
             marginalization, expressed in log form. Defaults to None.
         
-        mixture_parameter_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+        mixture_parameter_specifications (list[ndarray] | tuple[ndarray] | None, optional): 
             Specifications for the mixture fraction parameters. Defaults to None.
         
-        log_hyperparameter_likelihood (np.ndarray | float, optional): 
+        log_hyperparameter_likelihood (ndarray | float, optional): 
             Log likelihood of hyperparameters (penultimate result). Defaults to 0.
         
-        log_posterior (np.ndarray | float, optional): Log of the 
+        log_posterior (ndarray | float, optional): Log of the 
             hyperparameter posterior probability (final result of class). 
             Defaults to 0.
         
@@ -61,7 +70,7 @@ class DiscreteBruteScan(object):
             performing single dimension integration in log space. 
             Defaults to logspace_riemann.
         
-        log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray], optional): 
+        log_prior_matrix_list (list[ndarray] | tuple[ndarray], optional): 
             List or tuple of matrices representing the log of the prior matrices
             for the given hyperparameters over the nuisance parameter axes. 
             Defaults to None.
@@ -86,21 +95,21 @@ class DiscreteBruteScan(object):
 
 
     def __init__(self, 
-                 log_likelihoodnormalisation: np.ndarray, 
+                 log_likelihoodnormalisation: ndarray, 
                  log_priors: list[DiscreteLogPrior] | tuple[DiscreteLogPrior], 
                  log_likelihood: callable, 
-                 axes: list[np.ndarray] | tuple[np.ndarray] | None=None,
-                 nuisance_axes: list[np.ndarray] | tuple[np.ndarray] | None = None,
+                 axes: list[ndarray] | tuple[ndarray] | None=None,
+                 nuisance_axes: list[ndarray] | tuple[ndarray] | None = None,
                  prior_parameter_specifications: dict | list[ParameterSet] | dict[ParameterSet] = {}, 
                  edisp_parameters: ParameterSet=None,
                  psf_parameters: ParameterSet=None,
-                 log_nuisance_marg_results: np.ndarray | None = None, 
-                 mixture_parameter_specifications: list[np.ndarray] | tuple[np.ndarray] | None = None,
-                 log_hyperparameter_likelihood: np.ndarray | float = 0., 
-                 log_posterior: np.ndarray | float = 0., 
+                 log_nuisance_marg_results: ndarray | None = None, 
+                 mixture_parameter_specifications: list[ndarray] | tuple[ndarray] | None = None,
+                 log_hyperparameter_likelihood: ndarray | float = 0., 
+                 log_posterior: ndarray | float = 0., 
                  iterative_logspace_integrator: callable = iterate_logspace_integration,
                  logspace_integrator: callable = logspace_riemann,
-                 log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray] = None,
+                 log_prior_matrix_list: list[ndarray] | tuple[ndarray] = None,
                  log_marginalisation_regularisation: float  = None,
                  no_priors_on_init: bool = False,
                  no_likelihood_on_init: bool = False,
@@ -119,28 +128,28 @@ class DiscreteBruteScan(object):
             log_likelihood (callable, optional): A callable object to compute 
                 the log likelihood. Defaults to None.
             
-            axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): Axes 
+            axes (list[ndarray] | tuple[ndarray] | None, optional): Axes 
                 that the measured event data can take. Defaults to None.
             
-            nuisance_axes (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            nuisance_axes (list[ndarray] | tuple[ndarray] | None, optional): 
                 Axes that the nuisance parameters can take. Defaults to None.
             
             prior_parameter_specifications (dict, optional): Specifications for 
                 parameters involved in the likelihood estimation. Defaults to an empty dictionary.
             
-            log_likelihoodnormalisation (np.ndarray | float, optional): 
+            log_likelihoodnormalisation (ndarray | float, optional): 
                 Normalization for the log likelihood. Defaults to 0.
             
-            log_nuisance_marg_results (np.ndarray | None, optional): Results of 
+            log_nuisance_marg_results (ndarray | None, optional): Results of 
                 marginalization, expressed in log form. Defaults to None.
             
-            mixture_parameter_specifications (list[np.ndarray] | tuple[np.ndarray] | None, optional): 
+            mixture_parameter_specifications (list[ndarray] | tuple[ndarray] | None, optional): 
                 Specifications for the mixture fraction parameters. Defaults to None.
             
-            log_hyperparameter_likelihood (np.ndarray | float, optional): 
+            log_hyperparameter_likelihood (ndarray | float, optional): 
                 Log likelihood of hyperparameters (penultimate result). Defaults to 0.
             
-            log_posterior (np.ndarray | float, optional): Log of the 
+            log_posterior (ndarray | float, optional): Log of the 
                 hyperparameter posterior probability (final result of class). 
                 Defaults to 0.
             
@@ -152,7 +161,7 @@ class DiscreteBruteScan(object):
                 performing single dimension integration in log space. 
                 Defaults to logspace_riemann.
             
-            log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray], optional): 
+            log_prior_matrix_list (list[ndarray] | tuple[ndarray], optional): 
                 List or tuple of matrices representing the log of the prior matrices
                 for the given hyperparameters over the nuisance parameter axes. 
                 Defaults to None.
@@ -231,10 +240,15 @@ class DiscreteBruteScan(object):
         if len(edisp_parameters)>0:
             self.edisp_parameter_prior_logvalue_axes_by_name = {parameter.name:parameter.logpdf(parameter.axis) for parameter in self.edisp_parameters._dict_of_parameters_by_name.values()}
             self.edisp_parameter_prior_logvalue_mesh = np.sum(np.meshgrid(*self.edisp_parameter_prior_logvalue_axes_by_name.values(), indexing='ij'), axis=0)
+        else:
+            self.edisp_parameter_prior_logvalue_mesh = 0
+
 
         if len(psf_parameters)>0:
             self.psf_parameter_prior_logvalue_axes_by_name = {parameter.name:parameter.logpdf(parameter.axis) for parameter in self.psf_parameters._dict_of_parameters_by_name.values()}
             self.psf_parameter_prior_logvalue_mesh = np.sum(np.meshgrid(*self.psf_parameter_prior_logvalue_axes_by_name.values(), indexing='ij'), axis=0)
+        else:
+            self.psf_parameter_prior_logvalue_mesh = 0
 
         self.edisp_axes_dims = [len(axis) for axis in self.edisp_parameter_axes_by_name.values()]
         self.psf_axes_dims = [len(axis) for axis in self.psf_parameter_axes_by_name.values()]
@@ -269,6 +283,8 @@ class DiscreteBruteScan(object):
         self.sampler_results = sampler_results
         self.hyper_analysis_instance = hyper_analysis_instance
 
+        self.class_specific_marg_parameters = {}
+
 
 
     # Most import method in this whole class. If debugging be firmly aware of
@@ -286,23 +302,29 @@ class DiscreteBruteScan(object):
             # near exactly for a high number of events to the functional form 
             # of the prior directly (going to have to scale one or the other,
             # shape is what matters)
-    def observation_nuisance_marg(self, 
-                                  event_vals: list | np.ndarray, 
-                                  log_prior_matrix_list: list[np.ndarray] | tuple[np.ndarray],
-                                  loglike_kwargs=None) -> np.ndarray:
+
+    @staticmethod
+    def observation_nuisance_marg(nuisance_axes,
+                                  loglike,
+                                  event_vals: list | ndarray, 
+                                  log_prior_matrix_list: list[ndarray] | tuple[ndarray],
+                                  loglike_kwargs=None,
+                                  loglike_norm=0,
+                                  logspace_integrator=iterate_logspace_integration,
+                                  **kwargs) -> ndarray:
         """
         Calculates the marginal log likelihoods for observations by integrating over nuisance parameters. 
         This method creates a meshgrid of event values and nuisance axes, computes the log likelihood values, 
         and integrates these values with the log prior matrices.
 
         Args:
-            event_vals (list | np.ndarray): The event values for which the marginal log likelihoods are to be 
+            event_vals (list | ndarray): The event values for which the marginal log likelihoods are to be 
                                             computed. Can be a list or a numpy ndarray.
-            log_prior_matrix_list (list[np.ndarray] | tuple[np.ndarray]): A list or tuple of numpy ndarrays 
+            log_prior_matrix_list (list[ndarray] | tuple[ndarray]): A list or tuple of numpy ndarrays 
                                                                         representing log prior matrices.
 
         Returns:
-            np.ndarray: An array of marginal log likelihood values corresponding to each set of event values 
+            ndarray: An array of marginal log likelihood values corresponding to each set of event values 
                         and each log prior matrix.
 
         Notes:
@@ -314,22 +336,19 @@ class DiscreteBruteScan(object):
             loglike_kwargs = {}
 
 
-        meshvalues  = np.meshgrid(*event_vals, *self.nuisance_axes, indexing='ij')
+        meshvalues  = np.meshgrid(*[np.array([event_val]) for event_val in event_vals], *nuisance_axes, indexing='ij')
 
         formatted_nuisance_axes = []
 
-        for axis in self.nuisance_axes:
-            if hasattr(axis, 'unit'):
-                formatted_nuisance_axes.append(axis.value)
-            else:
-                formatted_nuisance_axes.append(axis)
+        for axis in nuisance_axes:
+            formatted_nuisance_axes.append(axis)
 
     
         flattened_meshvalues = [meshmatrix.flatten() for meshmatrix in meshvalues]
         
-        log_likelihoodvalues = np.squeeze(self.log_likelihood(*flattened_meshvalues, **loglike_kwargs).reshape(meshvalues[0].shape))
+        log_likelihoodvalues = np.squeeze(loglike(*flattened_meshvalues, **loglike_kwargs).reshape(meshvalues[0].shape))
 
-        log_likelihoodvalues = log_likelihoodvalues - self.log_likelihoodnormalisation
+        log_likelihoodvalues = log_likelihoodvalues - loglike_norm
         
         all_log_marg_results = []
 
@@ -340,16 +359,19 @@ class DiscreteBruteScan(object):
                 # and numpy doesn't support this kind of matrix addition nicely
             logintegrandvalues = (np.squeeze(log_prior_matrices).T+np.squeeze(log_likelihoodvalues).T).T
             
-            single_parameter_log_margvals = self.iterative_logspace_integrator(logintegrandvalues,   
+            single_parameter_log_margvals = logspace_integrator(logintegrandvalues,   
                 axes=formatted_nuisance_axes)
 
             all_log_marg_results.append(np.squeeze(single_parameter_log_margvals))
 
         
-        return np.array(all_log_marg_results, dtype=object)
+        return all_log_marg_results
+    
+
+    
 
 
-    def prior_gen(self, Nevents: int) -> tuple[(np.ndarray, list)]:
+    def prior_gen(self, Nevents: int) -> tuple[(ndarray, list)]:
         """
         Generates and returns the shapes and matrices of priors for a given number of events. This method handles 
         the generation of prior matrices, taking into account both efficient and inefficient construction methods, 
@@ -375,11 +397,11 @@ class DiscreteBruteScan(object):
 
 
         # Makes it so that when np.log(0) is called a warning isn't raised as well as other errors stemming from this.
-        np.seterr(divide='ignore', invalid='ignore')
+        # np.seterr(divide='ignore', invalid='ignore')
 
 
         # Array that contains the shapes of the non-flattened shapes of the prior matrices
-        prior_marged_shapes = np.empty(shape=(len(self.log_priors),), dtype=object)
+        prior_marged_shapes = [()]*len(self.log_priors)
 
         # Keeps track of the nan values that pop up in the prior matrices
             # Generally not great. Good thing to check when debugging.
@@ -438,7 +460,7 @@ class DiscreteBruteScan(object):
                                              )
 
                 # Making sure the output is a numpy array
-                log_prior_matrices = np.asarray(log_prior_matrices, dtype=float)
+                log_prior_matrices = np.asarray(log_prior_matrices)
 
                 log_prior_matrix_list.append(log_prior_matrices)
 
@@ -466,14 +488,13 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
             return new_prior_marged_shapes, self.log_prior_matrix_list
         
-
     def _mesh_inefficient_prior_construction(self, 
                                              log_prior: DiscreteLogPrior, 
                                              prior_idx: int,
                                              prior_spectral_params: dict, 
                                              prior_spatial_params: dict, 
                                              Nevents: int, 
-                                             prior_marged_shapes: list[np.ndarray] | list[list] | list[tuple],
+                                             prior_marged_shapes: list[ndarray] | list[list] | list[tuple],
                                              nans: int
                                              ):
         """
@@ -486,7 +507,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             prior_spectral_params (dict): Spectral parameters for the prior.
             prior_spatial_params (dict): Spatial parameters for the prior.
             Nevents (int): Number of events.
-            prior_marged_shapes (list[np.ndarray] | list[list] | list[tuple]): Shapes of the non-flattened prior matrices.
+            prior_marged_shapes (list[ndarray] | list[list] | list[tuple]): Shapes of the non-flattened prior matrices.
             nans (int): Counter for NaN values.
 
         Returns:
@@ -553,7 +574,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
             
             nans +=  np.sum(np.isnan(prior_matrix))
 
-            log_prior_matrices[..., _inner_idx] =    prior_matrix
+            log_prior_matrices = log_prior_matrices.at[..., _inner_idx].set(prior_matrix)
 
         return log_prior_matrices, nans
 
@@ -590,49 +611,54 @@ class before the multiprocessing or make sure that it isn't part of the actual
         except:
             obs_meta = [None]*len(measured_event_data[0])
 
+        print(__file__, "self.class_specific_marg_parameters", self.class_specific_marg_parameters)
+
         marg_results = [self.observation_nuisance_marg(
+            loglike=self.log_likelihood,
+            nuisance_axes=self.nuisance_axes,
+            loglike_norm = self.log_likelihoodnormalisation,
             log_prior_matrix_list=self.log_prior_matrix_list, 
-            event_vals=event_data, loglike_kwargs=obs_meta_kwargs) for event_data, obs_meta_kwargs in zip(measured_event_data, obs_meta)]
+            event_vals=event_data, loglike_kwargs=obs_meta_kwargs,
+            logspace_integrator=self.iterative_logspace_integrator,
+            **self.class_specific_marg_parameters) for event_data, obs_meta_kwargs in zip(measured_event_data, obs_meta)]
         
                 
-        marg_results = np.asarray(marg_results)
-
         # Making the output iterable around the priors, not the events.
             # Much easier to work with.
         reshaped_marg_results = []
         for _prior_idx in range(len(self.log_priors)):
 
-            stacked_marg_results = np.squeeze(np.vstack(marg_results[:,_prior_idx]))
+            stacked_marg_results = np.squeeze(np.vstack([marg_result[_prior_idx] for marg_result in marg_results] ))
 
 
-            logging.info('\nstacked_marg_results shape: ', stacked_marg_results.shape)
+            print('\nstacked_marg_results shape: ', stacked_marg_results.shape)
 
             stacked_marg_results = stacked_marg_results.reshape(prior_marged_shapes[_prior_idx])
 
             reshaped_marg_results.append(stacked_marg_results)
 
         
-        log_marg_mins = np.asarray([np.nanmin(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
-        log_marg_maxs = np.asarray([np.nanmax(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
-        # Adaptively set the regularisation based on the range of values in the
-        # log marginalisation results. Trying to keep them away from ~-600 or ~+600
-        # generally precision goes down to ~1e-300 (base 10)
-        diffs = log_marg_maxs-log_marg_mins
+        # log_marg_mins = np.asarray([np.nanmin(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
+        # log_marg_maxs = np.asarray([np.nanmax(reshaped_marg_result[reshaped_marg_result != -np.inf]) for reshaped_marg_result in reshaped_marg_results])
+        # # Adaptively set the regularisation based on the range of values in the
+        # # log marginalisation results. Trying to keep them away from ~-600 or ~+600
+        # # generally precision goes down to ~1e-300 (base 10)
+        # diffs = log_marg_maxs-log_marg_mins
 
-        self.log_marginalisation_regularisation = np.abs(0.3*np.mean(diffs))
+        # self.log_marginalisation_regularisation = np.abs(0.3*np.mean(diffs))
 
 
         return reshaped_marg_results
     
 
-    def add_log_nuisance_marg_results(self, new_log_marg_results: np.ndarray):
+    def add_log_nuisance_marg_results(self, new_log_marg_results: ndarray):
         """
         Extends each array in the existing log marginalisation results with corresponding new log marginalisation results. 
         This method iterates over each array in `self.log_nuisance_marg_results` and the new results, extending each existing array 
         with the corresponding new results. 
 
         Args:
-            new_log_marg_results (np.ndarray): An array containing new log marginalisation results. Each element in this 
+            new_log_marg_results (ndarray): An array containing new log marginalisation results. Each element in this 
                                             array corresponds to and will be appended to the respective array in 
                                             `self.log_nuisance_marg_results`.
 
@@ -650,7 +676,7 @@ class before the multiprocessing or make sure that it isn't part of the actual
     def select_scan_output_exploration_class(self, 
                                              mixture_parameter_specifications: ParameterSet | list[Parameter] | dict,
                                              mixture_fraction_exploration_type: str = None, 
-                                             log_nuisance_marg_results: list | np.ndarray = None,
+                                             log_nuisance_marg_results: list | ndarray = None,
                                             prior_parameter_specifications: dict | list[ParameterSet] | list[dict] = None,
                                             shared_parameters: list | dict | ParameterSet = None,
                                             parameter_meta_data: dict | list[dict] = None,
@@ -790,18 +816,18 @@ class before the multiprocessing or make sure that it isn't part of the actual
 
     
     def update_hyperparameter_likelihood(self, 
-                                           log_hyperparameter_likelihood: np.ndarray
-                                           ) -> np.ndarray:
+                                           log_hyperparameter_likelihood: ndarray
+                                           ) -> ndarray:
         """
         Updates the existing log hyperparameter likelihood with new values. This method adds the provided 
         log hyperparameter likelihood values to the current values stored in the object.
 
         Args:
-            log_hyperparameter_likelihood (np.ndarray): An array of new log hyperparameter likelihood values to be added 
+            log_hyperparameter_likelihood (ndarray): An array of new log hyperparameter likelihood values to be added 
                                                         to the existing log hyperparameter likelihood.
 
         Returns:
-            np.ndarray: The updated log hyperparameter likelihood after adding the new values.
+            ndarray: The updated log hyperparameter likelihood after adding the new values.
 
             
         Notes:
@@ -815,10 +841,10 @@ class before the multiprocessing or make sure that it isn't part of the actual
     
 
     def apply_hyperparameter_priors(self, 
-                                    log_hyperparameter_likelihood_matrix:np.ndarray=None,
+                                    log_hyperparameter_likelihood_matrix:ndarray=None,
                                     prior_parameter_specifications: list[ParameterSet] | dict[dict[dict[dict]]] | list[dict[dict[dict]]] = None, 
                                     mixture_parameter_specifications: list[Parameter] | ParameterSet = None,
-                                    log_hyper_priormesh: np.ndarray = None, 
+                                    log_hyper_priormesh: ndarray = None, 
                                     integrator: callable = None
                                     ):
         """
@@ -831,14 +857,14 @@ class before the multiprocessing or make sure that it isn't part of the actual
         generating a meshgrid of log prior values, and combining it with the log hyperparameter likelihood.
 
         Args:
-            log_hyperparameter_likelihood_matrix (np.ndarray, optional): An array representing the log hyperparameter likelihood matrix. Defaults to None.
+            log_hyperparameter_likelihood_matrix (ndarray, optional): An array representing the log hyperparameter likelihood matrix. Defaults to None.
             
             prior_parameter_specifications (list[ParameterSet] | dict[dict[dict[dict]]] | list[dict[dict[dict]]], optional): Specifications for prior 
             parameters involved in the exploration. If not provided, defaults to the class attribute `prior_parameter_specifications`.
             
             mixture_parameter_specifications (list[Parameter] | ParameterSet, optional): Specifications for the mixture parameters involved in the exploration. Defaults to None.
             
-            log_hyper_priormesh (np.ndarray, optional): Pre-computed log prior meshgrid. If None, it is computed from 
+            log_hyper_priormesh (ndarray, optional): Pre-computed log prior meshgrid. If None, it is computed from 
                 `priorinfos` and `hyper_param_axes`.
             
             integrator (callable, optional): Integrator function to be used for calculating the posterior. Defaults to 

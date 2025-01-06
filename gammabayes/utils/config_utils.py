@@ -1,6 +1,10 @@
 import warnings, yaml, sys, time, pickle, copy
 from gammabayes.utils.event_axes import create_axes
-import numpy as np
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
 
 
 def read_config_file(file_path):

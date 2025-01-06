@@ -1,4 +1,17 @@
-import numpy as np, time
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+import numpy
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+    
+import time
 from gammabayes.dark_matter.spectral_models import (
     DM_ContinuousEmission_Spectrum
 )
@@ -8,7 +21,6 @@ from gammabayes.dark_matter.density_profiles import DM_Profile
 from gammabayes.priors.core import TwoCompFluxPrior
 from gammabayes import update_with_defaults
 from gammabayes.utils import logspace_simpson
-from astropy import units as u
 
 class CombineDMComps(TwoCompFluxPrior):
     """
@@ -66,7 +78,7 @@ class CombineDMComps(TwoCompFluxPrior):
             symmetryfactor (int, optional): The symmetry factor. Defaults to 1.
 
         Returns:
-            np.ndarray: The cross-section values.
+            ndarray: The cross-section values.
         """
         
         update_with_defaults(spectral_parameters, self.default_spectral_parameters)
@@ -92,18 +104,18 @@ class CombineDMComps(TwoCompFluxPrior):
 
         # Splitting it up for easy debuggin
         log_integrated_energy = logspace_simpson(
-                                    logy=integrand, x = true_axes[0].value, axis=0)
+                                    logy=integrand, x = true_axes[0], axis=0)
                 
         log_integrated_energy_longitude = logspace_simpson(
                                 logy=log_integrated_energy, 
-                                    x = true_axes[1].value, axis=0)
+                                    x = true_axes[1], axis=0)
                                 
         logintegral = logspace_simpson(
-                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2].to(u.rad)), 
-                                    x = true_axes[2].value, axis=-1).T 
+                            logy=log_integrated_energy_longitude.T*np.cos(true_axes[2]*numpy.pi/180), 
+                                    x = true_axes[2], axis=-1).T 
         
 
-        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
+        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*signal_fraction) - logintegral - np.log(tobs_seconds)
 
 
         return np.exp(logsigmav)

@@ -1,4 +1,12 @@
-import numpy as np, warnings, dynesty, logging, time
+import warnings, dynesty, logging, time
+
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+
 
 from gammabayes.hyper_inference.core.utils import _handle_parameter_specification
 from gammabayes.hyper_inference.core.mixture_tree import MTree, MTreeNode
@@ -21,13 +29,13 @@ def logsubexp(a, b):
     Compute log(e^a - e^b) in a numerically stable way.
 
     Parameters:
-    a : float or np.ndarray
+    a : float or ndarray
         The logarithm of the first term.
-    b : float or np.ndarray
+    b : float or ndarray
         The logarithm of the second term.
 
     Returns:
-    float or np.ndarray
+    float or ndarray
         The logarithm of (e^a - e^b).
     """
     
@@ -42,7 +50,7 @@ def logsubexp(a, b):
 class ScanOutput_IntrinsicScatterMixturePosterior(ScanOutput_StochasticTreeMixturePosterior):
 
     def __init__(self, 
-                log_nuisance_marg_results: list[np.ndarray]|np.ndarray,
+                log_nuisance_marg_results: list[ndarray]|ndarray,
                 mixture_tree: MTree,
                 mixture_parameter_specifications:list | dict | ParameterSet,
                 prior_parameter_specifications: list | dict | ParameterSet = None,
@@ -50,11 +58,11 @@ class ScanOutput_IntrinsicScatterMixturePosterior(ScanOutput_StochasticTreeMixtu
                 observational_prior_names: list=None,
                 shared_parameters: list | dict | ParameterSet = None,
                 parameter_meta_data: dict = None,
-                event_weights:np.ndarray=None,
+                event_weights:ndarray=None,
                 log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
                 _sampler_results={},
-                scatter_likelihood:np.ndarray=0,
-                scatter_prior:np.ndarray=0,
+                scatter_likelihood:ndarray=0,
+                scatter_prior:ndarray=0,
                 scatter_sigma:float=0.01, # corresponds to 1% multiplicative noise on CCR rate
                 CCR_BKG_name:str="CCR_BKG",
                 scatter_K_range = np.linspace(0.2, 1.8, 401),
@@ -161,7 +169,7 @@ class ScanOutput_IntrinsicScatterMixturePosterior(ScanOutput_StochasticTreeMixtu
 
         return ln_like
 
-    def scatter_ln_likelihood(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
+    def scatter_ln_likelihood(self, inputs:list|ndarray, log_nuisance_marg_results:list[ndarray]=None):
 
 
 

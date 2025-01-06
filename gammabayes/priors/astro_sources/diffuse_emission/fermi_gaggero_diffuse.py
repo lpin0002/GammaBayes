@@ -5,19 +5,25 @@ from gammabayes.utils import iterate_logspace_integration, logspace_riemann
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 
 
-import numpy as np
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
+
 from gammapy.modeling.models import (
     PowerLawSpectralModel,
     SkyModel,
     TemplateSpatialModel,
     create_fermi_isotropic_diffuse_model,
 )
-from gammapy.catalog import SourceCatalogHGPS
-from gammapy.maps import Map, MapAxis, WcsGeom
 
-from scipy import interpolate
-from scipy.special import logsumexp
-from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from gammabayes.priors.core import DiscreteLogPrior, SourceFluxDiscreteLogPrior, TwoCompFluxPrior
@@ -60,9 +66,9 @@ class FermiGaggeroDiffusePrior(TwoCompFluxPrior):
     A subclass of SourceFluxDiscreteLogPrior for modeling the Fermi-Gaggero diffuse astrophysical background prior.
 
     Args:
-        energy_axis (np.ndarray): The energy axis for the prior (TeV).
-        longitudeaxis (np.ndarray): The longitude axis for the prior (degrees).
-        latitudeaxis (np.ndarray): The latitude axis for the prior (degrees).
+        energy_axis (ndarray): The energy axis for the prior (TeV).
+        longitudeaxis (ndarray): The longitude axis for the prior (degrees).
+        latitudeaxis (ndarray): The latitude axis for the prior (degrees).
         irf (IRF_LogLikelihood): Instrument Response Function log likelihood instance, providing `log_aeff`.
         normalise (bool, optional): Whether to normalize the prior. Defaults to True.
         logspace_integrator (callable, optional): Integrator function for normalization in log space. Defaults to logspace_riemann.
@@ -72,7 +78,7 @@ class FermiGaggeroDiffusePrior(TwoCompFluxPrior):
     """
 
     def __init__(self, 
-                 axes: list[np.ndarray[u.Quantity]]| tuple[np.ndarray[u.Quantity]]=None,
+                 axes: list[ndarray[u.Quantity]]| tuple[ndarray[u.Quantity]]=None,
                  binning_geometry: GammaBinning = None,
                  *args, **kwargs):
         """Initializes an instance of FermiGaggeroDiffusePrior, a subclass of DiscreteLogPrior, 
@@ -80,9 +86,9 @@ class FermiGaggeroDiffusePrior(TwoCompFluxPrior):
         to given energy, longitude, and latitude axes.
 
         Args:
-            energy_axis (np.ndarray): The energy axis for which the prior is defined, typically in GeV.
-            longitudeaxis (np.ndarray): The longitude axis over which the prior is defined, in degrees.
-            latitudeaxis (np.ndarray): The latitude axis over which the prior is defined, in degrees.
+            energy_axis (ndarray): The energy axis for which the prior is defined, typically in GeV.
+            longitudeaxis (ndarray): The longitude axis over which the prior is defined, in degrees.
+            latitudeaxis (ndarray): The latitude axis over which the prior is defined, in degrees.
             irf (IRF_LogLikelihood): An instance of IRF_LogLikelihood, providing the instrument response function, 
                                      specifically `log_aeff`, the log of the effective area.
             normalise (bool, optional): If True, the log prior will be normalized over the specified axes. 

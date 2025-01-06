@@ -1,4 +1,17 @@
-import numpy as np, copy
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+import numpy
+
+import copy
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 from collections.abc import Iterable   # import directly from collections for Python < 3.3
@@ -7,7 +20,6 @@ from collections import OrderedDict
 from gammabayes.dark_matter.spectral_models.core import DM_ContinuousEmission_Spectrum, CSVDictionary
 import time
 from gammabayes.utils import logspace_simpson
-from astropy import units as u
 
 from gammabayes.dark_matter.channel_spectra import (
     single_channel_spectral_data_path,
@@ -32,7 +44,6 @@ from gammabayes import (
     apply_dirichlet_stick_breaking_direct, update_with_defaults
 )
 
-from scipy import special
 
 
 class CustomDMRatiosModel(object):
@@ -41,7 +52,7 @@ class CustomDMRatiosModel(object):
 
     Attributes:
         irf_loglike (DiscreteLogLikelihood): The likelihood function based on instrument response functions (IRFs).
-        axes (list | tuple | np.ndarray): The axes for the likelihood function.
+        axes (list | tuple | ndarray): The axes for the likelihood function.
         spatial_class (DM_Profile): The spatial profile class for dark matter density.
         channels (list[str] | str): The list of channels or 'all' for all available channels.
         default_spectral_parameters (dict): Default spectral parameters.
@@ -50,7 +61,7 @@ class CustomDMRatiosModel(object):
 
     def __init__(self, 
                  irf_loglike:DiscreteLogLikelihood, 
-                 axes: list | tuple | np.ndarray,
+                 axes: list | tuple | ndarray,
                  spatial_class: DM_Profile = Einasto_Profile, 
                  
                  name='DM',
@@ -66,7 +77,7 @@ class CustomDMRatiosModel(object):
 
         Args:
             irf_loglike (DiscreteLogLikelihood): The likelihood function based on IRFs.
-            axes (list | tuple | np.ndarray): The axes for the likelihood function.
+            axes (list | tuple | ndarray): The axes for the likelihood function.
             spatial_class (DM_Profile, optional): The spatial profile class. Defaults to Einasto_Profile.
             channels (list[str] | str, optional): The list of channels or 'all'. Defaults to 'all'.
             default_spectral_parameters (dict, optional): Default spectral parameters. Defaults to {}.
@@ -317,7 +328,7 @@ class CustomDMRatiosModel(object):
             symmetryfactor (int, optional): The symmetry factor. Defaults to 1.
 
         Returns:
-            np.ndarray: The annihilation cross-section values.
+            ndarray: The annihilation cross-section values.
         """
         
         # update_with_defaults(spectral_parameters, self.default_spectral_parameters)
@@ -331,7 +342,7 @@ class CustomDMRatiosModel(object):
         all_parameters = list(spectral_parameters.values()) + list(spatial_parameters.values())
 
         num_spectral_params = len(spectral_parameters.keys())
-        parameter_values = np.asarray([item.value if hasattr(item, "value") else item for item in all_parameters])
+        parameter_values = np.asarray(all_parameters)
 
         unique_arrays_of_parameter_values = np.unique(parameter_values, axis=1)
 
@@ -352,18 +363,18 @@ class CustomDMRatiosModel(object):
         
         # Splitting it up for easier debuggin
         log_integrated_energies = {channel: logspace_simpson(
-                                    logy=integrand, x = true_axes[0].value, axis=0) for channel, integrand in individual_integrands.items()}
+                                    logy=integrand, x = true_axes[0], axis=0) for channel, integrand in individual_integrands.items()}
 
         log_integrated_energy_longitudes = {channel: logspace_simpson(
-                                    logy=integrand, x = true_axes[1].value, axis=0) for channel, integrand in log_integrated_energies.items()}
+                                    logy=integrand, x = true_axes[1], axis=0) for channel, integrand in log_integrated_energies.items()}
 
         mask = np.all(unique_arrays_of_parameter_values[:, None, :] == parameter_values[:, :, None], axis=0)
 
         log_integrals = {}
         for channel, integrand in log_integrated_energy_longitudes.items():
             log_channel_unique_integral = logspace_simpson(
-                                logy=integrand.T+np.log(np.sin(np.abs(true_axes[2].to(u.rad))))+np.log(180/np.pi), 
-                                        x = true_axes[2].value, axis=-1)
+                                logy=integrand.T+np.log(np.sin(np.abs(true_axes[2]*numpy.pi/180)))+np.log(180/np.pi), 
+                                        x = true_axes[2], axis=-1)
             
 
             log_channel_integral_slices = np.where(mask, log_channel_unique_integral.flatten()[None, :], 0.)
@@ -372,10 +383,10 @@ class CustomDMRatiosModel(object):
 
 
 
-        logintegral = special.logsumexp([np.log(ratios[channel])+log_integral for channel, log_integral in log_integrals.items()], axis=0)
+        logintegral = logsumexp([np.log(ratios[channel])+log_integral for channel, log_integral in log_integrals.items()], axis=0)
 
 
-        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass'].value**2*totalnumevents*overall_signal_fraction) - logintegral - np.log(tobs_seconds)
+        logsigmav = np.log(8*np.pi*symmetryfactor*spectral_parameters['mass']**2*totalnumevents*overall_signal_fraction) - logintegral - np.log(tobs_seconds)
 
         return np.exp(logsigmav)
 

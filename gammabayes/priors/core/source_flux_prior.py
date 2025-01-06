@@ -1,11 +1,24 @@
 from .discrete_logprior import DiscreteLogPrior
-from scipy.special import logsumexp
-import numpy as np
+
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+
+
+from numpy import ndarray
+
+
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExposure
 
-from astropy import units as u
 import matplotlib.pyplot as plt
 import warnings, logging
 import h5py, pickle
@@ -17,11 +30,11 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
     def __init__(self,
                  log_flux_function: callable=None, 
                  log_mesh_efficient_flux_func: callable = None,
-                 axes: tuple[np.ndarray] | None = None, 
+                 axes: tuple[ndarray] | None = None, 
                  binning_geometry: GammaBinning = None,
                  irf_loglike=None,
                  log_exposure_map=None, 
-                 pointing_dirs:np.ndarray[u.Quantity]=None, 
+                 pointing_dirs:ndarray=None, 
                  live_times=None,
                  log_scaling_factor=0.,
                  *args,
@@ -72,8 +85,12 @@ class SourceFluxDiscreteLogPrior(DiscreteLogPrior):
         if log_exposure_map is None:
             log_exposure_map = self.log_exposure_map
 
+        source_flux_values = self.log_flux_function(energy, lon, lat, *args, **kwargs)
+        log_exposure_values = log_exposure_map(energy, lon, lat)
 
-        return self.log_flux_function(energy, lon, lat, *args, **kwargs) + log_exposure_map(energy, lon, lat)
+        obs_flux_values = source_flux_values + log_exposure_values
+
+        return obs_flux_values
 
     def unscaled_log_mesh_efficient_func(self, energy, lon, lat, 
                                  log_exposure_map:GammaLogExposure = None, 

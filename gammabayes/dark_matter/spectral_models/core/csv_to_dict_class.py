@@ -1,5 +1,12 @@
 import pandas as pd
-import numpy as np
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+
+
 
 class CSVDictionary:
     """
@@ -79,7 +86,7 @@ class CSVDictionary:
             key (str): The key to access.
 
         Returns:
-            np.ndarray: The values under the specified column.
+            ndarray: The values under the specified column.
         """
         return self.dict_object[key]
         
@@ -89,7 +96,7 @@ class CSVDictionary:
 
         Args:
             key (str): The key to set or update.
-            values (np.ndarray): The values to set for the specified key.
+            values (ndarray): The values to set for the specified key.
         """
         # This simplistic implementation assumes 'values' is a complete list of column values.
         # You might need more complex handling depending on your exact requirements.
@@ -133,7 +140,7 @@ class CSVDictionary:
             default: The default value to return if the key is not found. Defaults to None.
 
         Returns:
-            np.ndarray: The values under the specified column, or the default value if the key is not found.
+            ndarray: The values under the specified column, or the default value if the key is not found.
 
         Raises:
             KeyError: If the key is not found and no default is provided.

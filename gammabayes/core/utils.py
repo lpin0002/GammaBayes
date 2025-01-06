@@ -1,5 +1,15 @@
 from .parameter_set_class import ParameterSet
-import logging, warnings, numpy as np
+import logging, warnings
+
+from jax import numpy as np
+
+from jax import config
+config.update("jax_enable_x64", True)
+
+
+import numpy
+from numpy import ndarray
+
 
 def _handle_parameter_specification(
         parameter_specifications: dict | ParameterSet,
@@ -64,7 +74,7 @@ Assigning empty hyperparameter axes for remaining priors.""")
     return formatted_parameter_specifications
 
 
-def _handle_nuisance_axes(nuisance_axes: list[np.ndarray],
+def _handle_nuisance_axes(nuisance_axes: list[ndarray],
                             log_likelihood=None, log_prior=None):
     """
     Handles the assignment and retrieval of nuisance axes. 
@@ -72,14 +82,14 @@ def _handle_nuisance_axes(nuisance_axes: list[np.ndarray],
     from `log_likelihood` or `log_prior`. If neither is available, it raises an exception.
 
     Args:
-        nuisance_axes (list[np.ndarray]): A list of numpy arrays representing the nuisance axes.
+        nuisance_axes (list[ndarray]): A list of numpy arrays representing the nuisance axes.
 
     Raises:
         Exception: Raised if `nuisance_axes` is not provided and cannot be retrieved from either 
                 `log_likelihood` or `log_proposal_prior` OR `log_target_priors`.
 
     Returns:
-        list[np.ndarray]: The list of numpy arrays representing the nuisance axes. This can be either the 
+        list[ndarray]: The list of numpy arrays representing the nuisance axes. This can be either the 
                         provided `nuisance_axes`, or retrieved from `log_likelihood` or `log_priors`.
     """
     if nuisance_axes is None:

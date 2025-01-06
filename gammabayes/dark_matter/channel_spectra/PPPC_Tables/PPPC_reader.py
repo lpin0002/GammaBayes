@@ -1,7 +1,15 @@
 import csv
 import re
 from matplotlib import pyplot as plt
-import numpy as np
+
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+
+
 from matplotlib.colors import LogNorm
 
 

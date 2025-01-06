@@ -1,11 +1,22 @@
 from .discrete_logprior import DiscreteLogPrior
-from scipy.special import logsumexp
-import numpy as np
+
+
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+
+
 from gammabayes.samplers import  integral_inverse_transform_sampler
 from gammabayes.utils import iterate_logspace_integration, construct_log_dx_mesh
 from gammabayes import update_with_defaults, GammaObs, GammaBinning, GammaLogExposure
 
-from astropy import units as u
 import matplotlib.pyplot as plt
 import warnings, logging
 import h5py, pickle
@@ -22,7 +33,7 @@ class ObsFluxDiscreteLogPrior(DiscreteLogPrior):
                  default_spatial_parameters: dict = None,  
                  irf_loglike=None,
                  live_times=None,
-                 pointing_dirs=np.array([0., 0.])*u.deg,
+                 pointing_dirs=np.array([0., 0.]),
                  *args, 
                  **kwargs,
                  ):

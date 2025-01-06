@@ -1,4 +1,12 @@
-import numpy as np, warnings, dynesty, logging, time
+import warnings, dynesty, logging, time
+
+
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
 
 from gammabayes.hyper_inference.core.utils import _handle_parameter_specification
 from gammabayes.hyper_inference.core.mixture_tree import MTree, MTreeNode
@@ -30,21 +38,21 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
         sampler (dynesty.NestedSampler): The Dynesty sampler object used for exploration.
     """
     def __init__(self, 
-                log_nuisance_marg_results: list[np.ndarray]|np.ndarray,
+                log_nuisance_marg_results: list[ndarray]|ndarray,
                 mixture_tree: MTree,
                 mixture_parameter_specifications:list | dict | ParameterSet,
                 prior_parameter_specifications: list | dict | ParameterSet = None,
                 observational_prior_names: list=None,
                 shared_parameters: list | dict | ParameterSet = None,
                 parameter_meta_data: dict = None,
-                event_weights:np.ndarray=None,
+                event_weights:ndarray=None,
                 log_nuisance_marg_regularisation: float = 0., # Argument for consistency between classes
                 _sampler_results={}):
         """
         Initializes the ScanOutput_StochasticTreeMixturePosterior class with necessary parameters and configurations.
 
         Args:
-            log_nuisance_marg_results (list[np.ndarray] | np.ndarray): Logarithm of marginal results for the parameters.
+            log_nuisance_marg_results (list[ndarray] | ndarray): Logarithm of marginal results for the parameters.
             mixture_tree (MTree): Tree handling the layout/structure of the mixture.
             mixture_parameter_specifications (list | dict | ParameterSet): Specifications for mixture parameters.
             log_nuisance_marg_regularisation (float, optional): Regularisation parameter for nuisance marginalisation.
@@ -169,15 +177,15 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
         
-    def prior_transform(self, u:float|np.ndarray):
+    def prior_transform(self, u:float|ndarray):
         """
         Transforms unit cube values to prior parameter values based on self.parameter_set_collection prior_transform.
 
         Args:
-            u (float | np.ndarray): Unit cube values.
+            u (float | ndarray): Unit cube values.
 
         Returns:
-            np.ndarray: Transformed prior parameter values.
+            ndarray: Transformed prior parameter values.
         """
 
 
@@ -187,13 +195,13 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
     
 
     
-    def single_event_loglike(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
+    def single_event_loglike(self, inputs:list|ndarray, log_nuisance_marg_results:list[ndarray]=None):
         """
         Calculates the log likelihood of the given inputs.
 
         Args:
-            inputs (list | np.ndarray): Input values for the parameters.
-            log_nuisance_marg_results (list[np.ndarray], optional): Logarithm of marginal results for the parameters.
+            inputs (list | ndarray): Input values for the parameters.
+            log_nuisance_marg_results (list[ndarray], optional): Logarithm of marginal results for the parameters.
 
         Returns:
             float: The log likelihood value.
@@ -258,7 +266,7 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
         return ln_like
     
-    def ln_likelihood(self, inputs:list|np.ndarray, log_nuisance_marg_results:list[np.ndarray]=None):
+    def ln_likelihood(self, inputs:list|ndarray, log_nuisance_marg_results:list[ndarray]=None):
 
         return np.dot(self.single_event_loglike(inputs=inputs, log_nuisance_marg_results=log_nuisance_marg_results), self.event_weights)
 
@@ -435,14 +443,14 @@ class ScanOutput_StochasticTreeMixturePosterior(object):
 
 
     @classmethod
-    def load(cls, h5f=None, file_name:str=None, log_nuisance_marg_results:list[np.ndarray]=[]):
+    def load(cls, h5f=None, file_name:str=None, log_nuisance_marg_results:list[ndarray]=[]):
         """
         Loads the class data from an HDF5 file.
 
         Args:
             h5f (h5py.File, optional): An open HDF5 file object for reading data.
             file_name (str, optional): The path to the HDF5 file to load.
-            log_nuisance_marg_results (list[np.ndarray], optional): Logarithm of marginal results for the parameters.
+            log_nuisance_marg_results (list[ndarray], optional): Logarithm of marginal results for the parameters.
 
         Returns:
             ScanOutput_StochasticTreeMixturePosterior: An instance of the class reconstructed from the file.

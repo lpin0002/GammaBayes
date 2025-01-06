@@ -1,5 +1,12 @@
 from gammabayes import haversine, resources_dir
-import numpy as np
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
+
 from astropy import units as u
 from astropy.units import Quantity
 from astropy.coordinates import SkyCoord

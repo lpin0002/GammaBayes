@@ -1,9 +1,14 @@
-import numpy as np
 import astropy.units as u
 
+try:
+    from jax import numpy as np
+    from jax.nn import logsumexp
+except Exception as err:
+    print(err)
+    import numpy as np
+    from scipy.special import logsumexp
+from numpy import ndarray
 
-import numpy as np
-import astropy.units as u
 from gammabayes.utils import logspace_riemann
 from gammabayes import haversine, update_with_defaults
 from .base_dm_profile import DM_Profile
@@ -23,22 +28,22 @@ class Einasto_Profile(DM_Profile):
     """Einasto dark matter density profile."""
 
     @staticmethod
-    def log_profile(radius: float | np.ndarray , 
+    def log_profile(radius: float | ndarray , 
                     r_s: float, 
                     alpha: float, 
-                    rho_s: float) -> float | np.ndarray :
+                    rho_s: float) -> float | ndarray :
         """
         Computes the logarithm of the Einasto density profile.
 
         Args:
-            radius (float | np.ndarray): Radial distance.
+            radius (float | ndarray): Radial distance.
             r_s (float): Scale radius.
             alpha (float): Einasto shape parameter.
             rho_s (float): Scale density.
             return_unit (bool, optional): Whether to return the unit of the density. Defaults to False.
 
         Returns:
-            float | np.ndarray: Logarithm of the density profile (and unit if return_unit is True).
+            float | ndarray: Logarithm of the density profile (and unit if return_unit is True).
         """
         radial_unit = u.kpc
 
@@ -85,7 +90,7 @@ class GNFW_Profile(DM_Profile):
     """Generalized NFW (GNFW) or Zhao dark matter density profile."""
 
     @staticmethod
-    def log_profile(radius: float | np.ndarray , 
+    def log_profile(radius: float | ndarray , 
                          r_s: float, 
                          alpha: float, 
                          beta: float, 
@@ -95,7 +100,7 @@ class GNFW_Profile(DM_Profile):
         Computes the logarithm of the GNFW density profile.
 
         Args:
-            radius (float | np.ndarray): Radial distance.
+            radius (float | ndarray): Radial distance.
             r_s (float): Scale radius.
             alpha (float): alpha parameter.
             beta (float): beta parameter.
@@ -103,7 +108,7 @@ class GNFW_Profile(DM_Profile):
             rho_s (float): Scale density.
 
         Returns:
-            float | np.ndarray: Logarithm of the density profile.
+            float | ndarray: Logarithm of the density profile.
         """
         
         radial_unit = u.kpc
@@ -159,12 +164,12 @@ class Burkert_Profile(DM_Profile):
         Computes the logarithm of the Burkert density profile.
 
         Args:
-            radius (float | np.ndarray): Radial distance.
+            radius (float | ndarray): Radial distance.
             r_s (float): Scale radius.
             rho_s (float): Scale density.
 
         Returns:
-            float | np.ndarray: Logarithm of the density profile.
+            float | ndarray: Logarithm of the density profile.
         """
         radius_unit = radius.unit
         radius = radius.to(radius_unit).value
@@ -205,12 +210,12 @@ class Moore_Profile(DM_Profile):
         Computes the logarithm of the Moore density profile.
 
         Args:
-            radius (float | np.ndarray): Radial distance.
+            radius (float | ndarray): Radial distance.
             r_s (float): Scale radius.
             rho_s (float): Scale density.
 
         Returns:
-            float | np.ndarray: Logarithm of the density profile.
+            float | ndarray: Logarithm of the density profile.
         """
         rr = radius / r_s
         return np.log(rho_s) - 1.16*np.log(rr)  - 1.84* np.log(1 + rr)

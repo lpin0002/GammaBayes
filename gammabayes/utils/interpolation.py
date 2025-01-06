@@ -1,18 +1,33 @@
-from gammabayes.core import GammaBinning
 from scipy.interpolate import RegularGridInterpolator
-import numpy as np
+from numpy import ndarray
 import copy
 from icecream import ic
-from astropy import units as u
+
+try:
+    from jax.nn import logsumexp as logsumexp
+    from jax.scipy.interpolate import RegularGridInterpolator as JAX_RegularGrid_Linear_Interpolator
+    from jax import vmap, grad
+    import jax.numpy as np
+    import jax
+    
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+    
+import numpy
+
+
+    
 
 
 class EnergySpatialTemplateInterpolator:
 
-    def __init__(self, binning_geometry:GammaBinning, data:np.ndarray, 
+    def __init__(self, binning_geometry, data:ndarray, 
                  spectral_parameter_axes:dict = None, spatial_parameter_axes:dict = None, 
                  axis_index_to_parameter_map:dict = None,
                  interpolation_method:str = 'linear',
-                 bounds_error:bool = False, fill_value:float = 0):
+                 bounds_error:bool = False, fill_value:float = 0,
+                 general_func_interpolator=JAX_RegularGrid_Linear_Interpolator):
         
         if spectral_parameter_axes is None:
             spectral_parameter_axes = {}
@@ -52,27 +67,26 @@ class EnergySpatialTemplateInterpolator:
         self.__sorted_parameter_axes = [axis for axis in self.__sorted_axis_index_to_parameter_axis.values()]
 
 
-        self.__axes_in_order = [axis.value for axis in binning_geometry.axes] + self.__sorted_parameter_axes
+        self.__axes_in_order = [axis for axis in binning_geometry.axes] + self.__sorted_parameter_axes
         self.__axes_in_order[0] = np.log10(self.__axes_in_order[0])
+        self.general_func_interpolator = general_func_interpolator
 
-        self.__regular_grid_interpolator = RegularGridInterpolator(
+        self.__regular_grid_interpolator = self.general_func_interpolator(
             self.__axes_in_order, values=self.__data, method=interpolation_method,
             bounds_error=self.bounds_error, fill_value=self.fill_value
         )
 
 
-    def __call__(self, energy:u.Quantity, lon:u.Quantity, lat:u.Quantity, spectral_parameters=None, spatial_parameters=None, *args, **kwargs):
+    def __call__(self, energy:float, lon:float, lat:float, spectral_parameters=None, spatial_parameters=None, *args, **kwargs):
 
         if spectral_parameters is None:
             spectral_parameters = {}
         if spatial_parameters is None:
             spatial_parameters = {}
 
-
-
-        input_energy = energy.to(self.binning_geometry.energy_axis.unit).value.flatten()
-        input_lon = lon.to(self.binning_geometry.lon_axis.unit).value.flatten()
-        input_lat = lat.to(self.binning_geometry.lat_axis.unit).value.flatten()
+        input_energy = energy.flatten()
+        input_lon = lon.flatten()
+        input_lat = lat.flatten()
 
         parameter_input_dict = copy.deepcopy(spectral_parameters)
         parameter_input_dict.update(spatial_parameters)
@@ -84,6 +98,13 @@ class EnergySpatialTemplateInterpolator:
         sorted_parameter_inputs = [parameter_input for parameter_axis_index, parameter_input in sorted_parameter_tuple_dict]
 
 
-        interpolator_input = np.array([np.log10(input_energy), input_lon, input_lat, *sorted_parameter_inputs]).T
+        interpolator_input = np.vstack([
+            np.log10(input_energy), 
+            input_lon, 
+            input_lat, 
+            *sorted_parameter_inputs
+        ]).T
 
-        return np.log(self.__regular_grid_interpolator(xi=interpolator_input).reshape(energy.shape))
+        print(interpolator_input.shape)
+
+        return np.log(self.__regular_grid_interpolator(interpolator_input).reshape(energy.shape))

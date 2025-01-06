@@ -3,7 +3,22 @@ from gammabayes.likelihoods.irfs.core.irf_extractor_class import IRFExtractor
 from gammabayes.likelihoods.irfs.core.irf_normalisation_setup import irf_norm_setup
 from astropy import units as u
 from astropy.units import Quantity
-import numpy as np
+
+
+from jax import config
+config.update("jax_enable_x64", True)
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
 from gammabayes.utils import MethodDict
 
 
@@ -40,9 +55,9 @@ class IRF_LogLikelihood(DiscreteLogLikelihood):
             prod_vers (int, optional): Version of the likelihood function, can currently be 3/3b or 5. 
             Defaults to 5.
             
-            axes (list[np.ndarray] | tuple[np.ndarray]): Arrays defining the reconstructed observation value axes.
+            axes (list[ndarray] | tuple[ndarray]): Arrays defining the reconstructed observation value axes.
             
-            dependent_axes (list[np.ndarray]): Arrays defining the true observation value axes.
+            dependent_axes (list[ndarray]): Arrays defining the true observation value axes.
             
             inputunit (str | list[str] | tuple[str], optional): Unit(s) of the input axes.
             

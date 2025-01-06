@@ -1,5 +1,10 @@
 from astropy import units as u
-import numpy as np
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+
 from gammabayes.priors.core.wrappers import _wrap_if_missing_keyword
 from gammabayes import update_with_defaults
 
@@ -15,8 +20,8 @@ class GaussianSpatial_PriorComp(BaseSpatial_PriorComp):
     @staticmethod
     def gaussian_logfunc(lon, lat, pos_lon_deg, pos_lat_deg, sigma_lon, sigma_lat, rho, normalisation=1., *args, **kwargs):
 
-        longitude_factor = (lon.value-pos_lon_deg)/sigma_lon
-        latitude_factor = (lat.value-pos_lat_deg)/sigma_lat
+        longitude_factor = (lon-pos_lon_deg)/sigma_lon
+        latitude_factor = (lat-pos_lat_deg)/sigma_lat
 
         prefactor = 1/(2*np.pi*sigma_lon*sigma_lat*np.sqrt(1-rho**2))
         exponent_prefactor = -1/(2*(1-rho**2))

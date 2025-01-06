@@ -1,6 +1,20 @@
 from typing import Literal
 from astropy.io import fits
-import numpy as np
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(__file__, err)
+    import numpy as np
+
+    
+from numpy import ndarray
+
 from gammabayes import GammaBinning
 from astropy import units as u
 from gammabayes.likelihoods import IRF_LogLikelihood
@@ -108,25 +122,34 @@ Medium (the default) should take up about 130MB of disk space while High takes u
 
 
     # Finding longitude and latitude values that fall within the bounds of the given binning geometry
-    care_about_lon_mask = np.logical_and(np.where(new_longitude_axis<=true_binning_geometry.lon_axis[-1].value+2*true_binning_geometry.lon_res.value, True, False), 
-                                         np.where(new_longitude_axis>=true_binning_geometry.lon_axis[0].value-2*true_binning_geometry.lon_res.value, True, False))
-    care_about_lat_mask = np.logical_and(np.where(lat_axis_2<=true_binning_geometry.lat_axis[-1].value+2*true_binning_geometry.lat_res.value, True, False), 
-                                         np.where(lat_axis_2>=true_binning_geometry.lat_axis[0].value-2*true_binning_geometry.lat_res.value, True, False))
+
+    upper_lon_value = true_binning_geometry.lon_axis[-1]+2*true_binning_geometry.lon_res
+    lower_lon_value = true_binning_geometry.lon_axis[0]-2*true_binning_geometry.lon_res
 
 
+    upper_lon_mask = np.where(new_longitude_axis<=upper_lon_value, True, False)
+    lower_lon_mask = np.where(new_longitude_axis>=lower_lon_value, True, False)
+
+    care_about_lon_mask = np.logical_and(upper_lon_mask, lower_lon_mask)
+
+
+    upper_lat_mask = np.where(lat_axis_2<=true_binning_geometry.lat_axis[-1]+2*true_binning_geometry.lat_res, True, False)
+    lower_lat_mask = np.where(lat_axis_2>=true_binning_geometry.lat_axis[0]-2*true_binning_geometry.lat_res, True, False)
+
+    care_about_lat_mask = np.logical_and(upper_lat_mask,lower_lat_mask)
 
 
 
     galprop_binning_geometry = GammaBinning(
-        energy_axis=energy_axis*u.MeV,
-        lon_axis=new_longitude_axis[care_about_lon_mask]*u.deg,
-        lat_axis=lat_axis_2[care_about_lat_mask]*u.deg
+        energy_axis=energy_axis,
+        lon_axis=new_longitude_axis[care_about_lon_mask],
+        lat_axis=lat_axis_2[care_about_lat_mask]
     )
 
 
 
 
-    __data = __data[longitude_mask, :, :, :][care_about_lon_mask, :, :, :][:, care_about_lat_mask, :, :]
+    __data = np.array(__data[longitude_mask, :, :, :][care_about_lon_mask, :, :, :][:, care_about_lat_mask, :, :])
 
 
 
@@ -139,7 +162,7 @@ Medium (the default) should take up about 130MB of disk space while High takes u
 
     template_model = EnergySpatialTemplateInterpolator(
         binning_geometry=galprop_binning_geometry,
-        data=reformatted_data_matrix/galprop_binning_geometry.energy_axis.value[:, None, None]**2*(u.TeV/u.MeV).to(""),
+        data=reformatted_data_matrix/galprop_binning_geometry.energy_axis[:, None, None]**2*(u.TeV/u.MeV).to(""),
         interpolation_method='linear'
         )
 

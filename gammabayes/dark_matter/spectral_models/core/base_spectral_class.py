@@ -1,5 +1,19 @@
-import numpy as np
-from scipy import interpolate
+
+
+try:
+    from jax import numpy as np
+    from jax.nn import logsumexp
+    from gammabayes.utils.interpolation import JAX_RegularGrid_Linear_Interpolator as RegularGridInterpolator
+    from jax.numpy import interp as interp1d
+except Exception as err:
+    print(err)
+    import numpy as np
+    from scipy.interpolate import RegularGridInterpolator
+    from scipy.interpolate import interp1d
+
+from numpy import ndarray
+import numpy
+
 from os import path
 ScalarSinglet_Folder_Path = path.dirname(__file__)
 
@@ -7,7 +21,6 @@ from gammabayes.dark_matter.channel_spectra import (
     single_channel_spectral_data_path,
     PPPCReader, 
 )
-from astropy import units as u
 from gammabayes import update_with_defaults
 
 
@@ -62,7 +75,7 @@ class DM_ContinuousEmission_Spectrum(object):
     
     def __init__(self, 
                  annihilation_fractions= None, 
-                 parameter_interpolation_values:  list[np.ndarray] = None, 
+                 parameter_interpolation_values:  list[ndarray] = None, 
                  ratios: bool = True,
                  default_parameter_values = None,
                  ):
@@ -71,7 +84,7 @@ class DM_ContinuousEmission_Spectrum(object):
 
         Args:
             annihilation_fractions (dict): Dictionary mapping annihilation channels to their fractions.
-            parameter_interpolation_values (list[np.ndarray]): List of parameter values for interpolation of annihilation_fractions.
+            parameter_interpolation_values (list[ndarray]): List of parameter values for interpolation of annihilation_fractions.
             ratios (bool, optional): Indicates if the fractions are ratios. Defaults to True.
             default_parameter_values (dict, optional): Default values for parameters. Defaults to {'mass': 1.0}.
         """
@@ -108,7 +121,7 @@ class DM_ContinuousEmission_Spectrum(object):
                 tempspectragrid = atprod_gammas[PPPC_channel].reshape(atprod_gammas.output_shape)
                 
                 # Interpolating square root of PPPC tables to preserve positivity during interpolation (where result is squared)
-                sqrtchannelfuncdictionary[darkSUSYchannel] = interpolate.RegularGridInterpolator(
+                sqrtchannelfuncdictionary[darkSUSYchannel] = RegularGridInterpolator(
                     (np.log10(atprod_mass_values), atprod_log10x_values), 
                     np.sqrt(np.asarray(tempspectragrid)),
                     method='cubic', bounds_error=False, fill_value=0)
@@ -136,7 +149,7 @@ class DM_ContinuousEmission_Spectrum(object):
         # sqrt enforces positivity while also transforming values to closer to 1
         if len(parameter_interpolation_values)>1:
             self.partial_sqrt_sigmav_interpolator_dictionary = {
-                channel: interpolate.RegularGridInterpolator(
+                channel: RegularGridInterpolator(
                     (*parameter_interpolation_values,),
                     np.sqrt(annihilation_fractions[channel]),
                     # 'cubic' method can be unstable for small values, we highly recommend 
@@ -147,7 +160,7 @@ class DM_ContinuousEmission_Spectrum(object):
                     }
         else:
             self.partial_sqrt_sigmav_interpolator_dictionary = {
-                channel: interpolate.interp1d(
+                channel: interp1d(
                     parameter_interpolation_values[0],
                     np.sqrt(annihilation_fractions[channel]),
                     kind='cubic', bounds_error=False, fill_value='extrapolate') for channel in list(PPPCReader.darkSUSY_to_PPPC_converter.keys()
@@ -158,12 +171,11 @@ class DM_ContinuousEmission_Spectrum(object):
         self.parameter_axes = [np.unique(values) for values in self.parameter_interpolation_values]
         self.annihilation_fractions = annihilation_fractions
         self.default_parameter_values = default_parameter_values
-        self.inverse_output_unit = u.TeV
 
 
 
     
-    def __call__(self, *args, **kwargs) -> np.ndarray | float:
+    def __call__(self, *args, **kwargs) -> ndarray | float:
         """
         Allows the instance to be called as a function, delegating to the `logfunc` method.
 
@@ -173,17 +185,17 @@ class DM_ContinuousEmission_Spectrum(object):
         return self.logfunc(*args, **kwargs)
 
 
-    def spectral_gen(self, energy: float | np.ndarray | list, 
-                           **kwargs) -> np.ndarray | float:
+    def spectral_gen(self, energy: float | ndarray | list, 
+                           **kwargs) -> ndarray | float:
         """
         Generates the dark matter annihilation gamma-ray spectrum.
 
         Args:
-            energy (float | np.ndarray | list): Gamma-ray energies in TeV.
+            energy (float | ndarray | list): Gamma-ray energies in TeV.
             **kwargs: Additional keyword arguments for model parameters.
 
         Returns:
-            np.ndarray | float: Gamma-ray flux for the specified energies and parameters.
+            ndarray | float: Gamma-ray flux for the specified energies and parameters.
         """
         
 
@@ -193,24 +205,12 @@ class DM_ContinuousEmission_Spectrum(object):
 
         update_with_defaults(kwargs, self.default_parameter_values)
 
-
-        try:
-            energy = energy.to("TeV").value
-        except:
-            pass
-
-        try:
-            mass_value = kwargs['mass'].to(self.default_parameter_values['mass'].unit).value
-        except:
-            mass_value = kwargs['mass']
+        mass_value = kwargs['mass']
 
 
         formatted_kwargs_list = []
         for key, val in self.default_parameter_values.items():
-            if hasattr(val, 'unit'):
-                formatted_kwargs_list.append(kwargs[key].to(val.unit).value)
-            else:
-                formatted_kwargs_list.append(kwargs[key])
+            formatted_kwargs_list.append(kwargs[key])
 
 
         for channel in self.sqrtchannelfuncdictionary.keys():
@@ -225,7 +225,7 @@ class DM_ContinuousEmission_Spectrum(object):
 
 
             # - np.log(energy) is to convert dN/dlogx to dN/dlogE = 1/(ln(E) E) dN/dlogx
-            log_channel_comp = np.log(channel_comp) - np.log((energy*u.TeV).to(self.inverse_output_unit).value) - np.log(np.log(10))
+            log_channel_comp = np.log(channel_comp) - np.log(energy*np.log(10))
 
 
             logspectra = np.logaddexp(
@@ -238,18 +238,18 @@ class DM_ContinuousEmission_Spectrum(object):
     
         
     def logfunc(self, 
-                energy: list | np.ndarray | float, 
+                energy: list | ndarray | float, 
                 kwd_parameters: dict = {'mass':1.0},
-                **kwargs) -> np.ndarray | float:
+                **kwargs) -> ndarray | float:
         """
         Calculates the logarithm of the gamma-ray flux.
 
         Args:
-            energy (list | np.ndarray | float): Gamma-ray energies in TeV.
+            energy (list | ndarray | float): Gamma-ray energies in TeV.
             kwd_parameters (dict, optional): Parameters for the dark matter model. Defaults to {'mass': 1.0}.
 
         Returns:
-            np.ndarray | float: Logarithm of the gamma-ray flux.
+            ndarray | float: Logarithm of the gamma-ray flux.
         """
 
         kwd_parameters.update(kwargs)
@@ -257,16 +257,10 @@ class DM_ContinuousEmission_Spectrum(object):
 
 
         
-        units = [energy.unit]
 
         energy = np.asarray(energy)
 
         for key, val in kwd_parameters.items():
-            if hasattr(val, 'unit'):
-                unit = val.unit
-            else:
-                unit=1
-            units.append(unit)
 
             
             formatted_value = np.asarray(val)
@@ -274,7 +268,7 @@ class DM_ContinuousEmission_Spectrum(object):
             if formatted_value.shape!=energy.shape:
                 formatted_value = energy*0+formatted_value
 
-            kwd_parameters[key] = formatted_value*unit
+            kwd_parameters[key] = formatted_value
         
 
         flatten_param_vals = np.asarray([energy.flatten(), *[theta_param.flatten() for theta_param in kwd_parameters.values()]])
@@ -282,8 +276,8 @@ class DM_ContinuousEmission_Spectrum(object):
         unique_param_vals = np.unique(flatten_param_vals, axis=1)
 
         logspectralvals = self.spectral_gen(
-            energy=unique_param_vals[0]*units[0], 
-            **{param_key: unique_param_vals[1+idx].flatten()*units[1+idx] for idx, param_key in enumerate(kwd_parameters.keys())})
+            energy=unique_param_vals[0] 
+            **{param_key: unique_param_vals[1+idx].flatten() for idx, param_key in enumerate(kwd_parameters.keys())})
 
         mask = np.all(unique_param_vals[:, None, :] == flatten_param_vals[:, :, None], axis=0)
 
@@ -303,18 +297,18 @@ class DM_ContinuousEmission_Spectrum(object):
         # parameter axes, spectral parameters, and spatial parameters at once, reducing dimensionality
         # and reduces the number of needed computations
     def mesh_efficient_logfunc(self, 
-                               energy: list | np.ndarray | float, 
+                               energy: list | ndarray | float, 
                                kwd_parameters: dict = {'mass':1.0},
-                               **kwargs) -> np.ndarray | float:
+                               **kwargs) -> ndarray | float:
         """
         Efficiently computes the log spectrum over a mesh of parameters.
 
         Args:
-            energy (list | np.ndarray | float): Gamma-ray energies in TeV.
+            energy (list | ndarray | float): Gamma-ray energies in TeV.
             kwd_parameters (dict, optional): Parameters for the dark matter model. Defaults to {'mass': 1.0}.
 
         Returns:
-            np.ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
+            ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
         """
 
 
@@ -322,21 +316,13 @@ class DM_ContinuousEmission_Spectrum(object):
         kwd_parameters.update(kwargs)
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
-        units = [energy.unit]
-
-        for param_key, param_val in kwd_parameters.items():
-            if hasattr(param_val, "unit"):
-                units.append(param_val.unit)
-            else:
-                units.append(1)
 
         
-
-        param_meshes = np.meshgrid(energy.value, *new_kwd_parameters.values(), indexing='ij')
+        param_meshes = np.meshgrid(energy, *new_kwd_parameters.values(), indexing='ij')
 
         logspectralvals = self.spectral_gen(
-            energy = param_meshes[0].flatten()*units[0], 
-            **{param_key: param_meshes[1+idx].flatten()*units[1+idx] for idx, param_key in enumerate(new_kwd_parameters.keys())}
+            energy = param_meshes[0].flatten(), 
+            **{param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(new_kwd_parameters.keys())}
             ).reshape(param_meshes[0].shape)
         
         return logspectralvals
@@ -344,20 +330,20 @@ class DM_ContinuousEmission_Spectrum(object):
 
 
     def mesh_integral_efficient_logfunc(self, 
-                               energy: list | np.ndarray | float, 
-                               kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+                               energy: list | ndarray | float, 
+                               kwd_parameters: dict = {'mass':1.0}) -> ndarray | float:
         """
         Efficiently computes the log spectrum for integration over a mesh of parameters.
 
         Args:
-            energy (list | np.ndarray | float): Gamma-ray energies in TeV.
+            energy (list | ndarray | float): Gamma-ray energies in TeV.
             kwd_parameters (dict, optional): Parameters for the dark matter model. Defaults to {'mass': 1.0}.
 
         Returns:
-            np.ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
+            ndarray | float: Logarithm of the gamma-ray flux over the parameter mesh.
         """
 
-        energy = np.asarray(energy.value)
+        energy = np.asarray(energy)
 
         new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
 

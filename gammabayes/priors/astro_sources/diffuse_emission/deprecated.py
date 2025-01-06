@@ -3,7 +3,17 @@ from gammabayes.utils import iterate_logspace_integration, logspace_riemann
 from gammabayes.likelihoods.irfs import IRF_LogLikelihood
 import warnings
 
-import numpy as np
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
 from gammapy.modeling.models import (
     PowerLawSpectralModel,
     SkyModel,
@@ -14,7 +24,6 @@ from gammapy.catalog import SourceCatalogHGPS
 from gammapy.maps import Map, MapAxis, WcsGeom
 
 from scipy import interpolate
-from scipy.special import logsumexp
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
@@ -25,21 +34,21 @@ fermi_flux_units = 1/u.TeV/u.s/u.deg**2/(u.cm**2)
 fermi_obs_rate_units = 1/u.TeV/u.s/u.deg**2
 
 
-def construct_fermi_gaggero_flux_matrix(energy_axis: np.ndarray=None, longitudeaxis: np.ndarray=None, latitudeaxis: np.ndarray=None,
+def construct_fermi_gaggero_flux_matrix(energy_axis: ndarray=None, longitudeaxis: ndarray=None, latitudeaxis: ndarray=None,
                                    binning_geometry:GammaBinning=None,
                                    logspace_integrator:callable=logspace_riemann):
     """
     Constructs the Fermi-Gaggero diffuse background event rate matrix (using Gammapy).
 
     Args:
-        energy_axis (np.ndarray): Energy axis for the matrix (TeV).
-        longitudeaxis (np.ndarray): Longitude axis for the matrix (degrees).
-        latitudeaxis (np.ndarray): Latitude axis for the matrix (degrees).
+        energy_axis (ndarray): Energy axis for the matrix (TeV).
+        longitudeaxis (ndarray): Longitude axis for the matrix (degrees).
+        latitudeaxis (ndarray): Latitude axis for the matrix (degrees).
         log_exposure_map (callable): Logarithm of the exposure as a function of energy, longitude, and latitude.
         logspace_integrator (callable, optional): Function used for integration over log space. Defaults to logspace_riemann.
 
     Returns:
-        np.ndarray: A 3D array representing the observed event rate from the Fermi-Gaggero diffuse background over specified axes.
+        ndarray: A 3D array representing the observed event rate from the Fermi-Gaggero diffuse background over specified axes.
     """
     warnings.warn("construct_fermi_gaggero_flux_matrix will be deprecated after version 0.1.16 of GammaBayes. Please use [insert class name here]", DeprecationWarning)
     
@@ -102,9 +111,9 @@ class construct_log_fermi_gaggero_bkg(object):
     Constructs and interpolates the log of the Fermi-Gaggero diffuse background model.
 
     Args:
-        energy_axis (np.ndarray): Energy axis for the model (TeV).
-        longitudeaxis (np.ndarray): Longitude axis for the model (degrees).
-        latitudeaxis (np.ndarray): Latitude axis for the model (degrees).
+        energy_axis (ndarray): Energy axis for the model (TeV).
+        longitudeaxis (ndarray): Longitude axis for the model (degrees).
+        latitudeaxis (ndarray): Latitude axis for the model (degrees).
         logspace_integrator (callable, optional): Function used for normalization in log space. Defaults to logspace_riemann.
 
     This class generates a regular grid interpolator for the Fermi-Gaggero diffuse background model,
@@ -115,11 +124,11 @@ class construct_log_fermi_gaggero_bkg(object):
         """Constructs and interpolates the log of the Fermi-Gaggero diffuse background model.
 
         Args:
-            energy_axis (np.ndarray): Energy axis for the model (TeV).
+            energy_axis (ndarray): Energy axis for the model (TeV).
             
-            longitudeaxis (np.ndarray): Longitude axis for the model (degrees).
+            longitudeaxis (ndarray): Longitude axis for the model (degrees).
             
-            latitudeaxis (np.ndarray): Latitude axis for the model (degrees).
+            latitudeaxis (ndarray): Latitude axis for the model (degrees).
             
             log_aeff (callable): Logarithm of the effective area as a function of energy, longitude, and latitude.
             

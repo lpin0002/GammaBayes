@@ -5,10 +5,22 @@ from gammabayes.utils import iterate_logspace_integration
 from gammabayes import resources_dir
 
 from tqdm import tqdm
-import numpy as np
+
+try:
+    from jax.nn import logsumexp
+    from jax.scipy.integrate import simpson as simps
+except:
+    from scipy.special import logsumexp
+    from scipy.integrate import simpson as simps
+
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+from numpy import ndarray
+
 from astropy import units as u
-from scipy import special
-from scipy.integrate import simpson as simps
 import os, sys
 from astropy.units import Quantity
 from numpy import ndarray

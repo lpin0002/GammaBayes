@@ -1,14 +1,25 @@
-import numpy as np, copy
+try:
+    from jax import numpy as np
+except Exception as err:
+    print(err)
+    import numpy as np
+from numpy import ndarray
+
+try:
+    from jax.nn import logsumexp
+except:
+    from scipy.special import logsumexp
+    
+    
+import copy, h5py, time
 from os import path
 Z5_Folder_Path = path.dirname(__file__)
 
 from gammabayes.dark_matter.spectral_models.core import multi_comp_dm_spectrum
-import time
 
 
 result_dict = {}
 
-import h5py, numpy as np, matplotlib.pyplot as plt
 
 
 

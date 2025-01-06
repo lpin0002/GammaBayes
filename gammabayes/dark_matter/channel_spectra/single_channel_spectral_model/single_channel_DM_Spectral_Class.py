@@ -1,4 +1,11 @@
-import numpy as np
+
+from jax import numpy as np
+import jax
+
+from numpy import ndarray
+
+
+
 from scipy import interpolate
 import os
 
@@ -48,29 +55,28 @@ class SingleDMChannel(object):
 
 
         self.default_parameter_values = default_parameter_values
-        np.seterr(divide='ignore')
 
     
-    def __call__(self, *args, **kwargs) -> np.ndarray | float:
+    def __call__(self, *args, **kwargs) -> ndarray | float:
         """
         Allows the instance to be called as a function.
 
         Returns:
-            np.ndarray | float: The result of the log function.
+            ndarray | float: The result of the log function.
         """
         return self.logfunc(*args, **kwargs)
 
 
-    def spectral_gen(self, energy: float | np.ndarray | list, 
-                           **kwargs) -> np.ndarray | float:
+    def spectral_gen(self, energy: float | ndarray | list, 
+                           **kwargs) -> ndarray | float:
         """
         Generates the spectral values for the given energy and parameters.
 
         Args:
-            energy (float | np.ndarray | list): Energy values to calculate the spectrum for.
+            energy (float | ndarray | list): Energy values to calculate the spectrum for.
 
         Returns:
-            np.ndarray | float: The calculated log spectrum values.
+            ndarray | float: The calculated log spectrum values.
         """
         
         update_with_defaults(kwargs, self.default_parameter_values)
@@ -86,23 +92,21 @@ class SingleDMChannel(object):
 
         return log_channel_spectrum
 
-    
-        
     def logfunc(self, 
-                energy: list | np.ndarray | float, 
-                kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+                energy: list | ndarray | float, 
+                kwd_parameters: dict = {'mass':1.0}) -> ndarray | float:
         """
         Calculates the log spectrum values for given energy and parameters.
 
         Args:
-            energy (list | np.ndarray | float): Energy values to calculate the spectrum for.
+            energy (list | ndarray | float): Energy values to calculate the spectrum for.
             kwd_parameters (dict, optional): Keyword parameters for the calculation. Defaults to {'mass': 1.0}.
 
         Returns:
-            np.ndarray | float: The calculated log spectrum values.
+            ndarray | float: The calculated log spectrum values.
         """
 
-        energy = np.asarray(energy.to("TeV").value)
+        energy = np.asarray(energy)
 
 
         for key, val in kwd_parameters.items():
@@ -134,23 +138,21 @@ class SingleDMChannel(object):
         # parameter axes, spectral parameters, and spatial parameters at once, reducing dimensionality
         # and reduces the number of needed computations
     def mesh_efficient_logfunc(self, 
-                               energy: list | np.ndarray | float, 
-                               kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+                               energy: list | ndarray | float, 
+                               kwd_parameters: dict = {'mass':1.0}) -> ndarray | float:
         """
         Calculates the log spectrum values using a mesh grid for efficiency.
 
         Args:
-            energy (list | np.ndarray | float): Energy values to calculate the spectrum for.
+            energy (list | ndarray | float): Energy values to calculate the spectrum for.
             kwd_parameters (dict, optional): Keyword parameters for the calculation. Defaults to {'mass': 1.0}.
 
         Returns:
-            np.ndarray | float: The calculated log spectrum values.
+            ndarray | float: The calculated log spectrum values.
         """
 
 
-        energy = energy.to("TeV")
-
-        new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
+        new_kwd_parameters = {param_key: np.array([param_val]) if np.array([param_val]).ndim==1 else param_val for param_key, param_val in kwd_parameters.items()}
 
 
         param_meshes = np.meshgrid(energy, *new_kwd_parameters.values(), indexing='ij')
@@ -159,33 +161,33 @@ class SingleDMChannel(object):
             energy = param_meshes[0].flatten(), 
             kwd_parameters={param_key: param_meshes[1+idx].flatten() for idx, param_key in enumerate(new_kwd_parameters.keys())}
             ).reshape(param_meshes[0].shape)
-        
+                
         return logspectralvals
 
 
 
     def mesh_integral_efficient_logfunc(self, 
-                               energy: list | np.ndarray | float, 
-                               kwd_parameters: dict = {'mass':1.0}) -> np.ndarray | float:
+                               energy: list | ndarray | float, 
+                               kwd_parameters: dict = {'mass':1.0}) -> ndarray | float:
         """
         Calculates the log spectrum values using a mesh grid and integrates for efficiency.
 
         Args:
-            energy (list | np.ndarray | float): Energy values to calculate the spectrum for.
+            energy (list | ndarray | float): Energy values to calculate the spectrum for.
             kwd_parameters (dict, optional): Keyword parameters for the calculation. Defaults to {'mass': 1.0}.
 
         Returns:
-            np.ndarray | float: The calculated log spectrum values.
+            ndarray | float: The calculated log spectrum values.
         """
 
 
         energy = np.asarray(energy)
 
-        new_kwd_parameters = {param_key: np.asarray(param_val) for param_key, param_val in kwd_parameters.items()}
+        new_kwd_parameters = {param_key: np.array([param_val]) if np.array([param_val]).ndim==1 else param_val for param_key, param_val in kwd_parameters.items()}
 
 
-        for key, val in new_kwd_parameters.items():
-            new_kwd_parameters[key] = np.asarray(val) 
+        # for key, val in new_kwd_parameters.items():
+        #     new_kwd_parameters[key] = np.asarray(val) 
 
         hyper_params_shape = new_kwd_parameters[list(new_kwd_parameters.keys())[0]].shape
         # minimises the amount of needed memory and comp time by reducing number of combinations in meshgrid

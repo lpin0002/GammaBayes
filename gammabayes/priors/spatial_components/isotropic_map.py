@@ -1,5 +1,11 @@
 from astropy import units as u
-import numpy as np
+
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+
+
 from gammabayes.priors.core.wrappers import _wrap_if_missing_keyword
 from gammabayes import update_with_defaults
 
@@ -10,7 +16,7 @@ class IsotropicSpatial_PriorComp(BaseSpatial_PriorComp):
 
     @staticmethod
     def iso_logfunc(lon, lat, *args, **kwargs):
-        return lon.value*0
+        return lon*0
     
     @staticmethod
     def iso_meshlogfunc(lon, lat, *args, **kwargs):

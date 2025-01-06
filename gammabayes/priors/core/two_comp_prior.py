@@ -1,9 +1,14 @@
-import numpy as np
+try:
+    from jax import numpy as np
+except:
+    import numpy as np
+    
 from os import path
 from gammabayes.priors.core.discrete_logprior import DiscreteLogPrior
 from gammabayes.priors.core.source_flux_prior import SourceFluxDiscreteLogPrior
 from gammabayes.core import GammaLogExposure, GammaBinning
 import time
+from numpy import ndarray
 
 from icecream import ic
 
@@ -107,12 +112,12 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
                 )
             
 
-    def log_flux_function(self, energy: float | np.ndarray | list, 
-                       lon: float | np.ndarray | list,  
-                       lat: float | np.ndarray | list,  
+    def log_flux_function(self, energy: float | ndarray | list, 
+                       lon: float | ndarray | list,  
+                       lat: float | ndarray | list,  
                        spectral_parameters: dict = {},
                        spatial_parameters: dict = {}, 
-                       ) -> np.ndarray:
+                       ) -> ndarray:
         """
         Calculate the log prior distribution for given energy, longitude, and latitude values, 
         along with optional spectral and spatial parameters.
@@ -121,40 +126,19 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         and the instrument response function over the specified parameter space.
         
         Args:
-            energy (float | np.ndarray | list): The energy values for which the log prior distribution is calculated.
+            energy (float | ndarray | list): The energy values for which the log prior distribution is calculated.
             
-            lon (float | np.ndarray | list): The longitude values for the spatial component.
+            lon (float | ndarray | list): The longitude values for the spatial component.
             
-            lat (float | np.ndarray | list): The latitude values for the spatial component.
+            lat (float | ndarray | list): The latitude values for the spatial component.
             
             spectral_parameters (dict, optional): A dictionary of parameters specific to the spectral component. Defaults to {}.
             
             spatial_parameters (dict, optional): A dictionary of parameters specific to the spatial component. Defaults to {}.
             
         Returns:
-            np.ndarray: The calculated log prior values as a numpy array.
+            ndarray: The calculated log prior values as a numpy array.
         """
-        spectral_axes = energy, *spectral_parameters.values()
-
-
-        spectral_units = []
-        for axis in spectral_axes:
-            if hasattr(axis, 'unit'):
-                spectral_units.append(axis.unit)
-            else:
-                spectral_units.append(1.)
-
-
-
-        spatial_axes = lon, lat, *spatial_parameters.values()
-
-        spatial_units = []
-        for axis in spatial_axes:
-            if hasattr(axis, 'unit'):
-                spatial_units.append(axis.unit)
-            else:
-                spatial_units.append(1.)
-        
             
         energy, lon, lat = np.asarray(energy), np.asarray(lon), np.asarray(lat)
 
@@ -169,9 +153,9 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
 
         #2 We then only have to evaluate on these values for the spectral component
         logspectralvals = self.spectral_comp(
-             unique_spectral_param_values[0]*spectral_units[0], 
+             unique_spectral_param_values[0], 
              kwd_parameters = {
-                  spectral_param_key : unique_spectral_param_values[1+val_idx]*spectral_units[1+val_idx] for val_idx, spectral_param_key in enumerate(mesh_spectral_parameters.keys())
+                  spectral_param_key : unique_spectral_param_values[1+val_idx]for val_idx, spectral_param_key in enumerate(mesh_spectral_parameters.keys())
                   },
                   )
         
@@ -197,10 +181,10 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         unique_spatial_param_vals = np.unique(flatten_spatial_param_vals, axis=1)
 
         logspatialvals = self.spatial_comp(
-             unique_spatial_param_vals[0]*spatial_units[0], 
-             unique_spatial_param_vals[1]*spatial_units[1], 
+             unique_spatial_param_vals[0], 
+             unique_spatial_param_vals[1], 
              kwd_parameters = {
-                  param_key : unique_spatial_param_vals[2+val_idx]*spatial_units[2+val_idx] for val_idx, param_key in enumerate(spatial_parameters.keys())
+                  param_key : unique_spatial_param_vals[2+val_idx] for val_idx, param_key in enumerate(spatial_parameters.keys())
                   }
                   )
 
@@ -219,12 +203,12 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         
 
     def log_mesh_efficient_flux_func(self, 
-                                energy: float | np.ndarray | list,
-                                lon: float | np.ndarray | list, 
-                                lat: float | np.ndarray | list,
+                                energy: float | ndarray | list,
+                                lon: float | ndarray | list, 
+                                lat: float | ndarray | list,
                                 spatial_parameters: dict = {}, 
                                 spectral_parameters: dict = {}, 
-                                ) -> np.ndarray:
+                                ) -> ndarray:
         
         """
         An efficient version of `logfunction` that utilizes mesh grid computations for the spectral and spatial components.
@@ -233,18 +217,18 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         are provided during class initialization, allowing for more efficient computation over grid meshes.
         
         Args:
-            energy (float | np.ndarray | list): The energy values for which the log distribution is calculated.
+            energy (float | ndarray | list): The energy values for which the log distribution is calculated.
             
-            lon (float | np.ndarray | list): The longitude values for the spatial component.
+            lon (float | ndarray | list): The longitude values for the spatial component.
             
-            lat (float | np.ndarray | list): The latitude values for the spatial component.
+            lat (float | ndarray | list): The latitude values for the spatial component.
             
             spatial_parameters (dict, optional): Parameters specific to the spatial component. Defaults to {}.
             
             spectral_parameters (dict, optional): Parameters specific to the spectral component. Defaults to {}.
             
         Returns:
-            np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
+            ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
 
         num_spectral_params     = len(spectral_parameters)
@@ -288,12 +272,12 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
 
     
     def log_mesh_integral_efficient_func(self, 
-                                energy: float | np.ndarray | list,
-                                lon: float | np.ndarray | list, 
-                                lat: float | np.ndarray | list,
+                                energy: float | ndarray | list,
+                                lon: float | ndarray | list, 
+                                lat: float | ndarray | list,
                                 spatial_parameters: dict = {}, 
                                 spectral_parameters: dict = {}, 
-                                ) -> np.ndarray:
+                                ) -> ndarray:
         
         """
         An efficient version of `logfunction` that utilizes mesh grid computations for the spectral and spatial components.
@@ -302,18 +286,18 @@ class TwoCompFluxPrior(SourceFluxDiscreteLogPrior):
         are provided during class initialization, allowing for more efficient computation over grid meshes.
         
         Args:
-            energy (float | np.ndarray | list): The energy values for which the log distribution is calculated.
+            energy (float | ndarray | list): The energy values for which the log distribution is calculated.
             
-            lon (float | np.ndarray | list): The longitude values for the spatial component.
+            lon (float | ndarray | list): The longitude values for the spatial component.
             
-            lat (float | np.ndarray | list): The latitude values for the spatial component.
+            lat (float | ndarray | list): The latitude values for the spatial component.
             
             spatial_parameters (dict, optional): Parameters specific to the spatial component. Defaults to {}.
             
             spectral_parameters (dict, optional): Parameters specific to the spectral component. Defaults to {}.
             
         Returns:
-            np.ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
+            ndarray: The calculated log prior values as a numpy array, optimized for mesh grid computations.
         """
             
         num_spectral_params     = len(spectral_parameters)
