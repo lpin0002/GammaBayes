@@ -12,9 +12,33 @@ from warnings import warn
 
 
 def trivial_log_aeff(energy, lon, lat, pointing_dir=None):
+    """
+    A trivial effective area function that returns zero for all inputs.
+
+    Args:
+        energy (Quantity): Energy values.
+        lon (float): Longitude values.
+        lat (float): Latitude values.
+        pointing_dir (Optional): Pointing direction. Defaults to None.
+
+    Returns:
+        ndarray: An array of zeros with the same shape as energy.
+    """
     return energy.value*0.
 
 class GammaLogExposure:
+    """
+    Handles effective area, observation time, and multi-observation bin overlaps for source flux exposures.
+
+    Attributes:
+        binning_geometry (GammaBinning): Binning geometry for the exposure data.
+        irfs (Optional): Instrument Response Functions (IRFs).
+        log_exposure_map (ndarray): Logarithmic exposure map.
+        pointing_dirs (list[ndarray[u.Quantity]]): List of pointing directions.
+        live_times (Quantity): Live times associated with the observations.
+        unit (Unit): Combined units of effective area and time.
+        log_unit_converter (float): Logarithmic unit conversion factor.
+    """
     def __init__(self, 
                  binning_geometry:GammaBinning, 
                  irfs=None, 
@@ -28,6 +52,18 @@ class GammaLogExposure:
                  # By default the units of the effective area are taken to be u.m**2 and intermediary calculations use seconds when needed
                  unit_bases = None, 
                  ):
+        """
+        Initialize the GammaLogExposure object.
+
+        Args:
+            binning_geometry (GammaBinning): Binning geometry for the exposure data.
+            irfs (Optional): Instrument Response Functions (IRFs).
+            log_exposure_map (ndarray, optional): Precomputed log exposure map.
+            pointing_dirs (list[np.ndarray[u.Quantity]] | np.ndarray[u.Quantity], optional): Pointing directions.
+            live_times (Quantity, optional): Live times associated with observations. Defaults to 1 second.
+            use_log_aeff (bool, optional): Whether to use logarithmic effective area. Defaults to True.
+            unit_bases (list[Unit], optional): Unit bases for decomposition. Defaults to [u.m, u.s].
+        """
         if unit_bases is None:
             unit_bases = [u.m, u.s] 
 
@@ -83,6 +119,12 @@ class GammaLogExposure:
                 
 
     def __parse_livetime(self, live_times):
+        """
+        Parse the live times input and convert to a standardized format.
+
+        Args:
+            live_times (Quantity | int | float | list | ndarray): Live times associated with the observations.
+        """
 
         if live_times is None:
             live_times = 1.*u.Unit("")
@@ -118,6 +160,12 @@ class GammaLogExposure:
 
 
     def __parse_pointing_dirs(self, pointing_dirs):
+        """
+        Parse the pointing directions input and convert to a standardized format.
+
+        Args:
+            pointing_dirs (ndarray | list): Pointing directions for the observations.
+        """
 
         if np.asarray(pointing_dirs).ndim <2:
             pointing_dirs = [pointing_dirs]
@@ -132,15 +180,42 @@ class GammaLogExposure:
 
 
     def __call__(self, *args, **kwargs):
+        """
+        Evaluate the log exposure interpolator.
+
+        Returns:
+            ndarray: Logarithmic exposure values.
+        """
         return np.log(self.exp_interpolator(*args, **kwargs).value)+self.log_unit_converter
 
 
     # Support for indexing like a list or array
     def __getitem__(self, key: int | slice):
+        """
+        Support indexing of the log exposure map.
+
+        Args:
+            key (int | slice): Index or slice of the map.
+
+        Returns:
+            ndarray: Indexed log exposure map.
+        """
 
         return self.log_exposure_map[key]
 
     def __add__(self, other):
+        """
+        Add two GammaLogExposure instances or a scalar to the current exposure.
+
+        Args:
+            other (GammaLogExposure | float): The other instance or scalar to add.
+
+        Returns:
+            GammaLogExposure: A new instance representing the sum of exposures.
+
+        Raises:
+            NotImplementedError: If binning geometries do not match.
+        """
 
         if isinstance(other, GammaLogExposure):
 
@@ -166,7 +241,16 @@ class GammaLogExposure:
 
 
     def _same_as_cached(self, pointing_dirs: np.ndarray[u.Quantity]| u.Quantity=None, live_times:u.Quantity=None):
+        """
+        Check if the provided pointing directions and live times match the cached values.
 
+        Args:
+            pointing_dirs (ndarray[Quantity] | Quantity, optional): Pointing directions to check.
+            live_times (Quantity, optional): Live times to check.
+
+        Returns:
+            bool: True if the input matches cached values, False otherwise.
+        """
 
         if pointing_dirs is None:
             same_as_cached = True
@@ -185,6 +269,12 @@ class GammaLogExposure:
     
 
     def _reset_cache(self):
+        """
+        Reset the cache for pointing directions and live times.
+
+        Raises:
+            ValueError: If pointing_dirs is not set.
+        """
 
 
         if self.pointing_dirs is None:
@@ -196,6 +286,15 @@ class GammaLogExposure:
 
 
     def __radd__(self, other):
+        """
+        Support reverse addition with scalar values or other instances.
+
+        Args:
+            other (int | float | GammaLogExposure): The object to add.
+
+        Returns:
+            GammaLogExposure: The resulting sum of exposures.
+        """
         if other == 0:
             return self
         else:
@@ -203,6 +302,13 @@ class GammaLogExposure:
         
 
     def refresh(self):
+        """
+        Refresh the log exposure map by recalculating it based on the current pointing directions
+        and live times.
+
+        Returns:
+            ndarray: Updated log exposure map.
+        """
 
         if self.use_log_aeff:
             log_exposure_vals = -np.inf
@@ -225,6 +331,16 @@ class GammaLogExposure:
     
 
     def add_single_exposure(self, pointing_dir:np.ndarray[u.Quantity], live_time:u.Quantity):
+        """
+        Add a single exposure to the existing log exposure map.
+
+        Args:
+            pointing_dir (ndarray[Quantity]): Pointing direction of the observation.
+            live_time (Quantity): Live time of the observation.
+
+        Returns:
+            ndarray: Updated log exposure map.
+        """
 
 
         self.pointing_dirs = self.pointing_dirs.append(pointing_dir)
@@ -253,7 +369,19 @@ class GammaLogExposure:
             
     
     def exp_interpolator(self, energy, lon, lat, *args, pointing_dirs=None, live_times=None, **kwargs):
+        """
+        Interpolate the exposure map with the possibility of updating pointing directions and live times.
 
+        Args:
+            energy (Quantity): Energy value for interpolation.
+            lon (Quantity): Longitude value for interpolation.
+            lat (Quantity): Latitude value for interpolation.
+            pointing_dirs (ndarray[Quantity], optional): New pointing directions. Defaults to None.
+            live_times (Quantity, optional): New live times. Defaults to None.
+
+        Returns:
+            Quantity: Interpolated exposure value with units.
+        """
         if not self._same_as_cached(pointing_dirs=pointing_dirs):
             if np.array(pointing_dirs).size>2:
                 self.pointing_dirs = pointing_dirs
@@ -268,6 +396,18 @@ class GammaLogExposure:
         
 
     def peek(self, fig_kwargs=None, pcolormesh_kwargs=None, plot_kwargs=None, **kwargs):
+        """
+        Generate visualizations of the exposure map and its projections.
+
+        Args:
+            fig_kwargs (dict, optional): Arguments for the figure. Defaults to None.
+            pcolormesh_kwargs (dict, optional): Arguments for pcolormesh plots. Defaults to None.
+            plot_kwargs (dict, optional): Arguments for line plots. Defaults to None.
+            **kwargs: Additional arguments for customization.
+
+        Returns:
+            tuple: Matplotlib figure and axes objects.
+        """
 
         if fig_kwargs is None:
             fig_kwargs = {}
@@ -379,7 +519,4 @@ class GammaLogExposure:
 
         return fig, ax
 
-    @property
-    def log_obs_time_map(self):
-        return np.log(self.observation_time.to(self.observation_time_unit).value)
             

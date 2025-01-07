@@ -173,7 +173,7 @@ class ParameterSet(object):
                 parameter_object['name'] = param_name
 
             if parameter_object['prior_name'] is None:
-                parameter['prior_name'] = self.prior_name
+                parameter_object['prior_name'] = self.prior_name
 
             self.append(parameter_object)
 
@@ -189,7 +189,7 @@ class ParameterSet(object):
         for parameter_object in list_input:
             
             if parameter_object['prior_name'] is None:
-                parameter['prior_name'] = self.prior_name
+                parameter_object['prior_name'] = self.prior_name
 
             self.append(parameter_object)
 
@@ -208,7 +208,7 @@ class ParameterSet(object):
             parameter_object = Parameter(parameter_specification)
 
             if parameter_object['prior_name'] is None:
-                parameter['prior_name'] = self.prior_name
+                parameter_object['prior_name'] = self.prior_name
 
 
             self.append(parameter_object)

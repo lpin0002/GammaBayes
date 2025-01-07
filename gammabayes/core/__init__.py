@@ -1,7 +1,8 @@
 from .parameter_class import Parameter
 # from .data_class import EventData
 from .binning_geometry import GammaBinning
-from .gamma_cube import GammaObs, GammaObsCube
+from .gamma_obs import GammaObs
+from .gamma_cube import GammaObsCube
 from .exposure import GammaLogExposure
 from .parameter_set_class import ParameterSet
 # from .analysis_cube import AnalysisContainer
